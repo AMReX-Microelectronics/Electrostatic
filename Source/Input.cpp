@@ -33,11 +33,10 @@ void ReadBasicInput(GpuArray<int, AMREX_SPACEDIM>& n_cell,
         for (int i=0; i<AMREX_SPACEDIM; ++i) {
             prob_hi[i] = temp[i];
         }
-        }
     }
 
-    nsteps = 10;
-    pp.query("nsteps",nsteps);
+    nstep = 10;
+    pp.query("nstep",nstep);
 
     plot_int = -1;
     pp.query("plot_int",plot_int);
@@ -63,12 +62,4 @@ void ReadMLMGInput(Real& alpha,
     pp.get("beta",beta);
     set_verbose_param = 1;
     pp.query("set_verbose_param",set_verbose_param);
-}
-
-
-void DefineGlobalVariables() 
-{
-    const Real q = 1.602e-19;
-    const Real pi = 3.14159265;
-    const Real kb = 1.380649e-23;
 }

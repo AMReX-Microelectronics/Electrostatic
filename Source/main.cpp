@@ -4,6 +4,7 @@
 #include <AMReX_MLMG.H> 
 #include <AMReX_MultiFab.H> 
 #include <AMReX_VisMF.H>
+#include "Global.H"
 #include "myfunc.H"
 #include "Input.H"
 #include "Initialize.H"
@@ -41,17 +42,13 @@ void main_main ()
     Print() << "prob_hi: " << prob_hi[0] << std::setw(5) << prob_hi[1] << std:: setw(5) << prob_hi[2] << "\n";
     
     //Material input
-    extern Real eps_0, eps_r;
+    Real eps_0, eps_r;
     ReadMaterialInput(eps_0, eps_r); 
 
     //Material input
     Real alpha, beta;
     int set_verbose_param;
     ReadMLMGInput(alpha, beta, set_verbose_param); 
-
-    //Global variables
-    extern const Real q, pi, kb; 
-    DefineGlobalVariables(); 
 
     //*** SIMULATION INPUT END
 
@@ -135,7 +132,7 @@ void main_main ()
     alpha_cc.setVal(0.);
 
     InitializeCharge(rho, prob_lo, prob_hi, geom); //initialize charge to cell centers
-    InitializePermittivity(eps_mfab, prob_lo, prob_hi, geom); //initialize permittivity to cell centers
+    InitializePermittivity(eps_mfab, prob_lo, prob_hi, geom, eps_0, eps_r); //initialize permittivity to cell centers
     //ROUTINE TO PERMITTIVITY AVERGED TO the FACES
 
     PoissonPhi.setVal(0.);
