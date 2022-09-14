@@ -1,2 +1,6 @@
 CEXE_sources += main.cpp
+CEXE_headers += Input.cpp
+CEXE_headers += Initialize.cpp
 CEXE_headers += myfunc.H
+CEXE_headers += Input.H
+CEXE_headers += Initialize.H
