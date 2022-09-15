@@ -94,7 +94,7 @@ void main_main ()
     MultiFab PoissonPhi(ba, dm, Ncomp1, Nghost1);
     MultiFab PoissonRHS(ba, dm, Ncomp1, Nghost0);
     MultiFab rho(ba, dm, Ncomp1, Nghost0); //charge density
-    MultiFab eps_mfab(ba, dm, Ncomp1, Nghost1); //relative permittivity 
+    MultiFab eps_cc(ba, dm, Ncomp1, Nghost1); //permittivity at cell-centers
     MultiFab Plt(ba, dm, 4, Nghost0); //4: number of elements to print
 
     //*** MULTIFAB ARRAYS END
@@ -123,7 +123,7 @@ void main_main ()
 
     // coefficients for solver
     MultiFab alpha_cc(ba, dm, 1, 0);
-    std::array< MultiFab, AMREX_SPACEDIM > beta_face;
+    std::array< MultiFab, AMREX_SPACEDIM > beta_face; //this is permittivity at face-centers
     AMREX_D_TERM(beta_face[0].define(convert(ba,IntVect(AMREX_D_DECL(1,0,0))), dm, 1, 0);,
                  beta_face[1].define(convert(ba,IntVect(AMREX_D_DECL(0,1,0))), dm, 1, 0);,
                  beta_face[2].define(convert(ba,IntVect(AMREX_D_DECL(0,0,1))), dm, 1, 0););
@@ -132,8 +132,8 @@ void main_main ()
     alpha_cc.setVal(0.);
 
     InitializeCharge(rho, prob_lo, prob_hi, geom); //initialize charge to cell centers
-    InitializePermittivity(eps_mfab, prob_lo, prob_hi, geom, eps_0, eps_r); //initialize permittivity to cell centers
-    //ROUTINE TO PERMITTIVITY AVERGED TO the FACES
+    InitializePermittivity(eps_cc, prob_lo, prob_hi, geom, eps_0, eps_r); //initialize permittivity to cell centers
+    AveragePermittivityToCellFaces(eps_cc, beta_face); //converts from cell-centered permittivity to face-center
 
     PoissonPhi.setVal(0.);
 
@@ -166,7 +166,7 @@ void main_main ()
     {
         int step = 0;
         const std::string& pltfile = amrex::Concatenate("plt",step,8);
-        MultiFab::Copy(Plt, eps_mfab, 0, 0, 1, 0);
+        MultiFab::Copy(Plt, eps_cc, 0, 0, 1, 0);
         MultiFab::Copy(Plt, PoissonPhi, 0, 1, 1, 0);
         MultiFab::Copy(Plt, PoissonRHS, 0, 2, 1, 0);
         MultiFab::Copy(Plt, rho, 0, 3, 1, 0);
