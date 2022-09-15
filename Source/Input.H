@@ -11,12 +11,12 @@ void ReadBasicInput(GpuArray<int, AMREX_SPACEDIM>& n_cell,
                     GpuArray<Real, AMREX_SPACEDIM>& prob_lo, 
                     GpuArray<Real, AMREX_SPACEDIM>& prob_hi, 
                     int& nstep, 
-                    int& plot_int, 
-                    Real& dt);
+                    int& plot_int,
+                    int& plot_elems);
 
 void ReadMaterialInput(Real& eps_0,
                        Real& eps_r);
 
-void ReadMLMGInput(Real& alpha, Real& beta, int& set_verbose_param);
+void ReadMLMGInput(Real& ascalar, Real& bscalar, int& set_verbose, int& max_order);
 
 #endif

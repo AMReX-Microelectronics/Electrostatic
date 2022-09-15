@@ -14,9 +14,9 @@ void SetupSphereParams(Real& R,
     //define radius of the charge sphere=(1/8)*minimum domain length 
     R = *std::min_element(domainLen.begin(), domainLen.end())/8.0;
 
-    Print() << "center: " << center[0] << std::setw(5) << center[1] << std:: setw(5) << center[2] << "\n";
-    Print() << "domain length: " << domainLen[0] << std::setw(5) << domainLen[1] << std:: setw(5) << domainLen[2] << "\n";
-    Print() << "Radius of the charge: " << R << "\n";
+    //Print() << "center: " << center[0] << std::setw(5) << center[1] << std:: setw(5) << center[2] << "\n";
+    //Print() << "domain length: " << domainLen[0] << std::setw(5) << domainLen[1] << std:: setw(5) << domainLen[2] << "\n";
+    //Print() << "Radius of the charge: " << R << "\n";
 }
 
 //Initialize charge
@@ -32,9 +32,14 @@ void InitializeCharge(MultiFab& rho,
         const Box& bx = mfi.validbox();
         GpuArray<Real,AMREX_SPACEDIM> dx = geom.CellSizeArray();
  
-        Real R;
+        Real R,V;
         amrex::GpuArray<Real, AMREX_SPACEDIM> center; // physical domain center
         SetupSphereParams(R, center, prob_lo, prob_hi);
+        V=(4./3.)*pi*std::pow(R,3);
+        Print() << "Radius of the charged sphere, R: " << R << "\n";
+        Print() << "Radius of the charged sphere, center: " << center[0] << " " << center[1] << " " << center[2] << "\n";
+        Print() << "Volume of the sphere, V: " << V << "\n";
+        Print() << "Total charge, Q=qV: " << q*V << "\n";
 
         const Array4<Real>& chargeDensity_arr = rho.array(mfi);
  

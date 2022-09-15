@@ -5,8 +5,8 @@ void ReadBasicInput(GpuArray<int, AMREX_SPACEDIM>& n_cell,
                     GpuArray<Real, AMREX_SPACEDIM>& prob_lo, 
                     GpuArray<Real, AMREX_SPACEDIM>& prob_hi, 
                     int& nstep, 
-                    int& plot_int, 
-                    Real& dt) 
+                    int& plot_int,
+                    int& plot_elems)
 {
     // ParmParse is way of reading inputs from the inputs file
     // pp.get means we require the inputs file to have it
@@ -41,7 +41,7 @@ void ReadBasicInput(GpuArray<int, AMREX_SPACEDIM>& n_cell,
     plot_int = -1;
     pp.query("plot_int",plot_int);
 
-    pp.get("dt",dt);
+    pp.get("plot_elems",plot_elems);
 }
 
 void ReadMaterialInput(Real& eps_0,
@@ -53,13 +53,16 @@ void ReadMaterialInput(Real& eps_0,
     pp.get("eps_r",eps_r); // relative permittivity of the material
 }
 
-void ReadMLMGInput(Real& alpha,
-                   Real& beta,
-                   int& set_verbose_param)
+void ReadMLMGInput(Real& ascalar,
+                   Real& bscalar,
+                   int& set_verbose,
+                   int& max_order)
 {
     ParmParse pp;
-    pp.get("alpha",alpha);
-    pp.get("beta",beta);
-    set_verbose_param = 1;
-    pp.query("set_verbose_param",set_verbose_param);
+    pp.get("mlmg_ascalar",ascalar);
+    pp.get("mlmg_bscalar",bscalar);
+    set_verbose = 0;
+    pp.query("mlmg_set_verbose",set_verbose);
+    max_order = 2;
+    pp.query("mlmg_max_order",max_order);
 }
