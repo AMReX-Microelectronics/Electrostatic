@@ -6,5 +6,7 @@
 using namespace amrex;
 
 extern const Real q, pi, kb;
+template<typename T>
+class TD;
 
 #endif
