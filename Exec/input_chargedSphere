@@ -1,0 +1,18 @@
+###### BASIC SETUP PARAMETERS ######
+n_cell = 100 100 100
+max_grid_size = 100
+prob_lo = -1.0 -1.0 -1.0
+prob_hi = 1.0 1.0 1.0
+nsteps = 1
+plot_int = 1
+plot_elems = 9
+
+###### MATERIAL PROPERTIES ######
+eps_0 = 8.85418782e-12 
+eps_r = 13
+
+###### MLMG SOLVER PARAMETERS ######
+mlmg_ascalar=0.0
+mlmg_bscalar=1.0
+mlmg_set_verbose=1
+mlmg_max_order=2
