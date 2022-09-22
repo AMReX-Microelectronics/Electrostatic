@@ -1,0 +1,5 @@
+CEXE_sources += WarpXUtil.cpp
+CEXE_headers += WarpXUtil.H
+CEXE_headers += WarpXConst.H
+
+VPATH_LOCATIONS   += $(CODE_HOME)/Source/Utils

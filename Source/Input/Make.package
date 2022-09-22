@@ -1,0 +1,5 @@
+CEXE_sources += MaterialProperties.cpp
+CEXE_headers += MaterialProperties.H
+CEXE_headers += MaterialProperties_fwd.H
+
+VPATH_LOCATIONS += $(CODE_HOME)/Source/Input/MaterialProperties
