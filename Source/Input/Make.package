@@ -1,5 +1,10 @@
+CEXE_sources += GeometryProperties.cpp
+CEXE_headers += GeometryProperties.H
+CEXE_headers += GeometryProperties_fwd.H
+
 CEXE_sources += MaterialProperties.cpp
 CEXE_headers += MaterialProperties.H
 CEXE_headers += MaterialProperties_fwd.H
 
-VPATH_LOCATIONS += $(CODE_HOME)/Source/Input/MaterialProperties
+VPATH_LOCATIONS += $(CODE_HOME)/Source/Input
+INCLUDE_LOCATIONS += $(CODE_HOME)/Source/Input

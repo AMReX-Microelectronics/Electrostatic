@@ -26,9 +26,9 @@ public:
 private:
     void ReadPermittivity();
     void InitializePermittivity();
-    void InitializeMacroMultiFabUsingParser (amrex::MultiFab *macro_mf,
-                                             amrex::ParserExecutor<3> const& macro_parser,
-                                             const int lev);
+//    void InitializeMacroMultiFabUsingParser (amrex::MultiFab *macro_mf,
+//                                             amrex::ParserExecutor<3> const& macro_parser,
+//                                             const int lev);
 
     std::string m_epsilon_s = "constant";
 //    amrex::Real m_epsilon = PhysConst::ep0;

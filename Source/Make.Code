@@ -1,7 +1,7 @@
 AMREX_HOME ?= ../../amrex
 include $(AMREX_HOME)/Tools/GNUMake/Make.defs
 
--include Make.package
+
 include $(CODE_HOME)/Source/Make.package
 include $(CODE_HOME)/Source/Input/Make.package
 include $(CODE_HOME)/Source/Utils/Make.package
@@ -9,4 +9,5 @@ include $(CODE_HOME)/Source/Utils/Make.package
 include $(AMREX_HOME)/Src/Base/Make.package
 include $(AMREX_HOME)/Src/Boundary/Make.package
 include $(AMREX_HOME)/Src/LinearSolvers/MLMG/Make.package
+
 include $(AMREX_HOME)/Tools/GNUMake/Make.rules

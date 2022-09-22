@@ -4,7 +4,9 @@
 //#include <AMReX_MLMG.H> 
 //#include <AMReX_MultiFab.H> 
 //#include <AMReX_VisMF.H>
+
 #include "Code.H"
+
 //#include "Global.H"
 //#include "myfunc.H"
 //#include "Input.H"
@@ -13,21 +15,26 @@
 
 using namespace amrex;
 
+template<typename T>
+class TD;
+
 int main (int argc, char* argv[])
 {
     amrex::Initialize(argc,argv);
 
-    c_Code p_Code;
-    p_Code.InitializeData();
-
-    auto& n_cell = p_Code.domain.n_cell;
-    auto& prob_lo = p_Code.domain.prob_lo;
-				auto& prob_hi = p_Code.domain.prob_hi;
-    auto& max_grid_size = p_Code.domain.max_grid_size;
-    Print() << "n_cell: " << n_cell[0] << " " << n_cell[1] << " " << n_cell[2] << "\n";
-    Print() << "prob_lo: " << prob_lo[0] << " " << prob_lo[1] << " " << prob_lo[2] << "\n";
-    Print() << "prob_hi: " << prob_hi[0] << " " << prob_hi[1] << " " << prob_hi[2] << "\n";
-    Print() << "max_grid_size: " << max_grid_size[0]  << "\n";
+    c_Code pCode; 
+    pCode.InitData();
+//    auto& pG = p_Code.GetGeometryPropertiesPointer();
+////    TD<decltype(p_Gprop)> type;
+//
+//    auto& n_cell = pG.n_cell;
+//    auto& prob_lo = pG.prob_lo;
+//    auto& prob_hi = pG.prob_hi;
+//    auto& max_grid_size = pG.max_grid_size;
+//    Print() << "n_cell: " << n_cell[0] << " " << n_cell[1] << " " << n_cell[2] << "\n";
+//    Print() << "prob_lo: " << prob_lo[0] << " " << prob_lo[1] << " " << prob_lo[2] << "\n";
+//    Print() << "prob_hi: " << prob_hi[0] << " " << prob_hi[1] << " " << prob_hi[2] << "\n";
+//    Print() << "max_grid_size: " << max_grid_size[0]  << "\n";
 
 
 //    main_main();
