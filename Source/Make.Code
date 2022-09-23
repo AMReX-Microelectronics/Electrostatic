@@ -3,6 +3,7 @@ include $(AMREX_HOME)/Tools/GNUMake/Make.defs
 
 
 include $(CODE_HOME)/Source/Make.package
+include $(CODE_HOME)/Source/ablastr/Make.package
 include $(CODE_HOME)/Source/Input/Make.package
 include $(CODE_HOME)/Source/Utils/Make.package
 

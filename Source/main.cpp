@@ -38,6 +38,7 @@ int main (int argc, char* argv[])
 
 
 //    main_main();
+    pCode.PrintGlobalWarnings("THE END"); //Print warning messages at the end of the simulation
 
     amrex::Finalize();
     return 0;

@@ -94,6 +94,6 @@ c_GeometryProperties::InitializeBoxArrayAndDistributionMap()
 
     dx = geom.CellSizeArray(); // obtain cell size array dx from the geom object
 
-    dm(ba);
+    dm.define(ba);
 
 }

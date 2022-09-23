@@ -18,17 +18,27 @@ class
 c_MaterialProperties
 {
 public: 
+
     c_MaterialProperties();
+    ~c_MaterialProperties();
+
     void ReadData();
     void InitData();
-    amrex::MultiFab& get_epsilon_mf() {return (*m_p_epsilon_mf);}
+
+    amrex::MultiFab& get_epsilon_mf  () {return (*m_p_epsilon_mf);}
+    amrex::MultiFab* get_p_epsilon_mf () {return m_p_epsilon_mf.get();}
+
 
 private:
+    const int Ncomp1=1;
+    const int Nghost1=1;
+    const int Nghost0=0;
+    const int level0=0;
     void ReadPermittivity();
     void InitializePermittivity();
-//    void InitializeMacroMultiFabUsingParser (amrex::MultiFab *macro_mf,
-//                                             amrex::ParserExecutor<3> const& macro_parser,
-//                                             const int lev);
+    void InitializeMacroMultiFabUsingParser (amrex::MultiFab *macro_mf,
+                                             amrex::ParserExecutor<3> const& macro_parser,
+                                             const int lev);
 
     std::string m_epsilon_s = "constant";
 //    amrex::Real m_epsilon = PhysConst::ep0;

@@ -7,4 +7,3 @@ domain.prob_lo = -1.0 -1.0 -1.0
 domain.prob_hi = 1.0 1.0 1.0
 
 ###### MATERIAL PROPERTIES ######
-material.epsilon = 8.85418782e-12 
