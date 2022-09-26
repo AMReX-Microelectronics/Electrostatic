@@ -2,7 +2,9 @@
 #define CODE_H_
 
 #include "Input/GeometryProperties_fwd.H"
-#include "Input/MaterialProperties_fwd.H"
+#include "Input/MacroscopicProperties_fwd.H"
+#include "Solver/Electrostatics/MLMG_fwd.H"
+#include "PostProcessor/PostProcessor_fwd.H"
 #include "Utils/WarnManager_fwd.H"
 
 
@@ -37,7 +39,7 @@ enum class WarnPriority
     /** Low priority warning:
      * essentially an informative message
      */
-    low,
+    low, 
     /** Medium priority warning:
      * a bug or a performance issue may affect the simulation
      */
@@ -54,18 +56,21 @@ class c_Code
 
 public:
 
+    c_Code (); //constructor
+    ~c_Code (); //destructor
+
+
+    /********************* FUNCTIONS/PARAMETERS TAKEN FROM WARPX ****************************/
+
     static c_Code& GetInstance ();
     static void ResetInstance ();
-
-    c_Code ();
-    ~c_Code ();
-
 
     /**
      * \brief This function is borrowed from WarpX. It records a warning message.
      * RecordWarning is thread safe: it can be used within OpenMP parallel loops.
      *
-     * @param[in] topic a string to identify the topic of the warning (e.g., "parallelization", "pbc", "particles"...)
+     * @param[in] topic a string to identify the topic of the warning 
+     * (e.g., "parallelization", "pbc", "particles"...)
      * @param[in] text the text of the warning message
      * @param[in] priority priority of the warning message ("medium" by default)
      */
@@ -91,25 +96,32 @@ public:
     void PrintGlobalWarnings(const std::string& when);
 
 
+    std::unique_ptr<Utils::WarnManager> m_p_warn_manager; //Warning manager: used to record and print error msgs.
+    bool m_always_warn_immediately = false; //flag to emit control emitting warning as soon as it is recorded
+
+    /****************************************************************************************/ 
+
+
     void ReadData ();
     void InitData ();
+    void Solve();
+    void PostProcess();
 
     static bool do_device_synchronize;
 
     c_GeometryProperties& get_GeometryProperties () { return *m_pGeometryProperties;}
-    c_MaterialProperties& get_MaterialProperties () { return *m_pMaterialProperties;}
+    c_MacroscopicProperties& get_MacroscopicProperties () { return *m_pMacroscopicProperties;}
+    c_MLMGSolver& get_MLMGSolver () { return *m_pMLMGSolver;}
+    c_PostProcessor& get_PostProcessor () { return *m_pPostProcessor;}
 
-
-    // Warning manager: it allows recording and printing error messages
-    std::unique_ptr<Utils::WarnManager> m_p_warn_manager;
-    // Flag to control if WarpX has to emit a warning message as soon as a warning is recorded
-    bool m_always_warn_immediately = false;
 
 private:
     static c_Code* m_instance;
 
     std::unique_ptr<c_GeometryProperties> m_pGeometryProperties;
-    std::unique_ptr<c_MaterialProperties> m_pMaterialProperties;
+    std::unique_ptr<c_MacroscopicProperties> m_pMacroscopicProperties;
+    std::unique_ptr<c_MLMGSolver> m_pMLMGSolver;
+    std::unique_ptr<c_PostProcessor> m_pPostProcessor;
 
 };
 #endif

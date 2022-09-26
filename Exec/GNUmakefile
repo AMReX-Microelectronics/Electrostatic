@@ -6,7 +6,7 @@ USE_OMP      = FALSE
 USE_CUDA     = FALSE
 COMP         = gnu
 DIM          = 3
-CXXSTD        = c++17
+CXXSTD       = c++17
 
 
 CODE_HOME := ..

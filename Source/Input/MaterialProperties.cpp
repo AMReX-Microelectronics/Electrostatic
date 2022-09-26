@@ -1,4 +1,4 @@
-#include "MaterialProperties.H"
+#include "MacroscopicProperties.H"
 
 #include "../Utils/WarpXUtil.H"
 #include "Code.H"
@@ -9,34 +9,34 @@
 
 using namespace amrex;
 
-c_MaterialProperties::c_MaterialProperties ()
+c_MacroscopicProperties::c_MacroscopicProperties ()
 {
     ReadData();
 } 
 
 
-c_MaterialProperties::~c_MaterialProperties ()
+c_MacroscopicProperties::~c_MacroscopicProperties ()
 {
     m_p_epsilon_mf.release();
 } 
 
 
 void 
-c_MaterialProperties::ReadData()
+c_MacroscopicProperties::ReadData()
 {    
      ReadPermittivity();
 }
 
 
 void 
-c_MaterialProperties::InitData()
+c_MacroscopicProperties::InitData()
 {
     InitializePermittivity();
 }
 
 
 void 
-c_MaterialProperties::ReadPermittivity()
+c_MacroscopicProperties::ReadPermittivity()
 {
 
     ParmParse pp_material("material");
@@ -52,11 +52,10 @@ c_MaterialProperties::ReadPermittivity()
     }
     if (!epsilon_specified) {
         std::stringstream warnMsg;
-        Print() << "Oops " << m_epsilon << "is used\n";
-        warnMsg << "Material permittivity is not specified. Using default vacuum value of " 
+        warnMsg << "Permittivity (epsilon) is not specified. Using default vacuum value of " 
                 <<  m_epsilon 
                 << " in the simulation.";
-        c_Code::GetInstance().RecordWarning("Material properties", warnMsg.str());
+        c_Code::GetInstance().RecordWarning("Macroscopic properties", warnMsg.str());
     }
 
     /** initialization of permittivity with a parser */
@@ -70,13 +69,13 @@ c_MaterialProperties::ReadPermittivity()
 
 
 void 
-c_MaterialProperties::InitializePermittivity()
+c_MacroscopicProperties::InitializePermittivity()
 {
 
-    auto& pCode = c_Code::GetInstance();
-    auto& pGeom = pCode.get_GeometryProperties();
-    auto ba = pGeom.ba;
-    auto dm = pGeom.dm;
+    auto& rCode = c_Code::GetInstance();
+    auto& rGprop = rCode.get_GeometryProperties();
+    auto& ba = rGprop.ba;
+    auto& dm = rGprop.dm;
 
     m_p_epsilon_mf = std::make_unique<amrex::MultiFab>(ba, dm, Ncomp1, Nghost1); //cell-centered multifab
 
@@ -86,47 +85,47 @@ c_MaterialProperties::InitializePermittivity()
 
     } else if (m_epsilon_s == "parse_epsilon_function") {
 
-        InitializeMacroMultiFabUsingParser(m_p_epsilon_mf.get(), m_p_epsilon_parser->compile<3>(), level0);
+        InitializeMacroMultiFabUsingParser(m_p_epsilon_mf.get(), m_p_epsilon_parser->compile<3>());
 
     }
-    m_p_epsilon_parser.release();
 
 }
 
 
 void 
-c_MaterialProperties::InitializeMacroMultiFabUsingParser (
+c_MacroscopicProperties::InitializeMacroMultiFabUsingParser (
                        amrex::MultiFab *macro_mf,
-                       amrex::ParserExecutor<3> const& macro_parser,
-                       const int lev)
+                       amrex::ParserExecutor<3> const& macro_parser)
 {
-//    WarpX& warpx = WarpX::GetInstance();
-//    const amrex::GpuArray<amrex::Real, AMREX_SPACEDIM> dx_lev = warpx.Geom(lev).CellSizeArray();
-//    const amrex::RealBox& real_box = warpx.Geom(lev).ProbDomain();
-//    amrex::IntVect iv = macro_mf->ixType().toIntVect();
-//    for ( amrex::MFIter mfi(*macro_mf, TilingIfNotGPU()); mfi.isValid(); ++mfi ) {
-//        // Initialize ghost cells in addition to valid cells
-//
-//        const amrex::Box& tb = mfi.tilebox( iv, macro_mf->nGrowVect());
-//        amrex::Array4<amrex::Real> const& macro_fab =  macro_mf->array(mfi);
-//        amrex::ParallelFor (tb,
-//            [=] AMREX_GPU_DEVICE (int i, int j, int k) {
-//                // Shift x, y, z position based on index type
-//                amrex::Real fac_x = (1._rt - iv[0]) * dx_lev[0] * 0.5_rt;
-//                amrex::Real x = i * dx_lev[0] + real_box.lo(0) + fac_x;
-//#if defined(WARPX_DIM_XZ) || defined(WARPX_DIM_RZ)
-//                amrex::Real y = 0._rt;
-//                amrex::Real fac_z = (1._rt - iv[1]) * dx_lev[1] * 0.5_rt;
-//                amrex::Real z = j * dx_lev[1] + real_box.lo(1) + fac_z;
-//#else
-//                amrex::Real fac_y = (1._rt - iv[1]) * dx_lev[1] * 0.5_rt;
-//                amrex::Real y = j * dx_lev[1] + real_box.lo(1) + fac_y;
-//                amrex::Real fac_z = (1._rt - iv[2]) * dx_lev[2] * 0.5_rt;
-//                amrex::Real z = k * dx_lev[2] + real_box.lo(2) + fac_z;
-//#endif
-//                // initialize the macroparameter
-//                macro_fab(i,j,k) = macro_parser(x,y,z);
-//        });
-//
-//    }
+
+    auto& rCode = c_Code::GetInstance();
+    auto& rGprop = rCode.get_GeometryProperties();
+    auto dx = rGprop.geom.CellSizeArray();
+    auto& real_box = rGprop.geom.ProbDomain();
+
+    auto iv = macro_mf->ixType().toIntVect();
+
+    for ( amrex::MFIter mfi(*macro_mf, TilingIfNotGPU()); mfi.isValid(); ++mfi ) {
+
+        const auto& tb = mfi.tilebox( iv, macro_mf->nGrowVect() ); /** initialize ghost cells in addition to valid cells.
+                                                                       auto = amrex::Box
+                                                                    */
+        auto const& mf_array =  macro_mf->array(mfi); //auto = amrex::Array4<amrex::Real>
+
+        amrex::ParallelFor (tb,
+            [=] AMREX_GPU_DEVICE (int i, int j, int k) {
+
+                amrex::Real fac_x = (1._rt - iv[0]) * dx[0] * 0.5_rt;
+                amrex::Real x = i * dx[0] + real_box.lo(0) + fac_x;
+
+                amrex::Real fac_y = (1._rt - iv[1]) * dx[1] * 0.5_rt;
+                amrex::Real y = j * dx[1] + real_box.lo(1) + fac_y;
+
+                amrex::Real fac_z = (1._rt - iv[2]) * dx[2] * 0.5_rt;
+                amrex::Real z = k * dx[2] + real_box.lo(2) + fac_z;
+
+                mf_array(i,j,k) = macro_parser(x,y,z);
+        });
+    }
+
 }

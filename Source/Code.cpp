@@ -5,8 +5,10 @@
 #include "Utils/WarpXUtil.H"
 #include "Utils/WarpXProfilerWrapper.H"
 
-#include "Input/MaterialProperties.H"
 #include "Input/GeometryProperties.H"
+#include "Input/MacroscopicProperties.H"
+#include "Solver/Electrostatics/MLMG.H"
+#include "PostProcessor/PostProcessor.H"
 
 
 
@@ -50,7 +52,7 @@ c_Code::~c_Code ()
 {
 
      m_pGeometryProperties.reset(); 
-     m_pMaterialProperties.reset();
+     m_pMacroscopicProperties.reset();
 
 }
 
@@ -88,18 +90,22 @@ c_Code::RecordWarning(
 void
 c_Code::PrintLocalWarnings(const std::string& when)
 {
+
     WARPX_PROFILE("WarpX::PrintLocalWarnings");
     const std::string warn_string = m_p_warn_manager->print_local_warnings(when);
     amrex::AllPrint() << warn_string;
+
 }
 
 
 void
 c_Code::PrintGlobalWarnings(const std::string& when)
 {
+
     WARPX_PROFILE("WarpX::PrintGlobalWarnings");
     const std::string warn_string = m_p_warn_manager->print_global_warnings(when);
     amrex::Print() << warn_string;
+
 }
 
 
@@ -108,7 +114,9 @@ c_Code::ReadData ()
 {
 
      m_pGeometryProperties = std::make_unique<c_GeometryProperties>();
-     m_pMaterialProperties = std::make_unique<c_MaterialProperties>();
+     m_pMacroscopicProperties = std::make_unique<c_MacroscopicProperties>();
+     m_pMLMGSolver = std::make_unique<c_MLMGSolver>();
+     m_pPostProcessor = std::make_unique<c_PostProcessor>();
 
 }
 
@@ -118,7 +126,31 @@ c_Code::InitData ()
 {
  
     m_pGeometryProperties->InitData();
-    m_pMaterialProperties->InitData();
+
+    m_pMacroscopicProperties->InitData();
+
+    m_pMLMGSolver->Setup_MLABecLaplacian_ForPoissonEqn();
+
+    m_pPostProcessor->InitData();
+
 
 }
+
+
+void 
+c_Code::Solve()
+{
+    m_pMLMGSolver->Solve_PoissonEqn();
+}
+
+
+void 
+c_Code::PostProcess()
+{
+    
+    m_pPostProcessor->Compute("vecE"); 
+    m_pPostProcessor->Compute("vecFlux"); 
+
+}
+
 

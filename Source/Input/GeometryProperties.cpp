@@ -86,13 +86,11 @@ c_GeometryProperties::InitializeBoxArrayAndDistributionMap()
     ba.maxSize(max_grid_size); // break up ba into chunks no larger than 'max_grid_size' along a direction
 
     amrex::RealBox real_box({AMREX_D_DECL( prob_lo[0], prob_lo[1], prob_lo[2])},
-                     {AMREX_D_DECL( prob_hi[0], prob_hi[1], prob_hi[2])});  //physical domain
+                    {AMREX_D_DECL( prob_hi[0], prob_hi[1], prob_hi[2])});  //physical domain
 
     amrex::Array<int,AMREX_SPACEDIM> is_periodic{AMREX_D_DECL(0,0,0)}; // 0: not periodic, 1: periodic
 
     geom.define(domain, real_box, CoordSys::cartesian, is_periodic); //define the geom object
-
-    dx = geom.CellSizeArray(); // obtain cell size array dx from the geom object
 
     dm.define(ba);
 

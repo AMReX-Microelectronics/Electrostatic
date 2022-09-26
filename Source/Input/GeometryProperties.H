@@ -30,7 +30,7 @@ public:
     amrex::BoxArray ba; // a list of boxes that cover the domain
     amrex::Geometry geom;
     amrex::DistributionMapping dm;
-    amrex::GpuArray<amrex::Real,AMREX_SPACEDIM> dx;
+//    amrex::GpuArray<amrex::Real,AMREX_SPACEDIM> dx;
 
     void ReadData();
     void InitData();

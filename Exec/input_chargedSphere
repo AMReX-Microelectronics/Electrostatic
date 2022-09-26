@@ -7,3 +7,9 @@ domain.prob_lo = -1.0 -1.0 -1.0
 domain.prob_hi = 1.0 1.0 1.0
 
 ###### MATERIAL PROPERTIES ######
+
+###### MLMG SOLVER PROPERTIES ######
+mlmg.ascalar=0
+mlmg.bscalar=1
+mlmg.set_verbose=0
+###### POST PROCESSING ######
