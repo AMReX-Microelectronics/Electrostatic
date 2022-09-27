@@ -26,6 +26,21 @@ c_MacroscopicProperties::~c_MacroscopicProperties ()
 } 
 
 
+void 
+c_MacroscopicProperties::ReadData()
+{ 
+
+    num_params = ReadParameterMap();
+    
+    DefineMacroVariableVectorSizes();
+
+    ReadMacroparam("epsilon", PhysConst::ep0);
+    ReadMacroparam("charge_density", 0.0);
+    ReadMacroparam("phi", 0.0);
+
+}
+
+
 int 
 c_MacroscopicProperties::ReadParameterMap()
 { 
@@ -51,21 +66,6 @@ c_MacroscopicProperties::DefineMacroVariableVectorSizes()
 
 
 void 
-c_MacroscopicProperties::ReadData()
-{ 
-
-    num_params = ReadParameterMap();
-    
-    DefineMacroVariableVectorSizes();
-
-    ReadMacroparam("epsilon", PhysConst::ep0);
-    ReadMacroparam("charge_density", 0.0);
-    ReadMacroparam("phi", 0.0);
-
-}
-
-
-void 
 c_MacroscopicProperties::InitData()
 {
 
@@ -83,6 +83,26 @@ c_MacroscopicProperties::InitData()
     DefineAndInitializeMacroparam("charge_density", ba, dm, geom, Ncomp1, Nghost0);
     DefineAndInitializeMacroparam("phi", ba, dm, geom, Ncomp1, Nghost1);
 
+    //auto& eps = get_mf("epsilon");
+    //const auto& eps_arr = eps[0].array();
+    //amrex::Print() << "eps_0,0,0 :  " << eps_arr(0,0,0) << "\n";
+    //amrex::Print() << "eps_15,49,49:  " << eps_arr(15,49,49) << "\n";
+    //amrex::Print() << "eps_24,49,49:  " << eps_arr(24,49,49) << "\n";
+    //amrex::Print() << "eps_25,49,49:  " << eps_arr(25,49,49) << "\n";
+    //amrex::Print() << "eps_49,49,49:  " << eps_arr(49,49,49) << "\n";
+    //amrex::Print() << "eps_74,49,49:  " << eps_arr(74,49,49) << "\n";
+    //amrex::Print() << "eps_75,49,49:  " << eps_arr(75,49,49) << "\n";
+    //amrex::Print() << "eps_85,49,49:  " << eps_arr(85,49,49) << "\n";
+    //auto& rho = get_mf("charge_density");
+    //const auto& rho_arr = rho[0].array();
+    //amrex::Print() << "rho_0,0,0 :  " << rho_arr(0,0,0) << "\n";
+    //amrex::Print() << "rho_15,49,49:  " << rho_arr(15,49,49) << "\n";
+    //amrex::Print() << "rho_24,49,49:  " << rho_arr(24,49,49) << "\n";
+    //amrex::Print() << "rho_25,49,49:  " << rho_arr(25,49,49) << "\n";
+    //amrex::Print() << "rho_49,49,49:  " << rho_arr(49,49,49) << "\n";
+    //amrex::Print() << "rho_74,49,49:  " << rho_arr(74,49,49) << "\n";
+    //amrex::Print() << "rho_75,49,49:  " << rho_arr(75,49,49) << "\n";
+    //amrex::Print() << "rho_85,49,49:  " << rho_arr(85,49,49) << "\n";
 }
 
 
@@ -136,13 +156,16 @@ c_MacroscopicProperties::DefineAndInitializeMacroparam(std::string macro_str,
 {
 
     auto macro_num = param_map[macro_str];
+    //amrex::Print()  << " Initializing macro_str: " << macro_str << " macro_num: " << macro_num << " macro_type: " << m_macro_type[macro_num] << "\n";
 
     m_p_mf[macro_num] = std::make_unique<amrex::MultiFab>(ba, dm, Ncomp, Nghost); //cell-centered multifab
 
     if (m_macro_type[macro_num] == "constant") {
+    //    amrex::Print()  << macro_num << " parse function is constant and set to : " << m_macro_value[macro_num] << "\n";
         m_p_mf[macro_num] -> setVal(m_macro_value[macro_num]);
 
-    } else if (m_macro_type[macro_num] == "parse_epsilon_function") {
+    } else if (m_macro_type[macro_num] == "parse_" + macro_str + "_function") {
+    //    amrex::Print() << macro_num << " parse function is used with name: " << m_macro_type[macro_num] << "\n";
 
         InitializeMacroMultiFabUsingParser(m_p_mf[macro_num].get(), m_p_macro_parser[macro_num]->compile<3>(), geom);
 
@@ -159,9 +182,13 @@ c_MacroscopicProperties::InitializeMacroMultiFabUsingParser (
 {
 
     auto dx = geom.CellSizeArray();
+    amrex::Print() << "dx: " << dx[0] << " " << dx[1] << " " << dx[2] << "\n";
     auto& real_box = geom.ProbDomain();
 
     auto iv = macro_mf->ixType().toIntVect();
+
+    amrex::Print() << "iv: " << iv[0] << " " << iv[1] << " " << iv[2] << "\n";
+    amrex::Print() << "real_box_lo: " << real_box.lo(0) << " " << real_box.lo(1) << " " << real_box.lo(2) << "\n";
 
     for ( amrex::MFIter mfi(*macro_mf, TilingIfNotGPU()); mfi.isValid(); ++mfi ) {
 

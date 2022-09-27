@@ -84,8 +84,10 @@ c_Output::WriteSingleLevelPlotFile(int step, amrex::Real time)
     int Ncomp1=1;
     int Nghost0=0;
 
+    int c=0;
     for (auto& it : map_param_all) {
-        amrex::MultiFab::Copy(*m_p_mf_all, *m_p_mf[it.second], 0, 0, Ncomp1, Nghost0);
+        amrex::MultiFab::Copy(*m_p_mf_all, *m_p_mf[it.second], 0, c, Ncomp1, Nghost0);
+        ++c;
     }
     amrex::WriteSingleLevelPlotfile(plot_file_name, *m_p_mf_all, m_p_name_str, geom, time, 0);
 
@@ -118,16 +120,19 @@ c_Output::AssimilateDataPointers()
             {
                 case 0:
                 {
+                   amrex::Print() << "counter, c: " << c << "\n";
                    m_p_mf[c] = rMprop.get_p_mf(str);
                    break;
                 }
                 case 1:
                 {
+                    amrex::Print() << "counter, c: " << c << "\n";
                     m_p_mf[c] = rPost.get_p_mf(str);
                     break;
                 }
                 default :
                 {
+                    amrex::Print() << "counter, c: " << c << "\n";
                     amrex::Print() << "macro " << str << " is not defined. \n";
                     break;
                 }
@@ -141,18 +146,22 @@ c_Output::AssimilateDataPointers()
             {
                 case s_Subscript::x :
                 {
+                    amrex::Print() << "counter, c: " << c << "\n";
                     amrex::Print() << "Inside c_Subscript::x \n";
                     std::string str_without_subscript = str.substr(0,str.length()-2);
                     std::string vector_str = "vec" + str_without_subscript;
+                    amrex::Print() << "Getting x component of vector: "<< vector_str << "\n";
 
                     m_p_mf[c] = rPost.get_p_array_mf_component(vector_str, 0);
                     break;
                 }
                 case s_Subscript::y :
                 {
+                    amrex::Print() << "counter, c: " << c << "\n";
                     amrex::Print() << "Inside c_Subscript::y \n";
                     std::string str_without_subscript = str.substr(0,str.length()-2);
                     std::string vector_str = "vec" + str_without_subscript;
+                    amrex::Print() << "Getting y component of vector: "<< vector_str << "\n";
 
                     m_p_mf[c] = rPost.get_p_array_mf_component(vector_str, 1);
                     break;
@@ -160,9 +169,11 @@ c_Output::AssimilateDataPointers()
                 }
                 case s_Subscript::z :
                 {
+                    amrex::Print() << "counter, c: " << c << "\n";
                     amrex::Print() << "Inside c_Subscript::z \n";
                     std::string str_without_subscript = str.substr(0,str.length()-2);
                     std::string vector_str = "vec" + str_without_subscript;
+                    amrex::Print() << "Getting z component of vector: "<< vector_str << "\n";
 
                     m_p_mf[c] = rPost.get_p_array_mf_component(vector_str, 2);
                     break;

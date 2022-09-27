@@ -46,7 +46,7 @@ c_MLMGSolver::ReadData()
         max_order = 2;
         std::stringstream warnMsg;
         warnMsg << "MLMG parameter 'max_order'" << " is not specified in the input file. The default value of "
-                <<  set_verbose
+                <<  max_order
                 << " is used.";
         c_Code::GetInstance().RecordWarning("MLMG properties", warnMsg.str());
     }
