@@ -33,6 +33,8 @@ domain.prob_hi = Lx/2. Ly/2. Lz/2.
 
 
 ###### MACROSCOPIC PROPERTIES ######
+macroscopic.fields_to_define = epsilon charge_density phi
+
 macroscopic.epsilon_function(x,y,z) = "epsilon_0 + (epsilon_r_sph-1)*epsilon_0 * ( sqrt(x**2 + y**2 + z**2) <= R_sph )"
 macroscopic.charge_density_function(x,y,z) = "charge_density_surr + charge_density_sph * ( sqrt(x**2 + y**2 + z**2) <= R_sph )"
 macroscopic.phi = 0.0
@@ -44,3 +46,7 @@ mlmg.set_verbose=0
 
 
 ###### POST PROCESSING ######
+post_process.fields_to_process = vecE vecFlux E_x
+
+###### OUTPUT ######
+plot.fields_to_plot = E_x E_y E_z vecE vecFlux epsilon charge_density phi epsilon

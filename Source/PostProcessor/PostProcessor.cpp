@@ -3,6 +3,7 @@
 #include "Code.H"
 #include "Solver/Electrostatics/MLMG.H"
 
+#include <AMReX_ParmParse.H>
 
 
 using namespace amrex;
@@ -39,8 +40,52 @@ int
 c_PostProcessor::ReadData()
 { 
 
-   map_param_all["vecE"] = 0;
-   map_param_all["vecFlux"] = 1;
+    amrex::Vector< std::string > m_fields_to_process;
+
+    amrex::ParmParse pp_postprocess("post_process");
+
+    bool varnames_specified = pp_postprocess.queryarr("fields_to_process", m_fields_to_process);
+
+    std::map<std::string,int>::iterator it_map_param_all;
+
+    int c=0;
+    for (auto it: m_fields_to_process)
+    {
+    //    amrex::Print() << "reading field to process: " << it  << "\n";
+
+        std::string second_last_char = it.substr(it.length()-2, 1);
+
+        if(second_last_char == "_")
+        {
+            std::string str_without_subscript = it.substr(0,it.length()-2);
+            std::string vector_str = "vec" + str_without_subscript;
+
+            it_map_param_all = map_param_all.find(vector_str);
+
+            if (it_map_param_all == map_param_all.end()) {
+                map_param_all[vector_str] = c;
+                ++c;
+            }
+        }
+        else {
+
+            it_map_param_all = map_param_all.find(it);
+
+            if (it_map_param_all == map_param_all.end()) {
+                map_param_all[it] = c;
+                ++c;
+            }
+        }
+    }
+    m_fields_to_process.clear();
+
+    //amrex::Print() <<  " map_param_all: \n";
+    //for (auto it: map_param_all) 
+    //{
+    //    amrex::Print() <<  it.first << "   " << it.second << "\n";
+    //}
+    //amrex::Print() << "total parameters to process (final): " << map_param_all.size() << "\n\n";
+
 
    return map_param_all.size();
 
@@ -89,39 +134,42 @@ c_PostProcessor::InitData()
 
 
 void 
-c_PostProcessor::Compute(std::string macro_str)
+c_PostProcessor::Compute()
 {
  
-    auto macro_num = map_param_all[macro_str];
     auto& rCode = c_Code::GetInstance();
-
     std::map<std::string,s_PostProcessMacroName::macro_name>::iterator it_Post;
 
-    it_Post = map_macro_name.find(macro_str);
-
-    if(it_Post == map_macro_name.end())
+    for(auto it: map_param_all) 
     {
-        amrex::Print() << "Computation of "<< macro_str << " is not implemented at present.\n";
-    }
-    else {
+        auto macro_str = it.first;
+        auto macro_num = it.second;
 
-        switch(map_macro_name[macro_str])
+        it_Post = map_macro_name.find(macro_str);
+
+        if(it_Post == map_macro_name.end())
         {
-            case s_PostProcessMacroName::vecE : 
+            amrex::Print() << "Computation of "<< macro_str << " is not implemented at present.\n";
+        }
+        else {
+
+            switch(map_macro_name[macro_str])
             {
-                auto val = map_param_arraymf[macro_str];    
-                auto& rMLMGsolver = rCode.get_MLMGSolver();
-                rMLMGsolver.Compute_vecE( *m_p_array_mf[val] );
-                break;
-            }
-            case s_PostProcessMacroName::vecFlux : 
-            {
-                auto val = map_param_arraymf[macro_str];    
-                auto& rMLMGsolver = rCode.get_MLMGSolver();
-                rMLMGsolver.Compute_vecFlux( *m_p_array_mf[val] );
-                break;
+                case s_PostProcessMacroName::vecE : 
+                {
+                    auto val = map_param_arraymf[macro_str];    
+                    auto& rMLMGsolver = rCode.get_MLMGSolver();
+                    rMLMGsolver.Compute_vecE( *m_p_array_mf[val] );
+                    break;
+                }
+                case s_PostProcessMacroName::vecFlux : 
+                {
+                    auto val = map_param_arraymf[macro_str];    
+                    auto& rMLMGsolver = rCode.get_MLMGSolver();
+                    rMLMGsolver.Compute_vecFlux( *m_p_array_mf[val] );
+                    break;
+                }
             }
         }
     }
- 
 }

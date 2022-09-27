@@ -173,8 +173,7 @@ void
 c_Code::PostProcess()
 {
     
-    m_pPostProcessor->Compute("vecE"); 
-    m_pPostProcessor->Compute("vecFlux"); 
+    m_pPostProcessor->Compute(); 
 
 //    auto& Ex = m_pPostProcessor->get_array_mf_component("vecE", 0);
 //    const auto& Ex_arr = Ex[0].array();

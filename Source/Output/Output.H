@@ -30,7 +30,8 @@ public:
     std::map<std::string,s_Subscript::subscript_name> map_subscript_name;
 
 private:
-  void DefineSubscriptNameMap()
+
+    void DefineSubscriptNameMap()
     {
         map_subscript_name["_x"] = s_Subscript::x;
         map_subscript_name["_y"] = s_Subscript::y;

@@ -45,11 +45,36 @@ int
 c_MacroscopicProperties::ReadParameterMap()
 { 
 
-   param_map["epsilon"] = 0;
-   param_map["charge_density"] = 1;
-   param_map["phi"] = 2;
+    amrex::Vector< std::string > m_fields_to_define;
 
-   return param_map.size();
+    amrex::ParmParse pp_macro("macroscopic");
+
+    bool varnames_specified = pp_macro.queryarr("fields_to_define", m_fields_to_define);
+
+    std::map<std::string,int>::iterator it_map_param_all;
+
+    int c=0;
+    for (auto it: m_fields_to_define)
+    {
+    //    amrex::Print() << "reading field to define " << it  << "\n";
+
+        it_map_param_all = map_param_all.find(it);
+
+        if (it_map_param_all == map_param_all.end()) {
+                map_param_all[it] = c;
+                ++c;
+        }
+    }
+    m_fields_to_define.clear();
+
+    //amrex::Print() <<  " map_param_all: \n";
+    //for (auto it: map_param_all)
+    //{
+    //    amrex::Print() <<  it.first << "   " << it.second << "\n";
+    //}
+    //amrex::Print() << "total parameters to define (final): " << map_param_all.size() << "\n\n";
+
+    return map_param_all.size();
 
 }
 
@@ -112,7 +137,7 @@ c_MacroscopicProperties::ReadMacroparam(std::string macro_str,
                                         T default_value)
 {
 
-    auto macro_num = param_map[macro_str];
+    auto macro_num = map_param_all[macro_str];
     m_macro_value[macro_num] = default_value;
 
     ParmParse pp_macroscopic("macroscopic");
@@ -155,7 +180,7 @@ c_MacroscopicProperties::DefineAndInitializeMacroparam(std::string macro_str,
                                                        int Nghost)
 {
 
-    auto macro_num = param_map[macro_str];
+    auto macro_num = map_param_all[macro_str];
     //amrex::Print()  << " Initializing macro_str: " << macro_str << " macro_num: " << macro_num << " macro_type: " << m_macro_type[macro_num] << "\n";
 
     m_p_mf[macro_num] = std::make_unique<amrex::MultiFab>(ba, dm, Ncomp, Nghost); //cell-centered multifab

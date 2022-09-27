@@ -24,7 +24,7 @@ public:
 
     int ReadData();
     void InitData();
-    void Compute(std::string macro_str);
+    void Compute();
 
     amrex::MultiFab& get_mf  (std::string macro_name) {auto m = map_param_mf[macro_name]; return (*m_p_mf[m]);}
     amrex::MultiFab* get_p_mf (std::string macro_name) {auto m = map_param_mf[macro_name]; return m_p_mf[m].get();}

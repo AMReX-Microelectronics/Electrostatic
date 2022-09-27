@@ -32,8 +32,8 @@ public:
     void ReadData();
     void InitData();
 
-    amrex::MultiFab& get_mf  (std::string macro_str) {auto macro_num = param_map[macro_str]; return (*m_p_mf[macro_num]);}
-    amrex::MultiFab* get_p_mf (std::string macro_str) {auto macro_num = param_map[macro_str]; return m_p_mf[macro_num].get();}
+    amrex::MultiFab& get_mf  (std::string macro_str) {auto macro_num = map_param_all[macro_str]; return (*m_p_mf[macro_num]);}
+    amrex::MultiFab* get_p_mf (std::string macro_str) {auto macro_num = map_param_all[macro_str]; return m_p_mf[macro_num].get();}
 
     std::map<std::string,s_MacroscopicPropertiesMacroName::macro_name> map_macro_name;
 
@@ -52,7 +52,7 @@ private:
                                              amrex::Geometry& geom);
 
     int ReadParameterMap();
-    std::map<std::string,int> param_map;
+    std::map<std::string,int> map_param_all;
     int num_params;
     void DefineMacroVariableVectorSizes();
 
