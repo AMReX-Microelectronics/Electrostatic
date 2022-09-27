@@ -146,15 +146,6 @@ c_Code::Solve()
 {
 //    auto& phi = m_pMacroscopicProperties->get_mf("phi");
 //    const auto& phi_arr = phi[0].array();
-//    amrex::Print() << "\nphi BEFORE Poisson solve: \n";
-//    amrex::Print() << "phi_0,0,0 :  "   << phi_arr(0,0,0) << "\n";
-//    amrex::Print() << "phi_15,49,49:  " << phi_arr(15,49,49) << "\n";
-//    amrex::Print() << "phi_24,49,49:  " << phi_arr(24,49,49) << "\n";
-//    amrex::Print() << "phi_25,49,49:  " << phi_arr(25,49,49) << "\n";
-//    amrex::Print() << "phi_49,49,49:  " << phi_arr(49,49,49) << "\n";
-//    amrex::Print() << "phi_74,49,49:  " << phi_arr(74,49,49) << "\n";
-//    amrex::Print() << "phi_75,49,49:  " << phi_arr(75,49,49) << "\n";
-//    amrex::Print() << "phi_85,49,49:  " << phi_arr(85,49,49) << "\n";
 
     m_pMLMGSolver->Solve_PoissonEqn();
 //    amrex::Print() << "\nphi AFTER Poisson solve: \n";

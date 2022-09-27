@@ -45,6 +45,14 @@ private:
         map_macro_name["phi"] = s_MacroscopicPropertiesMacroName::phi;
     };
 
+    void DefineDefaultValueMap()
+    {
+        map_default_value["epsilon"] = PhysConst::ep0;
+        map_default_value["charge_density"] = 0.0;
+        map_default_value["phi"] = 0.0;
+    };
+    std::map<std::string,amrex::Real> map_default_value;
+
     void ReadPermittivity();
     void InitializePermittivity();
     void InitializeMacroMultiFabUsingParser (amrex::MultiFab *mf,

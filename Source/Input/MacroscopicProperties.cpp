@@ -14,6 +14,7 @@ using namespace amrex;
 c_MacroscopicProperties::c_MacroscopicProperties ()
 {
     DefineParameterNameMap();
+    DefineDefaultValueMap();
     ReadData();
 } 
 
@@ -33,11 +34,22 @@ c_MacroscopicProperties::ReadData()
     num_params = ReadParameterMap();
     
     DefineMacroVariableVectorSizes();
+    std::map<std::string,amrex::Real>::iterator it_default;
 
-    ReadMacroparam("epsilon", PhysConst::ep0);
-    ReadMacroparam("charge_density", 0.0);
-    ReadMacroparam("phi", 0.0);
+    for (auto it: map_param_all)
+    {
+        amrex::Real default_val;
 
+        it_default = map_default_value.find(it.first);
+
+        if (it_default == map_default_value.end()) {
+            default_val = 0.0;
+        }
+        else {
+            default_val = map_default_value[it.first];
+        }
+        ReadMacroparam(it.first, default_val);
+    }
 }
 
 
