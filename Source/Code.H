@@ -5,6 +5,7 @@
 #include "Input/MacroscopicProperties_fwd.H"
 #include "Solver/Electrostatics/MLMG_fwd.H"
 #include "PostProcessor/PostProcessor_fwd.H"
+#include "Output/Output_fwd.H"
 #include "Utils/WarnManager_fwd.H"
 
 
@@ -106,6 +107,7 @@ public:
     void InitData ();
     void Solve();
     void PostProcess();
+    void Output();
 
     static bool do_device_synchronize;
 
@@ -113,6 +115,7 @@ public:
     c_MacroscopicProperties& get_MacroscopicProperties () { return *m_pMacroscopicProperties;}
     c_MLMGSolver& get_MLMGSolver () { return *m_pMLMGSolver;}
     c_PostProcessor& get_PostProcessor () { return *m_pPostProcessor;}
+    c_Output& get_Output () { return *m_pOutput;}
 
 
 private:
@@ -122,6 +125,7 @@ private:
     std::unique_ptr<c_MacroscopicProperties> m_pMacroscopicProperties;
     std::unique_ptr<c_MLMGSolver> m_pMLMGSolver;
     std::unique_ptr<c_PostProcessor> m_pPostProcessor;
+    std::unique_ptr<c_Output> m_pOutput;
 
 };
 #endif

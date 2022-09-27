@@ -9,6 +9,7 @@
 #include "Input/MacroscopicProperties.H"
 #include "Solver/Electrostatics/MLMG.H"
 #include "PostProcessor/PostProcessor.H"
+#include "Output/Output.H"
 
 
 
@@ -50,10 +51,7 @@ c_Code::c_Code ()
 
 c_Code::~c_Code ()
 {
-
-     m_pGeometryProperties.reset(); 
-     m_pMacroscopicProperties.reset();
-
+//
 }
 
 
@@ -114,9 +112,14 @@ c_Code::ReadData ()
 {
 
      m_pGeometryProperties = std::make_unique<c_GeometryProperties>();
+     
      m_pMacroscopicProperties = std::make_unique<c_MacroscopicProperties>();
+     
      m_pMLMGSolver = std::make_unique<c_MLMGSolver>();
+     
      m_pPostProcessor = std::make_unique<c_PostProcessor>();
+
+     m_pOutput = std::make_unique<c_Output>();
 
 }
 
@@ -133,6 +136,7 @@ c_Code::InitData ()
 
     m_pPostProcessor->InitData();
 
+    m_pOutput->InitData();
 
 }
 
@@ -154,3 +158,12 @@ c_Code::PostProcess()
 }
 
 
+void 
+c_Code::Output()
+{
+
+    int step=0;
+    amrex::Real time=0.0;
+    m_pOutput->WriteSingleLevelPlotFile(step, time);
+
+}
