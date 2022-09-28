@@ -52,6 +52,7 @@ private:
         map_default_value["phi"] = 0.0;
     };
     std::map<std::string,amrex::Real> map_default_value;
+    std::map<std::string,int> map_num_ghostcell;
 
     void ReadPermittivity();
     void InitializePermittivity();
@@ -59,7 +60,8 @@ private:
                                              amrex::ParserExecutor<3> const& parser,
                                              amrex::Geometry& geom);
 
-    int ReadParameterMap();
+    int ReadParameterMapAndNumberOfGhostCells();
+
     std::map<std::string,int> map_param_all;
     int num_params;
     void DefineMacroVariableVectorSizes();

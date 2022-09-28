@@ -9,6 +9,8 @@
 #include <AMReX_ParmParse.H>
 #include <AMReX_Parser.H>
 
+#include <ctype.h>
+
 using namespace amrex;
 
 c_MacroscopicProperties::c_MacroscopicProperties ()
@@ -31,7 +33,7 @@ void
 c_MacroscopicProperties::ReadData()
 { 
 
-    num_params = ReadParameterMap();
+    num_params = ReadParameterMapAndNumberOfGhostCells();
     
     DefineMacroVariableVectorSizes();
     std::map<std::string,amrex::Real>::iterator it_default;
@@ -54,21 +56,22 @@ c_MacroscopicProperties::ReadData()
 
 
 int 
-c_MacroscopicProperties::ReadParameterMap()
+c_MacroscopicProperties::ReadParameterMapAndNumberOfGhostCells()
 { 
 
-    amrex::Vector< std::string > m_fields_to_define;
+    amrex::Vector< std::string > fields_to_define;
+    amrex::Vector< std::string > ghostcells_for_fields;
 
     amrex::ParmParse pp_macro("macroscopic");
 
-    bool varnames_specified = pp_macro.queryarr("fields_to_define", m_fields_to_define);
+    bool varnames_specified = pp_macro.queryarr("fields_to_define", fields_to_define);
+    bool ghostcells_specified = pp_macro.queryarr("ghostcells_for_fields", ghostcells_for_fields);
 
     std::map<std::string,int>::iterator it_map_param_all;
 
     int c=0;
-    for (auto it: m_fields_to_define)
+    for (auto it: fields_to_define)
     {
-    //    amrex::Print() << "reading field to define " << it  << "\n";
 
         it_map_param_all = map_param_all.find(it);
 
@@ -77,14 +80,58 @@ c_MacroscopicProperties::ReadParameterMap()
                 ++c;
         }
     }
-    m_fields_to_define.clear();
-
-    //amrex::Print() <<  " map_param_all: \n";
-    //for (auto it: map_param_all)
-    //{
-    //    amrex::Print() <<  it.first << "   " << it.second << "\n";
-    //}
+    fields_to_define.clear();
+    amrex::Print() <<  " map_param_all: \n";
+    for (auto it: map_param_all)
+    {
+        amrex::Print() <<  it.first << "   " << it.second << "\n";
+    }
     //amrex::Print() << "total parameters to define (final): " << map_param_all.size() << "\n\n";
+
+    for (auto it: map_param_all)
+    {
+        std::string str = it.first;
+        bool comparison_true=false;
+        std::string str_with_ghost;
+        for (auto str_ghost: ghostcells_for_fields) {
+             int compare = strncmp(str.c_str(), str_ghost.c_str(), str.length());
+             if(compare == 0){
+               comparison_true = true; 
+               str_with_ghost = str_ghost;
+               break;
+             }   
+        }
+        if (comparison_true) {
+            std::string num_ghost_str = str_with_ghost.substr(str.length()+1);
+
+            if(std::isdigit(*num_ghost_str.c_str())) {
+                amrex::Real num_ghost = std::stod(num_ghost_str);
+                map_num_ghostcell[str] = num_ghost;
+            } 
+            else {
+                map_num_ghostcell[str] = 0;
+                std::stringstream warnMsg;
+                warnMsg << "Macroscopic specification: '" << str_with_ghost  << "' does not contain number of ghost cells.\n"
+                << "Default ghost cell value of 0 is chosen\n";
+                c_Code::GetInstance().RecordWarning("Macroscopic properties", warnMsg.str());
+            }
+        }
+        else {
+            map_num_ghostcell[str] = 0;
+            std::stringstream warnMsg;
+            warnMsg << "For macroscopic property: '" << str  << "' ghost cell value is not specified.\n"
+            << "Default ghost cell value of 0 is chosen\n";
+            c_Code::GetInstance().RecordWarning("Macroscopic properties", warnMsg.str());
+        }
+        
+    }
+    ghostcells_for_fields.clear();
+
+    amrex::Print() <<  " map_num_ghost_cell: \n";
+    for (auto it: map_num_ghostcell)
+    {
+        amrex::Print() <<  it.first << "   " << it.second << "\n";
+    }
 
     return map_param_all.size();
 
@@ -116,9 +163,11 @@ c_MacroscopicProperties::InitData()
     auto& dm = rGprop.dm;
     auto& geom = rGprop.geom;
 
-    DefineAndInitializeMacroparam("epsilon", ba, dm, geom, Ncomp1, Nghost1);
-    DefineAndInitializeMacroparam("charge_density", ba, dm, geom, Ncomp1, Nghost0);
-    DefineAndInitializeMacroparam("phi", ba, dm, geom, Ncomp1, Nghost1);
+    for (auto it: map_param_all)
+    {
+        auto str = it.first;
+        DefineAndInitializeMacroparam(str, ba, dm, geom, Ncomp1, map_num_ghostcell[str]);
+    }
 
     //auto& eps = get_mf("epsilon");
     //const auto& eps_arr = eps[0].array();
