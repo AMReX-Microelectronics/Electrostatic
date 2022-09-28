@@ -1,0 +1,6 @@
+CEXE_sources += MLMG.cpp
+CEXE_headers += MLMG.H
+CEXE_headers += MLMG_fwd.H
+
+VPATH_LOCATIONS += $(CODE_HOME)/Source/Solver/Electrostatics
+INCLUDE_LOCATIONS += $(CODE_HOME)/Source/Solver/Electrostatics

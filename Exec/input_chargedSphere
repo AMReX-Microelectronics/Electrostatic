@@ -1,18 +1,53 @@
-###### BASIC SETUP PARAMETERS ######
-n_cell = 100 100 100
-max_grid_size = 100
-prob_lo = -1.0 -1.0 -1.0
-prob_hi = 1.0 1.0 1.0
-nsteps = 1
-plot_int = 1
-plot_elems = 9
 
-###### MATERIAL PROPERTIES ######
-eps_0 = 8.85418782e-12 
-eps_r = 13
+##### USER DEFINED CONSTANTS #####
+### GEOMETRY PROPERTIES 
+my_constants.Lx = 2
+my_constants.Ly = 2
+my_constants.Lz = 2
 
-###### MLMG SOLVER PARAMETERS ######
-mlmg_ascalar=0.0
-mlmg_bscalar=1.0
-mlmg_set_verbose=1
-mlmg_max_order=2
+### Physical Constants 
+my_constants.pi = 3.14159265358979
+my_constants.epsilon_0 = 8.8541878128e-12
+my_constants.q = 1.602e-19
+
+### MACROSCOPIC PROPERTIES
+my_constants.R_sph = min(min(Lx,Ly),Lz)/8.
+my_constants.V_sph = (4./3)*pi*R_sph**3
+my_constants.Q_sph = 100*q
+
+my_constants.epsilon_r_sph = 10
+my_constants.charge_density_sph = Q_sph / V_sph
+my_constants.charge_density_surr = 0.0
+
+
+#####################################
+
+
+###### GEOMETRY PROPERTIES ######
+domain.n_cell = 100 100 100
+domain.max_grid_size = 100 100 100
+domain.blocking_factor = 100 100 100
+
+domain.prob_lo = -Lx/2. -Ly/2. -Lz/2.
+domain.prob_hi = Lx/2. Ly/2. Lz/2.
+
+
+###### MACROSCOPIC PROPERTIES ######
+macroscopic.fields_to_define = epsilon charge_density phi
+macroscopic.ghostcells_for_fields = epsilon.1 phi.1
+
+macroscopic.epsilon_function(x,y,z) = "epsilon_0 + (epsilon_r_sph-1)*epsilon_0 * ( sqrt(x**2 + y**2 + z**2) <= R_sph )"
+macroscopic.charge_density_function(x,y,z) = "charge_density_surr + charge_density_sph * ( sqrt(x**2 + y**2 + z**2) <= R_sph )"
+macroscopic.phi = 0.0
+
+###### MLMG SOLVER PROPERTIES ######
+mlmg.ascalar=0
+mlmg.bscalar=1
+mlmg.set_verbose=0
+
+
+###### POST PROCESSING ######
+post_process.fields_to_process = vecE vecFlux 
+
+###### OUTPUT ######
+plot.fields_to_plot = E_x E_y E_z vecFlux epsilon charge_density phi epsilon

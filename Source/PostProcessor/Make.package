@@ -1,0 +1,6 @@
+CEXE_sources += PostProcessor.cpp
+CEXE_headers += PostProcessor.H
+CEXE_headers += PostProcessor_fwd.H
+
+VPATH_LOCATIONS += $(CODE_HOME)/Source/PostProcessor
+INCLUDE_LOCATIONS += $(CODE_HOME)/Source/PostProcessor

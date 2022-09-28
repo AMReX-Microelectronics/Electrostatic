@@ -1,0 +1,4 @@
+VPATH_LOCATIONS += $(CODE_HOME)/Source/Solver
+INCLUDE_LOCATIONS += $(CODE_HOME)/Source/Solver
+
+include $(CODE_HOME)/Source/Solver/Electrostatics/Make.package

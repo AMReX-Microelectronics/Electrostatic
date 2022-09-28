@@ -1,0 +1,10 @@
+CEXE_sources += GeometryProperties.cpp
+CEXE_headers += GeometryProperties.H
+CEXE_headers += GeometryProperties_fwd.H
+
+CEXE_sources += MacroscopicProperties.cpp
+CEXE_headers += MacroscopicProperties.H
+CEXE_headers += MacroscopicProperties_fwd.H
+
+VPATH_LOCATIONS += $(CODE_HOME)/Source/Input
+INCLUDE_LOCATIONS += $(CODE_HOME)/Source/Input
