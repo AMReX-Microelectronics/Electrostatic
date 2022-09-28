@@ -44,7 +44,8 @@ macroscopic.fields_to_define = epsilon charge_density phi
 #
 # -At present, there is no option for specifying vector fields of type e.g. Array<amrex::Multifab, AMREX_SPACEDIM>.
 
-# -`ghostcells_for_fields' defines the ghost cell for the multifabs defined in fields_to_define. Default is 0.
+# -`ghostcells_for_fields' defines the ghost cell for the multifabs defined in fields_to_define, as <FieldName>.<NumberOfGhostCells>. 
+#   The default is 0.
 #
 macroscopic.ghostcells_for_fields = epsilon.1 phi.1
 
