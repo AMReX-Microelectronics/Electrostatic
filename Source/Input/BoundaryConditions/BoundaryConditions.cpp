@@ -40,8 +40,11 @@ c_BoundaryConditions::ReadData()
 
     DefineMacroVariableVectorSizes();
 
-//    ReadBoundaryConditionsParser();
-    
+    for (auto it: map_function_parser_name)
+    {
+        ReadBoundaryConditionsParser(it.first, it.second);
+    }
+   
 
 //    std::map<std::string,amrex::Real>::iterator it_default;
 //
@@ -214,6 +217,7 @@ c_BoundaryConditions::ReadBoundaryConditionsType()
     bool bc_lo_specified = pp_boundary.queryarr("lo", bc_str_2d[0]);
     bool bc_hi_specified = pp_boundary.queryarr("hi", bc_str_2d[1]);
 
+    /* Printing */
     amrex::Print() << "\nboundary conditions strings, bc_str: \n";
     for (auto& i: bc_str_2d)
     {
@@ -223,7 +227,8 @@ c_BoundaryConditions::ReadBoundaryConditionsType()
         }
         amrex::Print() << "\n";
     }
-    amrex::Print() << "\n";
+    amrex::Print() << "\n\n";
+
         
     for (std::size_t i = 0; i < 2; ++i) 
     {
@@ -254,18 +259,6 @@ c_BoundaryConditions::ReadBoundaryConditionsType()
         }
     }
 
-    /* loop over map_bcAny_2d and determine num_function_parser */
-    amrex::Print() << "printing map_bcAny_2d: \n";
-    for (auto& i: map_bcAny_2d)
-    {
-        for (auto& j: i) 
-        {
-            amrex::Print() << j.first << "  " << j.second << "\n";
-        }
-        amrex::Print() << "\n";
-    }
-    amrex::Print() << "\n";
-
     /* Printing */
     for (std::size_t i = 0; i < 2; ++i) 
     {
@@ -281,7 +274,47 @@ c_BoundaryConditions::ReadBoundaryConditionsType()
             amrex::Print() << "\n";
         }
     }
-    amrex::Print() << "\n\n:";
+    amrex::Print() << "\n\n";
+
+
+    /* loop over map_bcAny_2d and fill in the map of function parser names and set number of function parser names. */
+    int c=0;
+    for (std::size_t i = 0; i < 2; ++i) 
+    {
+        for (std::size_t j = 0; j < AMREX_SPACEDIM; ++j) 
+        {
+            if(map_bcAny_2d[i][j] == "inhomogeneous_function") 
+            {
+                if( bcType_2d[i][j] == "rob") 
+                {
+                    std::string main_str = std::any_cast<std::string>(bcAny_2d[i][j]);
+
+                    for(auto& str: robin_substrings) 
+                    {
+                        std::string str_with_subscript = main_str + str;
+                        map_function_parser_name[ str_with_subscript ] = c; 
+                        ++c;
+                    }
+                } 
+                else 
+                {
+                    map_function_parser_name[ std::any_cast<std::string>(bcAny_2d[i][j]) ] = c; 
+                    ++c;
+                }
+            }
+        }
+    }
+    num_function_parsers = map_function_parser_name.size();
+
+    /* Printing */
+    amrex::Print() << "\nmap_function_parser_name: \n";
+    for (auto& i: map_function_parser_name)
+    {
+        amrex::Print() << i.first << "  " << i.second << "\n";
+    }
+    amrex::Print() << "\nnum_function_parsers: " << num_function_parsers << "\n";
+    amrex::Print() << "\n\n";
+
     
 }
 
@@ -289,20 +322,17 @@ c_BoundaryConditions::ReadBoundaryConditionsType()
 void 
 c_BoundaryConditions::DefineMacroVariableVectorSizes()
 { 
-    //m_macro_type.resize(num_function_parsers, "constant"); //initialized to constant
-    //m_macro_value.resize(num_function_parsers);
-    //m_macro_str_function.resize(num_function_parsers);
-    //m_p_macro_parser.resize(num_function_parsers);
-    //m_p_mf.resize(num_function_parsers);
+    m_macro_str_function.resize(num_function_parsers);
+    m_p_macro_parser.resize(num_function_parsers);
+    m_p_mf.resize(num_function_parsers);
 }
 
 
-//template < class T >
-//void 
-//c_BoundaryConditions::ReadBoundaryConditionsParser(std::string macro_str, 
-//                                        T default_value)
-//{
-//
+void 
+c_BoundaryConditions::ReadBoundaryConditionsParser(std::string macro_str, int macro_num)
+{
+
+      amrex::Print() << "Reading macro: " << macro_str << " with number: " << macro_num << "\n";
 //    auto macro_num = map_param_all[macro_str];
 //    m_macro_value[macro_num] = default_value;
 //
@@ -310,6 +340,7 @@ c_BoundaryConditions::DefineMacroVariableVectorSizes()
 //
 //    bool specified = false; /** epsilon is the permittivity */
 //    std::string macro_functionXYZ = macro_str+"_function(x,y,z)";
+//
 //    if (queryWithParser(pp_macroscopic, macro_str.c_str() , m_macro_value[macro_num]) ) {
 //        m_macro_type[macro_num] = "constant";
 //        specified = true;
@@ -333,8 +364,8 @@ c_BoundaryConditions::DefineMacroVariableVectorSizes()
 //        m_p_macro_parser[macro_num] = std::make_unique<amrex::Parser>(
 //                                           makeParser( m_macro_str_function[macro_num], {"x","y","z"}));
 //    }
-//
-//}
+
+}
 
 
 

@@ -43,7 +43,7 @@ public:
     std::array<std::array<std::any,AMREX_SPACEDIM>,2> bcAny_2d; 
     std::array<std::array<std::string,AMREX_SPACEDIM>,2> bcType_2d;
     std::map<int,std::string> map_bcAny_2d[2];
-
+    std::map<std::string, int> map_function_parser_name;
 //    std::map<std::string,int> map_param_all;
 
 private:
@@ -63,15 +63,17 @@ private:
                                      std::array< std::any, AMREX_SPACEDIM >& bcAny, 
                                      std::map<int,std::string>& map_bcAny);
 
+    std::array<std::string,3> robin_substrings { "_a", "_b", "_c"};
+
     int num_function_parsers;
     void DefineMacroVariableVectorSizes();
     amrex::Vector<std::unique_ptr<amrex::Parser>> m_p_macro_parser; //pointer to parser object
     amrex::Vector<std::string> m_macro_str_function;
-    amrex::Vector<std::string> m_macro_type;
-    amrex::Vector<amrex::Real> m_macro_value;
+//    amrex::Vector<std::string> m_macro_type;
+//    amrex::Vector<amrex::Real> m_macro_value;
     amrex::Vector<std::unique_ptr<amrex::MultiFab>> m_p_mf; //Pointer to multifab of permittivity, eps
 
-//    void ReadBoundaryConditionsParser();
+    void ReadBoundaryConditionsParser(std::string macro_str, int macro_num);
 
 //    void DefineDefaultValueMap()
 //    {
