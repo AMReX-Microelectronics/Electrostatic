@@ -6,6 +6,7 @@
 #include "Utils/WarpXProfilerWrapper.H"
 
 #include "Input/GeometryProperties.H"
+#include "Input/BoundaryConditions/BoundaryConditions.H"
 #include "Input/MacroscopicProperties.H"
 #include "Solver/Electrostatics/MLMG.H"
 #include "PostProcessor/PostProcessor.H"
@@ -112,6 +113,8 @@ c_Code::ReadData ()
 {
 
      m_pGeometryProperties = std::make_unique<c_GeometryProperties>();
+
+     m_pBoundaryConditions = std::make_unique<c_BoundaryConditions>();
      
      m_pMacroscopicProperties = std::make_unique<c_MacroscopicProperties>();
      

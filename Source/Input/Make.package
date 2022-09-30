@@ -8,3 +8,5 @@ CEXE_headers += MacroscopicProperties_fwd.H
 
 VPATH_LOCATIONS += $(CODE_HOME)/Source/Input
 INCLUDE_LOCATIONS += $(CODE_HOME)/Source/Input
+
+include $(CODE_HOME)/Source/Input/BoundaryConditions/Make.package
