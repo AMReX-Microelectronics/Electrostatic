@@ -2,6 +2,7 @@
 
 #include "../Utils/WarpXUtil.H"
 #include "Utils/WarpXConst.H"
+#include "../../Utils/CodeUtils/CodeUtil.H"
 
 #include "Code.H"
 #include "GeometryProperties.H"
@@ -58,6 +59,11 @@ c_MacroscopicProperties::ReadData()
 int 
 c_MacroscopicProperties::ReadParameterMapAndNumberOfGhostCells()
 { 
+#ifdef PRINT_NAME
+    amrex::Print() << "\n\nSTART************************c_MacroscopicProperties::ReadParameterMapAndNumberOfGhostCells()************************\n";
+    amrex::Print() << "in file: " << __FILE__ << " at line: " << __LINE__ << "\n";
+#endif
+
 
     amrex::Vector< std::string > fields_to_define;
     amrex::Vector< std::string > ghostcells_for_fields;
@@ -81,12 +87,15 @@ c_MacroscopicProperties::ReadParameterMapAndNumberOfGhostCells()
         }
     }
     fields_to_define.clear();
-    amrex::Print() <<  " map_param_all: \n";
+
+#ifdef PRINT_LOW 
+    amrex::Print() <<  "\nmap_param_all:\n";
     for (auto it: map_param_all)
     {
         amrex::Print() <<  it.first << "   " << it.second << "\n";
     }
-    //amrex::Print() << "total parameters to define (final): " << map_param_all.size() << "\n\n";
+    amrex::Print() << "total parameters to define (final): " << map_param_all.size() << "\n\n";
+#endif
 
     for (auto it: map_param_all)
     {
@@ -127,11 +136,16 @@ c_MacroscopicProperties::ReadParameterMapAndNumberOfGhostCells()
     }
     ghostcells_for_fields.clear();
 
-    amrex::Print() <<  " map_num_ghost_cell: \n";
+#ifdef PRINT_LOW 
+    amrex::Print() <<  "map_num_ghost_cell: \n";
     for (auto it: map_num_ghostcell)
     {
         amrex::Print() <<  it.first << "   " << it.second << "\n";
     }
+#endif
+#ifdef PRINT_NAME
+    amrex::Print() << "END************************c_MacroscopicProperties::ReadParameterMapAndNumberOfGhostCells()************************\n";
+#endif
 
     return map_param_all.size();
 
@@ -154,8 +168,6 @@ c_MacroscopicProperties::InitData()
 {
 
     const int Ncomp1=1;
-    const int Nghost1=1;
-    const int Nghost0=0;
 
     auto& rCode = c_Code::GetInstance();
     auto& rGprop = rCode.get_GeometryProperties();
@@ -165,8 +177,9 @@ c_MacroscopicProperties::InitData()
 
     for (auto it: map_param_all)
     {
-        auto str = it.first;
-        DefineAndInitializeMacroparam(str, ba, dm, geom, Ncomp1, map_num_ghostcell[str]);
+        auto macro_str = it.first;
+        auto macro_num = it.second;
+        DefineAndInitializeMacroparam(macro_str, macro_num, ba, dm, geom, Ncomp1, map_num_ghostcell[macro_str]);
     }
 
     //auto& eps = get_mf("epsilon");
@@ -203,7 +216,7 @@ c_MacroscopicProperties::ReadMacroparam(std::string macro_str,
 
     ParmParse pp_macroscopic("macroscopic");
 
-    bool specified = false; /** epsilon is the permittivity */
+    bool specified = false; 
     std::string macro_functionXYZ = macro_str+"_function(x,y,z)";
     if (queryWithParser(pp_macroscopic, macro_str.c_str() , m_macro_value[macro_num]) ) {
         m_macro_type[macro_num] = "constant";
@@ -221,7 +234,7 @@ c_MacroscopicProperties::ReadMacroparam(std::string macro_str,
         c_Code::GetInstance().RecordWarning("Macroscopic properties", warnMsg.str());
     }
 
-    if (m_macro_type[macro_num] == "parse_" + macro_str + "_function") /** initialization of permittivity with a parser */
+    if (m_macro_type[macro_num] == "parse_" + macro_str + "_function") 
     { 
         Store_parserString(pp_macroscopic, macro_functionXYZ.c_str(),  m_macro_str_function[macro_num]);
 
@@ -234,6 +247,7 @@ c_MacroscopicProperties::ReadMacroparam(std::string macro_str,
 
 void 
 c_MacroscopicProperties::DefineAndInitializeMacroparam(std::string macro_str, 
+                                                       int num,
                                                        amrex::BoxArray& ba, 
                                                        amrex::DistributionMapping& dm, 
                                                        amrex::Geometry& geom, 
@@ -253,50 +267,8 @@ c_MacroscopicProperties::DefineAndInitializeMacroparam(std::string macro_str,
     } else if (m_macro_type[macro_num] == "parse_" + macro_str + "_function") {
     //    amrex::Print() << macro_num << " parse function is used with name: " << m_macro_type[macro_num] << "\n";
 
-        InitializeMacroMultiFabUsingParser(m_p_mf[macro_num].get(), m_p_macro_parser[macro_num]->compile<3>(), geom);
+        InitializeMacroMultiFabUsingParser_3vars(m_p_mf[macro_num].get(), m_p_macro_parser[macro_num]->compile<3>(), geom);
 
-    }
-
-}
-
-
-void 
-c_MacroscopicProperties::InitializeMacroMultiFabUsingParser (
-                       amrex::MultiFab *macro_mf,
-                       amrex::ParserExecutor<3> const& macro_parser,
-                       amrex::Geometry& geom)
-{
-
-    auto dx = geom.CellSizeArray();
-    amrex::Print() << "dx: " << dx[0] << " " << dx[1] << " " << dx[2] << "\n";
-    auto& real_box = geom.ProbDomain();
-
-    auto iv = macro_mf->ixType().toIntVect();
-
-    amrex::Print() << "iv: " << iv[0] << " " << iv[1] << " " << iv[2] << "\n";
-    amrex::Print() << "real_box_lo: " << real_box.lo(0) << " " << real_box.lo(1) << " " << real_box.lo(2) << "\n";
-
-    for ( amrex::MFIter mfi(*macro_mf, TilingIfNotGPU()); mfi.isValid(); ++mfi ) {
-
-        const auto& tb = mfi.tilebox( iv, macro_mf->nGrowVect() ); /** initialize ghost cells in addition to valid cells.
-                                                                       auto = amrex::Box
-                                                                    */
-        auto const& mf_array =  macro_mf->array(mfi); //auto = amrex::Array4<amrex::Real>
-
-        amrex::ParallelFor (tb,
-            [=] AMREX_GPU_DEVICE (int i, int j, int k) {
-
-                amrex::Real fac_x = (1._rt - iv[0]) * dx[0] * 0.5_rt;
-                amrex::Real x = i * dx[0] + real_box.lo(0) + fac_x;
-
-                amrex::Real fac_y = (1._rt - iv[1]) * dx[1] * 0.5_rt;
-                amrex::Real y = j * dx[1] + real_box.lo(1) + fac_y;
-
-                amrex::Real fac_z = (1._rt - iv[2]) * dx[2] * 0.5_rt;
-                amrex::Real z = k * dx[2] + real_box.lo(2) + fac_z;
-
-                mf_array(i,j,k) = macro_parser(x,y,z);
-        });
     }
 
 }

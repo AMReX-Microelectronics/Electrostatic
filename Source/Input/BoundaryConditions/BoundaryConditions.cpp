@@ -5,6 +5,8 @@
 
 #include "Code.H"
 #include "GeometryProperties.H"
+#include "../../Utils/TextMsg.H"
+#include "../../Utils/CodeUtils/CodeUtil.H"
 
 #include <AMReX_ParmParse.H>
 #include <AMReX_Parser.H>
@@ -19,7 +21,6 @@ using namespace amrex;
 c_BoundaryConditions::c_BoundaryConditions ()
 {
     DefineBoundaryTypeMap();
-//    DefineDefaultValueMap();
     ReadData();
 } 
 
@@ -29,9 +30,9 @@ c_BoundaryConditions::~c_BoundaryConditions ()
 //    for (auto& elem : m_p_mf) {
 //        elem.release();
 //    }
-} 
-//
-//
+}
+
+
 void 
 c_BoundaryConditions::ReadData()
 { 
@@ -44,103 +45,36 @@ c_BoundaryConditions::ReadData()
     {
         ReadBoundaryConditionsParser(it.first, it.second);
     }
-   
 
-//    std::map<std::string,amrex::Real>::iterator it_default;
-//
-//    for (auto it: map_param_all)
-//    {
-//        amrex::Real default_val;
-//
-//        it_default = map_default_value.find(it.first);
-//
-//        if (it_default == map_default_value.end()) {
-//            default_val = 0.0;
-//        }
-//        else {
-//            default_val = map_default_value[it.first];
-//        }
-//        ReadMacroparam(it.first, default_val);
-//    }
-}
-//
-//
-
-//bcAny_lo_cast(int c, std::any bcAny_lo) 
-//{   
-//    switch(map_bcAny_lo[c])
-//    {   
-//        case inhomogeneous_constant: 
-//        {
-//            return std::any_cast<std::double>(bcAny_lo[c]);
-//        }
-//        case inhomogeneous_function:
-//        {
-//            return std::any_cast<std::string>(bcAny_lo[c]);
-//        }
-//        case homogeneous:
-//        {
-//            return std::any_cast<std::double>(bcAny_lo[c]);
-//        }
-//    }
-//}
-//
-template<class T, class F>
-inline std::pair<const std::type_index, std::function<void(std::any const&)>>
-    to_any_visitor(F const &f)
-{
-    return {
-        std::type_index(typeid(T)),
-        [g = f](std::any const &a)
-        {
-            if constexpr (std::is_void_v<T>)
-                g();
-            else
-                g(std::any_cast<T const&>(a));
-        }
-    };
-}
- 
-static std::unordered_map<
-    std::type_index, std::function<void(std::any const&)>>
-    any_visitor {
-        to_any_visitor<float>([](float x){ std::cout << "contains a value: " << x; }),
-        to_any_visitor<double>([](double x){ std::cout << "contains a value: " << x; }),
-        to_any_visitor<std::string>([](std::string s)
-            { std::cout << "contains a function parser name: "<< s; })
-        // ... add more handlers for your types ...
-    };
-
-inline void process(const std::any& a)
-{
-    if (const auto it = any_visitor.find(std::type_index(a.type()));
-        it != any_visitor.cend()) {
-        it->second(a);
-    } 
-    else {
-//        std::cout << "unregistered type! "<< std::quoted(a.type().name());
-        std::cout << "contents do not matter! ";
-    }
 }
 
 
 void
 c_BoundaryConditions::SortBoundaryTypeArrayString(const amrex::Vector<std::string>& bc_str, std::array< std::string, AMREX_SPACEDIM >& bcType, std::array< std::any, AMREX_SPACEDIM >& bcAny,  std::map<int,std::string>& map_bcAny)
 { 
+#ifdef PRINT_NAME
+    amrex::Print() << "\n\nSTART************************c_BoundaryConditions::SortBoundaryTypeArrayString(*)************************\n";
+    amrex::Print() << "in file: " << __FILE__ << " at line: " << __LINE__ << "\n";
+#endif
+
     int c=0;
     for (auto str: bc_str)
     { 
 
         std::string first_three_letters = str.substr(0,3);
         bcType[c] = first_three_letters;
-//        amrex::Print() << "string: " << str  << " first_three_letters: " << first_three_letters<< "\n";
+#ifdef PRINT_HIGH
+        amrex::Print() << "\nstring: " << str  << " first_three_letters: " << first_three_letters<< "\n";
+#endif
 
         if(bcType[c] == "dir" or bcType[c] == "neu" or bcType[c] == "rob")
         { 
             std::string fourth_char = str.substr(3,1);
             std::string last_char = str.substr(str.length()-1);
-//            amrex::Print() << "fourth_char: " << fourth_char << "\n";
-//            amrex::Print() << "last_char: " << last_char << "\n";
+#ifdef PRINT_HIGH
+            amrex::Print() << "fourth_char: " << fourth_char << "\n";
+            amrex::Print() << "last_char: " << last_char << "\n";
+#endif
 
             if(fourth_char == "(" or last_char == ")" )
             {
@@ -165,8 +99,9 @@ c_BoundaryConditions::SortBoundaryTypeArrayString(const amrex::Vector<std::strin
                 }
                 std::string bracketed_str = str.substr(4,str.length()-5);
                
-//                amrex::Print() << "bracketed_str: " << bracketed_str << "\n";
-
+#ifdef PRINT_HIGH
+                amrex::Print() << "bracketed_str: " << bracketed_str << "\n";
+#endif
                 std::string stripped_bracketed_str;
                 if(bracketed_str.substr(0,1) == "-" or bracketed_str.substr(0,1) == "+") {
                    stripped_bracketed_str = bracketed_str.substr(1);
@@ -178,23 +113,26 @@ c_BoundaryConditions::SortBoundaryTypeArrayString(const amrex::Vector<std::strin
                 {   
                     map_bcAny[c] = "inhomogeneous_constant"; 
                     bcAny[c] = std::stod(bracketed_str);
-//                    amrex::Print() << "inhomo constant: " << bracketed_str << "\n";
-//                    amrex::Print() << "bcAny_lo: " << std::any_cast<std::double>(bcAny_lo[c]) << "\n";
+#ifdef PRINT_HIGH
+                    amrex::Print() << "inhomo constant: " << bracketed_str << "\n";
+#endif
                 }
                 else 
                 {
                     map_bcAny[c] = "inhomogeneous_function"; 
                     bcAny[c] = bracketed_str;
-//                    amrex::Print() << "inhomo function with parameter name: " << bracketed_str << "\n";
-//                    amrex::Print() << "bcAny_lo: " << std::any_cast<std::string>(bcAny_lo[c]) << "\n";
+#ifdef PRINT_HIGH
+                    amrex::Print() << "inhomo function with parameter name: " << bracketed_str << "\n";
+#endif
                 }
             }
             else if(fourth_char != "(" and last_char != ")") 
             {
                 map_bcAny[c] = "homogeneous"; 
                 bcAny[c] = 0.0;
-//                amrex::Print() << "homo constant 0.0 " << "\n";
-//                amrex::Print() << "bcAny_lo: " << std::any_cast<std::double>(bcAny_lo[c]) << "\n";
+#ifdef PRINT_HIGH
+                amrex::Print() << "homo constant 0.0 " << "\n";
+#endif
             }
         }
         else if(bcType[c] == "per") {
@@ -205,11 +143,21 @@ c_BoundaryConditions::SortBoundaryTypeArrayString(const amrex::Vector<std::strin
         }
         ++c;
     }
+
+#ifdef PRINT_NAME
+    amrex::Print() << "END************************c_BoundaryConditions::SortBoundaryTypeArrayString(*)************************\n";
+#endif
 }
+
 
 void 
 c_BoundaryConditions::ReadBoundaryConditionsType()
 { 
+
+#ifdef PRINT_NAME
+    amrex::Print() << "\n\nSTART************************c_BoundaryConditions::ReadBoundaryConditionsType()************************\n";
+    amrex::Print() << "in file: " << __FILE__ << " at line: " << __LINE__ << "\n";
+#endif
 
     amrex::Vector<amrex::Vector<std::string>> bc_str_2d(2);
 
@@ -217,7 +165,7 @@ c_BoundaryConditions::ReadBoundaryConditionsType()
     bool bc_lo_specified = pp_boundary.queryarr("lo", bc_str_2d[0]);
     bool bc_hi_specified = pp_boundary.queryarr("hi", bc_str_2d[1]);
 
-    /* Printing */
+#ifdef PRINT_LOW
     amrex::Print() << "\nboundary conditions strings, bc_str: \n";
     for (auto& i: bc_str_2d)
     {
@@ -227,13 +175,16 @@ c_BoundaryConditions::ReadBoundaryConditionsType()
         }
         amrex::Print() << "\n";
     }
-    amrex::Print() << "\n\n";
+    amrex::Print() << "\n";
+#endif
 
         
     for (std::size_t i = 0; i < 2; ++i) 
     {
         SortBoundaryTypeArrayString(bc_str_2d[i], bcType_2d[i], bcAny_2d[i], map_bcAny_2d[i]);
     }
+
+    bc_str_2d.clear();
 
     /* WARNING: assert both sides to be periodic */
     for (std::size_t i = 0; i < 1; ++i) 
@@ -259,7 +210,7 @@ c_BoundaryConditions::ReadBoundaryConditionsType()
         }
     }
 
-    /* Printing */
+#ifdef PRINT_LOW
     for (std::size_t i = 0; i < 2; ++i) 
     {
         for (std::size_t j = 0; j < AMREX_SPACEDIM; ++j) 
@@ -269,12 +220,13 @@ c_BoundaryConditions::ReadBoundaryConditionsType()
             amrex::Print() << "boundary map: " << map_bcAny_2d[i][j] << "\n";
             amrex::Print() << "bracket ";
 
-            process(bcAny_2d[i][j]);
+            process_std_any(bcAny_2d[i][j]);
 
             amrex::Print() << "\n";
         }
     }
-    amrex::Print() << "\n\n";
+    amrex::Print() << "\n";
+#endif
 
 
     /* loop over map_bcAny_2d and fill in the map of function parser names and set number of function parser names. */
@@ -306,7 +258,7 @@ c_BoundaryConditions::ReadBoundaryConditionsType()
     }
     num_function_parsers = map_function_parser_name.size();
 
-    /* Printing */
+#ifdef PRINT_LOW
     amrex::Print() << "\nmap_function_parser_name: \n";
     for (auto& i: map_function_parser_name)
     {
@@ -314,8 +266,11 @@ c_BoundaryConditions::ReadBoundaryConditionsType()
     }
     amrex::Print() << "\nnum_function_parsers: " << num_function_parsers << "\n";
     amrex::Print() << "\n\n";
+#endif    
 
-    
+#ifdef PRINT_NAME
+    amrex::Print() << "END************************c_BoundaryConditions::ReadBoundaryConditionsType()************************\n\n";
+#endif    
 }
 
 
@@ -331,152 +286,76 @@ c_BoundaryConditions::DefineMacroVariableVectorSizes()
 void 
 c_BoundaryConditions::ReadBoundaryConditionsParser(std::string macro_str, int macro_num)
 {
+#ifdef PRINT_NAME
+    amrex::Print() << "\n\nSTART************************c_BoundaryConditions::ReadBoundaryConditionsParser(*)************************\n";
+    amrex::Print() << "in file: " << __FILE__ << " at line: " << __LINE__ << "\n";
+#endif
 
-      amrex::Print() << "Reading macro: " << macro_str << " with number: " << macro_num << "\n";
-//    auto macro_num = map_param_all[macro_str];
-//    m_macro_value[macro_num] = default_value;
-//
-//    ParmParse pp_macroscopic("macroscopic");
-//
-//    bool specified = false; /** epsilon is the permittivity */
-//    std::string macro_functionXYZ = macro_str+"_function(x,y,z)";
-//
-//    if (queryWithParser(pp_macroscopic, macro_str.c_str() , m_macro_value[macro_num]) ) {
-//        m_macro_type[macro_num] = "constant";
-//        specified = true;
-//    }
-//    if (pp_macroscopic.query( macro_functionXYZ.c_str(), m_macro_str_function[macro_num]) ) {
-//        m_macro_type[macro_num] = "parse_" + macro_str + "_function";
-//        specified = true;
-//    }
-//    if (!specified) {
-//        std::stringstream warnMsg;
-//        warnMsg << "Macroscopic parameter '" << macro_str << "' is not specified in the input file. The default value of " 
-//                <<  m_macro_value[macro_num]
-//                << " is used.";
-//        c_Code::GetInstance().RecordWarning("Macroscopic properties", warnMsg.str());
-//    }
-//
-//    if (m_macro_type[macro_num] == "parse_" + macro_str + "_function") /** initialization of permittivity with a parser */
-//    { 
-//        Store_parserString(pp_macroscopic, macro_functionXYZ.c_str(),  m_macro_str_function[macro_num]);
-//
-//        m_p_macro_parser[macro_num] = std::make_unique<amrex::Parser>(
-//                                           makeParser( m_macro_str_function[macro_num], {"x","y","z"}));
-//    }
 
+    ParmParse pp_boundary("boundary");
+
+    std::string macro_functionXYZ = macro_str + "_function(x,y,z)";
+    bool specified = false;
+
+    if (pp_boundary.query( macro_functionXYZ.c_str(), m_macro_str_function[macro_num]) ) {
+        specified = true;
+    }
+    if(!specified) {
+        std::string warnMsg = "Boundary Conditions: function parser '" + macro_functionXYZ + "' is not specified in the input file.\n";
+        WARPX_ALWAYS_ASSERT_WITH_MESSAGE(specified==true, warnMsg);
+    } 
+    else 
+    {
+        Store_parserString(pp_boundary, macro_functionXYZ.c_str(),  m_macro_str_function[macro_num]);
+
+        m_p_macro_parser[macro_num] = std::make_unique<amrex::Parser>(
+                                           makeParser( m_macro_str_function[macro_num], m_parser_varname_vector));
+    }
+
+#ifdef PRINT_LOW
+    if(specified) {
+       amrex::Print() << "\nReading macro: " << macro_str << " with number: " << macro_num << "\n";
+       amrex::Print() << "function_parser_name: " << macro_functionXYZ << "\n";
+       amrex::Print() << "function_parser: " <<  m_macro_str_function[macro_num] << "\n\n";
+    }
+#endif
+
+#ifdef PRINT_NAME
+    amrex::Print() << "END************************c_BoundaryConditions::ReadBoundaryConditionsParser(*)************************\n\n";
+#endif    
 }
 
 
 
-//void 
-//c_BoundaryConditions::InitData()
-//{
-//
-//    const int Ncomp1=1;
-//    const int Nghost1=1;
-//    const int Nghost0=0;
-//
-//    auto& rCode = c_Code::GetInstance();
-//    auto& rGprop = rCode.get_GeometryProperties();
-//    auto& ba = rGprop.ba;
-//    auto& dm = rGprop.dm;
-//    auto& geom = rGprop.geom;
-//
-//    for (auto it: map_param_all)
-//    {
-//        auto str = it.first;
-//        DefineAndInitializeMacroparam(str, ba, dm, geom, Ncomp1, map_num_ghostcell[str]);
-//    }
-//
-//    //auto& eps = get_mf("epsilon");
-//    //const auto& eps_arr = eps[0].array();
-//    //amrex::Print() << "eps_0,0,0 :  " << eps_arr(0,0,0) << "\n";
-//    //amrex::Print() << "eps_15,49,49:  " << eps_arr(15,49,49) << "\n";
-//    //amrex::Print() << "eps_24,49,49:  " << eps_arr(24,49,49) << "\n";
-//    //amrex::Print() << "eps_25,49,49:  " << eps_arr(25,49,49) << "\n";
-//    //amrex::Print() << "eps_49,49,49:  " << eps_arr(49,49,49) << "\n";
-//    //amrex::Print() << "eps_74,49,49:  " << eps_arr(74,49,49) << "\n";
-//    //amrex::Print() << "eps_75,49,49:  " << eps_arr(75,49,49) << "\n";
-//    //amrex::Print() << "eps_85,49,49:  " << eps_arr(85,49,49) << "\n";
-//    //auto& rho = get_mf("charge_density");
-//    //const auto& rho_arr = rho[0].array();
-//    //amrex::Print() << "rho_0,0,0 :  " << rho_arr(0,0,0) << "\n";
-//    //amrex::Print() << "rho_15,49,49:  " << rho_arr(15,49,49) << "\n";
-//    //amrex::Print() << "rho_24,49,49:  " << rho_arr(24,49,49) << "\n";
-//    //amrex::Print() << "rho_25,49,49:  " << rho_arr(25,49,49) << "\n";
-//    //amrex::Print() << "rho_49,49,49:  " << rho_arr(49,49,49) << "\n";
-//    //amrex::Print() << "rho_74,49,49:  " << rho_arr(74,49,49) << "\n";
-//    //amrex::Print() << "rho_75,49,49:  " << rho_arr(75,49,49) << "\n";
-//    //amrex::Print() << "rho_85,49,49:  " << rho_arr(85,49,49) << "\n";
-//}
-//
-//
-//void 
-//c_BoundaryConditions::DefineAndInitializeMacroparam(std::string macro_str, 
-//                                                       amrex::BoxArray& ba, 
-//                                                       amrex::DistributionMapping& dm, 
-//                                                       amrex::Geometry& geom, 
-//                                                       int Ncomp, 
-//                                                       int Nghost)
-//{
-//
-//    auto macro_num = map_param_all[macro_str];
-//    //amrex::Print()  << " Initializing macro_str: " << macro_str << " macro_num: " << macro_num << " macro_type: " << m_macro_type[macro_num] << "\n";
-//
-//    m_p_mf[macro_num] = std::make_unique<amrex::MultiFab>(ba, dm, Ncomp, Nghost); //cell-centered multifab
-//
-//    if (m_macro_type[macro_num] == "constant") {
-//    //    amrex::Print()  << macro_num << " parse function is constant and set to : " << m_macro_value[macro_num] << "\n";
-//        m_p_mf[macro_num] -> setVal(m_macro_value[macro_num]);
-//
-//    } else if (m_macro_type[macro_num] == "parse_" + macro_str + "_function") {
-//    //    amrex::Print() << macro_num << " parse function is used with name: " << m_macro_type[macro_num] << "\n";
-//
-//        InitializeMacroMultiFabUsingParser(m_p_mf[macro_num].get(), m_p_macro_parser[macro_num]->compile<3>(), geom);
-//
-//    }
-//
-//}
-//
-//
-//void 
-//c_BoundaryConditions::InitializeMacroMultiFabUsingParser (
-//                       amrex::MultiFab *macro_mf,
-//                       amrex::ParserExecutor<3> const& macro_parser,
-//                       amrex::Geometry& geom)
-//{
-//
-//    auto dx = geom.CellSizeArray();
-//    amrex::Print() << "dx: " << dx[0] << " " << dx[1] << " " << dx[2] << "\n";
-//    auto& real_box = geom.ProbDomain();
-//
-//    auto iv = macro_mf->ixType().toIntVect();
-//
-//    amrex::Print() << "iv: " << iv[0] << " " << iv[1] << " " << iv[2] << "\n";
-//    amrex::Print() << "real_box_lo: " << real_box.lo(0) << " " << real_box.lo(1) << " " << real_box.lo(2) << "\n";
-//
-//    for ( amrex::MFIter mfi(*macro_mf, TilingIfNotGPU()); mfi.isValid(); ++mfi ) {
-//
-//        const auto& tb = mfi.tilebox( iv, macro_mf->nGrowVect() ); /** initialize ghost cells in addition to valid cells.
-//                                                                       auto = amrex::Box
-//                                                                    */
-//        auto const& mf_array =  macro_mf->array(mfi); //auto = amrex::Array4<amrex::Real>
-//
-//        amrex::ParallelFor (tb,
-//            [=] AMREX_GPU_DEVICE (int i, int j, int k) {
-//
-//                amrex::Real fac_x = (1._rt - iv[0]) * dx[0] * 0.5_rt;
-//                amrex::Real x = i * dx[0] + real_box.lo(0) + fac_x;
-//
-//                amrex::Real fac_y = (1._rt - iv[1]) * dx[1] * 0.5_rt;
-//                amrex::Real y = j * dx[1] + real_box.lo(1) + fac_y;
-//
-//                amrex::Real fac_z = (1._rt - iv[2]) * dx[2] * 0.5_rt;
-//                amrex::Real z = k * dx[2] + real_box.lo(2) + fac_z;
-//
-//                mf_array(i,j,k) = macro_parser(x,y,z);
-//        });
-//    }
-//
-//}
+void 
+c_BoundaryConditions::InitData()
+{
+#ifdef PRINT_NAME
+    amrex::Print() << "\n\nSTART************************c_BoundaryConditions::InitData()************************\n";
+    amrex::Print() << "in file: " << __FILE__ << " at line: " << __LINE__ << "\n";
+#endif
+
+    const int Ncomp1=1;
+    const int Nghost1=1;
+
+    auto& rCode = c_Code::GetInstance();
+    auto& rGprop = rCode.get_GeometryProperties();
+    auto& ba = rGprop.ba;
+    auto& dm = rGprop.dm;
+    auto& geom = rGprop.geom;
+
+    for (auto it: map_function_parser_name)
+    {
+        auto macro_str = it.first;
+        auto macro_num = it.second;
+        int parser_varname_size = 3;
+
+        m_p_mf[macro_num] = std::make_unique<amrex::MultiFab>(ba, dm, Ncomp1, Nghost1); //cell-centered multifab
+
+        InitializeMacroMultiFabUsingParser_3vars(m_p_mf[macro_num].get(), m_p_macro_parser[macro_num]->compile<3>(), geom);
+    }
+
+#ifdef PRINT_NAME
+    amrex::Print() << "END************************c_BoundaryConditions::InitData()************************\n\n";
+#endif    
+}

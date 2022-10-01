@@ -8,6 +8,10 @@ COMP         = gnu
 DIM          = 3
 CXXSTD       = c++17
 
+PRINT_NAME   = TRUE
+PRINT_LOW   = TRUE
+TIME_DEPENDENT = FALSE 
+
 
 CODE_HOME := ..
 include $(CODE_HOME)/Source/Make.Code

@@ -32,10 +32,10 @@ public:
     ~c_BoundaryConditions();
 
     void ReadData();
- //   void InitData();
+    void InitData();
 
-//    amrex::MultiFab& get_mf  (std::string macro_str) {auto macro_num = map_param_all[macro_str]; return (*m_p_mf[macro_num]);}
-//    amrex::MultiFab* get_p_mf (std::string macro_str) {auto macro_num = map_param_all[macro_str]; return m_p_mf[macro_num].get();}
+    amrex::MultiFab& get_mf  (std::string macro_str) {auto macro_num = map_function_parser_name[macro_str]; return (*m_p_mf[macro_num]);}
+    amrex::MultiFab* get_p_mf (std::string macro_str) {auto macro_num = map_function_parser_name[macro_str]; return m_p_mf[macro_num].get();}
 
     std::map<std::string, s_BoundaryConditions::boundary_type> map_boundary_type;
 
@@ -44,7 +44,6 @@ public:
     std::array<std::array<std::string,AMREX_SPACEDIM>,2> bcType_2d;
     std::map<int,std::string> map_bcAny_2d[2];
     std::map<std::string, int> map_function_parser_name;
-//    std::map<std::string,int> map_param_all;
 
 private:
     void DefineBoundaryTypeMap()
@@ -63,47 +62,24 @@ private:
                                      std::array< std::any, AMREX_SPACEDIM >& bcAny, 
                                      std::map<int,std::string>& map_bcAny);
 
-    std::array<std::string,3> robin_substrings { "_a", "_b", "_c"};
+    std::array<std::string,3> robin_substrings { "_a", "_b", "_f"};
 
     int num_function_parsers;
     void DefineMacroVariableVectorSizes();
+
     amrex::Vector<std::unique_ptr<amrex::Parser>> m_p_macro_parser; //pointer to parser object
     amrex::Vector<std::string> m_macro_str_function;
-//    amrex::Vector<std::string> m_macro_type;
-//    amrex::Vector<amrex::Real> m_macro_value;
+
     amrex::Vector<std::unique_ptr<amrex::MultiFab>> m_p_mf; //Pointer to multifab of permittivity, eps
 
     void ReadBoundaryConditionsParser(std::string macro_str, int macro_num);
+#ifdef TIME_DEPENDENT
+    amrex::Vector<std::string> m_parser_varname_vector = {"x", "y", "z", "t"};
+#else
+    amrex::Vector<std::string> m_parser_varname_vector = {"x", "y", "z"};
+#endif
 
-//    void DefineDefaultValueMap()
-//    {
-//        map_default_value["dir"] = 0.0;
-//        map_default_value["neu"] = 0.0;
-//    };
 
-//    std::map<std::string,amrex::Real> map_default_value;
-    
-
-//    std::map<std::string,int> map_num_ghostcell;
-//
-//    void ReadPermittivity();
-//    void InitializePermittivity();
-//    void InitializeMacroMultiFabUsingParser (amrex::MultiFab *mf,
-//                                             amrex::ParserExecutor<3> const& parser,
-//                                             amrex::Geometry& geom);
-//
-//    int ReadParameterMapAndNumberOfGhostCells();
-//
-//
-//    template<class T> 
-//        void ReadMacroparam(std::string, T default_value);
-//
-//    void DefineAndInitializeMacroparam(std::string, 
-//                                       amrex::BoxArray& ba, 
-//                                       amrex::DistributionMapping& dm, 
-//                                       amrex::Geometry& geom, 
-//                                       int Ncomp, int Nghost);
-//
 };
 
 #endif

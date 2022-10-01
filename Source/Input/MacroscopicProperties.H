@@ -56,9 +56,6 @@ private:
 
     void ReadPermittivity();
     void InitializePermittivity();
-    void InitializeMacroMultiFabUsingParser (amrex::MultiFab *mf,
-                                             amrex::ParserExecutor<3> const& parser,
-                                             amrex::Geometry& geom);
 
     int ReadParameterMapAndNumberOfGhostCells();
 
@@ -75,10 +72,11 @@ private:
     template<class T> 
         void ReadMacroparam(std::string, T default_value);
 
-    void DefineAndInitializeMacroparam(std::string, 
-                                       amrex::BoxArray& ba, 
-                                       amrex::DistributionMapping& dm, 
-                                       amrex::Geometry& geom, 
+    void DefineAndInitializeMacroparam(std::string macro_str,
+                                       int macro_num,
+                                       amrex::BoxArray& ba,
+                                       amrex::DistributionMapping& dm,
+                                       amrex::Geometry& geom,
                                        int Ncomp, int Nghost);
 
 };

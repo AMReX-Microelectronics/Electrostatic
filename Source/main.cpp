@@ -13,6 +13,18 @@
 //#include "Initialize.H"
 //#include "Poisson_MLMG.H"
 
+
+//#if defined PRINT_HIGH
+//
+//    #define PRINT_MEDIUM = true
+//    #define PRINT_LOW = true
+//
+//#elif defined PRINT_MEDIUM
+//
+//    #define PRINT_LOW = true
+//
+//#endif
+
 using namespace amrex;
 
 template<typename T>
@@ -21,6 +33,12 @@ class TD;
 int main (int argc, char* argv[])
 {
     amrex::Initialize(argc,argv);
+
+#ifdef PRINT_NAME
+    amrex::Print() << "\n\nSTART************************main(*)************************\n";
+    amrex::Print() << "in file: " << __FILE__ << " at line: " << __LINE__ << "\n";
+#endif
+
 
     amrex::Real total_run_time = ParallelDescriptor::second();
 
@@ -68,6 +86,9 @@ int main (int argc, char* argv[])
 
     //*** RUN DIAGNOSTICS END
 
+#ifdef PRINT_NAME
+    amrex::Print() << "END************************main(*)************************\n";
+#endif
     amrex::Finalize();
     return 0;
 }
