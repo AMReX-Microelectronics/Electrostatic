@@ -33,9 +33,18 @@ private:
 
     void DefineSubscriptNameMap()
     {
+#ifdef PRINT_NAME
+    amrex::Print() << "\n\n\t\t\t\t{************************c_Output::DefineSubscriptNameMap()************************\n";
+    amrex::Print() << "\t\t\t\tin file: " << __FILE__ << " at line: " << __LINE__ << "\n";
+#endif
+
         map_subscript_name["_x"] = s_Subscript::x;
         map_subscript_name["_y"] = s_Subscript::y;
         map_subscript_name["_z"] = s_Subscript::z;
+
+#ifdef PRINT_NAME
+    amrex::Print() << "\t\t\t\t}************************c_Output::DefineSubscriptNameMap()************************\n";
+#endif
     };
 
     std::unique_ptr<amrex::MultiFab> m_p_mf_all;

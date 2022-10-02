@@ -82,7 +82,7 @@ macroscopic.fields_to_define = epsilon charge_density phi
 # - `ghostcells_for_fields' defines the ghost cell for the multifabs defined in fields_to_define, as <FieldName>.<NumberOfGhostCells>. 
 #    The default is 0.
 #
-macroscopic.ghostcells_for_fields = epsilon.1 phi.1
+macroscopic.ghostcells_for_fields = epsilon.1 charge_density.0 phi.1 
 
 # - The fields defined in `fields_to_define' can be initialized as constants or using a function parser as follows.
 #
@@ -126,7 +126,8 @@ macroscopic.phi = 0.0
 mlmg.ascalar=0
 mlmg.bscalar=1
 mlmg.set_verbose=0
-
+mlmg.absolute_tolerance=0
+mlmg.relative_tolerance=1e-10
 
 
 #############################

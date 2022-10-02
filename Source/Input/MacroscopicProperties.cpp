@@ -16,9 +16,18 @@ using namespace amrex;
 
 c_MacroscopicProperties::c_MacroscopicProperties ()
 {
+#ifdef PRINT_NAME
+    amrex::Print() << "\n\n\t\t\t{************************c_MacroscopicProperties Consructor()************************\n";
+    amrex::Print() << "\t\t\tin file: " << __FILE__ << " at line: " << __LINE__ << "\n";
+#endif
+
     DefineParameterNameMap();
     DefineDefaultValueMap();
     ReadData();
+
+#ifdef PRINT_NAME
+    amrex::Print() << "\t\t\t}************************c_MacroscopicProperties Consructor()************************\n";
+#endif
 } 
 
 
@@ -33,6 +42,10 @@ c_MacroscopicProperties::~c_MacroscopicProperties ()
 void 
 c_MacroscopicProperties::ReadData()
 { 
+#ifdef PRINT_NAME
+    amrex::Print() << "\n\n\t\t\t\t{************************c_MacroscopicProperties::ReadData()************************\n";
+    amrex::Print() << "\t\t\t\tin file: " << __FILE__ << " at line: " << __LINE__ << "\n";
+#endif
 
     num_params = ReadParameterMapAndNumberOfGhostCells();
     
@@ -53,6 +66,9 @@ c_MacroscopicProperties::ReadData()
         }
         ReadMacroparam(it.first, default_val);
     }
+#ifdef PRINT_NAME
+    amrex::Print() << "\t\t\t\t}************************c_MacroscopicProperties::ReadData()************************\n";
+#endif
 }
 
 
@@ -60,8 +76,8 @@ int
 c_MacroscopicProperties::ReadParameterMapAndNumberOfGhostCells()
 { 
 #ifdef PRINT_NAME
-    amrex::Print() << "\n\nSTART************************c_MacroscopicProperties::ReadParameterMapAndNumberOfGhostCells()************************\n";
-    amrex::Print() << "in file: " << __FILE__ << " at line: " << __LINE__ << "\n";
+    amrex::Print() << "\n\n\t\t\t\t\t{************************c_MacroscopicProperties::ReadParameterMapAndNumberOfGhostCells()************************\n";
+    amrex::Print() << "\t\t\t\t\tin file: " << __FILE__ << " at line: " << __LINE__ << "\n";
 #endif
 
 
@@ -144,7 +160,7 @@ c_MacroscopicProperties::ReadParameterMapAndNumberOfGhostCells()
     }
 #endif
 #ifdef PRINT_NAME
-    amrex::Print() << "END************************c_MacroscopicProperties::ReadParameterMapAndNumberOfGhostCells()************************\n";
+    amrex::Print() << "\t\t\t\t\t}************************c_MacroscopicProperties::ReadParameterMapAndNumberOfGhostCells()************************\n";
 #endif
 
     return map_param_all.size();
@@ -155,17 +171,30 @@ c_MacroscopicProperties::ReadParameterMapAndNumberOfGhostCells()
 void 
 c_MacroscopicProperties::DefineMacroVariableVectorSizes()
 { 
+#ifdef PRINT_NAME
+    amrex::Print() << "\n\n\t\t\t\t\t{************************c_MacroscopicProperties::DefineMacroVariableVectorSizes()************************\n";
+    amrex::Print() << "\t\t\t\t\tin file: " << __FILE__ << " at line: " << __LINE__ << "\n";
+#endif
+    
     m_macro_type.resize(num_params, "constant"); //initialized to constant
     m_macro_value.resize(num_params);
     m_macro_str_function.resize(num_params);
     m_p_macro_parser.resize(num_params);
     m_p_mf.resize(num_params);
+
+#ifdef PRINT_NAME
+    amrex::Print() << "\t\t\t\t\t}************************c_MacroscopicProperties::DefineMacroVariableVectorSizes()************************\n";
+#endif
 }
 
 
 void 
 c_MacroscopicProperties::InitData()
 {
+#ifdef PRINT_NAME
+    amrex::Print() << "\n\n\t\t{************************c_MacroscopicProperties::InitData()************************\n";
+    amrex::Print() << "\t\tin file: " << __FILE__ << " at line: " << __LINE__ << "\n";
+#endif
 
     const int Ncomp1=1;
 
@@ -202,6 +231,9 @@ c_MacroscopicProperties::InitData()
     //amrex::Print() << "rho_74,49,49:  " << rho_arr(74,49,49) << "\n";
     //amrex::Print() << "rho_75,49,49:  " << rho_arr(75,49,49) << "\n";
     //amrex::Print() << "rho_85,49,49:  " << rho_arr(85,49,49) << "\n";
+#ifdef PRINT_NAME
+    amrex::Print() << "\t\t}************************c_MacroscopicProperties::InitData()************************\n";
+#endif
 }
 
 
@@ -210,6 +242,10 @@ void
 c_MacroscopicProperties::ReadMacroparam(std::string macro_str, 
                                         T default_value)
 {
+#ifdef PRINT_NAME
+    amrex::Print() << "\n\n\t\t\t\t\t{************************c_MacroscopicProperties::ReadMacroparam()************************\n";
+    amrex::Print() << "\t\t\t\t\tin file: " << __FILE__ << " at line: " << __LINE__ << "\n";
+#endif
 
     auto macro_num = map_param_all[macro_str];
     m_macro_value[macro_num] = default_value;
@@ -242,6 +278,9 @@ c_MacroscopicProperties::ReadMacroparam(std::string macro_str,
                                            makeParser( m_macro_str_function[macro_num], {"x","y","z"}));
     }
 
+#ifdef PRINT_NAME
+    amrex::Print() << "\t\t\t\t\t}************************c_MacroscopicProperties::ReadMacroparam()************************\n";
+#endif
 }
 
 
@@ -254,6 +293,10 @@ c_MacroscopicProperties::DefineAndInitializeMacroparam(std::string macro_str,
                                                        int Ncomp, 
                                                        int Nghost)
 {
+#ifdef PRINT_NAME
+    amrex::Print() << "\n\n\t\t\t{************************c_MacroscopicProperties::DefineAndInitializeMacroparam()************************\n";
+    amrex::Print() << "\t\t\tin file: " << __FILE__ << " at line: " << __LINE__ << "\n";
+#endif
 
     auto macro_num = map_param_all[macro_str];
     //amrex::Print()  << " Initializing macro_str: " << macro_str << " macro_num: " << macro_num << " macro_type: " << m_macro_type[macro_num] << "\n";
@@ -267,8 +310,11 @@ c_MacroscopicProperties::DefineAndInitializeMacroparam(std::string macro_str,
     } else if (m_macro_type[macro_num] == "parse_" + macro_str + "_function") {
     //    amrex::Print() << macro_num << " parse function is used with name: " << m_macro_type[macro_num] << "\n";
 
-        InitializeMacroMultiFabUsingParser_3vars(m_p_mf[macro_num].get(), m_p_macro_parser[macro_num]->compile<3>(), geom);
+        Multifab_Manipulation::InitializeMacroMultiFabUsingParser_3vars(m_p_mf[macro_num].get(), m_p_macro_parser[macro_num]->compile<3>(), geom);
 
     }
 
+#ifdef PRINT_NAME
+    amrex::Print() << "\t\t\t}************************c_MacroscopicProperties::DefineAndInitializeMacroparam()************************\n";
+#endif
 }

@@ -1,6 +1,7 @@
 #include "MLMG.H"
 
 #include "../Utils/WarpXUtil.H"
+#include "../Utils/CodeUtils/CodeUtil.H"
 #include "Code.H"
 #include "Input/GeometryProperties.H"
 #include "Input/MacroscopicProperties.H"
@@ -17,13 +18,35 @@ using namespace amrex;
 
 c_MLMGSolver::c_MLMGSolver ()
 {
+#ifdef PRINT_NAME
+    amrex::Print() << "\n\n\t\t\t{************************c_MLMGSolver Constructor()************************\n";
+    amrex::Print() << "\t\t\tin file: " << __FILE__ << " at line: " << __LINE__ << "\n";
+#endif
+
     ReadData();
+
+//    for (std::size_t i = 0; i < 2; ++i)
+//    {
+//        for (std::size_t j = 0; j < AMREX_SPACEDIM; ++j)
+//        {
+//            AssignLinOpBCTypeToBoundaries( bcType_2d[i][j], map_bcAny_2d[i][j], &map_LinOPBCType_2d[i][j]);
+//        }
+//    }
+
+#ifdef PRINT_NAME
+    amrex::Print() << "\t\t\t}************************c_MLMGSolver Constructor()************************\n";
+#endif
 } 
 
 
 void
 c_MLMGSolver::ReadData() 
 {
+#ifdef PRINT_NAME
+    amrex::Print() << "\n\n\t\t\t\t{************************c_MLMGSolver::ReadData()************************\n";
+    amrex::Print() << "\t\t\t\tin file: " << __FILE__ << " at line: " << __LINE__ << "\n";
+#endif
+
 
     ParmParse pp_mlmg("mlmg");
     pp_mlmg.get("ascalar",ascalar);
@@ -73,12 +96,72 @@ c_MLMGSolver::ReadData()
         c_Code::GetInstance().RecordWarning("MLMG properties", warnMsg.str());
     }
 
+#ifdef PRINT_NAME
+    amrex::Print() << "\t\t\t\t}************************c_MLMGSolver::ReadData()************************\n";
+#endif
 }
+
+
+//void
+//c_MLMGSolver::AssignLinOpBCTypeToBoundaries (const std::string bcType_str, const std::string map_bcAny_str, amrex::LinOpBCType& map_LinOPBCType_2d)
+//{
+///*
+//    LinOpBCType::interior:
+//    LinOpBCType::Dirichlet:
+//    LinOpBCType::Neumann:
+//    LinOpBCType::reflect_odd:
+//    LinOpBCType::Marshak:
+//    LinOpBCType::SanchezPomraning:
+//    LinOpBCType::inflow:
+//    LinOpBCType::inhomogNeumann:
+//    LinOpBCType::Robin:
+//    LinOpBCType::Periodic:
+//*/
+//    
+//   switch(bcType_str)
+//   {
+//       case boundary_type::dir :
+//       {
+//            map_LinOPBCType_2d = LinOpBCType::Dirichlet;
+//
+//            break;
+//       }
+//       case boundary_type::neu :
+//       {
+//            if(map_bcAny_str == "inhomogeneous_function" || "inhomogeneous_constant") 
+//            {
+//            map_LinOPBCType_2d = LinOpBCType::inhomogNeumann;
+//            }
+//            else if(map_bcAny_str == "homogeneous")
+//            {
+//            map_LinOPBCType_2d = LinOpBCType::Neumann;
+//            }
+//            break;
+//       }
+//       case boundary_type::per :
+//       {
+//           map_LinOPBCType_2d = LinOpBCType::Periodic;
+//       }
+//       case boundary_type::rob :
+//       {
+//           map_LinOPBCType_2d = LinOpBCType::Robin;
+//       }
+//       case boundary_type::ref :
+//       {
+//           map_LinOPBCType_2d = LinOpBCType::reflect_odd;
+//       }
+//   }
+//
+//} 
 
 
 void
 c_MLMGSolver:: Setup_MLABecLaplacian_ForPoissonEqn()
 {
+#ifdef PRINT_NAME
+    amrex::Print() << "\n\n\t\t{************************c_MLMGSolver::Setup_MLABecLaplacian_ForPoissonEqn()************************\n";
+    amrex::Print() << "\t\tin file: " << __FILE__ << " at line: " << __LINE__ << "\n";
+#endif
 
     auto& rCode = c_Code::GetInstance();
     auto& rGprop = rCode.get_GeometryProperties();
@@ -134,7 +217,7 @@ c_MLMGSolver:: Setup_MLABecLaplacian_ForPoissonEqn()
                  beta_fc[1].define(convert(ba,IntVect(AMREX_D_DECL(0,1,0))), dm, 1, 0);,
                  beta_fc[2].define(convert(ba,IntVect(AMREX_D_DECL(0,0,1))), dm, 1, 0););
 
-    AverageCellCenteredMultiFabToCellFaces(eps_cc, beta_fc); //converts from cell-centered permittivity to face-center and store in beta_fc
+    Multifab_Manipulation::AverageCellCenteredMultiFabToCellFaces(eps_cc, beta_fc); //converts from cell-centered permittivity to face-center and store in beta_fc
 
     mlabec.setBCoeffs(0, amrex::GetArrOfConstPtrs(beta_fc));
 
@@ -142,11 +225,19 @@ c_MLMGSolver:: Setup_MLABecLaplacian_ForPoissonEqn()
 
     pMLMG->setVerbose(set_verbose);
 
+
+#ifdef PRINT_NAME
+    amrex::Print() << "\t\t}************************c_MLMGSolver::Setup_MLABecLaplacian_ForPoissonEqn()************************\n";
+#endif
 }
 
 void
 c_MLMGSolver:: Solve_PoissonEqn()
 {
+#ifdef PRINT_NAME
+    amrex::Print() << "\n\n\t\t{************************c_MLMGSolver::Solve_PoissonEqn()************************\n";
+    amrex::Print() << "\t\tin file: " << __FILE__ << " at line: " << __LINE__ << "\n";
+#endif
 
     auto& rCode = c_Code::GetInstance();
     auto& rMprop = rCode.get_MacroscopicProperties();
@@ -157,14 +248,21 @@ c_MLMGSolver:: Solve_PoissonEqn()
                  relative_tolerance,
                  absolute_tolerance);
 
+#ifdef PRINT_NAME
+    amrex::Print() << "\t\t}************************c_MLMGSolver::Solve_PoissonEqn()************************\n";
+#endif
 }
 
 
 void
 c_MLMGSolver:: Compute_vecE(std::array<amrex::MultiFab, AMREX_SPACEDIM>& vecE)
 {
+#ifdef PRINT_NAME
+    amrex::Print() << "\n\n\t\t\t{************************c_MLMGSolver::Compute_vecE(*)************************\n";
+    amrex::Print() << "\t\t\tin file: " << __FILE__ << " at line: " << __LINE__ << "\n";
+#endif
+
     /** First the gradient of phi is computed then it is multiplied by one. */
-    amrex::Print() << "Computing vecE using MLMG. \n";
     auto& rCode = c_Code::GetInstance();
     auto& rGprop = rCode.get_GeometryProperties();
     auto& ba = rGprop.ba;
@@ -196,16 +294,21 @@ c_MLMGSolver:: Compute_vecE(std::array<amrex::MultiFab, AMREX_SPACEDIM>& vecE)
                    MultiFab::Saxpy (vecE[2], -1.0, gradPhi[0][2],0,0,1,0); );
 
 
-
+#ifdef PRINT_NAME
+    amrex::Print() << "\t\t\t}************************c_MLMGSolver::Compute_vecE(*)************************\n";
+#endif
 }
 
 
 void
 c_MLMGSolver:: Compute_vecFlux(std::array<amrex::MultiFab, AMREX_SPACEDIM>& vecFlux)
 {
+#ifdef PRINT_NAME
+    amrex::Print() << "\n\n\t\t\t{************************c_MLMGSolver::Compute_vecFlux(*)************************\n";
+    amrex::Print() << "\t\t\tin file: " << __FILE__ << " at line: " << __LINE__ << "\n";
+#endif
 
     /** Flux (-beta*grad phi)  is computed. */
-    amrex::Print() << "Computing vecFlux using MLMG. \n";
 
     auto& rCode = c_Code::GetInstance();
     auto& rGprop = rCode.get_GeometryProperties();
@@ -224,37 +327,8 @@ c_MLMGSolver:: Compute_vecFlux(std::array<amrex::MultiFab, AMREX_SPACEDIM>& vecF
                     MultiFab::Copy (vecFlux[1], minus_epsGradPhi[0][1],0,0,1,0); ,
                     MultiFab::Copy (vecFlux[2], minus_epsGradPhi[0][2],0,0,1,0); );
 
-}
-
-
-void 
-c_MLMGSolver:: AverageCellCenteredMultiFabToCellFaces(const amrex::MultiFab& cc_arr,
-                   std::array< amrex::MultiFab, AMREX_SPACEDIM >& face_arr)
-{
-    for (MFIter mfi(cc_arr, TilingIfNotGPU()); mfi.isValid(); ++mfi)
-    {
-        const Array4<Real const> & cc = cc_arr.array(mfi);
-        AMREX_D_TERM(const Array4<Real> & facex = face_arr[0].array(mfi);,
-                     const Array4<Real> & facey = face_arr[1].array(mfi);,
-                     const Array4<Real> & facez = face_arr[2].array(mfi););
-
-        AMREX_D_TERM(const Box & nodal_x = mfi.nodaltilebox(0);,
-                     const Box & nodal_y = mfi.nodaltilebox(1);,
-                     const Box & nodal_z = mfi.nodaltilebox(2););
-
-        amrex::ParallelFor(nodal_x, nodal_y, nodal_z,
-        [=] AMREX_GPU_DEVICE (int i, int j, int k) noexcept
-        {
-            facex(i,j,k) = 0.5*(cc(i,j,k)+cc(i-1,j,k));
-        },
-        [=] AMREX_GPU_DEVICE (int i, int j, int k) noexcept
-        {
-            facey(i,j,k) = 0.5*(cc(i,j,k)+cc(i,j-1,k));
-        },
-        [=] AMREX_GPU_DEVICE (int i, int j, int k) noexcept
-        {
-            facez(i,j,k) = 0.5*(cc(i,j,k)+cc(i,j,k-1));
-        });
-    }
+#ifdef PRINT_NAME
+    amrex::Print() << "\t\t\t}************************c_MLMGSolver::Compute_vecFlux(*)************************\n";
+#endif
 }
 

@@ -20,8 +20,17 @@ using namespace amrex;
 
 c_BoundaryConditions::c_BoundaryConditions ()
 {
+#ifdef PRINT_NAME
+    amrex::Print() << "\n\n\t\t\t{************************c_BoundaryConditions Constructor************************\n";
+    amrex::Print() << "\t\t\tin file: " << __FILE__ << " at line: " << __LINE__ << "\n";
+#endif
+
     DefineBoundaryTypeMap();
     ReadData();
+
+#ifdef PRINT_NAME
+    amrex::Print() << "\t\t\t}************************c_BoundaryConditions Constructor************************\n";
+#endif
 } 
 
 
@@ -36,6 +45,10 @@ c_BoundaryConditions::~c_BoundaryConditions ()
 void 
 c_BoundaryConditions::ReadData()
 { 
+#ifdef PRINT_NAME
+    amrex::Print() << "\n\n\t\t\t\t{************************c_BoundaryConditions::ReadData()************************\n";
+    amrex::Print() << "\t\t\t\tin file: " << __FILE__ << " at line: " << __LINE__ << "\n";
+#endif
 
     ReadBoundaryConditionsType();
 
@@ -46,6 +59,9 @@ c_BoundaryConditions::ReadData()
         ReadBoundaryConditionsParser(it.first, it.second);
     }
 
+#ifdef PRINT_NAME
+    amrex::Print() << "\t\t\t\t}************************c_BoundaryConditions::ReadData()************************\n";
+#endif
 }
 
 
@@ -53,8 +69,8 @@ void
 c_BoundaryConditions::SortBoundaryTypeArrayString(const amrex::Vector<std::string>& bc_str, std::array< std::string, AMREX_SPACEDIM >& bcType, std::array< std::any, AMREX_SPACEDIM >& bcAny,  std::map<int,std::string>& map_bcAny)
 { 
 #ifdef PRINT_NAME
-    amrex::Print() << "\n\nSTART************************c_BoundaryConditions::SortBoundaryTypeArrayString(*)************************\n";
-    amrex::Print() << "in file: " << __FILE__ << " at line: " << __LINE__ << "\n";
+    amrex::Print() << "\n\n\t\t\t\t\t\t{************************c_BoundaryConditions::SortBoundaryTypeArrayString(*)************************\n";
+    amrex::Print() << "\t\t\t\t\t\tin file: " << __FILE__ << " at line: " << __LINE__ << "\n";
 #endif
 
     int c=0;
@@ -145,7 +161,7 @@ c_BoundaryConditions::SortBoundaryTypeArrayString(const amrex::Vector<std::strin
     }
 
 #ifdef PRINT_NAME
-    amrex::Print() << "END************************c_BoundaryConditions::SortBoundaryTypeArrayString(*)************************\n";
+    amrex::Print() << "\t\t\t\t\t\t}************************c_BoundaryConditions::SortBoundaryTypeArrayString(*)************************\n";
 #endif
 }
 
@@ -155,8 +171,8 @@ c_BoundaryConditions::ReadBoundaryConditionsType()
 { 
 
 #ifdef PRINT_NAME
-    amrex::Print() << "\n\nSTART************************c_BoundaryConditions::ReadBoundaryConditionsType()************************\n";
-    amrex::Print() << "in file: " << __FILE__ << " at line: " << __LINE__ << "\n";
+    amrex::Print() << "\n\n\t\t\t\t\t{************************c_BoundaryConditions::ReadBoundaryConditionsType()************************\n";
+    amrex::Print() << "\t\t\t\t\tin file: " << __FILE__ << " at line: " << __LINE__ << "\n";
 #endif
 
     amrex::Vector<amrex::Vector<std::string>> bc_str_2d(2);
@@ -216,9 +232,9 @@ c_BoundaryConditions::ReadBoundaryConditionsType()
         for (std::size_t j = 0; j < AMREX_SPACEDIM; ++j) 
         {
             
-            amrex::Print() << "\nboundary type: " << bcType_2d[i][j] << "\n";
-            amrex::Print() << "boundary map: " << map_bcAny_2d[i][j] << "\n";
-            amrex::Print() << "bracket ";
+            amrex::Print() << "\nboundary type, bcType_2d: " << bcType_2d[i][j] << "\n";
+            amrex::Print() << "boundary map, map_bcAny_2d: " << map_bcAny_2d[i][j] << "\n";
+            amrex::Print() << "(bcAny_2d) bracket ";
 
             process_std_any(bcAny_2d[i][j]);
 
@@ -269,7 +285,7 @@ c_BoundaryConditions::ReadBoundaryConditionsType()
 #endif    
 
 #ifdef PRINT_NAME
-    amrex::Print() << "END************************c_BoundaryConditions::ReadBoundaryConditionsType()************************\n\n";
+    amrex::Print() << "\t\t\t\t\t}************************c_BoundaryConditions::ReadBoundaryConditionsType()************************\n\n";
 #endif    
 }
 
@@ -277,9 +293,21 @@ c_BoundaryConditions::ReadBoundaryConditionsType()
 void 
 c_BoundaryConditions::DefineMacroVariableVectorSizes()
 { 
+#ifdef PRINT_NAME
+    amrex::Print() << "\n\n\t\t\t\t\t{************************c_BoundaryConditions::DefineMacroVariableVectorSizes()************************\n";
+    amrex::Print() << "\t\t\t\t\tin file: " << __FILE__ << " at line: " << __LINE__ << "\n";
+#endif
+
+
     m_macro_str_function.resize(num_function_parsers);
     m_p_macro_parser.resize(num_function_parsers);
     m_p_mf.resize(num_function_parsers);
+
+
+
+#ifdef PRINT_NAME
+    amrex::Print() << "\t\t\t\t\t}************************c_BoundaryConditions::DefineMacroVariableVectorSizes()************************\n";
+#endif
 }
 
 
@@ -287,8 +315,8 @@ void
 c_BoundaryConditions::ReadBoundaryConditionsParser(std::string macro_str, int macro_num)
 {
 #ifdef PRINT_NAME
-    amrex::Print() << "\n\nSTART************************c_BoundaryConditions::ReadBoundaryConditionsParser(*)************************\n";
-    amrex::Print() << "in file: " << __FILE__ << " at line: " << __LINE__ << "\n";
+    amrex::Print() << "\n\n\t\t\t\t\t{************************c_BoundaryConditions::ReadBoundaryConditionsParser(*)************************\n";
+    amrex::Print() << "\t\t\t\t\tin file: " << __FILE__ << " at line: " << __LINE__ << "\n";
 #endif
 
 
@@ -321,7 +349,7 @@ c_BoundaryConditions::ReadBoundaryConditionsParser(std::string macro_str, int ma
 #endif
 
 #ifdef PRINT_NAME
-    amrex::Print() << "END************************c_BoundaryConditions::ReadBoundaryConditionsParser(*)************************\n\n";
+    amrex::Print() << "\t\t\t\t\t}************************c_BoundaryConditions::ReadBoundaryConditionsParser(*)************************\n\n";
 #endif    
 }
 
@@ -331,8 +359,8 @@ void
 c_BoundaryConditions::InitData()
 {
 #ifdef PRINT_NAME
-    amrex::Print() << "\n\nSTART************************c_BoundaryConditions::InitData()************************\n";
-    amrex::Print() << "in file: " << __FILE__ << " at line: " << __LINE__ << "\n";
+    amrex::Print() << "\n\n\t\t{************************c_BoundaryConditions::InitData()************************\n";
+    amrex::Print() << "\t\tin file: " << __FILE__ << " at line: " << __LINE__ << "\n";
 #endif
 
     const int Ncomp1=1;
@@ -352,10 +380,10 @@ c_BoundaryConditions::InitData()
 
         m_p_mf[macro_num] = std::make_unique<amrex::MultiFab>(ba, dm, Ncomp1, Nghost1); //cell-centered multifab
 
-        InitializeMacroMultiFabUsingParser_3vars(m_p_mf[macro_num].get(), m_p_macro_parser[macro_num]->compile<3>(), geom);
+        Multifab_Manipulation::InitializeMacroMultiFabUsingParser_3vars(m_p_mf[macro_num].get(), m_p_macro_parser[macro_num]->compile<3>(), geom);
     }
 
 #ifdef PRINT_NAME
-    amrex::Print() << "END************************c_BoundaryConditions::InitData()************************\n\n";
+    amrex::Print() << "\t\t}************************c_BoundaryConditions::InitData()************************\n\n";
 #endif    
 }

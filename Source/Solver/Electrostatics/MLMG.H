@@ -45,7 +45,6 @@ public:
     std::array< amrex::MultiFab, AMREX_SPACEDIM > beta_fc; 
     c_MLMGSolver();
 
-    void ReadData();
 
     void Setup_MLABecLaplacian_ForPoissonEqn();
 
@@ -55,19 +54,16 @@ public:
 
     void Compute_vecFlux(std::array<amrex::MultiFab, AMREX_SPACEDIM>& flux);
 
-    void AverageCellCenteredMultiFabToCellFaces(const amrex::MultiFab& cc_arr,
-                                                std::array< amrex::MultiFab, AMREX_SPACEDIM >& face_arr);
-
-
-//    void InitData();
-    
 //    amrex::MultiFab& get_mf  (std::string macro_str) {auto macro_num = param_map[macro_str]; return (*m_p_mf[macro_num]);}
 //    amrex::MultiFab* get_p_mf (std::string macro_str) {auto macro_num = param_map[macro_str]; return m_p_mf[macro_num].get();}
 
+    std::map<int, amrex::LinOpBCType> map_LinOPBCType_2d[2];
+
 private:
-//    amrex::Vector<std::unique_ptr<amrex::MultiFab>> m_p_mf;
-//    void ParseBasicDomainInput();
-//    void InitializeBoxArrayAndDistributionMap ();
+    void ReadData();
+
+    void AssignLinOpBCTypeToBoundaries (const std::string bcType_str, const std::string map_bcAny_str, amrex::LinOpBCType& map_LinOPBCType_2d);
+
 
 };
 

@@ -9,7 +9,7 @@ DIM          = 3
 CXXSTD       = c++17
 
 PRINT_NAME   = TRUE
-PRINT_LOW   = TRUE
+PRINT_LOW   = FALSE
 TIME_DEPENDENT = FALSE 
 
 

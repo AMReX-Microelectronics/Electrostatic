@@ -12,26 +12,57 @@ using namespace amrex;
 
 c_GeometryProperties::c_GeometryProperties ()
 {
+#ifdef PRINT_NAME
+    amrex::Print() << "\n\n\t\t\t{************************c_GeometryProperties Constructor()************************\n";
+    amrex::Print() << "\t\t\tin file: " << __FILE__ << " at line: " << __LINE__ << "\n";
+#endif
+
     ReadData();
+
+#ifdef PRINT_NAME
+    amrex::Print() << "\t\t\t}************************c_GeometryProperties Constructor()************************\n";
+#endif
 } 
 
 void 
 c_GeometryProperties::ReadData()
 {    
+#ifdef PRINT_NAME
+    amrex::Print() << "\n\n\t\t\t\t{************************c_GeometryProperties::ReadData()************************\n";
+    amrex::Print() << "\t\t\t\tin file: " << __FILE__ << " at line: " << __LINE__ << "\n";
+#endif
+
      ParseBasicDomainInput();
+
+#ifdef PRINT_NAME
+    amrex::Print() << "\n\n\t\t\t\t}************************c_GeometryProperties::ReadData()************************\n";
+#endif
 }
 
 
 void 
 c_GeometryProperties::InitData()
 {
+#ifdef PRINT_NAME
+    amrex::Print() << "\n\n\t\t{************************c_GeometryProperties::InitData()************************\n";
+    amrex::Print() << "\t\tin file: " << __FILE__ << " at line: " << __LINE__ << "\n";
+#endif
+
     InitializeBoxArrayAndDistributionMap();
+
+#ifdef PRINT_NAME
+    amrex::Print() << "\t\t}************************c_GeometryProperties::InitData()************************\n";
+#endif
 }
 
 
 void
 c_GeometryProperties::ParseBasicDomainInput()
 {
+#ifdef PRINT_NAME
+    amrex::Print() << "\n\n\t\t\t\t{************************c_GeometryProperties::ParseBasicDomainInput()************************\n";
+    amrex::Print() << "\t\t\t\tin file: " << __FILE__ << " at line: " << __LINE__ << "\n";
+#endif
 
     amrex::Vector<int> num_cell;
     amrex::Vector<amrex::Real> prob_min(AMREX_SPACEDIM);
@@ -70,11 +101,18 @@ c_GeometryProperties::ParseBasicDomainInput()
         blocking_factor[i] = bf[i]; 
     }
 
+#ifdef PRINT_NAME
+    amrex::Print() << "\t\t\t\t}************************c_GeometryProperties::ParseBasicDomainInput()************************\n";
+#endif
 }
 
 void 
 c_GeometryProperties::InitializeBoxArrayAndDistributionMap()
 {
+#ifdef PRINT_NAME
+    amrex::Print() << "\n\n\t\t\t{************************c_GeometryProperties::InitializeBoxArrayAndDistributionMap()************************\n";
+    amrex::Print() << "\t\t\tin file: " << __FILE__ << " at line: " << __LINE__ << "\n";
+#endif
 
     amrex::IntVect dom_lo(AMREX_D_DECL(       0,        0,        0)); // domain low
     amrex::IntVect dom_hi(AMREX_D_DECL(n_cell[0]-1, n_cell[1]-1, n_cell[2]-1)); // domain high
@@ -94,4 +132,7 @@ c_GeometryProperties::InitializeBoxArrayAndDistributionMap()
 
     dm.define(ba);
 
+#ifdef PRINT_NAME
+    amrex::Print() << "\t\t\t}************************c_GeometryProperties::InitializeBoxArrayAndDistributionMap()************************\n";
+#endif
 }

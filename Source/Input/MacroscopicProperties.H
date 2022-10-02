@@ -40,16 +40,34 @@ public:
 private:
     void DefineParameterNameMap()
     {
+#ifdef PRINT_NAME
+    amrex::Print() << "\n\n\t\t\t\t{************************c_MacroscopicProperties::DefineParameterNameMap()************************\n";
+    amrex::Print() << "\t\t\t\tin file: " << __FILE__ << " at line: " << __LINE__ << "\n";
+#endif
+
         map_macro_name["epsilon"] = s_MacroscopicPropertiesMacroName::epsilon;
         map_macro_name["charge_density"] = s_MacroscopicPropertiesMacroName::charge_density;
         map_macro_name["phi"] = s_MacroscopicPropertiesMacroName::phi;
+
+#ifdef PRINT_NAME
+    amrex::Print() << "\t\t\t\t}************************c_MacroscopicProperties::DefineParameterNameMap()************************\n";
+#endif
     };
 
     void DefineDefaultValueMap()
     {
+#ifdef PRINT_NAME
+    amrex::Print() << "\n\n\t\t\t\t{************************c_MacroscopicProperties::DefineDefaultValueMap()************************\n";
+    amrex::Print() << "\t\t\t\tin file: " << __FILE__ << " at line: " << __LINE__ << "\n";
+#endif
+
         map_default_value["epsilon"] = PhysConst::ep0;
         map_default_value["charge_density"] = 0.0;
         map_default_value["phi"] = 0.0;
+
+#ifdef PRINT_NAME
+    amrex::Print() << "\t\t\t\t}************************c_MacroscopicProperties::DefineDefaultValueMap()************************\n";
+#endif
     };
     std::map<std::string,amrex::Real> map_default_value;
     std::map<std::string,int> map_num_ghostcell;

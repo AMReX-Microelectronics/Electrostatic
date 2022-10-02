@@ -11,6 +11,11 @@ using namespace amrex;
 
 c_PostProcessor::c_PostProcessor ()
 {
+#ifdef PRINT_NAME
+    amrex::Print() << "\n\n\t\t\t{************************c_PostProcessor Constructor()************************\n";
+    amrex::Print() << "\t\t\tin file: " << __FILE__ << " at line: " << __LINE__ << "\n";
+#endif
+
     DefineParameterNameMap();
     num_all_params = ReadData();
     num_arraymf_params = SortParameterType();
@@ -23,6 +28,9 @@ c_PostProcessor::c_PostProcessor ()
     m_p_mf.resize(num_mf_params);
     m_p_array_mf.resize(num_arraymf_params);
 
+#ifdef PRINT_NAME
+    amrex::Print() << "\t\t\t}************************c_PostProcessor Constructor()************************\n";
+#endif
 } 
 
 
@@ -39,6 +47,10 @@ c_PostProcessor::~c_PostProcessor ()
 int 
 c_PostProcessor::ReadData()
 { 
+#ifdef PRINT_NAME
+    amrex::Print() << "\n\n\t\t\t\t{************************c_PostProcessor:ReadData()************************\n";
+    amrex::Print() << "\t\t\t\tin file: " << __FILE__ << " at line: " << __LINE__ << "\n";
+#endif
 
     amrex::Vector< std::string > m_fields_to_process;
 
@@ -86,6 +98,9 @@ c_PostProcessor::ReadData()
     //}
     //amrex::Print() << "total parameters to process (final): " << map_param_all.size() << "\n\n";
 
+#ifdef PRINT_NAME
+    amrex::Print() << "\t\t\t\t}************************c_PostProcessor:ReadData()************************\n";
+#endif
 
    return map_param_all.size();
 
@@ -95,6 +110,10 @@ c_PostProcessor::ReadData()
 int 
 c_PostProcessor::SortParameterType()
 { 
+#ifdef PRINT_NAME
+    amrex::Print() << "\n\n\t\t\t\t{************************c_PostProcessor:SortParameterMap()************************\n";
+    amrex::Print() << "\t\t\t\tin file: " << __FILE__ << " at line: " << __LINE__ << "\n";
+#endif
 
   int i=0;
   int j=0;
@@ -114,6 +133,10 @@ c_PostProcessor::SortParameterType()
        }
    }
 
+#ifdef PRINT_NAME
+    amrex::Print() << "\t\t\t\t}************************c_PostProcessor:SortParameterMap()************************\n";
+#endif
+
    return i;
 
 }
@@ -122,6 +145,10 @@ c_PostProcessor::SortParameterType()
 void 
 c_PostProcessor::InitData()
 {
+#ifdef PRINT_NAME
+    amrex::Print() << "\n\n\t\t{************************c_PostProcessor::InitData()************************\n";
+    amrex::Print() << "\t\tin file: " << __FILE__ << " at line: " << __LINE__ << "\n";
+#endif
 
     for (auto it : map_param_mf) {
         m_p_mf[it.second] = std::make_unique<amrex::MultiFab>(); //cell-centered multifab
@@ -130,12 +157,19 @@ c_PostProcessor::InitData()
         m_p_array_mf[it.second] = std::make_unique<  std::array<amrex::MultiFab, AMREX_SPACEDIM>  >();
     }
 
+#ifdef PRINT_NAME
+    amrex::Print() << "\t\t}************************c_PostProcessor::InitData()************************\n";
+#endif
 }
 
 
 void 
 c_PostProcessor::Compute()
 {
+#ifdef PRINT_NAME
+    amrex::Print() << "\n\n\t\t{************************c_PostProcessor::Compute()************************\n";
+    amrex::Print() << "\t\tin file: " << __FILE__ << " at line: " << __LINE__ << "\n";
+#endif
  
     auto& rCode = c_Code::GetInstance();
     std::map<std::string,s_PostProcessMacroName::macro_name>::iterator it_Post;
@@ -172,4 +206,7 @@ c_PostProcessor::Compute()
             }
         }
     }
+#ifdef PRINT_NAME
+    amrex::Print() << "\t\t}************************c_PostProcessor::Compute()************************\n";
+#endif
 }

@@ -14,6 +14,10 @@ using namespace amrex;
 
 c_Output::c_Output ()
 {
+#ifdef PRINT_NAME
+    amrex::Print() << "\n\n\t\t\t{************************c_Output Constructor()************************\n";
+    amrex::Print() << "\t\t\tin file: " << __FILE__ << " at line: " << __LINE__ << "\n";
+#endif
 
     DefineSubscriptNameMap();
     num_all_params = ReadData();
@@ -21,6 +25,9 @@ c_Output::c_Output ()
     m_p_mf.resize(num_all_params);
     m_p_name_str.resize(num_all_params);
 
+#ifdef PRINT_NAME
+    amrex::Print() << "\t\t\t}************************c_Output Constructor()************************\n";
+#endif
 } 
 
 
@@ -35,6 +42,10 @@ c_Output::~c_Output ()
 int 
 c_Output::ReadData()
 { 
+#ifdef PRINT_NAME
+    amrex::Print() << "\n\n\t\t\t\t{************************c_Output::ReadData()************************\n";
+    amrex::Print() << "\t\t\t\tin file: " << __FILE__ << " at line: " << __LINE__ << "\n";
+#endif
 
     amrex::Vector< std::string > m_fields_to_plot;
     amrex::ParmParse pp_plot("plot");
@@ -84,6 +95,10 @@ c_Output::ReadData()
     //}
     //amrex::Print() << "total parameters to plot (final): " << map_param_all.size() << "\n\n";
 
+#ifdef PRINT_NAME
+    amrex::Print() << "\t\t\t\t}************************c_Output::ReadData()************************\n";
+#endif
+
     return map_param_all.size();
 
 }
@@ -92,6 +107,10 @@ c_Output::ReadData()
 void 
 c_Output::InitData()
 {
+#ifdef PRINT_NAME
+    amrex::Print() << "\n\n\t\t{************************c_Output::InitData()************************\n";
+    amrex::Print() << "\t\tin file: " << __FILE__ << " at line: " << __LINE__ << "\n";
+#endif
     for (auto it : map_param_all) {
         m_p_name_str[it.second] = it.first;
     }
@@ -104,12 +123,19 @@ c_Output::InitData()
 
     m_p_mf_all = std::make_unique<amrex::MultiFab>(ba, dm, num_all_params, Nghost0); //cell-centered multifab
 
+#ifdef PRINT_NAME
+    amrex::Print() << "\t\t}************************c_Output::InitData()************************\n";
+#endif
 }
 
 
 void
 c_Output::WriteSingleLevelPlotFile(int step, amrex::Real time)
 {
+#ifdef PRINT_NAME
+    amrex::Print() << "\n\n\t\t{************************c_Output::WriteSingleLevelPlotFile()************************\n";
+    amrex::Print() << "\t\tin file: " << __FILE__ << " at line: " << __LINE__ << "\n";
+#endif
 
     AssimilateDataPointers();
 
@@ -128,6 +154,9 @@ c_Output::WriteSingleLevelPlotFile(int step, amrex::Real time)
     }
     amrex::WriteSingleLevelPlotfile(plot_file_name, *m_p_mf_all, m_p_name_str, geom, time, 0);
 
+#ifdef PRINT_NAME
+    amrex::Print() << "\t\t}************************c_Output::WriteSingleLevelPlotFile()************************\n";
+#endif
 }
 
 
@@ -137,6 +166,10 @@ class TD;
 void
 c_Output::AssimilateDataPointers()
 {
+#ifdef PRINT_NAME
+    amrex::Print() << "\n\n\t\t\t{************************c_Output::AssimilateDataPointers()************************\n";
+    amrex::Print() << "\t\t\tin file: " << __FILE__ << " at line: " << __LINE__ << "\n";
+#endif
 
     auto& rCode = c_Code::GetInstance();
     auto& rPost = rCode.get_PostProcessor(); 
@@ -220,10 +253,17 @@ c_Output::AssimilateDataPointers()
         ++c;
     }
 
+#ifdef PRINT_NAME
+    amrex::Print() << "\t\t\t}************************c_Output::AssimilateDataPointers()************************\n";
+#endif
 }
 
 int c_Output::Evaluate_TypeOf_MacroStr(std::string macro_str) 
 {
+#ifdef PRINT_NAME
+    amrex::Print() << "\n\n\t\t\t\t{************************c_Output::Evaluate_TypeOf_MacroStr(*)************************\n";
+    amrex::Print() << "\t\t\t\tin file: " << __FILE__ << " at line: " << __LINE__ << "\n";
+#endif
     /** if macro_str is defined in c_MacroscopicProperties then return is 0.
      *  if macro_str is defined in c_PostProcessor then return is 1.
      **/
@@ -249,5 +289,8 @@ int c_Output::Evaluate_TypeOf_MacroStr(std::string macro_str)
         return_type = 1;
     }
 
+#ifdef PRINT_NAME
+    amrex::Print() << "\t\t\t\t}************************c_Output::Evaluate_TypeOf_MacroStr(*)************************\n";
+#endif
     return return_type;
 }
