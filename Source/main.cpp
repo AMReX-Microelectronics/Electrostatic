@@ -15,6 +15,7 @@ class TD;
 
 int main (int argc, char* argv[])
 {
+
     amrex::Initialize(argc,argv);
 
 #ifdef PRINT_NAME
@@ -23,7 +24,6 @@ int main (int argc, char* argv[])
     amrex::Print() << "in file: " << __FILE__ << " at line: " << __LINE__ << "\n";
     amrex::Print() << "************************************************************\n";
 #endif
-
 
     amrex::Real initial_time = ParallelDescriptor::second();
 
@@ -46,6 +46,7 @@ int main (int argc, char* argv[])
     amrex::Print() << "}**************************main(*)**************************\n";
     amrex::Print() << "**********************************************************\n\n";
 #endif
+
     amrex::Finalize();
     return 0;
 }

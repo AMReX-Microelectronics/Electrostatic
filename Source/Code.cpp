@@ -154,7 +154,7 @@ c_Code::InitData ()
 
     m_pMacroscopicProperties->InitData();
 
-    m_pMLMGSolver->Setup_MLABecLaplacian_ForPoissonEqn();
+    m_pMLMGSolver->InitData();
 
     m_pPostProcessor->InitData();
 

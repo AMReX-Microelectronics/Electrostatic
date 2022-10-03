@@ -2,6 +2,7 @@
 #define MLMG_H_
 
 #include "MLMG_fwd.H"
+#include "Input/BoundaryConditions/BoundaryConditions_fwd.H"
 
 #include <AMReX_REAL.H>
 #include <AMReX_GpuContainers.H>
@@ -46,7 +47,8 @@ public:
     c_MLMGSolver();
 
 
-    void Setup_MLABecLaplacian_ForPoissonEqn();
+    void InitData();
+
 
     void Solve_PoissonEqn();
 
@@ -57,13 +59,33 @@ public:
 //    amrex::MultiFab& get_mf  (std::string macro_str) {auto macro_num = param_map[macro_str]; return (*m_p_mf[macro_num]);}
 //    amrex::MultiFab* get_p_mf (std::string macro_str) {auto macro_num = param_map[macro_str]; return m_p_mf[macro_num].get();}
 
-    std::map<int, amrex::LinOpBCType> map_LinOPBCType_2d[2];
+    std::array<std::array<amrex::LinOpBCType,AMREX_SPACEDIM>,2> LinOpBCType_2d;
+
 
 private:
+    amrex::MultiFab* soln_cc=nullptr;
+    amrex::MultiFab*  rhs_cc=nullptr;
+    amrex::MultiFab* beta_cc=nullptr;
+
+    amrex::MultiFab* robin_a=nullptr;
+    amrex::MultiFab* robin_b=nullptr;
+    amrex::MultiFab* robin_f=nullptr;
+
+
     void ReadData();
 
-    void AssignLinOpBCTypeToBoundaries (const std::string bcType_str, const std::string map_bcAny_str, amrex::LinOpBCType& map_LinOPBCType_2d);
+    void Set_soln_beta_rhs_ccMultifabs();
 
+    void Setup_MLABecLaplacian_ForPoissonEqn();
+
+    void AssignLinOpBCTypeToBoundaries ();
+
+    bool all_homogeneous_boundaries;
+    bool some_functionbased_inhomogeneous_boundaries;
+    bool some_constant_inhomogeneous_boundaries;
+
+    void Fill_Constant_Inhomogeneous_Boundaries();
+    void Fill_FunctionBased_Inhomogeneous_Boundaries();
 
 };
 

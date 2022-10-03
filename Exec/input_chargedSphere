@@ -59,13 +59,15 @@ domain.prob_hi = Lx/2. Ly/2. Lz/2.
 # - For periodic boundary conditions, if any one side of a dimension (lo or hi) is set as periodic,
 #   then other side of the direction is asserted as periodic. A warning is raised if the other side is set to something else.
 
-boundary.lo = dir(Xmin) per rob(Zmin)
-boundary.hi = neu(-5.0) per ref
-
-boundary.Xmin_function(x,y,z)   = "cos(y)"
-boundary.Zmin_a_function(x,y,z) = "1 * (x < 0)  *  (z < -Lz/2)"
-boundary.Zmin_b_function(x,y,z) = "1 * (x >= 0) *  (z < -Lz/2)"
-boundary.Zmin_f_function(x,y,z) = "5 * (x < 0)  *  (z < -Lz/2) + 10 * (x >= 0)  *  (z < -Lz/2)"
+boundary.lo = neu(1e-5) dir(0) dir(1e-5)
+boundary.hi = neu(1e-5) dir(0) dir(1e-5)
+#boundary.lo = dir(Xmin) per rob(Zmin)
+#boundary.hi = neu(-5.0) per ref
+#
+#boundary.Xmin_function(x,y,z)   = "cos(y)"
+#boundary.Zmin_a_function(x,y,z) = "1 * (x < 0)  *  (z < -Lz/2)"
+#boundary.Zmin_b_function(x,y,z) = "1 * (x >= 0) *  (z < -Lz/2)"
+#boundary.Zmin_f_function(x,y,z) = "5 * (x < 0)  *  (z < -Lz/2) + 10 * (x >= 0)  *  (z < -Lz/2)"
 
 ####################################
 ###### MACROSCOPIC PROPERTIES ######
