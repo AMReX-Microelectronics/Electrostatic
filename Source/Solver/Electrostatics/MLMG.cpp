@@ -1,6 +1,7 @@
 #include "MLMG.H"
 
-#include "../Utils/WarpXUtil.H"
+#include "../../Utils/WarpXUtil.H"
+#include "../../Utils/TextMsg.H"
 #include "../../Utils/CodeUtils/CodeUtil.H"
 #include "Code.H"
 #include "Input/GeometryProperties/GeometryProperties.H"
@@ -116,10 +117,36 @@ c_MLMGSolver::ReadData()
         c_Code::GetInstance().RecordWarning("MLMG properties", warnMsg.str());
     }
      
+
+
+    auto& rCode = c_Code::GetInstance();
+    auto& rMprop = rCode.get_MacroscopicProperties();
+    std::map<std::string,int>::iterator it_Mprop;
+
     pp_mlmg.get("alpha",alpha_cc_str);
+
+    //Assert that the multifab name is specified through 'macroscopic.fields_to_define' in the input file.
+    it_Mprop = rMprop.map_param_all.find(alpha_cc_str);
+    WARPX_ALWAYS_ASSERT_WITH_MESSAGE(it_Mprop != rMprop.map_param_all.end(), 
+                                     "'" + alpha_cc_str + "' is not specified through 'macroscopic.fields_to_define' in the input file.");
+
     pp_mlmg.get("beta" ,beta_cc_str);
+
+    it_Mprop = rMprop.map_param_all.find(beta_cc_str);
+    AMREX_ALWAYS_ASSERT_WITH_MESSAGE(it_Mprop != rMprop.map_param_all.end(), 
+                                     beta_cc_str + " is not specified through 'macroscopic.fields_to_define' in the input file.");
+
     pp_mlmg.get("soln" ,soln_cc_str);
+
+    it_Mprop = rMprop.map_param_all.find(soln_cc_str);
+    AMREX_ALWAYS_ASSERT_WITH_MESSAGE(it_Mprop != rMprop.map_param_all.end(), 
+                                     soln_cc_str + " is not specified through 'macroscopic.fields_to_define' in the input file.");
+
     pp_mlmg.get("rhs"  ,rhs_cc_str);
+
+    it_Mprop = rMprop.map_param_all.find(rhs_cc_str);
+    AMREX_ALWAYS_ASSERT_WITH_MESSAGE(it_Mprop != rMprop.map_param_all.end(), 
+                                     rhs_cc_str + " is not specified through 'macroscopic.fields_to_define' in the input file.");
 
 #ifdef PRINT_NAME
     amrex::Print() << "\t\t\t\t}************************c_MLMGSolver::ReadData()************************\n";

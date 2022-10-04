@@ -38,7 +38,7 @@ domain.prob_hi = Lx/2. Ly/2. Lz/2.
 #domain.is_periodic = 1: yes, 0: no
 domain.is_periodic = 1 1 0
 
-#options: cartesian, radial (at present, only cartesian is supported).
+#domain.coord_sys can be cartesian or radial (at present, only cartesian is supported).
 domain.coord_sys = cartesian 
 
 #################################
@@ -72,7 +72,8 @@ domain.coord_sys = cartesian
 # - Periodic boundary conditions are imposed based on domain.is_periodic set above.
 #   At these boundaries, if some boundaries other than "per" are specified through boundary.hi and boundary.lo,
 #   then they are ignored and a warning is raised stating that these boundary conditions are set to periodic.
-
+#   E.g. below `neu' for directions 0 and 1 will be ignored.
+#
 boundary.hi = neu neu dir(10)
 boundary.lo = neu neu dir(0)
 
@@ -99,7 +100,7 @@ macroscopic.ghostcells_for_fields = alpha.0 epsilon.1 charge_density.0 phi.1
 # - Their default values are set in function c_MacroscopicProperties::DefineDefaultValueMap(), which are used 
 #   if neither a `constant' or `function parser' based initialization is defined in the input file.
 #
-# - If the default value is not specified in the above function, it is taken as `0'.
+# - If the default value is not specified in the above function, then the multifab is initialized as `0'.
 #
 # - In the following example, epsilon and charge_density are given constant values, however, they can be specified using a function parser as well,
 #   e.g. macroscopic.epsilon_function(x,y,z) = "epsilon_0 + (epsilon_r_sph-1)*epsilon_0 * ( sqrt(x**2 + y**2 + z**2) <= R_sph )"
@@ -157,7 +158,7 @@ mlmg.relative_tolerance=1e-10
 #   2) the vector of Flux, denoted as `vecFlux', which computes  beta_fc * Gradient( soln ).
 #
 # - Note that since the functions provided by MLMG solver do not have an option to compute specific components of the vector fields.
-#   Therefore, specifying individual components such as E_x, E_y etc. will still force the code to compute the entire vector fields.
+#   Therefore, specifying individual components such as Field_x, Field_y etc. will still force the code to compute the entire vector fields.
 
 post_process.fields_to_process = vecField vecFlux 
 
@@ -171,7 +172,7 @@ post_process.fields_to_process = vecField vecFlux
 # -Note that for vector fields (specified as vec<FieldName>) user have an option to plot out only the specific x, y, or z components.
 #  For example, for specifying the y-component of `vecFlux', defined above, user should write, `Flux_y'
 
-plot.fields_to_plot = Field_x Field_y Field_z vecFlux epsilon charge_density phi 
+plot.fields_to_plot = Field_x Field_y Field_z vecFlux epsilon charge_density phi alpha
 
 # -Note that there is provision for disregarding repeating field names, e.g. 1) specifying `phi' twice will result in it's output written out only once, 
 #  2) specifying Field_x and vecField will result in output of Field_x, Field_y, and Field_z.

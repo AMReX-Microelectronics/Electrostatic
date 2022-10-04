@@ -272,13 +272,13 @@ int c_Output::Evaluate_TypeOf_MacroStr(std::string macro_str)
     auto& rPost = rCode.get_PostProcessor();
     auto& rMprop = rCode.get_MacroscopicProperties();
 
-    std::map<std::string,s_MacroscopicPropertiesMacroName::macro_name>::iterator it_Mprop;
+    std::map<std::string,int>::iterator it_Mprop;
     std::map<std::string,s_PostProcessMacroName::macro_name>::iterator it_Post;
 
-    it_Mprop = rMprop.map_macro_name.find(macro_str);
+    it_Mprop = rMprop.map_param_all.find(macro_str);
     it_Post = rPost.map_macro_name.find(macro_str);
 
-    if(it_Mprop != rMprop.map_macro_name.end())
+    if(it_Mprop != rMprop.map_param_all.end())
     { 
     //   amrex::Print() << "macro_string " << macro_str << " is a part of c_MacroscopicProperties. \n";
         return_type = 0;

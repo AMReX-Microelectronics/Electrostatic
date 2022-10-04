@@ -36,6 +36,7 @@ public:
     amrex::MultiFab* get_p_mf (std::string macro_str) {auto macro_num = map_param_all[macro_str]; return m_p_mf[macro_num].get();}
 
     std::map<std::string,s_MacroscopicPropertiesMacroName::macro_name> map_macro_name;
+    std::map<std::string,int> map_param_all;
 
 private:
     void DefineParameterNameMap()
@@ -77,7 +78,6 @@ private:
 
     int ReadParameterMapAndNumberOfGhostCells();
 
-    std::map<std::string,int> map_param_all;
     int num_params;
     void DefineMacroVariableVectorSizes();
 

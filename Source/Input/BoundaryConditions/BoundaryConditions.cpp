@@ -36,9 +36,7 @@ c_BoundaryConditions::c_BoundaryConditions ()
 
 c_BoundaryConditions::~c_BoundaryConditions ()
 {
-//    for (auto& elem : m_p_mf) {
-//        elem.release();
-//    }
+//    
 }
 
 
@@ -203,7 +201,7 @@ c_BoundaryConditions::ReadBoundaryConditionsType()
 
     bc_str_2d.clear();
 
-    /* WARNING: assert both sides to be periodic */
+    /* Make both boundaries periodic based on is_periodic */
     auto& rCode = c_Code::GetInstance();
     auto& rGprop = rCode.get_GeometryProperties();
     auto& is_periodic = rGprop.is_periodic;
@@ -223,6 +221,22 @@ c_BoundaryConditions::ReadBoundaryConditionsType()
                 bcAny_2d[0][idim] = 0x0;               bcAny_2d[1][idim] = 0x0;
 
         }
+    }
+
+    /*Conversely, ensure a direction in is_periodic is set to be periodic if boundary.lo/hi are set to periodic.*/
+    for (std::size_t idim = 0; idim < AMREX_SPACEDIM; ++idim) 
+    {
+        bool is_periodic_flag = true;
+        if ( ( bcType_2d[0][idim] == "per" and  bcType_2d[1][idim] != "per") or 
+             ( bcType_2d[0][idim] != "per" and  bcType_2d[1][idim] == "per") or
+             ( bcType_2d[0][idim] == "per" and  bcType_2d[1][idim] == "per" and is_periodic[idim] != 1) ) 
+        {
+             is_periodic_flag = false;
+        }
+         std::string warnMsg;
+         warnMsg = "Both sides must be periodic, and 'domain.is_periodic', must be 1 for the periodic directions\
+                    user intends to set. Current setup violates this for direction: " + std::to_string(idim);
+         WARPX_ALWAYS_ASSERT_WITH_MESSAGE(is_periodic_flag == true, warnMsg);
     }
 
 

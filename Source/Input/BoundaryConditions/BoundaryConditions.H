@@ -3,8 +3,6 @@
 
 #include "BoundaryConditions_fwd.H"
 
-#include "../Utils/WarpXConst.H"
-
 #include <AMReX_REAL.H>
 #include <AMReX_Array.H>
 #include <AMReX_Vector.H>
@@ -14,8 +12,6 @@
 #include <string>
 #include <vector>
 #include <any>
-//#include <AMReX_Extension.H>
-//#include <AMReX_GpuQualifiers.H>
 
 
 struct s_BoundaryConditions {
@@ -70,7 +66,7 @@ private:
     amrex::Vector<std::unique_ptr<amrex::Parser>> m_p_macro_parser; //pointer to parser object
     amrex::Vector<std::string> m_macro_str_function;
 
-    amrex::Vector<std::unique_ptr<amrex::MultiFab>> m_p_mf; //Pointer to multifab of permittivity, eps
+    amrex::Vector<std::unique_ptr<amrex::MultiFab>> m_p_mf; //Pointer to multifabs 
 
     void ReadBoundaryConditionsParser(std::string macro_str, int macro_num);
 #ifdef TIME_DEPENDENT
