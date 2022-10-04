@@ -1,7 +1,6 @@
 #include "MacroscopicProperties.H"
 
-#include "../Utils/WarpXUtil.H"
-#include "Utils/WarpXConst.H"
+#include "../../Utils/SelectWarpXUtils/WarpXUtil.H"
 #include "../../Utils/CodeUtils/CodeUtil.H"
 
 #include "Code.H"

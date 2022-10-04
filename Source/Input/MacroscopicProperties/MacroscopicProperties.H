@@ -3,7 +3,7 @@
 
 #include "MacroscopicProperties_fwd.H"
 
-#include "../Utils/WarpXConst.H"
+#include "../Utils/SelectWarpXUtils/WarpXConst.H"
 
 #include <AMReX_REAL.H>
 #include <AMReX_Array.H>

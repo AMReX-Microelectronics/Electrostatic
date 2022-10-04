@@ -1,9 +1,9 @@
 #include "Code.H"
 
-#include "Utils/MsgLogger/MsgLogger.H"
-#include "Utils/WarnManager.H"
-#include "Utils/WarpXUtil.H"
-#include "Utils/WarpXProfilerWrapper.H"
+#include "Utils/SelectWarpXUtils/MsgLogger/MsgLogger.H"
+#include "Utils/SelectWarpXUtils/WarnManager.H"
+#include "Utils/SelectWarpXUtils/WarpXUtil.H"
+#include "Utils/SelectWarpXUtils/WarpXProfilerWrapper.H"
 
 #include "Input/GeometryProperties/GeometryProperties.H"
 #include "Input/BoundaryConditions/BoundaryConditions.H"

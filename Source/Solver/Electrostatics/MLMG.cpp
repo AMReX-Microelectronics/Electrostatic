@@ -1,7 +1,7 @@
 #include "MLMG.H"
 
-#include "../../Utils/WarpXUtil.H"
-#include "../../Utils/TextMsg.H"
+#include "../../Utils/SelectWarpXUtils/WarpXUtil.H"
+#include "../../Utils/SelectWarpXUtils/TextMsg.H"
 #include "../../Utils/CodeUtils/CodeUtil.H"
 #include "Code.H"
 #include "Input/GeometryProperties/GeometryProperties.H"

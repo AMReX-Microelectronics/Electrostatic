@@ -7,7 +7,7 @@
 #include "Solver/Electrostatics/MLMG_fwd.H"
 #include "PostProcessor/PostProcessor_fwd.H"
 #include "Output/Output_fwd.H"
-#include "Utils/WarnManager_fwd.H"
+#include "Utils/SelectWarpXUtils/WarnManager_fwd.H"
 
 
 #include <AMReX.H>

@@ -1,12 +1,10 @@
 #include "BoundaryConditions.H"
 
-#include "../Utils/WarpXUtil.H"
-#include "Utils/WarpXConst.H"
-
+#include "../../Utils/SelectWarpXUtils/WarpXUtil.H"
+#include "../../Utils/SelectWarpXUtils/TextMsg.H"
+#include "../../Utils/CodeUtils/CodeUtil.H"
 #include "Code.H"
 #include "GeometryProperties.H"
-#include "../../Utils/TextMsg.H"
-#include "../../Utils/CodeUtils/CodeUtil.H"
 
 #include <AMReX_ParmParse.H>
 #include <AMReX_Parser.H>

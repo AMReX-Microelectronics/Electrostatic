@@ -1,9 +1,3 @@
-//#include <AMReX_PlotFileUtil.H>
-//#include <AMReX_ParmParse.H>
-//#include <AMReX_MLABecLaplacian.H>
-//#include <AMReX_MLMG.H> 
-//#include <AMReX_MultiFab.H> 
-#include <AMReX_VisMF.H>
 
 #include "Code.H"
 #include "CodeUtil.H"
@@ -32,8 +26,6 @@ int main (int argc, char* argv[])
     pCode.InitData();
 
     pCode.PrintGlobalWarnings("the initialization step"); //Print warning at this stage
-
-//    pCode.Output();
 
     pCode.Solve();
 
