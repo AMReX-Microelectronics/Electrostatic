@@ -3,24 +3,22 @@
 ##################################
 #
 ### GEOMETRY PROPERTIES 
-my_constants.Lx = 2
-my_constants.Ly = 2
-my_constants.Lz = 2
+my_constants.Lx = 0.2
+my_constants.Ly = 0.2
+my_constants.Lz = 0.05
 
 ### Physical Constants 
-my_constants.pi = 3.14159265358979
+#my_constants.pi = 3.14159265358979
+#my_constants.q = 1.602e-19
 my_constants.epsilon_0 = 8.8541878128e-12
-my_constants.q = 1.602e-19
 
 ### MACROSCOPIC PROPERTIES
-my_constants.R_sph = min(min(Lx,Ly),Lz)/8.
-my_constants.V_sph = (4./3)*pi*R_sph**3
-my_constants.Q_sph = 100*q
-
-my_constants.epsilon_r_sph = 10
-my_constants.charge_density_sph = Q_sph / V_sph
-my_constants.charge_density_surr = 0.0
-
+#my_constants.A = Lx*Ly #area of parallel plate capacitor
+#my_constants.d = Lz    #distance between plates
+#my_constants.t = 0.001  #thickness of plates which hold the charge
+#my_constants.C = epsilon_0*A/d #capacitance
+#my_constants.dV = 10 #Volts
+#my_constants.rho = C*dV/(A*t) #Volts
 #####################################
 
 
@@ -30,15 +28,24 @@ my_constants.charge_density_surr = 0.0
 #
 # - The following AMReX specific properties are defined in c_GeometryProperties.
 
-domain.n_cell = 100 100 100
-domain.max_grid_size = 100 100 100
-domain.blocking_factor = 100 100 100
+domain.n_cell = 120 120 80
+domain.max_grid_size = 120 120 80
+# domain.blocking_factor = 120 120 80
 
 domain.prob_lo = -Lx/2. -Ly/2. -Lz/2.
 domain.prob_hi = Lx/2. Ly/2. Lz/2.
 
-# - User must specify boundary conditions using `domain.boundaryCond_lo' array for X_min, Y_min, and Z_min boundaries
-#   and `domain.boundaryCond_hi' for X_max, Y_max, and Z_max boundaries.
+#domain.is_periodic = 1: yes, 0: no
+domain.is_periodic = 1 1 0
+
+#options: cartesian, radial (at present, only cartesian is supported).
+domain.coord_sys = cartesian 
+
+#################################
+###### BOUNDARY CONDITIONS ######
+#################################
+# - User must specify boundary conditions using `boundary.lo' array for X_min, Y_min, and Z_min boundaries
+#   and `boundary.hi' for X_max, Y_max, and Z_max boundaries.
 #
 # - User has an option to choose from the following:
 #   dir: homogeneous dirichlet
@@ -46,28 +53,29 @@ domain.prob_hi = Lx/2. Ly/2. Lz/2.
 #   per: periodic
 #   rob: robin
 #   ref: reflect
+#   
+#   The options are as follows:
 #
-#   dir(<value>) or neu(<value>): inhomogeneous dirichlet or neumann with a value of <value>, 
+#   dir or neu: homogeneous dirichlet or neumann boundaries.
+#
+#   dir(<value>) or neu(<value>): inhomogeneous dirichlet or neumann with a value of <value> in SI units, 
 #                                 e.g. <value> = 5.0, -3e-6, 5e7 etc.
 #   dir(<string>) or neu(<string>) or rob(<string>): inhomogeneous dirichlet, neumann or robin 
 #                                                    with a function parser name of <string>, 
 #                                                    e.g. <string> = Xmin, Ymax, Z_hi, etc.
 #
+# - For homogeneous dirichlet or neumann, boundary values are initialized based on the solution multifab, e.g. phi in this case.
+#
 # - For periodic and reflect boundary conditions, we do not need to specify any value in the bracket.
 #   If such value or string is specified then it is ignored.
 #
-# - For periodic boundary conditions, if any one side of a dimension (lo or hi) is set as periodic,
-#   then other side of the direction is asserted as periodic. A warning is raised if the other side is set to something else.
+# - Periodic boundary conditions are imposed based on domain.is_periodic set above.
+#   At these boundaries, if some boundaries other than "per" are specified through boundary.hi and boundary.lo,
+#   then they are ignored and a warning is raised stating that these boundary conditions are set to periodic.
 
-boundary.lo = neu(1e-5) dir(0) dir(1e-5)
-boundary.hi = neu(1e-5) dir(0) dir(1e-5)
-#boundary.lo = dir(Xmin) per rob(Zmin)
-#boundary.hi = neu(-5.0) per ref
-#
-#boundary.Xmin_function(x,y,z)   = "cos(y)"
-#boundary.Zmin_a_function(x,y,z) = "1 * (x < 0)  *  (z < -Lz/2)"
-#boundary.Zmin_b_function(x,y,z) = "1 * (x >= 0) *  (z < -Lz/2)"
-#boundary.Zmin_f_function(x,y,z) = "5 * (x < 0)  *  (z < -Lz/2) + 10 * (x >= 0)  *  (z < -Lz/2)"
+boundary.hi = neu neu dir(10)
+boundary.lo = neu neu dir(0)
+
 
 ####################################
 ###### MACROSCOPIC PROPERTIES ######
@@ -76,15 +84,15 @@ boundary.hi = neu(1e-5) dir(0) dir(1e-5)
 # - `fields_to_define' defines cell-centered multifabs (amrex::Multifab) initialized as input. 
 #
 # - For the electrostatic problem, we need epsilon, charge_density, phi.
-# 
-macroscopic.fields_to_define = epsilon charge_density phi
-#
 # - At present, there is no option for specifying vector fields of type e.g. Array<amrex::Multifab, AMREX_SPACEDIM>.
+ 
+macroscopic.fields_to_define = alpha epsilon charge_density phi
 
 # - `ghostcells_for_fields' defines the ghost cell for the multifabs defined in fields_to_define, as <FieldName>.<NumberOfGhostCells>. 
 #    The default is 0.
-#
-macroscopic.ghostcells_for_fields = epsilon.1 charge_density.0 phi.1 
+
+macroscopic.ghostcells_for_fields = alpha.0 epsilon.1 charge_density.0 phi.1 
+
 
 # - The fields defined in `fields_to_define' can be initialized as constants or using a function parser as follows.
 #
@@ -93,43 +101,44 @@ macroscopic.ghostcells_for_fields = epsilon.1 charge_density.0 phi.1
 #
 # - If the default value is not specified in the above function, it is taken as `0'.
 #
-# - In the following example, epsilon and charge_density are given a different value below radius R_sph, defined above.
-#
-macroscopic.epsilon_function(x,y,z) = "epsilon_0 + (epsilon_r_sph-1)*epsilon_0 * ( sqrt(x**2 + y**2 + z**2) <= R_sph )"
-macroscopic.charge_density_function(x,y,z) = "charge_density_surr + charge_density_sph * ( sqrt(x**2 + y**2 + z**2) <= R_sph )"
-macroscopic.phi = 0.0
-#
-#
-# - Note that, the particular use of field multifabs defined above need to be coded in the solver depending on the application.
-#   e.g. we have used phi as the `unknown' multifab for the MLMG Poisson solver, as described below.
+# - In the following example, epsilon and charge_density are given constant values, however, they can be specified using a function parser as well,
+#   e.g. macroscopic.epsilon_function(x,y,z) = "epsilon_0 + (epsilon_r_sph-1)*epsilon_0 * ( sqrt(x**2 + y**2 + z**2) <= R_sph )"
 
-
+macroscopic.epsilon = epsilon_0
+macroscopic.charge_density = 0.
+macroscopic.phi = 0.
 
 ####################################
 ###### MLMG SOLVER PROPERTIES ######
 ####################################
 #
-# - MLMG solver solves alpha_cc asclalar + bscalar ( Divergence{  beta_fc * Gradient{ unknown_cc }  } ) = rhs_cc, 
-#   where subscripts `cc' and `fc' denote a cell-centered and face-centered multifab.
-#  
+# - MLMG solver solves alpha asclalar + bscalar ( Divergence{  beta_fc * Gradient{ soln }  } ) = rhs, 
+#   where subscripts `fc' denotes a face-centered multifab. rhs, soln and alpha are cell-centered multifabs.
+
 # - For Poisson problem, ascalar = 0 and bscalar=1.
-# 
-# - We have used: 
-#   - beta_fc = epsilon_fc (which is derived from epsilon_cc) 
-#   - unknown_cc = phi
-#   - rho_cc = charge_denfisty
-#
+
+mlmg.ascalar=0
+mlmg.bscalar=1
+
+# - Below we assign cell-centered multifabs defined in "macroscopic.fields_to_define" to MLMG cell-centered multifabs.
+# - Note that we need beta_fc which is derived from beta set equal to epsilon here.
+
+mlmg.soln   = phi
+mlmg.rhs    = charge_density
+mlmg.alpha  = alpha
+mlmg.beta   = epsilon
+
+
 # - Other optional parameters to specify are: 
 #    - set_verbose (default=0), 
 #    - max_order (default=2), 
 #    - relative_tolerance (default=1e-10),
 #    - absolute_tolerance(default=0).
 
-mlmg.ascalar=0
-mlmg.bscalar=1
 mlmg.set_verbose=0
 mlmg.absolute_tolerance=0
 mlmg.relative_tolerance=1e-10
+
 
 
 #############################
@@ -144,15 +153,13 @@ mlmg.relative_tolerance=1e-10
 #
 # -At present, the recipe for the following two vector fields is coded, using the functions provided by the MLMG solver.:
 #
-#   1) the vector of E-field, denoted as `vecE'. This is equal to -Gradient(unknown_cc). 
-#   2) the vector of Flux, denoted as `vecFlux'. This is equal to  beta_fc * Gradient{ unknown_cc }.
+#   1) the vector of Field, denoted as `vecField', which gives -Gradient(soln). This is E-field.
+#   2) the vector of Flux, denoted as `vecFlux', which computes  beta_fc * Gradient( soln ).
 #
 # - Note that since the functions provided by MLMG solver do not have an option to compute specific components of the vector fields.
 #   Therefore, specifying individual components such as E_x, E_y etc. will still force the code to compute the entire vector fields.
 
-post_process.fields_to_process = vecE vecFlux 
-
-
+post_process.fields_to_process = vecField vecFlux 
 
 ####################
 ###### OUTPUT ######
@@ -163,8 +170,8 @@ post_process.fields_to_process = vecE vecFlux
 #
 # -Note that for vector fields (specified as vec<FieldName>) user have an option to plot out only the specific x, y, or z components.
 #  For example, for specifying the y-component of `vecFlux', defined above, user should write, `Flux_y'
-#
-plot.fields_to_plot = E_x E_y E_z vecFlux epsilon charge_density phi 
-#
+
+plot.fields_to_plot = Field_x Field_y Field_z vecFlux epsilon charge_density phi 
+
 # -Note that there is provision for disregarding repeating field names, e.g. 1) specifying `phi' twice will result in it's output written out only once, 
-#  2) specifying E_x and vecE will result in output of E_x, E_y, and E_z.
+#  2) specifying Field_x and vecField will result in output of Field_x, Field_y, and Field_z.

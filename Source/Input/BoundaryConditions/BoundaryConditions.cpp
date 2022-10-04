@@ -173,6 +173,7 @@ c_BoundaryConditions::ReadBoundaryConditionsType()
 #ifdef PRINT_NAME
     amrex::Print() << "\n\n\t\t\t\t\t{************************c_BoundaryConditions::ReadBoundaryConditionsType()************************\n";
     amrex::Print() << "\t\t\t\t\tin file: " << __FILE__ << " at line: " << __LINE__ << "\n";
+    std::string prt = "\t\t\t\t\t";
 #endif
 
     amrex::Vector<amrex::Vector<std::string>> bc_str_2d(2);
@@ -182,12 +183,12 @@ c_BoundaryConditions::ReadBoundaryConditionsType()
     bool bc_hi_specified = pp_boundary.queryarr("hi", bc_str_2d[1]);
 
 #ifdef PRINT_LOW
-    amrex::Print() << "\nboundary conditions strings, bc_str: \n";
+    amrex::Print() << "\n" << prt << "boundary conditions strings, bc_str: \n";
     for (auto& i: bc_str_2d)
     {
         for (auto& j: i) 
         {
-            amrex::Print() << j << "  ";
+            amrex::Print() << prt << j << "  ";
         }
         amrex::Print() << "\n";
     }
@@ -203,28 +204,27 @@ c_BoundaryConditions::ReadBoundaryConditionsType()
     bc_str_2d.clear();
 
     /* WARNING: assert both sides to be periodic */
-    for (std::size_t i = 0; i < 1; ++i) 
+    auto& rCode = c_Code::GetInstance();
+    auto& rGprop = rCode.get_GeometryProperties();
+    auto& is_periodic = rGprop.is_periodic;
+
+    
+    for (std::size_t idim = 0; idim < AMREX_SPACEDIM; ++idim) 
     {
-        for (std::size_t j = 0; j < AMREX_SPACEDIM; ++j) 
+        if(is_periodic[idim] == 1 and  (map_bcAny_2d[0][idim] != "periodic" or  map_bcAny_2d[0][idim] != "periodic") ) 
         {
-            if(map_bcAny_2d[i][j] == "periodic" or map_bcAny_2d[i+1][j] == "periodic") {
-               if(map_bcAny_2d[i][j] != "periodic" or map_bcAny_2d[i+1][j] !="periodic") { //raise a warning
+            std::stringstream warnMsg;
+            warnMsg << "Note that domain.is_periodic is set to 1 (true) for direction "<< idim << " !\n"
+                << "Therefore, the value set by boundary.lo/hi is ignored and both sides are assumed to be periodic. \n";
+            c_Code::GetInstance().RecordWarning("Boundary Conditions", warnMsg.str());
 
-                    std::string dim;
-                    if(j==0) { dim= 'x';} else if(j==1) {dim='y';} else if(j==2) {dim = 'z';}
+            map_bcAny_2d[0][idim] = "periodic";    map_bcAny_2d[1][idim] = "periodic";
+               bcType_2d[0][idim] = "per";            bcType_2d[1][idim] = "per";
+                bcAny_2d[0][idim] = 0x0;               bcAny_2d[1][idim] = 0x0;
 
-                    std::stringstream warnMsg;
-                    warnMsg << "Note that only one of the ends of a domain along a direction cannot be periodic; both must be. \n"
-                    << "Input specification for direction '" << dim << "' violates that, and therefore, both sides are assumed to be periodic. \n";
-                    c_Code::GetInstance().RecordWarning("Boundary Conditions", warnMsg.str());
-
-                    map_bcAny_2d[i][j] = "periodic";    map_bcAny_2d[i+1][j] = "periodic";
-                    bcType_2d[i][j] = "per";            bcType_2d[i+1][j] = "per";
-                    bcAny_2d[i][j] = 0x0;               bcAny_2d[i+1][j] = 0x0;
-               }
-            }
         }
     }
+
 
 #ifdef PRINT_LOW
     for (std::size_t i = 0; i < 2; ++i) 
@@ -232,9 +232,9 @@ c_BoundaryConditions::ReadBoundaryConditionsType()
         for (std::size_t j = 0; j < AMREX_SPACEDIM; ++j) 
         {
             
-            amrex::Print() << "\nboundary type, bcType_2d: " << bcType_2d[i][j] << "\n";
-            amrex::Print() << "boundary map, map_bcAny_2d: " << map_bcAny_2d[i][j] << "\n";
-            amrex::Print() << "(bcAny_2d) bracket ";
+            amrex::Print()  << "\n" << prt << "boundary type, bcType_2d: " << bcType_2d[i][j] << "\n";
+            amrex::Print()  << prt << "boundary map, map_bcAny_2d: " << map_bcAny_2d[i][j] << "\n";
+            amrex::Print()  << prt << "(bcAny_2d) bracket ";
 
             process_std_any(bcAny_2d[i][j]);
 
@@ -275,12 +275,12 @@ c_BoundaryConditions::ReadBoundaryConditionsType()
     num_function_parsers = map_function_parser_name.size();
 
 #ifdef PRINT_LOW
-    amrex::Print() << "\nmap_function_parser_name: \n";
+    amrex::Print() << "\n" << prt << "map_function_parser_name: \n";
     for (auto& i: map_function_parser_name)
     {
         amrex::Print() << i.first << "  " << i.second << "\n";
     }
-    amrex::Print() << "\nnum_function_parsers: " << num_function_parsers << "\n";
+    amrex::Print() << "\n" << prt << "num_function_parsers: " << num_function_parsers << "\n";
     amrex::Print() << "\n\n";
 #endif    
 

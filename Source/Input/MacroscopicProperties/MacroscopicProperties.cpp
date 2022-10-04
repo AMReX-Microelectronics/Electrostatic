@@ -78,6 +78,7 @@ c_MacroscopicProperties::ReadParameterMapAndNumberOfGhostCells()
 #ifdef PRINT_NAME
     amrex::Print() << "\n\n\t\t\t\t\t{************************c_MacroscopicProperties::ReadParameterMapAndNumberOfGhostCells()************************\n";
     amrex::Print() << "\t\t\t\t\tin file: " << __FILE__ << " at line: " << __LINE__ << "\n";
+    std::string prt = "\t\t\t\t\t";
 #endif
 
 
@@ -105,12 +106,12 @@ c_MacroscopicProperties::ReadParameterMapAndNumberOfGhostCells()
     fields_to_define.clear();
 
 #ifdef PRINT_LOW 
-    amrex::Print() <<  "\nmap_param_all:\n";
+    amrex::Print() <<  "\n" << prt << "map_param_all:\n";
     for (auto it: map_param_all)
     {
-        amrex::Print() <<  it.first << "   " << it.second << "\n";
+        amrex::Print() << prt <<  it.first << "   " << it.second << "\n";
     }
-    amrex::Print() << "total parameters to define (final): " << map_param_all.size() << "\n\n";
+    amrex::Print() << prt << "Total parameters to define (final): " << map_param_all.size() << "\n\n";
 #endif
 
     for (auto it: map_param_all)
@@ -153,10 +154,10 @@ c_MacroscopicProperties::ReadParameterMapAndNumberOfGhostCells()
     ghostcells_for_fields.clear();
 
 #ifdef PRINT_LOW 
-    amrex::Print() <<  "map_num_ghost_cell: \n";
+    amrex::Print() << prt <<  "map_num_ghost_cell: \n";
     for (auto it: map_num_ghostcell)
     {
-        amrex::Print() <<  it.first << "   " << it.second << "\n";
+        amrex::Print() << prt <<  it.first << "   " << it.second << "\n";
     }
 #endif
 #ifdef PRINT_NAME

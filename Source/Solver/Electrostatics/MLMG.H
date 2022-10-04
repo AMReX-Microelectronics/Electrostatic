@@ -42,39 +42,44 @@ public:
     amrex::LPInfo info;
     amrex::MLABecLaplacian mlabec;
     std::unique_ptr<amrex::MLMG> pMLMG;
-    std::unique_ptr<amrex::MultiFab> alpha_cc; 
     std::array< amrex::MultiFab, AMREX_SPACEDIM > beta_fc; 
     c_MLMGSolver();
+    ~c_MLMGSolver();
 
 
     void InitData();
 
-
     void Solve_PoissonEqn();
 
-    void Compute_vecE(std::array<amrex::MultiFab, AMREX_SPACEDIM>& E);
+    void Compute_vecField(std::array<amrex::MultiFab, AMREX_SPACEDIM>& E);
 
     void Compute_vecFlux(std::array<amrex::MultiFab, AMREX_SPACEDIM>& flux);
 
-//    amrex::MultiFab& get_mf  (std::string macro_str) {auto macro_num = param_map[macro_str]; return (*m_p_mf[macro_num]);}
-//    amrex::MultiFab* get_p_mf (std::string macro_str) {auto macro_num = param_map[macro_str]; return m_p_mf[macro_num].get();}
+    //amrex::MultiFab& get_mf  (std::string macro_str) {auto macro_num = param_map[macro_str]; return (*m_p_mf[macro_num]);}
+    //amrex::MultiFab* get_p_mf (std::string macro_str) {auto macro_num = param_map[macro_str]; return m_p_mf[macro_num].get();}
 
     std::array<std::array<amrex::LinOpBCType,AMREX_SPACEDIM>,2> LinOpBCType_2d;
 
 
 private:
+    amrex::MultiFab* alpha_cc=nullptr;
+    amrex::MultiFab* beta_cc=nullptr;
     amrex::MultiFab* soln_cc=nullptr;
     amrex::MultiFab*  rhs_cc=nullptr;
-    amrex::MultiFab* beta_cc=nullptr;
 
     amrex::MultiFab* robin_a=nullptr;
     amrex::MultiFab* robin_b=nullptr;
     amrex::MultiFab* robin_f=nullptr;
 
+    std::string alpha_cc_str;
+    std::string beta_cc_str;
+    std::string soln_cc_str;
+    std::string rhs_cc_str;
+
 
     void ReadData();
 
-    void Set_soln_beta_rhs_ccMultifabs();
+    void Set_MLMG_CellCentered_Multifabs();
 
     void Setup_MLABecLaplacian_ForPoissonEqn();
 

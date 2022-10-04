@@ -3,8 +3,8 @@
 #include "../Utils/WarpXUtil.H"
 #include "../../Utils/CodeUtils/CodeUtil.H"
 #include "Code.H"
-#include "Input/GeometryProperties.H"
-#include "Input/MacroscopicProperties.H"
+#include "Input/GeometryProperties/GeometryProperties.H"
+#include "Input/MacroscopicProperties/MacroscopicProperties.H"
 #include "Input/BoundaryConditions/BoundaryConditions.H"
 
 #include <AMReX.H>
@@ -34,6 +34,27 @@ c_MLMGSolver::c_MLMGSolver ()
 
 #ifdef PRINT_NAME
     amrex::Print() << "\t\t\t}************************c_MLMGSolver Constructor()************************\n";
+#endif
+} 
+
+
+c_MLMGSolver::~c_MLMGSolver ()
+{
+#ifdef PRINT_NAME
+    amrex::Print() << "\n\n\t\t\t{************************c_MLMGSolver Destructor()************************\n";
+    amrex::Print() << "\t\t\tin file: " << __FILE__ << " at line: " << __LINE__ << "\n";
+#endif
+
+    alpha_cc=nullptr;
+    beta_cc=nullptr;
+    soln_cc=nullptr;
+    rhs_cc=nullptr;
+    robin_a=nullptr;
+    robin_b=nullptr;
+    robin_f=nullptr;
+
+#ifdef PRINT_NAME
+    amrex::Print() << "\t\t\t}************************c_MLMGSolver Destructor()************************\n";
 #endif
 } 
 
@@ -94,6 +115,11 @@ c_MLMGSolver::ReadData()
                 << " is used.";
         c_Code::GetInstance().RecordWarning("MLMG properties", warnMsg.str());
     }
+     
+    pp_mlmg.get("alpha",alpha_cc_str);
+    pp_mlmg.get("beta" ,beta_cc_str);
+    pp_mlmg.get("soln" ,soln_cc_str);
+    pp_mlmg.get("rhs"  ,rhs_cc_str);
 
 #ifdef PRINT_NAME
     amrex::Print() << "\t\t\t\t}************************c_MLMGSolver::ReadData()************************\n";
@@ -107,6 +133,7 @@ c_MLMGSolver::AssignLinOpBCTypeToBoundaries ()
 #ifdef PRINT_NAME
     amrex::Print() << "\n\n\t\t\t\t{************************c_MLMGSolver::AssignLinOpBCTypeToBoundaries()************************\n";
     amrex::Print() << "\t\t\t\tin file: " << __FILE__ << " at line: " << __LINE__ << "\n";
+    std::string prt =  "\t\t\t\t";
 #endif
 /*
     LinOpBCType::interior:
@@ -193,6 +220,15 @@ c_MLMGSolver::AssignLinOpBCTypeToBoundaries ()
         }
     }
 
+#ifdef PRINT_LOW
+    for (std::size_t i = 0; i < 2; ++i)
+    {
+        for (std::size_t j = 0; j < AMREX_SPACEDIM; ++j)
+        {
+            amrex::Print() << prt << "side: " << i << " direction: " << j << " LinOpBCType: " << LinOpBCType_2d[i][j] << " type: " << map_bcAny_2d[i][j]  << "\n";
+        }
+    }
+#endif 
 #ifdef PRINT_NAME
     amrex::Print() << "\t\t\t\t}************************c_MLMGSolver::AssignLinOpBCTypeToBoundaries()************************\n";
 #endif
@@ -207,7 +243,7 @@ c_MLMGSolver:: InitData()
     amrex::Print() << "\t\tin file: " << __FILE__ << " at line: " << __LINE__ << "\n";
 #endif
 
-    Set_soln_beta_rhs_ccMultifabs();
+    Set_MLMG_CellCentered_Multifabs();
     Setup_MLABecLaplacian_ForPoissonEqn();
 
 #ifdef PRINT_NAME
@@ -217,21 +253,23 @@ c_MLMGSolver:: InitData()
 
 
 void
-c_MLMGSolver:: Set_soln_beta_rhs_ccMultifabs()
+c_MLMGSolver:: Set_MLMG_CellCentered_Multifabs()
 {
 #ifdef PRINT_NAME
-    amrex::Print() << "\n\n\t\t\t{************************c_MLMGSolver::Set_soln_beta_rhs_ccMultifabs()************************\n";
+    amrex::Print() << "\n\n\t\t\t{************************c_MLMGSolver::Set_MLMG_CellCentered_Multifabs()************************\n";
     amrex::Print() << "\t\t\tin file: " << __FILE__ << " at line: " << __LINE__ << "\n";
 #endif
 
     auto& rCode = c_Code::GetInstance();
     auto& rMprop = rCode.get_MacroscopicProperties();
-    soln_cc = rMprop.get_p_mf("phi");
-    rhs_cc  = rMprop.get_p_mf("charge_density");
-    beta_cc = rMprop.get_p_mf("epsilon");
+
+    alpha_cc = rMprop.get_p_mf(alpha_cc_str);
+    beta_cc = rMprop.get_p_mf(beta_cc_str);
+    soln_cc = rMprop.get_p_mf(soln_cc_str);
+    rhs_cc  = rMprop.get_p_mf(rhs_cc_str);
 
 #ifdef PRINT_NAME
-    amrex::Print() << "\t\t\t}************************c_MLMGSolver::Set_soln_beta_rhs_ccMultifabs()************************\n";
+    amrex::Print() << "\t\t\t}************************c_MLMGSolver::Set_MLMG_CellCentered_Multifabs()************************\n";
 #endif
 }
 
@@ -250,7 +288,6 @@ c_MLMGSolver:: Setup_MLABecLaplacian_ForPoissonEqn()
     auto& ba = rGprop.ba;
     auto& dm = rGprop.dm;
     auto& geom = rGprop.geom;
-    auto& rMprop = rCode.get_MacroscopicProperties();
 
     mlabec.define({geom}, {ba}, {dm}, info); // Implicit solve using MLABecLaplacian class
 
@@ -264,9 +301,13 @@ c_MLMGSolver:: Setup_MLABecLaplacian_ForPoissonEqn()
     // see Src/Boundary/AMReX_LO_BCTYPES.H for supported types
     mlabec.setDomainBC(LinOpBCType_2d[0], LinOpBCType_2d[1]);
 
+    auto& rBC = rCode.get_BoundaryConditions();
+    auto& map_boundary_type = rBC.map_boundary_type;
+    auto& bcType_2d = rBC.bcType_2d;
+    auto& map_bcAny_2d = rBC.map_bcAny_2d;
+
     // Fill the ghost cells of each grid from the other grids
     // includes periodic domain boundaries
-    soln_cc->FillBoundary(geom.periodicity());
 
     int amrlev = 0; //refers to the setcoarsest level of the solve
 
@@ -278,6 +319,7 @@ c_MLMGSolver:: Setup_MLABecLaplacian_ForPoissonEqn()
     {
         Fill_FunctionBased_Inhomogeneous_Boundaries();
     }
+    soln_cc->FillBoundary(geom.periodicity());
 
     mlabec.setLevelBC(amrlev, soln_cc, robin_a, robin_b, robin_f);
 
@@ -285,16 +327,10 @@ c_MLMGSolver:: Setup_MLABecLaplacian_ForPoissonEqn()
     // set scaling factors 
     mlabec.setScalars(ascalar, bscalar);
 
-    int Ncomp1=1;
-    int Nghost0=0;
     // set alpha_cc, and beta_fc coefficients
-    // alpha_cc is a cell-centered multifab
-    alpha_cc =  std::make_unique<amrex::MultiFab>(ba, dm, Ncomp1, Nghost0); 
-    alpha_cc->setVal(0.); // fill in alpha_cc multifab to the value of 0.0
-
     mlabec.setACoeffs(amrlev, *alpha_cc);
 
- //   beta_fc =  std::make_unique<amrex::FArrayBox,AMREX_SPACEDIM>; 
+    // beta_fc =  std::make_unique<amrex::FArrayBox,AMREX_SPACEDIM>; 
     // beta_fc is a face-centered multifab
     AMREX_D_TERM(beta_fc[0].define(convert(ba,IntVect(AMREX_D_DECL(1,0,0))), dm, 1, 0);,
                  beta_fc[1].define(convert(ba,IntVect(AMREX_D_DECL(0,1,0))), dm, 1, 0);,
@@ -308,7 +344,6 @@ c_MLMGSolver:: Setup_MLABecLaplacian_ForPoissonEqn()
 
     pMLMG->setVerbose(set_verbose);
 
-
 #ifdef PRINT_NAME
     amrex::Print() << "\t\t\t}************************c_MLMGSolver::Setup_MLABecLaplacian_ForPoissonEqn()************************\n";
 #endif
@@ -321,6 +356,7 @@ c_MLMGSolver:: Fill_Constant_Inhomogeneous_Boundaries()
 #ifdef PRINT_NAME
     amrex::Print() << "\n\n\t\t\t\t{************************c_MLMGSolver::Fill_Constant_Inhomogeneous_Boundaries()************************\n";
     amrex::Print() << "\t\t\t\tin file: " << __FILE__ << " at line: " << __LINE__ << "\n";
+    std::string prt = "\t\t\t\t";
 #endif
 
     auto& rCode = c_Code::GetInstance();
@@ -339,30 +375,38 @@ c_MLMGSolver:: Fill_Constant_Inhomogeneous_Boundaries()
     std::vector<int> dir_inhomo_const_lo;
     std::string value = "inhomogeneous_constant";
     bool result = findByValue(dir_inhomo_const_lo, map_bcAny_2d[0], value);
-    if(result)
-    {
-        std::cout<<"\nLow directions with value `"<< value << "' are:\n";
-        for(auto dir : dir_inhomo_const_lo)  amrex::Print() << "direction: " << dir << " boundary value: " << std::any_cast<amrex::Real>(bcAny_2d[0][dir]) << "\n";
-    }
-    std::vector<int> dir_inhomo_const_hi;
-    result = findByValue(dir_inhomo_const_hi, map_bcAny_2d[0], value);
-    if(result)
-    {
-        std::cout<<"High directions with value `"<< value << "' are:\n";
-        for(auto dir : dir_inhomo_const_hi)  amrex::Print() << "direction: " << dir  << " boundary value: " << std::any_cast<amrex::Real>(bcAny_2d[1][dir]) << "\n";
-    }
 
+#ifdef PRINT_LOW
+    if(result)
+    {
+        amrex::Print() << "\n"<< prt <<"Low directions with value `"<< value << "' are:\n";
+        for(auto dir : dir_inhomo_const_lo)  amrex::Print() << prt << "direction: " << dir << " boundary value: " << std::any_cast<amrex::Real>(bcAny_2d[0][dir]) << "\n";
+    }
+#endif
+
+    std::vector<int> dir_inhomo_const_hi;
+    result = findByValue(dir_inhomo_const_hi, map_bcAny_2d[1], value);
+
+#ifdef PRINT_LOW
+    if(result)
+    {
+        amrex::Print() << "\n"<< prt <<"High directions with value `"<< value << "' are:\n";
+        for(auto dir : dir_inhomo_const_hi)  amrex::Print() << prt << "direction: " << dir  << " boundary value: " << std::any_cast<amrex::Real>(bcAny_2d[1][dir]) << "\n";
+    }
+#endif
+
+    int len = 1;
     for (MFIter mfi(*soln_cc, TilingIfNotGPU()); mfi.isValid(); ++mfi)
     {
         const auto& soln_arr = soln_cc->array(mfi);
 
         const auto& bx = mfi.tilebox();
-        const auto& gbx = mfi.growntilebox(1);
+        //const auto& gbx = mfi.growntilebox(1);
 
 
         for (auto dir : dir_inhomo_const_lo) {
             if (bx.smallEnd(dir) == domain.smallEnd(dir)) {
-                Box const& bxlo = amrex::adjCellLo(bx, dir);
+                Box const& bxlo = amrex::adjCellLo(bx, dir,len);
                 amrex::ParallelFor(bxlo,
                 [=] AMREX_GPU_DEVICE (int i, int j, int k) noexcept
                 {
@@ -372,7 +416,7 @@ c_MLMGSolver:: Fill_Constant_Inhomogeneous_Boundaries()
         }
         for (auto dir : dir_inhomo_const_hi) {
             if (bx.bigEnd(dir) == domain.bigEnd(dir)) {
-                Box const& bxhi = amrex::adjCellHi(bx, dir);
+                Box const& bxhi = amrex::adjCellHi(bx, dir,len);
                 amrex::ParallelFor(bxhi,
                 [=] AMREX_GPU_DEVICE (int i, int j, int k) noexcept
                 {
@@ -395,7 +439,9 @@ c_MLMGSolver:: Fill_FunctionBased_Inhomogeneous_Boundaries()
     amrex::Print() << "\n\n\t\t\t\t{************************c_MLMGSolver::Fill_FunctionBased_Inhomogeneous_Boundaries()************************\n";
     amrex::Print() << "\t\t\t\tin file: " << __FILE__ << " at line: " << __LINE__ << "\n";
 #endif
-    
+
+//TO BE CODED
+
 #ifdef PRINT_NAME
     amrex::Print() << "\n\n\t\t\t\t}************************c_MLMGSolver::Fill_FunctionBased_Inhomogeneous_Boundaries()************************\n";
 #endif
@@ -421,10 +467,10 @@ c_MLMGSolver:: Solve_PoissonEqn()
 
 
 void
-c_MLMGSolver:: Compute_vecE(std::array<amrex::MultiFab, AMREX_SPACEDIM>& vecE)
+c_MLMGSolver:: Compute_vecField(std::array<amrex::MultiFab, AMREX_SPACEDIM>& vecField)
 {
 #ifdef PRINT_NAME
-    amrex::Print() << "\n\n\t\t\t{************************c_MLMGSolver::Compute_vecE(*)************************\n";
+    amrex::Print() << "\n\n\t\t\t{************************c_MLMGSolver::Compute_vecField(*)************************\n";
     amrex::Print() << "\t\t\tin file: " << __FILE__ << " at line: " << __LINE__ << "\n";
 #endif
 
@@ -441,27 +487,27 @@ c_MLMGSolver:: Compute_vecE(std::array<amrex::MultiFab, AMREX_SPACEDIM>& vecE)
     //TD<decltype(gradPhi[0][0])> gradPhi_00_type; //amrex::MultiFab&
     //TD<decltype(gradPhi[0][0][0])> gradPhi_000_type; //amrex::FArrayBox&
     //TD<decltype(gradPhi[0][0][0].array())> gradPhi_000array_type; //amrex::Array4<double>
-    //TD<decltype(vecE)> vecE_type; //std::array<amrex::MultiFab, 3>&
-    //TD<decltype(vecE[0])> vecE_0_type; //amrex::MultiFab&
-    //TD<decltype(vecE[0][0])> vecE_00_type;//amrex::FArrayBox&
+    //TD<decltype(vecField)> vecField_type; //std::array<amrex::MultiFab, 3>&
+    //TD<decltype(vecField[0])> vecField_0_type; //amrex::MultiFab&
+    //TD<decltype(vecField[0][0])> vecField_00_type;//amrex::FArrayBox&
 
     for (int idim = 0; idim < AMREX_SPACEDIM; ++idim) {
         
         gradPhi[0][idim].define(amrex::convert(ba,amrex::IntVect::TheDimensionVector(idim)),dm, 1, 0);
 
-        vecE[idim].define(amrex::convert(ba,IntVect::TheDimensionVector(idim)),dm, 1, 0);
+        vecField[idim].define(amrex::convert(ba,IntVect::TheDimensionVector(idim)),dm, 1, 0);
 
     }
     pMLMG->getGradSolution(amrex::GetVecOfArrOfPtrs(gradPhi));
 
     /*Saxpy does E[x] += -1*gradPhi[0][x], where initial value of E[x]=0*/
-    AMREX_D_TERM ( MultiFab::Saxpy (vecE[0], -1.0, gradPhi[0][0],0,0,1,0); ,
-                   MultiFab::Saxpy (vecE[1], -1.0, gradPhi[0][1],0,0,1,0); ,
-                   MultiFab::Saxpy (vecE[2], -1.0, gradPhi[0][2],0,0,1,0); );
+    AMREX_D_TERM ( MultiFab::Saxpy (vecField[0], -1.0, gradPhi[0][0],0,0,1,0); ,
+                   MultiFab::Saxpy (vecField[1], -1.0, gradPhi[0][1],0,0,1,0); ,
+                   MultiFab::Saxpy (vecField[2], -1.0, gradPhi[0][2],0,0,1,0); );
 
 
 #ifdef PRINT_NAME
-    amrex::Print() << "\t\t\t}************************c_MLMGSolver::Compute_vecE(*)************************\n";
+    amrex::Print() << "\t\t\t}************************c_MLMGSolver::Compute_vecField(*)************************\n";
 #endif
 }
 

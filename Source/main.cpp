@@ -33,6 +33,8 @@ int main (int argc, char* argv[])
 
     pCode.PrintGlobalWarnings("the initialization step"); //Print warning at this stage
 
+//    pCode.Output();
+
     pCode.Solve();
 
     pCode.PostProcess();

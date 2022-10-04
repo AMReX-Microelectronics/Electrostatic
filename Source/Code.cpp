@@ -5,9 +5,9 @@
 #include "Utils/WarpXUtil.H"
 #include "Utils/WarpXProfilerWrapper.H"
 
-#include "Input/GeometryProperties.H"
+#include "Input/GeometryProperties/GeometryProperties.H"
 #include "Input/BoundaryConditions/BoundaryConditions.H"
-#include "Input/MacroscopicProperties.H"
+#include "Input/MacroscopicProperties/MacroscopicProperties.H"
 #include "Solver/Electrostatics/MLMG.H"
 #include "PostProcessor/PostProcessor.H"
 #include "Output/Output.H"

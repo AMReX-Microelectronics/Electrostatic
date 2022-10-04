@@ -1,8 +1,8 @@
 #include "Output.H"
 
 #include "Code.H"
-#include "Input/GeometryProperties.H"
-#include "Input/MacroscopicProperties.H"
+#include "Input/GeometryProperties/GeometryProperties.H"
+#include "Input/MacroscopicProperties/MacroscopicProperties.H"
 #include "PostProcessor/PostProcessor.H"
 
 #include <AMReX_ParmParse.H>

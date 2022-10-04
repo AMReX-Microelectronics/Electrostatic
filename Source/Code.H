@@ -1,9 +1,9 @@
 #ifndef CODE_H_
 #define CODE_H_
 
-#include "Input/GeometryProperties_fwd.H"
+#include "Input/GeometryProperties/GeometryProperties_fwd.H"
 #include "Input/BoundaryConditions/BoundaryConditions_fwd.H"
-#include "Input/MacroscopicProperties_fwd.H"
+#include "Input/MacroscopicProperties/MacroscopicProperties_fwd.H"
 #include "Solver/Electrostatics/MLMG_fwd.H"
 #include "PostProcessor/PostProcessor_fwd.H"
 #include "Output/Output_fwd.H"

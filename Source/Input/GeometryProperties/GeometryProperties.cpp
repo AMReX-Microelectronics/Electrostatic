@@ -62,13 +62,17 @@ c_GeometryProperties::ParseBasicDomainInput()
 #ifdef PRINT_NAME
     amrex::Print() << "\n\n\t\t\t\t{************************c_GeometryProperties::ParseBasicDomainInput()************************\n";
     amrex::Print() << "\t\t\t\tin file: " << __FILE__ << " at line: " << __LINE__ << "\n";
+    std::string prt = "\t\t\t\t";
 #endif
 
     amrex::Vector<int> num_cell;
     amrex::Vector<amrex::Real> prob_min(AMREX_SPACEDIM);
     amrex::Vector<amrex::Real> prob_max(AMREX_SPACEDIM);
-    amrex::Vector<amrex::Real> mg(AMREX_SPACEDIM);
-    amrex::Vector<amrex::Real> bf(AMREX_SPACEDIM);
+    amrex::Vector<amrex::Real> mg{AMREX_D_DECL(128,128,128)}; //default values
+    amrex::Vector<amrex::Real> bf{AMREX_D_DECL(8,8,8)};
+    amrex::Vector<amrex::Real> periodicity{AMREX_D_DECL(0,0,0)};
+    std::string coord_sys_str = "cartesian";
+    coord_sys =  amrex::CoordSys::cartesian; //default
 
     amrex::ParmParse pp_domain("domain");
 
@@ -84,13 +88,16 @@ c_GeometryProperties::ParseBasicDomainInput()
     pp_domain.queryarr("max_grid_size", mg);
 
     pp_domain.queryarr("blocking_factor", bf);
-    bf.resize(std::max(static_cast<int>(bf.size()),1),8);
 
-    pp_domain.addarr("n_cell", num_cell);
-    pp_domain.addarr("prob_lo", prob_min);
-    pp_domain.addarr("prob_hi", prob_max);
-    pp_domain.addarr("max_grid_size", mg);
-    pp_domain.addarr("blocking_factor", bf);
+    pp_domain.queryarr("is_periodic", periodicity);
+
+    pp_domain.query("coord_sys", coord_sys_str);
+
+    //pp_domain.addarr("n_cell", num_cell);
+    //pp_domain.addarr("prob_lo", prob_min);
+    //pp_domain.addarr("prob_hi", prob_max);
+    //pp_domain.addarr("max_grid_size", mg);
+    //pp_domain.addarr("blocking_factor", bf);
 
     for (int i=0; i<AMREX_SPACEDIM; ++i) 
     {
@@ -99,12 +106,39 @@ c_GeometryProperties::ParseBasicDomainInput()
         prob_hi[i] = prob_max[i]; 
         max_grid_size[i] = mg[i];  //Converting Vector to IntVect
         blocking_factor[i] = bf[i]; 
+        is_periodic[i] = periodicity[i]; 
     }
+    if(coord_sys_str == "cartesian") 
+    {
+        coord_sys =  amrex::CoordSys::cartesian;
+    }
+    else if(coord_sys_str == "radial") 
+    {
+        coord_sys = amrex::CoordSys::RZ;
+    }
+
+#ifdef PRINT_LOW
+    for (int i=0; i<AMREX_SPACEDIM; ++i) 
+    {
+        amrex::Print() << prt << "\n";
+        amrex::Print() << prt << "direction: " << i << "\n";
+        amrex::Print() << prt << "prob_lo: " << prob_lo[i] << "\n";
+        amrex::Print() << prt << "prob_hi: " << prob_hi[i] << "\n";
+        amrex::Print() << prt << "max_grid_size: " << max_grid_size[i] << "\n";
+        amrex::Print() << prt << "blocking_factor: " << blocking_factor[i] << "\n";
+        amrex::Print() << prt << "is_periodic: " << is_periodic[i] << "\n";
+    }
+    amrex::Print() << prt << "\n";
+    amrex::Print() << prt << "coord_sys: " << coord_sys << "\n";
+#endif
 
 #ifdef PRINT_NAME
     amrex::Print() << "\t\t\t\t}************************c_GeometryProperties::ParseBasicDomainInput()************************\n";
 #endif
 }
+
+template<typename T>
+class TD;
 
 void 
 c_GeometryProperties::InitializeBoxArrayAndDistributionMap()
@@ -126,9 +160,7 @@ c_GeometryProperties::InitializeBoxArrayAndDistributionMap()
     amrex::RealBox real_box({AMREX_D_DECL( prob_lo[0], prob_lo[1], prob_lo[2])},
                     {AMREX_D_DECL( prob_hi[0], prob_hi[1], prob_hi[2])});  //physical domain
 
-    amrex::Array<int,AMREX_SPACEDIM> is_periodic{AMREX_D_DECL(0,0,0)}; // 0: not periodic, 1: periodic
-
-    geom.define(domain, real_box, CoordSys::cartesian, is_periodic); //define the geom object
+    geom.define(domain, real_box, coord_sys, is_periodic); //define the geom object
 
     dm.define(ba);
 

@@ -27,6 +27,9 @@ public:
     amrex::GpuArray<amrex::Real, AMREX_SPACEDIM>  prob_hi; // physical hi coordinate
     amrex::IntVect max_grid_size;
     amrex::IntVect blocking_factor;
+    std::array<int, AMREX_SPACEDIM> is_periodic;
+    amrex::CoordSys::CoordType coord_sys;
+
     amrex::BoxArray ba; // a list of boxes that cover the domain
     amrex::Geometry geom;
     amrex::DistributionMapping dm;

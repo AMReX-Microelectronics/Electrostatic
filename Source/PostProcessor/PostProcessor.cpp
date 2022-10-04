@@ -189,11 +189,11 @@ c_PostProcessor::Compute()
 
             switch(map_macro_name[macro_str])
             {
-                case s_PostProcessMacroName::vecE : 
+                case s_PostProcessMacroName::vecField : 
                 {
                     auto val = map_param_arraymf[macro_str];    
                     auto& rMLMGsolver = rCode.get_MLMGSolver();
-                    rMLMGsolver.Compute_vecE( *m_p_array_mf[val] );
+                    rMLMGsolver.Compute_vecField( *m_p_array_mf[val] );
                     break;
                 }
                 case s_PostProcessMacroName::vecFlux : 
