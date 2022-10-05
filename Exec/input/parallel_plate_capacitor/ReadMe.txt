@@ -6,7 +6,7 @@
    a voltage of 10 V is specified at Zmax boundary and 0 V 
    is specified at Zmin boundary.
  
-  -Three examples provided in this folder show different ways
+  -Four examples provided in this folder show different ways
    to specify these voltages.
 
      1) inhomo_const_dirichlet: 
@@ -22,6 +22,10 @@
      3) function_parsed_robin:
             This example specifies voltages through robin boundaries by
         creating parsers for a, b, and f coefficients of the boundary.
+
+     4) function_parsed_dirichlet_varyingFunc:
+            This example is similar to example 2 but voltage at the top plate
+        is applied as a cosine function 10*cos(2 pi x/(2Lx)).
 
   -On all lateral sides we can either specify Neumann boundaries 
    or periodic boundaries.
