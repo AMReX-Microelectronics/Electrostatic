@@ -483,6 +483,7 @@ c_MLMGSolver:: Fill_FunctionBased_Inhomogeneous_Boundaries()
 #ifdef PRINT_NAME
     amrex::Print() << "\n\n\t\t\t\t{************************c_MLMGSolver::Fill_FunctionBased_Inhomogeneous_Boundaries()************************\n";
     amrex::Print() << "\t\t\t\tin file: " << __FILE__ << " at line: " << __LINE__ << "\n";
+    std::string prt = "\t\t\t\t";
 #endif
 
     auto& rCode = c_Code::GetInstance();
@@ -502,7 +503,7 @@ c_MLMGSolver:: Fill_FunctionBased_Inhomogeneous_Boundaries()
     if(result)
     {
         amrex::Print() << "\n"<< prt <<"Low directions with value `"<< value << "' are:\n";
-        for(auto dir : dir_inhomo_func_lo)  amrex::Print() << prt << "direction: " << dir << " boundary value: " << std::any_cast<amrex::Real>(bcAny_2d[0][dir]) << "\n";
+        for(auto dir : dir_inhomo_func_lo)  amrex::Print() << prt << "direction: " << dir << " boundary value: " << std::any_cast<std::string>(bcAny_2d[0][dir]) << "\n";
     }
 #endif
 
@@ -513,7 +514,7 @@ c_MLMGSolver:: Fill_FunctionBased_Inhomogeneous_Boundaries()
     if(result)
     {
         amrex::Print() << "\n"<< prt <<"High directions with value `"<< value << "' are:\n";
-        for(auto dir : dir_inhomo_func_hi)  amrex::Print() << prt << "direction: " << dir  << " boundary value: " << std::any_cast<amrex::Real>(bcAny_2d[1][dir]) << "\n";
+        for(auto dir : dir_inhomo_func_hi)  amrex::Print() << prt << "direction: " << dir  << " boundary value: " << std::any_cast<std::string>(bcAny_2d[1][dir]) << "\n";
     }
 #endif
 
