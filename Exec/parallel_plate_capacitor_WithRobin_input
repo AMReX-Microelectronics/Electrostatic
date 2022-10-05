@@ -74,8 +74,8 @@ domain.coord_sys = cartesian
 #   then they are ignored and a warning is raised stating that these boundary conditions are set to periodic.
 #   E.g. below `neu' for directions 0 and 1 will be ignored.
 #
-boundary.hi = neu neu rob(Zmax)
-boundary.lo = neu neu rob(Zmin)
+boundary.hi = per per rob(Zmax)
+boundary.lo = per per rob(Zmin)
 
 # - Note that for function parsers, we do not need to indicate the ghost region. 
 #   The function above for Zmax_a, for example,  is equivalent to 1 * (z > Lz/2).
@@ -115,9 +115,13 @@ macroscopic.ghostcells_for_fields = alpha.0 epsilon.1 charge_density.0 phi.1 rob
 # - In the following example, epsilon and charge_density are given constant values, however, they can be specified using a function parser as well,
 #   e.g. macroscopic.epsilon_function(x,y,z) = "epsilon_0 + (epsilon_r_sph-1)*epsilon_0 * ( sqrt(x**2 + y**2 + z**2) <= R_sph )"
 
+macroscopic.alpha = 0.
 macroscopic.epsilon = epsilon_0
 macroscopic.charge_density = 0.
 macroscopic.phi = 0.
+macroscopic.robinA = 0.
+macroscopic.robinB = 0.
+macroscopic.robinF = 0.
 
 ####################################
 ###### MLMG SOLVER PROPERTIES ######
@@ -150,6 +154,7 @@ mlmg.robin_f   = robinF
 #    - absolute_tolerance(default=0).
 
 mlmg.set_verbose=0
+mlmg.max_order=2
 mlmg.absolute_tolerance=0
 mlmg.relative_tolerance=1e-10
 
