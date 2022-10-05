@@ -64,6 +64,8 @@ domain.coord_sys = cartesian
 #                                                    with a function parser name of <string>, 
 #                                                    e.g. <string> = Xmin, Ymax, Z_hi, etc.
 #
+#   see examples: input/parallel_plate_capacitor/function_parsed_robin and function_parsed_dirichlet                                                 
+#
 # - For homogeneous dirichlet or neumann, boundary values are initialized based on the solution multifab, e.g. phi in this case.
 #
 # - For periodic and reflect boundary conditions, we do not need to specify any value in the bracket.
@@ -75,13 +77,6 @@ domain.coord_sys = cartesian
 
 boundary.hi = neu neu dir(10)
 boundary.lo = neu neu dir(0)
-
-#boundary.Xmin_function(x,y,z)   = "cos(y)"
-#boundary.Zmin_a_function(x,y,z) = "1 * (x < 0)  *  (z < -Lz/2)"
-#boundary.Zmin_b_function(x,y,z) = "1 * (x >= 0) *  (z < -Lz/2)"
-#boundary.Zmin_f_function(x,y,z) = "5 * (x < 0)  *  (z < -Lz/2) + 10 * (x >= 0)  *  (z < -Lz/2)"
-
-
 
 ####################################
 ###### MACROSCOPIC PROPERTIES ######
@@ -139,8 +134,13 @@ mlmg.rhs    = charge_density
 mlmg.alpha  = alpha
 mlmg.beta   = epsilon
 
-
 # - Other optional parameters to specify are: 
+#    - Three robin boundary parameters if robin boundaries are specified.
+#      Note: these parameters are set equal to corresponding multifabs initialized in macroscopic.fields_to_define,
+#      e.g. robinA, robinB and robinF. (see example, input/parallel_plate_capacitor/robin)
+#      - mlmg.robin_a = robinA
+#      - mlmg.robin_b = robinB
+#      - mlmg.robin_f = robinF
 #    - set_verbose (default=0), 
 #    - max_order (default=2), 
 #    - relative_tolerance (default=1e-10),

@@ -64,6 +64,8 @@ domain.coord_sys = cartesian
 #                                                    with a function parser name of <string>, 
 #                                                    e.g. <string> = Xmin, Ymax, Z_hi, etc.
 #
+#   see examples: input/parallel_plate_capacitor/function_parsed_robin and function_parsed_dirichlet                                                 
+#
 # - For homogeneous dirichlet or neumann, boundary values are initialized based on the solution multifab, e.g. phi in this case.
 #
 # - For periodic and reflect boundary conditions, we do not need to specify any value in the bracket.
@@ -74,15 +76,19 @@ domain.coord_sys = cartesian
 #   then they are ignored and a warning is raised stating that these boundary conditions are set to periodic.
 #   E.g. below `neu' for directions 0 and 1 will be ignored.
 #
-# - Note that for function parsers, we do not need to indicate the ghost region. 
-#   i.e. The function parser for Zmax_a_function(x,y,z) = "1" is equivalent to "1 * (z > Lz/2)".
-#   This is taken care of in the code.
-#
-boundary.hi = neu neu dir(Zmax)
-boundary.lo = neu neu dir(Zmin)
+boundary.hi = per per rob(Zmax)
+boundary.lo = per per rob(Zmin)
 
-boundary.Zmax_function(x,y,z) = "10"
-boundary.Zmin_function(x,y,z) = "0"
+# - Note that for function parsers, we do not need to indicate the ghost region. 
+#   The function above for Zmax_a, for example,  is equivalent to 1 * (z > Lz/2).
+#   This is taken care of in the code.
+boundary.Zmax_a_function(x,y,z) = "1" 
+boundary.Zmax_b_function(x,y,z) = "0"
+boundary.Zmax_f_function(x,y,z) = "10"
+
+boundary.Zmin_a_function(x,y,z) = "1"
+boundary.Zmin_b_function(x,y,z) = "0"
+boundary.Zmin_f_function(x,y,z) = "0"
 
 ####################################
 ###### MACROSCOPIC PROPERTIES ######
@@ -111,9 +117,13 @@ macroscopic.ghostcells_for_fields = alpha.0 epsilon.1 charge_density.0 phi.1 rob
 # - In the following example, epsilon and charge_density are given constant values, however, they can be specified using a function parser as well,
 #   e.g. macroscopic.epsilon_function(x,y,z) = "epsilon_0 + (epsilon_r_sph-1)*epsilon_0 * ( sqrt(x**2 + y**2 + z**2) <= R_sph )"
 
+macroscopic.alpha = 0.
 macroscopic.epsilon = epsilon_0
 macroscopic.charge_density = 0.
 macroscopic.phi = 0.
+macroscopic.robinA = 0.
+macroscopic.robinB = 0.
+macroscopic.robinF = 0.
 
 ####################################
 ###### MLMG SOLVER PROPERTIES ######
@@ -139,13 +149,21 @@ mlmg.robin_b   = robinB
 mlmg.robin_f   = robinF
 
 
+
 # - Other optional parameters to specify are: 
+#    - Three robin boundary parameters if robin boundaries are specified.
+#      Note: these parameters are set equal to corresponding multifabs initialized in macroscopic.fields_to_define,
+#      e.g. robinA, robinB and robinF. (see example, input/parallel_plate_capacitor/robin)
+#      - mlmg.robin_a = robinA
+#      - mlmg.robin_b = robinB
+#      - mlmg.robin_f = robinF
 #    - set_verbose (default=0), 
 #    - max_order (default=2), 
 #    - relative_tolerance (default=1e-10),
 #    - absolute_tolerance(default=0).
 
 mlmg.set_verbose=0
+mlmg.max_order=2
 mlmg.absolute_tolerance=0
 mlmg.relative_tolerance=1e-10
 
