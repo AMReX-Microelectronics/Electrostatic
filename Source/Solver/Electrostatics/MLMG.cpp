@@ -46,10 +46,10 @@ c_MLMGSolver::~c_MLMGSolver ()
     amrex::Print() << "\t\t\tin file: " << __FILE__ << " at line: " << __LINE__ << "\n";
 #endif
 
-    alpha_cc=nullptr;
-    beta_cc=nullptr;
-    soln_cc=nullptr;
-    rhs_cc=nullptr;
+    alpha=nullptr;
+    beta=nullptr;
+    soln=nullptr;
+    rhs=nullptr;
     robin_a=nullptr;
     robin_b=nullptr;
     robin_f=nullptr;
@@ -123,31 +123,50 @@ c_MLMGSolver::ReadData()
     auto& rMprop = rCode.get_MacroscopicProperties();
     std::map<std::string,int>::iterator it_Mprop;
 
-    pp_mlmg.get("alpha",alpha_cc_str);
+    pp_mlmg.get("alpha",alpha_str);
 
     //Assert that the multifab name is specified through 'macroscopic.fields_to_define' in the input file.
-    it_Mprop = rMprop.map_param_all.find(alpha_cc_str);
+    it_Mprop = rMprop.map_param_all.find(alpha_str);
     WARPX_ALWAYS_ASSERT_WITH_MESSAGE(it_Mprop != rMprop.map_param_all.end(), 
-                                     "'" + alpha_cc_str + "' is not specified through 'macroscopic.fields_to_define' in the input file.");
+                                     "'" + alpha_str + "' is not specified through 'macroscopic.fields_to_define' in the input file.");
 
-    pp_mlmg.get("beta" ,beta_cc_str);
+    pp_mlmg.get("beta" ,beta_str);
 
-    it_Mprop = rMprop.map_param_all.find(beta_cc_str);
-    AMREX_ALWAYS_ASSERT_WITH_MESSAGE(it_Mprop != rMprop.map_param_all.end(), 
-                                     beta_cc_str + " is not specified through 'macroscopic.fields_to_define' in the input file.");
+    it_Mprop = rMprop.map_param_all.find(beta_str);
+    WARPX_ALWAYS_ASSERT_WITH_MESSAGE(it_Mprop != rMprop.map_param_all.end(), 
+                                     beta_str + " is not specified through 'macroscopic.fields_to_define' in the input file.");
 
-    pp_mlmg.get("soln" ,soln_cc_str);
+    pp_mlmg.get("soln" ,soln_str);
 
-    it_Mprop = rMprop.map_param_all.find(soln_cc_str);
-    AMREX_ALWAYS_ASSERT_WITH_MESSAGE(it_Mprop != rMprop.map_param_all.end(), 
-                                     soln_cc_str + " is not specified through 'macroscopic.fields_to_define' in the input file.");
+    it_Mprop = rMprop.map_param_all.find(soln_str);
+    WARPX_ALWAYS_ASSERT_WITH_MESSAGE(it_Mprop != rMprop.map_param_all.end(), 
+                                     soln_str + " is not specified through 'macroscopic.fields_to_define' in the input file.");
 
-    pp_mlmg.get("rhs"  ,rhs_cc_str);
+    pp_mlmg.get("rhs"  ,rhs_str);
 
-    it_Mprop = rMprop.map_param_all.find(rhs_cc_str);
-    AMREX_ALWAYS_ASSERT_WITH_MESSAGE(it_Mprop != rMprop.map_param_all.end(), 
-                                     rhs_cc_str + " is not specified through 'macroscopic.fields_to_define' in the input file.");
+    it_Mprop = rMprop.map_param_all.find(rhs_str);
+    WARPX_ALWAYS_ASSERT_WITH_MESSAGE(it_Mprop != rMprop.map_param_all.end(), 
+                                     rhs_str + " is not specified through 'macroscopic.fields_to_define' in the input file.");
 
+    auto& rBC = rCode.get_BoundaryConditions();
+    auto some_robin_boundaries = rBC.some_robin_boundaries;
+
+    if(some_robin_boundaries) {
+        pp_mlmg.get("robin_a"  ,robin_a_str);
+        it_Mprop = rMprop.map_param_all.find(robin_a_str);
+        WARPX_ALWAYS_ASSERT_WITH_MESSAGE(it_Mprop != rMprop.map_param_all.end(), 
+                                         robin_a_str + " is not specified through 'macroscopic.fields_to_define' in the input file.");
+
+        pp_mlmg.get("robin_b"  ,robin_b_str);
+        it_Mprop = rMprop.map_param_all.find(robin_b_str);
+        WARPX_ALWAYS_ASSERT_WITH_MESSAGE(it_Mprop != rMprop.map_param_all.end(), 
+                                         robin_b_str + " is not specified through 'macroscopic.fields_to_define' in the input file.");
+
+        pp_mlmg.get("robin_f"  ,robin_f_str);
+        it_Mprop = rMprop.map_param_all.find(robin_f_str);
+        WARPX_ALWAYS_ASSERT_WITH_MESSAGE(it_Mprop != rMprop.map_param_all.end(), 
+                                         robin_f_str + " is not specified through 'macroscopic.fields_to_define' in the input file.");
+    }
 #ifdef PRINT_NAME
     amrex::Print() << "\t\t\t\t}************************c_MLMGSolver::ReadData()************************\n";
 #endif
@@ -290,10 +309,13 @@ c_MLMGSolver:: Set_MLMG_CellCentered_Multifabs()
     auto& rCode = c_Code::GetInstance();
     auto& rMprop = rCode.get_MacroscopicProperties();
 
-    alpha_cc = rMprop.get_p_mf(alpha_cc_str);
-    beta_cc = rMprop.get_p_mf(beta_cc_str);
-    soln_cc = rMprop.get_p_mf(soln_cc_str);
-    rhs_cc  = rMprop.get_p_mf(rhs_cc_str);
+    alpha = rMprop.get_p_mf(alpha_str);
+    beta = rMprop.get_p_mf(beta_str);
+    soln = rMprop.get_p_mf(soln_str);
+    rhs  = rMprop.get_p_mf(rhs_str);
+    robin_a  = rMprop.get_p_mf(robin_a_str);
+    robin_b  = rMprop.get_p_mf(robin_b_str);
+    robin_f  = rMprop.get_p_mf(robin_f_str);
 
 #ifdef PRINT_NAME
     amrex::Print() << "\t\t\t}************************c_MLMGSolver::Set_MLMG_CellCentered_Multifabs()************************\n";
@@ -346,16 +368,19 @@ c_MLMGSolver:: Setup_MLABecLaplacian_ForPoissonEqn()
     {
         Fill_FunctionBased_Inhomogeneous_Boundaries();
     }
-    soln_cc->FillBoundary(geom.periodicity());
+    soln->FillBoundary(geom.periodicity());
+    robin_a->FillBoundary(geom.periodicity());
+    robin_b->FillBoundary(geom.periodicity());
+    robin_f->FillBoundary(geom.periodicity());
 
-    mlabec.setLevelBC(amrlev, soln_cc, robin_a, robin_b, robin_f);
+    mlabec.setLevelBC(amrlev, soln, robin_a, robin_b, robin_f);
 
 
     // set scaling factors 
     mlabec.setScalars(ascalar, bscalar);
 
-    // set alpha_cc, and beta_fc coefficients
-    mlabec.setACoeffs(amrlev, *alpha_cc);
+    // set alpha, and beta_fc coefficients
+    mlabec.setACoeffs(amrlev, *alpha);
 
     // beta_fc =  std::make_unique<amrex::FArrayBox,AMREX_SPACEDIM>; 
     // beta_fc is a face-centered multifab
@@ -363,7 +388,7 @@ c_MLMGSolver:: Setup_MLABecLaplacian_ForPoissonEqn()
                  beta_fc[1].define(convert(ba,IntVect(AMREX_D_DECL(0,1,0))), dm, 1, 0);,
                  beta_fc[2].define(convert(ba,IntVect(AMREX_D_DECL(0,0,1))), dm, 1, 0););
 
-    Multifab_Manipulation::AverageCellCenteredMultiFabToCellFaces(*beta_cc, beta_fc); //converts from cell-centered permittivity to face-center and store in beta_fc
+    Multifab_Manipulation::AverageCellCenteredMultiFabToCellFaces(*beta, beta_fc); //converts from cell-centered permittivity to face-center and store in beta_fc
 
     mlabec.setBCoeffs(0, amrex::GetArrOfConstPtrs(beta_fc));
 
@@ -388,14 +413,9 @@ c_MLMGSolver:: Fill_Constant_Inhomogeneous_Boundaries()
 
     auto& rCode = c_Code::GetInstance();
     auto& rGprop = rCode.get_GeometryProperties();
-    auto& geom = rGprop.geom;
-    auto& real_box = geom.ProbDomain();
-    auto dx = geom.CellSizeArray();
-    Box const& domain = geom.Domain();
+    Box const& domain = rGprop.geom.Domain();
 
     auto& rBC = rCode.get_BoundaryConditions();
-    auto& map_boundary_type = rBC.map_boundary_type;
-    auto& bcType_2d = rBC.bcType_2d;
     auto& bcAny_2d = rBC.bcAny_2d;
     auto& map_bcAny_2d = rBC.map_bcAny_2d;
 
@@ -423,13 +443,11 @@ c_MLMGSolver:: Fill_Constant_Inhomogeneous_Boundaries()
 #endif
 
     int len = 1;
-    for (MFIter mfi(*soln_cc, TilingIfNotGPU()); mfi.isValid(); ++mfi)
+    for (MFIter mfi(*soln, TilingIfNotGPU()); mfi.isValid(); ++mfi)
     {
-        const auto& soln_arr = soln_cc->array(mfi);
+        const auto& soln_arr = soln->array(mfi);
 
         const auto& bx = mfi.tilebox();
-        //const auto& gbx = mfi.growntilebox(1);
-
 
         for (auto dir : dir_inhomo_const_lo) {
             if (bx.smallEnd(dir) == domain.smallEnd(dir)) {
@@ -467,7 +485,170 @@ c_MLMGSolver:: Fill_FunctionBased_Inhomogeneous_Boundaries()
     amrex::Print() << "\t\t\t\tin file: " << __FILE__ << " at line: " << __LINE__ << "\n";
 #endif
 
-//TO BE CODED
+    auto& rCode = c_Code::GetInstance();
+    auto& rGprop = rCode.get_GeometryProperties();
+    Box const& domain = rGprop.geom.Domain();
+
+    auto& rBC = rCode.get_BoundaryConditions();
+    auto& bcAny_2d = rBC.bcAny_2d;
+    auto& map_bcAny_2d = rBC.map_bcAny_2d;
+    auto& map_robin_coeff = rBC.map_robin_coeff;
+
+    std::vector<int> dir_inhomo_func_lo;
+    std::string value = "inhomogeneous_function";
+    bool result = findByValue(dir_inhomo_func_lo, map_bcAny_2d[0], value);
+
+#ifdef PRINT_LOW
+    if(result)
+    {
+        amrex::Print() << "\n"<< prt <<"Low directions with value `"<< value << "' are:\n";
+        for(auto dir : dir_inhomo_func_lo)  amrex::Print() << prt << "direction: " << dir << " boundary value: " << std::any_cast<amrex::Real>(bcAny_2d[0][dir]) << "\n";
+    }
+#endif
+
+    std::vector<int> dir_inhomo_func_hi;
+    result = findByValue(dir_inhomo_func_hi, map_bcAny_2d[1], value);
+
+#ifdef PRINT_LOW
+    if(result)
+    {
+        amrex::Print() << "\n"<< prt <<"High directions with value `"<< value << "' are:\n";
+        for(auto dir : dir_inhomo_func_hi)  amrex::Print() << prt << "direction: " << dir  << " boundary value: " << std::any_cast<amrex::Real>(bcAny_2d[1][dir]) << "\n";
+    }
+#endif
+
+    for (MFIter mfi(*soln, TilingIfNotGPU()); mfi.isValid(); ++mfi)
+    {
+        const auto& soln_arr = soln->array(mfi);
+        const auto& robin_a_arr = robin_a->array(mfi);
+        const auto& robin_b_arr = robin_b->array(mfi);
+        const auto& robin_f_arr = robin_f->array(mfi);
+
+        const auto& bx = mfi.tilebox();
+        
+        /*for low sides*/
+        for (auto dir : dir_inhomo_func_lo) //looping over boundaries of type inhomogeneous_function
+        {
+            if (bx.smallEnd(dir) == domain.smallEnd(dir)) //work with a box that adjacent to the domain boundary
+            { 
+                Box const& bxlo = amrex::adjCellLo(bx, dir);
+
+                if(LinOpBCType_2d[0][dir] == LinOpBCType::Robin) //if the boundary is robin then it is treated differently
+                {  
+                    std::string main_str = std::any_cast<std::string>(bcAny_2d[0][dir]);
+                    for(auto it_rob : map_robin_coeff) //loop over parser names with robin subscripts e.g. Zmin_a, Zmin_b, Zmin_f
+                    {
+                        std::string macro_str = main_str + it_rob.first; 
+
+                        auto& parser_mf = rBC.get_mf(macro_str);
+                        const auto& parser_mf_arr = parser_mf.array(mfi);
+
+                        switch(it_rob.second)
+                        {
+                            case s_RobinCoefficient::_a:
+                            {
+                                amrex::ParallelFor(bxlo,
+                                [=] AMREX_GPU_DEVICE (int i, int j, int k) noexcept
+                                {
+                                    robin_a_arr(i,j,k) = parser_mf_arr(i,j,k);
+                                });
+                            }
+                            case s_RobinCoefficient::_b:
+                            {
+                                amrex::ParallelFor(bxlo,
+                                [=] AMREX_GPU_DEVICE (int i, int j, int k) noexcept
+                                {
+                                    robin_b_arr(i,j,k) = parser_mf_arr(i,j,k);
+                                });
+                            }
+                            case s_RobinCoefficient::_f:
+                            {
+                                amrex::ParallelFor(bxlo,
+                                [=] AMREX_GPU_DEVICE (int i, int j, int k) noexcept
+                                {
+                                    robin_f_arr(i,j,k) = parser_mf_arr(i,j,k);
+                                });
+                            }
+                        }
+                    }
+                }
+                else //it is dirichlet or neumann inhomogeneous function boundary 
+                {
+                    std::string macro_str = std::any_cast<std::string>(bcAny_2d[0][dir]);
+
+                    auto& parser_mf = rBC.get_mf(macro_str);
+                    const auto& parser_mf_arr = parser_mf.array(mfi);
+
+                    amrex::ParallelFor(bxlo,
+                    [=] AMREX_GPU_DEVICE (int i, int j, int k) noexcept
+                    {
+                        soln_arr(i,j,k) = parser_mf_arr(i,j,k);
+                    });
+                }
+            }
+        }
+        /*for hi sides*/
+        for (auto dir : dir_inhomo_func_hi) //looping over boundaries of type inhomogeneous_function
+        {
+            if (bx.bigEnd(dir) == domain.bigEnd(dir)) //work with a box that adjacent to the domain boundary
+            { 
+                Box const& bxhi = amrex::adjCellHi(bx, dir);
+
+                if(LinOpBCType_2d[1][dir] == LinOpBCType::Robin) //if the boundary is robin then it is treated differently
+                {  
+                    std::string main_str = std::any_cast<std::string>(bcAny_2d[1][dir]);
+                    for(auto it_rob : map_robin_coeff) //loop over parser names with robin subscripts e.g. Zmin_a, Zmin_b, Zmin_f
+                    {
+                        std::string macro_str = main_str + it_rob.first; 
+
+                        auto& parser_mf = rBC.get_mf(macro_str);
+                        const auto& parser_mf_arr = parser_mf.array(mfi);
+
+                        switch(it_rob.second)
+                        {
+                            case s_RobinCoefficient::_a:
+                            {
+                                amrex::ParallelFor(bxhi,
+                                [=] AMREX_GPU_DEVICE (int i, int j, int k) noexcept
+                                {
+                                    robin_a_arr(i,j,k) = parser_mf_arr(i,j,k);
+                                });
+                            }
+                            case s_RobinCoefficient::_b:
+                            {
+                                amrex::ParallelFor(bxhi,
+                                [=] AMREX_GPU_DEVICE (int i, int j, int k) noexcept
+                                {
+                                    robin_b_arr(i,j,k) = parser_mf_arr(i,j,k);
+                                });
+                            }
+                            case s_RobinCoefficient::_f:
+                            {
+                                amrex::ParallelFor(bxhi,
+                                [=] AMREX_GPU_DEVICE (int i, int j, int k) noexcept
+                                {
+                                    robin_f_arr(i,j,k) = parser_mf_arr(i,j,k);
+                                });
+                            }
+                        }
+                    }
+                }
+                else //it is dirichlet or neumann inhomogeneous function boundary 
+                {
+                    std::string macro_str = std::any_cast<std::string>(bcAny_2d[1][dir]);
+
+                    auto& parser_mf = rBC.get_mf(macro_str);
+                    const auto& parser_mf_arr = parser_mf.array(mfi);
+
+                    amrex::ParallelFor(bxhi,
+                    [=] AMREX_GPU_DEVICE (int i, int j, int k) noexcept
+                    {
+                        soln_arr(i,j,k) = parser_mf_arr(i,j,k);
+                    });
+                }
+            }
+        }
+    }
 
 #ifdef PRINT_NAME
     amrex::Print() << "\n\n\t\t\t\t}************************c_MLMGSolver::Fill_FunctionBased_Inhomogeneous_Boundaries()************************\n";
@@ -483,7 +664,7 @@ c_MLMGSolver:: Solve_PoissonEqn()
     amrex::Print() << "\t\tin file: " << __FILE__ << " at line: " << __LINE__ << "\n";
 #endif
 
-    pMLMG->solve({soln_cc}, {rhs_cc},
+    pMLMG->solve({soln}, {rhs},
                  relative_tolerance,
                  absolute_tolerance);
 

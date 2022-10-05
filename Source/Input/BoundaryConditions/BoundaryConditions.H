@@ -18,6 +18,10 @@ struct s_BoundaryConditions {
     enum boundary_type { dir, neu, per, rob, ref };
 };
 
+struct s_RobinCoefficient {
+    enum subscript_type { _a, _b, _f };
+};
+
 
 class 
 c_BoundaryConditions
@@ -34,13 +38,14 @@ public:
     amrex::MultiFab* get_p_mf (std::string macro_str) {auto macro_num = map_function_parser_name[macro_str]; return m_p_mf[macro_num].get();}
 
     std::map<std::string, s_BoundaryConditions::boundary_type> map_boundary_type;
+    std::map<std::string, s_RobinCoefficient::subscript_type> map_robin_coeff;
 
     /*The following 2d arrays are for lo and hi sides each with AMREX_SPACEDIM */
     std::array<std::array<std::any,AMREX_SPACEDIM>,2> bcAny_2d; 
     std::array<std::array<std::string,AMREX_SPACEDIM>,2> bcType_2d;
     std::map<int,std::string> map_bcAny_2d[2];
     std::map<std::string, int> map_function_parser_name;
-
+    bool  some_robin_boundaries;
 private:
     void DefineBoundaryTypeMap()
     {
@@ -49,6 +54,11 @@ private:
         map_boundary_type["per"] = s_BoundaryConditions::per;
         map_boundary_type["rob"] = s_BoundaryConditions::rob;
         map_boundary_type["ref"] = s_BoundaryConditions::ref;
+
+        map_robin_coeff["_a"] = s_RobinCoefficient::_a;
+        map_robin_coeff["_b"] = s_RobinCoefficient::_b;
+        map_robin_coeff["_f"] = s_RobinCoefficient::_f;
+        s_BoundaryConditions::ref;
     };
 
     void ReadBoundaryConditionsType();

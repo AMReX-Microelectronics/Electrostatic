@@ -62,19 +62,22 @@ public:
 
 
 private:
-    amrex::MultiFab* alpha_cc=nullptr;
-    amrex::MultiFab* beta_cc=nullptr;
-    amrex::MultiFab* soln_cc=nullptr;
-    amrex::MultiFab*  rhs_cc=nullptr;
+    amrex::MultiFab* alpha=nullptr;
+    amrex::MultiFab* beta=nullptr;
+    amrex::MultiFab* soln=nullptr;
+    amrex::MultiFab*  rhs=nullptr;
 
     amrex::MultiFab* robin_a=nullptr;
     amrex::MultiFab* robin_b=nullptr;
     amrex::MultiFab* robin_f=nullptr;
 
-    std::string alpha_cc_str;
-    std::string beta_cc_str;
-    std::string soln_cc_str;
-    std::string rhs_cc_str;
+    std::string alpha_str;
+    std::string beta_str;
+    std::string soln_str;
+    std::string rhs_str;
+    std::string robin_a_str;
+    std::string robin_b_str;
+    std::string robin_f_str;
 
 
     void ReadData();

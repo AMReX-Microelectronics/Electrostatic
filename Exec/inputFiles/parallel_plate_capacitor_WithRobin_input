@@ -74,9 +74,19 @@ domain.coord_sys = cartesian
 #   then they are ignored and a warning is raised stating that these boundary conditions are set to periodic.
 #   E.g. below `neu' for directions 0 and 1 will be ignored.
 #
-boundary.hi = neu neu dir(10)
-boundary.lo = neu neu dir(0)
+boundary.hi = neu neu rob(Zmax)
+boundary.lo = neu neu rob(Zmin)
 
+# - Note that for function parsers, we do not need to indicate the ghost region. 
+#   The function above for Zmax_a, for example,  is equivalent to 1 * (z > Lz/2).
+#   This is taken care of in the code.
+boundary.Zmax_a_function(x,y,z) = "1" 
+boundary.Zmax_b_function(x,y,z) = "0"
+boundary.Zmax_f_function(x,y,z) = "10"
+
+boundary.Zmin_a_function(x,y,z) = "1"
+boundary.Zmin_b_function(x,y,z) = "0"
+boundary.Zmin_f_function(x,y,z) = "0"
 
 ####################################
 ###### MACROSCOPIC PROPERTIES ######
@@ -87,12 +97,12 @@ boundary.lo = neu neu dir(0)
 # - For the electrostatic problem, we need epsilon, charge_density, phi.
 # - At present, there is no option for specifying vector fields of type e.g. Array<amrex::Multifab, AMREX_SPACEDIM>.
  
-macroscopic.fields_to_define = alpha epsilon charge_density phi
+macroscopic.fields_to_define = alpha epsilon charge_density phi robinA robinB robinF
 
 # - `ghostcells_for_fields' defines the ghost cell for the multifabs defined in fields_to_define, as <FieldName>.<NumberOfGhostCells>. 
 #    The default is 0.
 
-macroscopic.ghostcells_for_fields = alpha.0 epsilon.1 charge_density.0 phi.1 
+macroscopic.ghostcells_for_fields = alpha.0 epsilon.1 charge_density.0 phi.1 robinA.1 robinB.1 robinF.1
 
 
 # - The fields defined in `fields_to_define' can be initialized as constants or using a function parser as follows.
@@ -128,6 +138,9 @@ mlmg.soln   = phi
 mlmg.rhs    = charge_density
 mlmg.alpha  = alpha
 mlmg.beta   = epsilon
+mlmg.robin_a   = robinA 
+mlmg.robin_b   = robinB
+mlmg.robin_f   = robinF
 
 
 # - Other optional parameters to specify are: 
@@ -172,7 +185,7 @@ post_process.fields_to_process = vecField vecFlux
 # -Note that for vector fields (specified as vec<FieldName>) user have an option to plot out only the specific x, y, or z components.
 #  For example, for specifying the y-component of `vecFlux', defined above, user should write, `Flux_y'
 
-plot.fields_to_plot = Field_x Field_y Field_z vecFlux epsilon charge_density phi alpha
+plot.fields_to_plot = Field_x Field_y Field_z vecFlux epsilon charge_density phi robinA robinB robinF
 
 # -Note that there is provision for disregarding repeating field names, e.g. 1) specifying `phi' twice will result in it's output written out only once, 
 #  2) specifying Field_x and vecField will result in output of Field_x, Field_y, and Field_z.

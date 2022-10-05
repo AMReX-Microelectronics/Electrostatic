@@ -24,8 +24,8 @@ c_BoundaryConditions::c_BoundaryConditions ()
 #endif
 
     DefineBoundaryTypeMap();
+    some_robin_boundaries = false;
     ReadData();
-
 #ifdef PRINT_NAME
     amrex::Print() << "\t\t\t}************************c_BoundaryConditions Constructor************************\n";
 #endif
@@ -198,6 +198,17 @@ c_BoundaryConditions::ReadBoundaryConditionsType()
     }
 
     bc_str_2d.clear();
+
+    /*determine if there is a robin boundary*/
+    for (std::size_t i = 0; i < 2; ++i) 
+    {
+        for (std::size_t j = 0; j < AMREX_SPACEDIM; ++j) 
+        {
+            if(bcType_2d[i][j] == "rob") {
+                some_robin_boundaries = true;
+            }  
+        }
+    }
 
     /* Make both boundaries periodic based on is_periodic */
     auto& rCode = c_Code::GetInstance();
