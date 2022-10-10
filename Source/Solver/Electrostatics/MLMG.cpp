@@ -369,11 +369,15 @@ c_MLMGSolver:: Setup_MLABecLaplacian_ForPoissonEqn()
         Fill_FunctionBased_Inhomogeneous_Boundaries();
     }
     soln->FillBoundary(geom.periodicity());
-    robin_a->FillBoundary(geom.periodicity());
-    robin_b->FillBoundary(geom.periodicity());
-    robin_f->FillBoundary(geom.periodicity());
 
-    mlabec.setLevelBC(amrlev, soln, robin_a, robin_b, robin_f);
+    if(rBC.some_robin_boundaries) {
+        robin_a->FillBoundary(geom.periodicity());
+        robin_b->FillBoundary(geom.periodicity());
+        robin_f->FillBoundary(geom.periodicity());
+    }
+
+    //mlabec.setLevelBC(amrlev, soln, robin_a, robin_b, robin_f);
+    mlabec.setLevelBC(amrlev, soln);
 
 
     // set scaling factors 
