@@ -175,8 +175,8 @@ c_BoundaryConditions::ReadBoundaryConditionsType()
     amrex::Vector<amrex::Vector<std::string>> bc_str_2d(2);
 
     amrex::ParmParse pp_boundary("boundary");
-    bool bc_lo_specified = pp_boundary.queryarr("lo", bc_str_2d[0]);
-    bool bc_hi_specified = pp_boundary.queryarr("hi", bc_str_2d[1]);
+    pp_boundary.queryarr("lo", bc_str_2d[0]);
+    pp_boundary.queryarr("hi", bc_str_2d[1]);
 
 #ifdef PRINT_LOW
     amrex::Print() << "\n" << prt << "boundary conditions strings, bc_str: \n";
@@ -399,11 +399,14 @@ c_BoundaryConditions::InitData()
     {
         auto macro_str = it.first;
         auto macro_num = it.second;
-        int parser_varname_size = 3;
 
-        m_p_mf[macro_num] = std::make_unique<amrex::MultiFab>(ba, dm, Ncomp1, Nghost1); //cell-centered multifab
-
-        Multifab_Manipulation::InitializeMacroMultiFabUsingParser_3vars(m_p_mf[macro_num].get(), m_p_macro_parser[macro_num]->compile<3>(), geom);
+        m_p_mf[macro_num] = std::make_unique<amrex::MultiFab>(ba, dm, Ncomp1, Nghost1); //cell3
+        if(m_parser_varname_vector.size() == 3) {
+            Multifab_Manipulation::InitializeMacroMultiFabUsingParser_3vars(m_p_mf[macro_num].get(), m_p_macro_parser[macro_num]->compile<3>(), geom);
+        }
+        else if(m_parser_varname_vector.size() == 4) {
+            //Multifab_Manipulation::InitializeMacroMultiFabUsingParser_3vars(m_p_mf[macro_num].get(), m_p_macro_parser[macro_num]->compile<4>(), geom);
+        }
     }
 
 #ifdef PRINT_NAME

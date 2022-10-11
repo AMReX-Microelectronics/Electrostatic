@@ -58,7 +58,6 @@ private:
         map_robin_coeff["_a"] = s_RobinCoefficient::_a;
         map_robin_coeff["_b"] = s_RobinCoefficient::_b;
         map_robin_coeff["_f"] = s_RobinCoefficient::_f;
-        s_BoundaryConditions::ref;
     };
 
     void ReadBoundaryConditionsType();

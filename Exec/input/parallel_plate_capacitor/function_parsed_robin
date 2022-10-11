@@ -28,8 +28,8 @@ my_constants.epsilon_0 = 8.8541878128e-12
 #
 # - The following AMReX specific properties are defined in c_GeometryProperties.
 
-domain.n_cell = 120 120 80
-domain.max_grid_size = 120 120 80
+domain.n_cell = 160 160 40
+domain.max_grid_size = 160 160 40
 # domain.blocking_factor = 120 120 80
 
 domain.prob_lo = -Lx/2. -Ly/2. -Lz/2.

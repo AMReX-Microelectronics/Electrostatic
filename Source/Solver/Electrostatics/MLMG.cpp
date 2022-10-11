@@ -351,10 +351,6 @@ c_MLMGSolver:: Setup_MLABecLaplacian_ForPoissonEqn()
     mlabec.setDomainBC(LinOpBCType_2d[0], LinOpBCType_2d[1]);
 
     auto& rBC = rCode.get_BoundaryConditions();
-    auto& map_boundary_type = rBC.map_boundary_type;
-    auto& bcType_2d = rBC.bcType_2d;
-    auto& map_bcAny_2d = rBC.map_bcAny_2d;
-
     // Fill the ghost cells of each grid from the other grids
     // includes periodic domain boundaries
 
@@ -376,8 +372,8 @@ c_MLMGSolver:: Setup_MLABecLaplacian_ForPoissonEqn()
         robin_f->FillBoundary(geom.periodicity());
     }
 
-    //mlabec.setLevelBC(amrlev, soln, robin_a, robin_b, robin_f);
-    mlabec.setLevelBC(amrlev, soln);
+    mlabec.setLevelBC(amrlev, soln, robin_a, robin_b, robin_f);
+    //mlabec.setLevelBC(amrlev, soln);
 
 
     // set scaling factors 
@@ -425,10 +421,10 @@ c_MLMGSolver:: Fill_Constant_Inhomogeneous_Boundaries()
 
     std::vector<int> dir_inhomo_const_lo;
     std::string value = "inhomogeneous_constant";
-    bool result = findByValue(dir_inhomo_const_lo, map_bcAny_2d[0], value);
+    bool found_lo = findByValue(dir_inhomo_const_lo, map_bcAny_2d[0], value);
 
 #ifdef PRINT_LOW
-    if(result)
+    if(found_lo)
     {
         amrex::Print() << "\n"<< prt <<"Low directions with value `"<< value << "' are:\n";
         for(auto dir : dir_inhomo_const_lo)  amrex::Print() << prt << "direction: " << dir << " boundary value: " << std::any_cast<amrex::Real>(bcAny_2d[0][dir]) << "\n";
@@ -436,10 +432,10 @@ c_MLMGSolver:: Fill_Constant_Inhomogeneous_Boundaries()
 #endif
 
     std::vector<int> dir_inhomo_const_hi;
-    result = findByValue(dir_inhomo_const_hi, map_bcAny_2d[1], value);
+    bool found_hi = findByValue(dir_inhomo_const_hi, map_bcAny_2d[1], value);
 
 #ifdef PRINT_LOW
-    if(result)
+    if(found_hi)
     {
         amrex::Print() << "\n"<< prt <<"High directions with value `"<< value << "' are:\n";
         for(auto dir : dir_inhomo_const_hi)  amrex::Print() << prt << "direction: " << dir  << " boundary value: " << std::any_cast<amrex::Real>(bcAny_2d[1][dir]) << "\n";
@@ -452,28 +448,32 @@ c_MLMGSolver:: Fill_Constant_Inhomogeneous_Boundaries()
         const auto& soln_arr = soln->array(mfi);
 
         const auto& bx = mfi.tilebox();
-
-        for (auto dir : dir_inhomo_const_lo) {
-            if (bx.smallEnd(dir) == domain.smallEnd(dir)) {
-                Box const& bxlo = amrex::adjCellLo(bx, dir,len);
-                amrex::ParallelFor(bxlo,
-                [=] AMREX_GPU_DEVICE (int i, int j, int k) noexcept
-                {
-                    soln_arr(i,j,k) = std::any_cast<amrex::Real>(bcAny_2d[0][dir]);
-                });
+        
+        if(found_lo) {
+            for (auto dir : dir_inhomo_const_lo) {
+                if (bx.smallEnd(dir) == domain.smallEnd(dir)) {
+                    Box const& bxlo = amrex::adjCellLo(bx, dir,len);
+                    amrex::ParallelFor(bxlo,
+                    [=] AMREX_GPU_DEVICE (int i, int j, int k) noexcept
+                    {
+                        soln_arr(i,j,k) = std::any_cast<amrex::Real>(bcAny_2d[0][dir]);
+                    });
+                }
             }
         }
-        for (auto dir : dir_inhomo_const_hi) {
-            if (bx.bigEnd(dir) == domain.bigEnd(dir)) {
-                Box const& bxhi = amrex::adjCellHi(bx, dir,len);
-                amrex::ParallelFor(bxhi,
-                [=] AMREX_GPU_DEVICE (int i, int j, int k) noexcept
-                {
-                    soln_arr(i,j,k) = std::any_cast<amrex::Real>(bcAny_2d[1][dir]);
-                });
+        if(found_hi) {
+            for (auto dir : dir_inhomo_const_hi) {
+                if (bx.bigEnd(dir) == domain.bigEnd(dir)) {
+                    Box const& bxhi = amrex::adjCellHi(bx, dir,len);
+                    amrex::ParallelFor(bxhi,
+                    [=] AMREX_GPU_DEVICE (int i, int j, int k) noexcept
+                    {
+                        soln_arr(i,j,k) = std::any_cast<amrex::Real>(bcAny_2d[1][dir]);
+                    });
+                }
             }
         }
-    }
+    } 
 
 #ifdef PRINT_NAME
     amrex::Print() << "\n\n\t\t\t\t}************************c_MLMGSolver::Fill_Constant_Inhomogeneous_Boundaries()************************\n";
@@ -501,10 +501,10 @@ c_MLMGSolver:: Fill_FunctionBased_Inhomogeneous_Boundaries()
 
     std::vector<int> dir_inhomo_func_lo;
     std::string value = "inhomogeneous_function";
-    bool result = findByValue(dir_inhomo_func_lo, map_bcAny_2d[0], value);
+    bool found_lo = findByValue(dir_inhomo_func_lo, map_bcAny_2d[0], value);
 
 #ifdef PRINT_LOW
-    if(result)
+    if(found_lo)
     {
         amrex::Print() << "\n"<< prt <<"Low directions with value `"<< value << "' are:\n";
         for(auto dir : dir_inhomo_func_lo)  amrex::Print() << prt << "direction: " << dir << " boundary value: " << std::any_cast<std::string>(bcAny_2d[0][dir]) << "\n";
@@ -512,10 +512,10 @@ c_MLMGSolver:: Fill_FunctionBased_Inhomogeneous_Boundaries()
 #endif
 
     std::vector<int> dir_inhomo_func_hi;
-    result = findByValue(dir_inhomo_func_hi, map_bcAny_2d[1], value);
+    bool found_hi = findByValue(dir_inhomo_func_hi, map_bcAny_2d[1], value);
 
 #ifdef PRINT_LOW
-    if(result)
+    if(found_hi)
     {
         amrex::Print() << "\n"<< prt <<"High directions with value `"<< value << "' are:\n";
         for(auto dir : dir_inhomo_func_hi)  amrex::Print() << prt << "direction: " << dir  << " boundary value: " << std::any_cast<std::string>(bcAny_2d[1][dir]) << "\n";
@@ -532,124 +532,136 @@ c_MLMGSolver:: Fill_FunctionBased_Inhomogeneous_Boundaries()
         const auto& bx = mfi.tilebox();
         
         /*for low sides*/
-        for (auto dir : dir_inhomo_func_lo) //looping over boundaries of type inhomogeneous_function
+        if(found_lo)
         {
-            if (bx.smallEnd(dir) == domain.smallEnd(dir)) //work with a box that adjacent to the domain boundary
-            { 
-                Box const& bxlo = amrex::adjCellLo(bx, dir);
+            for (auto dir : dir_inhomo_func_lo) //looping over boundaries of type inhomogeneous_function
+            {
+                if (bx.smallEnd(dir) == domain.smallEnd(dir)) //work with a box that adjacent to the domain boundary
+                { 
+                    Box const& bxlo = amrex::adjCellLo(bx, dir);
 
-                if(LinOpBCType_2d[0][dir] == LinOpBCType::Robin) //if the boundary is robin then it is treated differently
-                {  
-                    std::string main_str = std::any_cast<std::string>(bcAny_2d[0][dir]);
-                    for(auto it_rob : map_robin_coeff) //loop over parser names with robin subscripts e.g. Zmin_a, Zmin_b, Zmin_f
+                    if(LinOpBCType_2d[0][dir] == LinOpBCType::Robin) //if the boundary is robin then it is treated differently
+                    {  
+                        std::string main_str = std::any_cast<std::string>(bcAny_2d[0][dir]);
+                        for(auto it_rob : map_robin_coeff) //loop over parser names with robin subscripts e.g. Zmin_a, Zmin_b, Zmin_f
+                        {
+                            std::string macro_str = main_str + it_rob.first; 
+
+                            auto& parser_mf = rBC.get_mf(macro_str);
+                            const auto& parser_mf_arr = parser_mf.array(mfi);
+
+                            switch(it_rob.second)
+                            {
+                                case s_RobinCoefficient::_a:
+                                {
+                                    amrex::ParallelFor(bxlo,
+                                    [=] AMREX_GPU_DEVICE (int i, int j, int k) noexcept
+                                    {
+                                        robin_a_arr(i,j,k) = parser_mf_arr(i,j,k);
+                                    });
+                                    break;
+                                }
+                                case s_RobinCoefficient::_b:
+                                {
+                                    amrex::ParallelFor(bxlo,
+                                    [=] AMREX_GPU_DEVICE (int i, int j, int k) noexcept
+                                    {
+                                        robin_b_arr(i,j,k) = parser_mf_arr(i,j,k);
+                                    });
+                                    break;
+                                }
+                                case s_RobinCoefficient::_f:
+                                {
+                                    amrex::ParallelFor(bxlo,
+                                    [=] AMREX_GPU_DEVICE (int i, int j, int k) noexcept
+                                    {
+                                        robin_f_arr(i,j,k) = parser_mf_arr(i,j,k);
+                                    });
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                    else //it is dirichlet or neumann inhomogeneous function boundary 
                     {
-                        std::string macro_str = main_str + it_rob.first; 
+                        std::string macro_str = std::any_cast<std::string>(bcAny_2d[0][dir]);
 
                         auto& parser_mf = rBC.get_mf(macro_str);
                         const auto& parser_mf_arr = parser_mf.array(mfi);
 
-                        switch(it_rob.second)
+                        amrex::ParallelFor(bxlo,
+                        [=] AMREX_GPU_DEVICE (int i, int j, int k) noexcept
                         {
-                            case s_RobinCoefficient::_a:
-                            {
-                                amrex::ParallelFor(bxlo,
-                                [=] AMREX_GPU_DEVICE (int i, int j, int k) noexcept
-                                {
-                                    robin_a_arr(i,j,k) = parser_mf_arr(i,j,k);
-                                });
-                            }
-                            case s_RobinCoefficient::_b:
-                            {
-                                amrex::ParallelFor(bxlo,
-                                [=] AMREX_GPU_DEVICE (int i, int j, int k) noexcept
-                                {
-                                    robin_b_arr(i,j,k) = parser_mf_arr(i,j,k);
-                                });
-                            }
-                            case s_RobinCoefficient::_f:
-                            {
-                                amrex::ParallelFor(bxlo,
-                                [=] AMREX_GPU_DEVICE (int i, int j, int k) noexcept
-                                {
-                                    robin_f_arr(i,j,k) = parser_mf_arr(i,j,k);
-                                });
-                            }
-                        }
+                            soln_arr(i,j,k) = parser_mf_arr(i,j,k);
+                        });
                     }
-                }
-                else //it is dirichlet or neumann inhomogeneous function boundary 
-                {
-                    std::string macro_str = std::any_cast<std::string>(bcAny_2d[0][dir]);
-
-                    auto& parser_mf = rBC.get_mf(macro_str);
-                    const auto& parser_mf_arr = parser_mf.array(mfi);
-
-                    amrex::ParallelFor(bxlo,
-                    [=] AMREX_GPU_DEVICE (int i, int j, int k) noexcept
-                    {
-                        soln_arr(i,j,k) = parser_mf_arr(i,j,k);
-                    });
                 }
             }
         }
         /*for hi sides*/
-        for (auto dir : dir_inhomo_func_hi) //looping over boundaries of type inhomogeneous_function
+        if(found_hi)
         {
-            if (bx.bigEnd(dir) == domain.bigEnd(dir)) //work with a box that adjacent to the domain boundary
-            { 
-                Box const& bxhi = amrex::adjCellHi(bx, dir);
+            for (auto dir : dir_inhomo_func_hi) //looping over boundaries of type inhomogeneous_function
+            {
+                if (bx.bigEnd(dir) == domain.bigEnd(dir)) //work with a box that adjacent to the domain boundary
+                { 
+                    Box const& bxhi = amrex::adjCellHi(bx, dir);
 
-                if(LinOpBCType_2d[1][dir] == LinOpBCType::Robin) //if the boundary is robin then it is treated differently
-                {  
-                    std::string main_str = std::any_cast<std::string>(bcAny_2d[1][dir]);
-                    for(auto it_rob : map_robin_coeff) //loop over parser names with robin subscripts e.g. Zmin_a, Zmin_b, Zmin_f
+                    if(LinOpBCType_2d[1][dir] == LinOpBCType::Robin) //if the boundary is robin then it is treated differently
+                    {  
+                        std::string main_str = std::any_cast<std::string>(bcAny_2d[1][dir]);
+                        for(auto it_rob : map_robin_coeff) //loop over parser names with robin subscripts e.g. Zmin_a, Zmin_b, Zmin_f
+                        {
+                            std::string macro_str = main_str + it_rob.first; 
+
+                            auto& parser_mf = rBC.get_mf(macro_str);
+                            const auto& parser_mf_arr = parser_mf.array(mfi);
+
+                            switch(it_rob.second)
+                            {
+                                case s_RobinCoefficient::_a:
+                                {
+                                    amrex::ParallelFor(bxhi,
+                                    [=] AMREX_GPU_DEVICE (int i, int j, int k) noexcept
+                                    {
+                                        robin_a_arr(i,j,k) = parser_mf_arr(i,j,k);
+                                    });
+                                    break;
+                                }
+                                case s_RobinCoefficient::_b:
+                                {
+                                    amrex::ParallelFor(bxhi,
+                                    [=] AMREX_GPU_DEVICE (int i, int j, int k) noexcept
+                                    {
+                                        robin_b_arr(i,j,k) = parser_mf_arr(i,j,k);
+                                    });
+                                    break;
+                                }
+                                case s_RobinCoefficient::_f:
+                                {
+                                    amrex::ParallelFor(bxhi,
+                                    [=] AMREX_GPU_DEVICE (int i, int j, int k) noexcept
+                                    {
+                                        robin_f_arr(i,j,k) = parser_mf_arr(i,j,k);
+                                    });
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                    else //it is dirichlet or neumann inhomogeneous function boundary 
                     {
-                        std::string macro_str = main_str + it_rob.first; 
+                        std::string macro_str = std::any_cast<std::string>(bcAny_2d[1][dir]);
 
                         auto& parser_mf = rBC.get_mf(macro_str);
                         const auto& parser_mf_arr = parser_mf.array(mfi);
 
-                        switch(it_rob.second)
+                        amrex::ParallelFor(bxhi,
+                        [=] AMREX_GPU_DEVICE (int i, int j, int k) noexcept
                         {
-                            case s_RobinCoefficient::_a:
-                            {
-                                amrex::ParallelFor(bxhi,
-                                [=] AMREX_GPU_DEVICE (int i, int j, int k) noexcept
-                                {
-                                    robin_a_arr(i,j,k) = parser_mf_arr(i,j,k);
-                                });
-                            }
-                            case s_RobinCoefficient::_b:
-                            {
-                                amrex::ParallelFor(bxhi,
-                                [=] AMREX_GPU_DEVICE (int i, int j, int k) noexcept
-                                {
-                                    robin_b_arr(i,j,k) = parser_mf_arr(i,j,k);
-                                });
-                            }
-                            case s_RobinCoefficient::_f:
-                            {
-                                amrex::ParallelFor(bxhi,
-                                [=] AMREX_GPU_DEVICE (int i, int j, int k) noexcept
-                                {
-                                    robin_f_arr(i,j,k) = parser_mf_arr(i,j,k);
-                                });
-                            }
-                        }
+                            soln_arr(i,j,k) = parser_mf_arr(i,j,k);
+                        });
                     }
-                }
-                else //it is dirichlet or neumann inhomogeneous function boundary 
-                {
-                    std::string macro_str = std::any_cast<std::string>(bcAny_2d[1][dir]);
-
-                    auto& parser_mf = rBC.get_mf(macro_str);
-                    const auto& parser_mf_arr = parser_mf.array(mfi);
-
-                    amrex::ParallelFor(bxhi,
-                    [=] AMREX_GPU_DEVICE (int i, int j, int k) noexcept
-                    {
-                        soln_arr(i,j,k) = parser_mf_arr(i,j,k);
-                    });
                 }
             }
         }
