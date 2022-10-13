@@ -34,7 +34,14 @@ c_BoundaryConditions::c_BoundaryConditions ()
 
 c_BoundaryConditions::~c_BoundaryConditions ()
 {
-//    
+#ifdef PRINT_NAME
+    amrex::Print() << "\n\n\t\t\t{************************c_BoundaryConditions Destructor()************************\n";
+    amrex::Print() << "\t\t\tin file: " << __FILE__ << " at line: " << __LINE__ << "\n";
+#endif
+
+#ifdef PRINT_NAME
+    amrex::Print() << "\t\t\t}************************c_BoundaryConditions Destructor()************************\n";
+#endif
 }
 
 
@@ -67,6 +74,7 @@ c_BoundaryConditions::SortBoundaryTypeArrayString(const amrex::Vector<std::strin
 #ifdef PRINT_NAME
     amrex::Print() << "\n\n\t\t\t\t\t\t{************************c_BoundaryConditions::SortBoundaryTypeArrayString(*)************************\n";
     amrex::Print() << "\t\t\t\t\t\tin file: " << __FILE__ << " at line: " << __LINE__ << "\n";
+    std::string prt = "\t\t\t\t\t\t";
 #endif
 
     int c=0;
@@ -76,7 +84,7 @@ c_BoundaryConditions::SortBoundaryTypeArrayString(const amrex::Vector<std::strin
         std::string first_three_letters = str.substr(0,3);
         bcType[c] = first_three_letters;
 #ifdef PRINT_HIGH
-        amrex::Print() << "\nstring: " << str  << " first_three_letters: " << first_three_letters<< "\n";
+        amrex::Print() << "\n" << prt << "string: " << str  << " first_three_letters: " << first_three_letters<< "\n";
 #endif
 
         if(bcType[c] == "dir" or bcType[c] == "neu" or bcType[c] == "rob")
@@ -84,8 +92,8 @@ c_BoundaryConditions::SortBoundaryTypeArrayString(const amrex::Vector<std::strin
             std::string fourth_char = str.substr(3,1);
             std::string last_char = str.substr(str.length()-1);
 #ifdef PRINT_HIGH
-            amrex::Print() << "fourth_char: " << fourth_char << "\n";
-            amrex::Print() << "last_char: " << last_char << "\n";
+            amrex::Print() << prt << "fourth_char: " << fourth_char << "\n";
+            amrex::Print() << prt << "last_char: " << last_char << "\n";
 #endif
 
             if(fourth_char == "(" or last_char == ")" )
@@ -112,7 +120,7 @@ c_BoundaryConditions::SortBoundaryTypeArrayString(const amrex::Vector<std::strin
                 std::string bracketed_str = str.substr(4,str.length()-5);
                
 #ifdef PRINT_HIGH
-                amrex::Print() << "bracketed_str: " << bracketed_str << "\n";
+                amrex::Print() << prt << "bracketed_str: " << bracketed_str << "\n";
 #endif
                 std::string stripped_bracketed_str;
                 if(bracketed_str.substr(0,1) == "-" or bracketed_str.substr(0,1) == "+") {
@@ -126,7 +134,7 @@ c_BoundaryConditions::SortBoundaryTypeArrayString(const amrex::Vector<std::strin
                     map_bcAny[c] = "inhomogeneous_constant"; 
                     bcAny[c] = std::stod(bracketed_str);
 #ifdef PRINT_HIGH
-                    amrex::Print() << "inhomo constant: " << bracketed_str << "\n";
+                    amrex::Print() << prt << "inhomo constant: " << bracketed_str << "\n";
 #endif
                 }
                 else 
@@ -134,7 +142,7 @@ c_BoundaryConditions::SortBoundaryTypeArrayString(const amrex::Vector<std::strin
                     map_bcAny[c] = "inhomogeneous_function"; 
                     bcAny[c] = bracketed_str;
 #ifdef PRINT_HIGH
-                    amrex::Print() << "inhomo function with parameter name: " << bracketed_str << "\n";
+                    amrex::Print() << prt << "inhomo function with parameter name: " << bracketed_str << "\n";
 #endif
                 }
             }
@@ -143,7 +151,7 @@ c_BoundaryConditions::SortBoundaryTypeArrayString(const amrex::Vector<std::strin
                 map_bcAny[c] = "homogeneous"; 
                 bcAny[c] = 0.0;
 #ifdef PRINT_HIGH
-                amrex::Print() << "homo constant 0.0 " << "\n";
+                amrex::Print() << prt << "homo constant 0.0 " << "\n";
 #endif
             }
         }
@@ -301,7 +309,7 @@ c_BoundaryConditions::ReadBoundaryConditionsType()
     amrex::Print() << "\n" << prt << "map_function_parser_name: \n";
     for (auto& i: map_function_parser_name)
     {
-        amrex::Print() << i.first << "  " << i.second << "\n";
+        amrex::Print() << prt << i.first << "  " << i.second << "\n";
     }
     amrex::Print() << "\n" << prt << "num_function_parsers: " << num_function_parsers << "\n";
     amrex::Print() << "\n\n";
@@ -340,6 +348,7 @@ c_BoundaryConditions::ReadBoundaryConditionsParser(std::string macro_str, int ma
 #ifdef PRINT_NAME
     amrex::Print() << "\n\n\t\t\t\t\t{************************c_BoundaryConditions::ReadBoundaryConditionsParser(*)************************\n";
     amrex::Print() << "\t\t\t\t\tin file: " << __FILE__ << " at line: " << __LINE__ << "\n";
+    std::string prt = "\t\t\t\t\t";
 #endif
 
 
@@ -365,9 +374,9 @@ c_BoundaryConditions::ReadBoundaryConditionsParser(std::string macro_str, int ma
 
 #ifdef PRINT_LOW
     if(specified) {
-       amrex::Print() << "\nReading macro: " << macro_str << " with number: " << macro_num << "\n";
-       amrex::Print() << "function_parser_name: " << macro_functionXYZ << "\n";
-       amrex::Print() << "function_parser: " <<  m_macro_str_function[macro_num] << "\n\n";
+       amrex::Print() << "\n" << prt << "Reading macro: " << macro_str << " with number: " << macro_num << "\n";
+       amrex::Print() << prt << "function_parser_name: " << macro_functionXYZ << "\n";
+       amrex::Print() << prt << "function_parser: " <<  m_macro_str_function[macro_num] << "\n\n";
     }
 #endif
 

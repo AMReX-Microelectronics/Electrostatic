@@ -49,10 +49,10 @@ inline std::pair<const std::type_index, std::function<void(std::any const&)>>
 static std::unordered_map<
     std::type_index, std::function<void(std::any const&)>>
     any_visitor {
-        to_any_visitor<float>([](float x){ std::cout << "contains a value: " << x; }),
-        to_any_visitor<double>([](double x){ std::cout << "contains a value: " << x; }),
+        to_any_visitor<float>([](float x){ amrex::Print() << "contains a value: " << x; }),
+        to_any_visitor<double>([](double x){ amrex::Print() << "contains a value: " << x; }),
         to_any_visitor<std::string>([](std::string s)
-            { std::cout << "contains a function parser name: "<< s; })
+            { amrex::Print() << "contains a function parser name: "<< s; })
         // ... add more handlers for your types ...
     };
 
@@ -64,7 +64,7 @@ inline void process_std_any(const std::any& a)
     }
     else {
 //        std::cout << "unregistered type! "<< std::quoted(a.type().name());
-        std::cout << "contents do not matter! ";
+        amrex::Print() << "contents do not matter! ";
     }
 }
 

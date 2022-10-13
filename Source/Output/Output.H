@@ -21,11 +21,12 @@ public:
 
     c_Output();
     ~c_Output();
-//
+
     int ReadData();
     void InitData();
     void WriteSingleLevelPlotFile(int step, amrex::Real time);
     void AssimilateDataPointers();
+    //void Reset();
 
     std::map<std::string,s_Subscript::subscript_name> map_subscript_name;
 
@@ -47,9 +48,13 @@ private:
 #endif
     };
 
+    std::string filename_str;
+    amrex::Vector< int > num_ghost;
+    const std::string default_level_prefix {"Level_"};
+
     std::unique_ptr<amrex::MultiFab> m_p_mf_all;
     std::string plot_file_name;
-    const int plt_name_digits=5;
+    const int plt_name_digits=4;
 
     std::map<std::string,int> map_param_all;
     int num_all_params;

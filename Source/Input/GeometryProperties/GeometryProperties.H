@@ -21,6 +21,7 @@ c_GeometryProperties
 {
 public: 
     c_GeometryProperties();
+    ~c_GeometryProperties();
 
     amrex::GpuArray<int, AMREX_SPACEDIM>  n_cell;     // number of cells in each dimension
     amrex::GpuArray<amrex::Real, AMREX_SPACEDIM>  prob_lo; // physical lo coordinate

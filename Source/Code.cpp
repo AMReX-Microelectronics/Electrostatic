@@ -43,7 +43,7 @@ c_Code::ResetInstance ()
 c_Code::c_Code ()
 {
 #ifdef PRINT_NAME
-    amrex::Print() << "\n\n\t{************************c_Code  Constructor()************************\n";
+    amrex::Print() << "\n\n\t{************************c_Code Constructor()************************\n";
 #endif
     m_instance = this;
     m_p_warn_manager = std::make_unique<Utils::WarnManager>();
@@ -58,7 +58,13 @@ c_Code::c_Code ()
 
 c_Code::~c_Code ()
 {
-//
+#ifdef PRINT_NAME
+    amrex::Print() << "\n\n\t{************************c_Code Destructor()************************\n";
+#endif
+
+#ifdef PRINT_NAME
+    amrex::Print() << "\t}************************c_Code Destructor()************************\n";
+#endif
 }
 
 

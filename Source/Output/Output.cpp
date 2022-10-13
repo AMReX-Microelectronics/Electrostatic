@@ -7,6 +7,7 @@
 
 #include <AMReX_ParmParse.H>
 #include "AMReX_PlotFileUtil.H"
+#include <AMReX_VisMF.H>
 
 
 using namespace amrex;
@@ -33,10 +34,40 @@ c_Output::c_Output ()
 
 c_Output::~c_Output ()
 {
+#ifdef PRINT_NAME
+    amrex::Print() << "\n\n\t\t\t{************************c_Output Destructor()************************\n";
+    amrex::Print() << "\t\t\tin file: " << __FILE__ << " at line: " << __LINE__ << "\n";
+#endif
 
-//    m_p_mf_all.release();
+    map_param_all.clear();
+    m_p_mf.clear();
+    num_ghost.clear();
+    m_p_name_str.clear();
 
+#ifdef PRINT_NAME
+    amrex::Print() << "\t\t\t}************************c_Output Destructor()************************\n";
+#endif
 } 
+
+
+//void
+//c_Output::Reset ()
+//{
+//#ifdef PRINT_NAME
+//    amrex::Print() << "\n\n\t\t\t{************************c_Output::Reset()************************\n";
+//    amrex::Print() << "\t\t\tin file: " << __FILE__ << " at line: " << __LINE__ << "\n";
+//#endif
+//   
+//    num_all_params = 0;
+//    map_param_all.clear();
+//    m_p_mf.clear();
+//    num_ghost.clear();
+//    m_p_name_str.clear();
+//
+//#ifdef PRINT_NAME
+//    amrex::Print() << "\t\t\t}************************c_Output::Reset()************************\n";
+//#endif
+//} 
 
 
 int 
@@ -48,21 +79,51 @@ c_Output::ReadData()
     std::string prt = "\t\t\t\t";
 #endif
 
-    amrex::Vector< std::string > m_fields_to_plot;
+    amrex::Vector< std::string > fields_to_plot_withGhost_str;
+    amrex::Vector< std::string > fields_to_plot_str;
+    amrex::Vector< std::string > ghost_str;
     amrex::ParmParse pp_plot("plot");
-    bool varnames_specified = pp_plot.queryarr("fields_to_plot", m_fields_to_plot);
+    
+    filename_str = "plt";
+
+    pp_plot.query("filename", filename_str);
+
+    amrex::ParmParse pp_plot_file(filename_str);
+    bool varnames_specified = pp_plot_file.queryarr("fields_to_plot", fields_to_plot_withGhost_str);
+
+    const int varsize = fields_to_plot_withGhost_str.size();
+
+    fields_to_plot_str.resize(varsize);
+    ghost_str.resize(varsize);
+
+    int c=0;
+    for (auto str: fields_to_plot_withGhost_str) 
+    {
+        std::string second_last_str = str.substr(str.length()-2,1);
+
+        if(second_last_str == ".") 
+        { 
+             std::string string_without_ghost = str.substr(0,str.length()-2);
+             ghost_str[c] = str.substr(str.length()-1,1);
+             fields_to_plot_str[c] = string_without_ghost;
+        }
+        else {
+             fields_to_plot_str[c] = str;
+        }
+        ++c;
+    }
 
     std::map<std::string,int>::iterator it_map_param_all;
 
-
-    int c=0;
-    for (auto it: m_fields_to_plot) 
+    c=0;
+    for (std::size_t i = 0; i < fields_to_plot_str.size(); ++i)
     {
-        std::string first_three_char_str = it.substr(0, 3);
+        std::string str = fields_to_plot_str[i];
+        std::string first_three_char_str = str.substr(0, 3);
 
         if(first_three_char_str == "vec") 
         {
-            std::string rest_of_string = it.substr(3);
+            std::string rest_of_string = str.substr(3);
             for(auto subscript : map_subscript_name) 
             {
                 std::string component = rest_of_string + subscript.first;
@@ -71,22 +132,41 @@ c_Output::ReadData()
 
                 if (it_map_param_all == map_param_all.end()) {
                     map_param_all[component] = c;
+                    if(ghost_str[i] == "1") {
+                       num_ghost.push_back(1); 
+                    }
+                    else {
+                       num_ghost.push_back(0); 
+                    }
                     ++c;
                 }  
             }   
         }
         else {
 
-            it_map_param_all = map_param_all.find(it);
+            it_map_param_all = map_param_all.find(str);
 
             if (it_map_param_all == map_param_all.end()) {
-                map_param_all[it] = c;
+                map_param_all[str] = c;
+                if(ghost_str[i] == "1") {
+                   num_ghost.push_back(1); 
+                }
+                else {
+                   num_ghost.push_back(0); 
+                }
                 ++c;
             }
         }
-                                           
     }
-    m_fields_to_plot.clear();
+#ifdef PRINT_HIGH
+    for (auto it: map_param_all) 
+    {
+        amrex::Print() << prt << "field: " << it.first << " counter " << it.second << " ghost cells: " << num_ghost[it.second] << "\n";
+    }
+#endif
+    fields_to_plot_withGhost_str.clear();
+    fields_to_plot_str.clear();
+    ghost_str.clear();
 
 #ifdef PRINT_LOW
     amrex::Print() << prt <<  "fields to plot: \n";
@@ -142,7 +222,7 @@ c_Output::WriteSingleLevelPlotFile(int step, amrex::Real time)
 
     AssimilateDataPointers();
 
-    plot_file_name = amrex::Concatenate("plt", step, plt_name_digits);
+    plot_file_name = amrex::Concatenate(filename_str, step, plt_name_digits);
 
     auto& rCode = c_Code::GetInstance();
     auto& rGprop = rCode.get_GeometryProperties();
@@ -154,22 +234,43 @@ c_Output::WriteSingleLevelPlotFile(int step, amrex::Real time)
         int field_number = map_param_all[it];
 
         #ifdef PRINT_HIGH
-        amrex::Print() << prt << "copying parameter: " << it << " field_number: " << field_number << "\n";
+        amrex::Print() << prt << "copying parameter: " << it << " field_number: " << field_number << " num_ghost: " << num_ghost[field_number] << "\n";
         #endif
-
         amrex::MultiFab::Copy(*m_p_mf_all, *m_p_mf[field_number], 0, field_number, Ncomp1, Nghost0);
+
     }
-    amrex::WriteSingleLevelPlotfile(plot_file_name, *m_p_mf_all, m_p_name_str, geom, time, 0);
+
+    int iteration=0;
+    Vector<std::string> extra_dirs;
+    if(num_ghost.size() > 0)  extra_dirs.emplace_back("raw_fields");
+
+    amrex::WriteSingleLevelPlotfile( plot_file_name, 
+                                    *m_p_mf_all, m_p_name_str, 
+                                     geom, 
+                                     time, iteration, 
+                                     "HyperCLaw-V1.1", default_level_prefix, "Cell",
+                                     extra_dirs);
+
+
+    /*Writing raw fields with ghost cells*/
+    for (auto it : m_p_name_str) 
+    {
+        int field_number = map_param_all[it];
+        if(num_ghost[field_number] == 1) {
+            int lev = 0;
+            const std::string raw_pltname = plot_file_name + "/raw_fields";
+            std::string prefix = amrex::MultiFabFileFullPrefix(lev,
+                                raw_pltname, default_level_prefix, m_p_name_str[field_number]);
+            VisMF::Write(*m_p_mf[field_number], prefix);
+        }
+    }
 
 #ifdef PRINT_NAME
     amrex::Print() << "\t\t}************************c_Output::WriteSingleLevelPlotFile()************************\n";
 #endif
 }
 
-
-template<typename T>
-class TD;
-
+    
 void
 c_Output::AssimilateDataPointers()
 {

@@ -1,11 +1,14 @@
 
 #include "Code.H"
 #include "CodeUtil.H"
+#include "Utils/SelectWarpXUtils/WarpXUtil.H"
+#include "Utils/SelectWarpXUtils/WarpXProfilerWrapper.H"
+
+
+#include <AMReX_TinyProfiler.H>
+
 
 using namespace amrex;
-
-template<typename T>
-class TD;
 
 int main (int argc, char* argv[])
 {
@@ -20,18 +23,27 @@ int main (int argc, char* argv[])
 #endif
 
     amrex::Real initial_time = ParallelDescriptor::second();
+    
+    {
+        WARPX_PROFILE_VAR("main()", pmain);
 
-    c_Code pCode; 
+        c_Code pCode; 
 
-    pCode.InitData();
+        pCode.InitData();
 
-    pCode.PrintGlobalWarnings("the initialization step"); //Print warning at this stage
+        pCode.PrintGlobalWarnings("the initialization step"); //Print warning at this stage
 
-    pCode.Solve();
+        //pCode.Output();
 
-    pCode.PostProcess();
+        pCode.Solve();
 
-    pCode.Output();
+        pCode.PostProcess();
+
+        pCode.Output();
+ 
+        WARPX_PROFILE_VAR_STOP(pmain);
+
+    } //destructor of c_Code is called here and all objects it created are destructed in reverse order.
 
     PrintRunDiagnostics(initial_time);
 
@@ -42,5 +54,5 @@ int main (int argc, char* argv[])
 #endif
 
     amrex::Finalize();
-    return 0;
+
 }
