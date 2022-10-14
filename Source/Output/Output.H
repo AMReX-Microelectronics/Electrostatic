@@ -24,13 +24,14 @@ public:
 
     int ReadData();
     void InitData();
-    void WriteSingleLevelPlotFile(int step, amrex::Real time);
-    void AssimilateDataPointers();
-    //void Reset();
+    void WriteOutput(int step, amrex::Real time);
+    void WriteOutput_AfterInit();
 
-    std::map<std::string,s_Subscript::subscript_name> map_subscript_name;
+    int m_write_after_init;
 
 private:
+
+    std::map<std::string,s_Subscript::subscript_name> m_map_subscript_name;
 
     void DefineSubscriptNameMap()
     {
@@ -39,31 +40,40 @@ private:
     amrex::Print() << "\t\t\t\tin file: " << __FILE__ << " at line: " << __LINE__ << "\n";
 #endif
 
-        map_subscript_name["_x"] = s_Subscript::x;
-        map_subscript_name["_y"] = s_Subscript::y;
-        map_subscript_name["_z"] = s_Subscript::z;
+        m_map_subscript_name["_x"] = s_Subscript::x;
+        m_map_subscript_name["_y"] = s_Subscript::y;
+        m_map_subscript_name["_z"] = s_Subscript::z;
 
 #ifdef PRINT_NAME
     amrex::Print() << "\t\t\t\t}************************c_Output::DefineSubscriptNameMap()************************\n";
 #endif
     };
 
-    std::string filename_str;
-    amrex::Vector< int > num_ghost;
-    const std::string default_level_prefix {"Level_"};
+    amrex::Vector< int > m_output_option; //1 or 2 specified in the input file or 0 if not specified.
 
-    std::unique_ptr<amrex::MultiFab> m_p_mf_all;
-    std::string plot_file_name;
-    const int plt_name_digits=4;
+    const std::string m_default_level_prefix {"Level_"};
+    std::string m_filename_prefix_str;
+    std::string m_plot_file_name;
+    const int m_plt_name_digits=4;
+    amrex::Vector<std::string> m_extra_dirs;
 
-    std::map<std::string,int> map_param_all;
-    int num_all_params;
+    std::map<std::string,int> m_map_param_all;
+    int m_num_params_plot_single_level;
+    int m_raw_fields_to_plot;
+
+    std::map<std::string,int> m_map_field_to_plot_after_init;
 
     amrex::Vector< amrex::MultiFab* > m_p_mf;
-    amrex::Vector< std::string > m_p_name_str;
+    std::unique_ptr<amrex::MultiFab> m_p_mf_all;
+    std::unique_ptr<amrex::MultiFab> m_p_mf_all_init;
 
+
+
+    void AssimilateDataPointers();
     int Evaluate_TypeOf_MacroStr(std::string macro_str);
 
+    void WriteSingleLevelPlotFile(int step, amrex::Real time, std::unique_ptr<amrex::MultiFab>& p_all_mf, std::map<std::string,int>& map_all_mf);
+    void WriteRawFields(std::map<std::string,int>& map_all_mf);
 };
 
 #endif

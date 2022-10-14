@@ -18,13 +18,26 @@ c_Output::c_Output ()
 #ifdef PRINT_NAME
     amrex::Print() << "\n\n\t\t\t{************************c_Output Constructor()************************\n";
     amrex::Print() << "\t\t\tin file: " << __FILE__ << " at line: " << __LINE__ << "\n";
+    std::string prt = "\t\t\t";
 #endif
 
     DefineSubscriptNameMap();
-    num_all_params = ReadData();
+    m_num_params_plot_single_level = 0;
+    m_raw_fields_to_plot = 0;
+    m_write_after_init = 0;
 
-    m_p_mf.resize(num_all_params);
-    m_p_name_str.resize(num_all_params);
+    m_num_params_plot_single_level = ReadData();
+
+    if(m_raw_fields_to_plot)  m_extra_dirs.emplace_back("raw_fields");
+
+    m_p_mf.resize(m_map_param_all.size());
+
+#ifdef PRINT_LOW
+    amrex::Print() << prt << "number of all parameters: " << m_map_param_all.size() << "\n"; 
+    amrex::Print() << prt << "m_raw_fields_to_plot: " << m_raw_fields_to_plot << "\n\n"; 
+    amrex::Print() <<"\n" << prt << "number of parameters to plot in a single level plot file: " << m_num_params_plot_single_level << "\n";
+    amrex::Print() << prt << "m_write_after_init: " << m_write_after_init << "\n\n"; 
+#endif
 
 #ifdef PRINT_NAME
     amrex::Print() << "\t\t\t}************************c_Output Constructor()************************\n";
@@ -39,11 +52,15 @@ c_Output::~c_Output ()
     amrex::Print() << "\t\t\tin file: " << __FILE__ << " at line: " << __LINE__ << "\n";
 #endif
 
-    map_param_all.clear();
-    m_p_mf.clear();
-    num_ghost.clear();
-    m_p_name_str.clear();
+    m_output_option.clear();
+    m_map_param_all.clear();
+    m_map_field_to_plot_after_init.clear();     
 
+    m_num_params_plot_single_level = 0;
+    m_raw_fields_to_plot = 0;
+    m_write_after_init = 0;
+    m_p_mf.clear();
+    m_extra_dirs.clear();
 #ifdef PRINT_NAME
     amrex::Print() << "\t\t\t}************************c_Output Destructor()************************\n";
 #endif
@@ -61,7 +78,7 @@ c_Output::~c_Output ()
 //    num_all_params = 0;
 //    map_param_all.clear();
 //    m_p_mf.clear();
-//    num_ghost.clear();
+//    m_output_option.clear();
 //    m_p_name_str.clear();
 //
 //#ifdef PRINT_NAME
@@ -81,33 +98,48 @@ c_Output::ReadData()
 
     amrex::Vector< std::string > fields_to_plot_withGhost_str;
     amrex::Vector< std::string > fields_to_plot_str;
-    amrex::Vector< std::string > ghost_str;
+    amrex::Vector< std::string > extra_str;
+    
+    int num_params_without_option_2 = 0;
+
     amrex::ParmParse pp_plot("plot");
     
-    filename_str = "plt";
+    m_filename_prefix_str = "plt";
 
-    pp_plot.query("filename", filename_str);
+    pp_plot.query("filename", m_filename_prefix_str);
+    pp_plot.query("write_after_init", m_write_after_init);
 
-    amrex::ParmParse pp_plot_file(filename_str);
+    amrex::ParmParse pp_plot_file(m_filename_prefix_str);
     bool varnames_specified = pp_plot_file.queryarr("fields_to_plot", fields_to_plot_withGhost_str);
 
     const int varsize = fields_to_plot_withGhost_str.size();
 
     fields_to_plot_str.resize(varsize);
-    ghost_str.resize(varsize);
+    extra_str.resize(varsize);
 
     int c=0;
     for (auto str: fields_to_plot_withGhost_str) 
     {
         std::string second_last_str = str.substr(str.length()-2,1);
+        if(second_last_str == ".")
+        {
+            std::string last_str = str.substr(str.length()-1,1);
 
-        if(second_last_str == ".") 
-        { 
-             std::string string_without_ghost = str.substr(0,str.length()-2);
-             ghost_str[c] = str.substr(str.length()-1,1);
-             fields_to_plot_str[c] = string_without_ghost;
+            if (last_str == "1" or last_str == "2") 
+            { 
+                std::string string_without_ghost = str.substr(0,str.length()-2);
+                extra_str[c] = str.substr(str.length()-1,1);
+                fields_to_plot_str[c] = string_without_ghost;
+                m_raw_fields_to_plot = true;
+            }
+            else 
+            {
+               //assert unknown option.
+            }
         }
-        else {
+        else if (second_last_str != ".")
+        {
+             extra_str[c] = "0";
              fields_to_plot_str[c] = str;
         }
         ++c;
@@ -124,64 +156,75 @@ c_Output::ReadData()
         if(first_three_char_str == "vec") 
         {
             std::string rest_of_string = str.substr(3);
-            for(auto subscript : map_subscript_name) 
+            for(auto subscript : m_map_subscript_name) 
             {
                 std::string component = rest_of_string + subscript.first;
 
-                it_map_param_all = map_param_all.find(component);
+                it_map_param_all = m_map_param_all.find(component);
 
-                if (it_map_param_all == map_param_all.end()) {
-                    map_param_all[component] = c;
-                    if(ghost_str[i] == "1") {
-                       num_ghost.push_back(1); 
+                if (it_map_param_all == m_map_param_all.end()) 
+                {
+                    if(extra_str[i] == "0")
+                    {
+                       m_output_option.push_back(0); 
+                       ++num_params_without_option_2;
                     }
-                    else {
-                       num_ghost.push_back(0); 
+                    else if(extra_str[i] == "1")
+                    {
+                       m_output_option.push_back(1); 
+                       ++num_params_without_option_2;
                     }
+                    else if(extra_str[i] == "2")
+                    {
+                       m_output_option.push_back(2); 
+                    }
+                    m_map_param_all[component] = c;
                     ++c;
                 }  
             }   
         }
-        else {
+        else 
+        {
+            it_map_param_all = m_map_param_all.find(str);
 
-            it_map_param_all = map_param_all.find(str);
-
-            if (it_map_param_all == map_param_all.end()) {
-                map_param_all[str] = c;
-                if(ghost_str[i] == "1") {
-                   num_ghost.push_back(1); 
+            if (it_map_param_all == m_map_param_all.end()) 
+            {
+                if(extra_str[i] == "0")
+                {
+                   m_output_option.push_back(0); 
+                   ++num_params_without_option_2;
                 }
-                else {
-                   num_ghost.push_back(0); 
+                else if(extra_str[i] == "1")
+                {
+                   m_output_option.push_back(1); 
+                   ++num_params_without_option_2;
                 }
+                else if(extra_str[i] == "2")
+                {
+                   m_output_option.push_back(2); 
+                }
+                m_map_param_all[str] = c;
                 ++c;
             }
         }
     }
-#ifdef PRINT_HIGH
-    for (auto it: map_param_all) 
-    {
-        amrex::Print() << prt << "field: " << it.first << " counter " << it.second << " ghost cells: " << num_ghost[it.second] << "\n";
-    }
-#endif
     fields_to_plot_withGhost_str.clear();
     fields_to_plot_str.clear();
-    ghost_str.clear();
+    extra_str.clear();
 
 #ifdef PRINT_LOW
     amrex::Print() << prt <<  "fields to plot: \n";
-    for (auto it: map_param_all) 
+    for (auto it: m_map_param_all) 
     {
-        amrex::Print() << prt <<  it.first << "   " << it.second << "\n";
+        amrex::Print() << prt << "field name: " << it.first << " field number " << it.second << " output option: " << m_output_option[it.second] << "\n";
     }
-    amrex::Print() << prt << "total parameters to plot (final): " << map_param_all.size() << "\n\n";
 #endif 
 
 #ifdef PRINT_NAME
     amrex::Print() << "\t\t\t\t}************************c_Output::ReadData()************************\n";
 #endif
 
-    return map_param_all.size();
+    return num_params_without_option_2;
 
 }
 
@@ -192,10 +235,8 @@ c_Output::InitData()
 #ifdef PRINT_NAME
     amrex::Print() << "\n\n\t\t{************************c_Output::InitData()************************\n";
     amrex::Print() << "\t\tin file: " << __FILE__ << " at line: " << __LINE__ << "\n";
+    std::string prt = "\t\t";
 #endif
-    for (auto it : map_param_all) {
-        m_p_name_str[it.second] = it.first;
-    }
 
     auto& rCode = c_Code::GetInstance();
     auto& rGprop = rCode.get_GeometryProperties();
@@ -203,7 +244,40 @@ c_Output::InitData()
     auto& dm = rGprop.dm;
     int Nghost0=0;
 
-    m_p_mf_all = std::make_unique<amrex::MultiFab>(ba, dm, num_all_params, Nghost0); //cell-centered multifab
+    m_p_mf_all = std::make_unique<amrex::MultiFab>(ba, dm, m_num_params_plot_single_level, Nghost0); //cell-centered multifab
+
+    if(m_write_after_init) 
+    {
+        int counter=0;
+        for (auto it : m_map_param_all) 
+        {
+            std::string field_name = it.first;
+            int field_number = it.second;
+
+            if ( Evaluate_TypeOf_MacroStr(field_name) == 0 ) /*it is a part of MacroscopicProperties so the multifab pointer is available after initialization*/
+            {
+                m_map_field_to_plot_after_init[field_name] = field_number;    
+
+                if(m_output_option[field_number] == 0 or m_output_option[field_number] == 1) 
+                {
+                    ++counter;
+                }
+            }
+        }
+        m_p_mf_all_init = std::make_unique<amrex::MultiFab>(ba, dm, counter, Nghost0); //cell-centered multifab
+
+
+#ifdef PRINT_HIGH
+        amrex::Print() << "\n" << prt <<  "m_write_after_init is true! \n";
+        for (auto it : m_map_field_to_plot_after_init) 
+        {
+            std::string field_name = it.first;
+            int field_number = it.second;
+            amrex::Print() << prt  << "field to plot after init, name " << field_name << ", field_number " << field_number << ", output option " << m_output_option[field_number] << "\n";
+        }
+        amrex::Print() << prt <<  "size of m_p_mf_all_init: " << counter << "\n";
+#endif
+    }
 
 #ifdef PRINT_NAME
     amrex::Print() << "\t\t}************************c_Output::InitData()************************\n";
@@ -212,17 +286,57 @@ c_Output::InitData()
 
 
 void
-c_Output::WriteSingleLevelPlotFile(int step, amrex::Real time)
+c_Output::WriteOutput(int step, amrex::Real time)
 {
 #ifdef PRINT_NAME
-    amrex::Print() << "\n\n\t\t{************************c_Output::WriteSingleLevelPlotFile()************************\n";
+    amrex::Print() << "\n\n\t\t{************************c_Output::WriteOutput()************************\n";
     amrex::Print() << "\t\tin file: " << __FILE__ << " at line: " << __LINE__ << "\n";
     std::string prt = "\t\t";
 #endif
 
     AssimilateDataPointers();
+    m_plot_file_name = amrex::Concatenate(m_filename_prefix_str, step, m_plt_name_digits);
+    
+    WriteSingleLevelPlotFile(step, time, m_p_mf_all, m_map_param_all);
 
-    plot_file_name = amrex::Concatenate(filename_str, step, plt_name_digits);
+    if(m_raw_fields_to_plot) WriteRawFields(m_map_param_all); 
+
+#ifdef PRINT_NAME
+    amrex::Print() << "\t\t}************************c_Output::WriteOutput()************************\n";
+#endif
+}
+
+
+void
+c_Output::WriteOutput_AfterInit()
+{
+#ifdef PRINT_NAME
+    amrex::Print() << "\n\n\t\t{************************c_Output::WriteOutput_AfterInit()************************\n";
+    amrex::Print() << "\t\tin file: " << __FILE__ << " at line: " << __LINE__ << "\n";
+    std::string prt = "\t\t";
+#endif
+
+    AssimilateDataPointers();
+    int step = 0;
+    amrex::Real time = 0;
+    m_plot_file_name = amrex::Concatenate(m_filename_prefix_str+"_init", step, 0);
+    WriteSingleLevelPlotFile(step, time, m_p_mf_all_init, m_map_field_to_plot_after_init);
+    if(m_raw_fields_to_plot) WriteRawFields(m_map_field_to_plot_after_init); 
+
+#ifdef PRINT_NAME
+    amrex::Print() << "\t\t}************************c_Output::WriteOutput_AfterInit()************************\n";
+#endif
+}
+
+
+void
+c_Output::WriteSingleLevelPlotFile(int step, amrex::Real time, std::unique_ptr<amrex::MultiFab>& p_all_mf, std::map<std::string,int>& map_all_mf)
+{
+#ifdef PRINT_NAME
+    amrex::Print() << "\n\n\t\t\t{************************c_Output::WriteSingleLevelPlotFile()************************\n";
+    amrex::Print() << "\t\t\tin file: " << __FILE__ << " at line: " << __LINE__ << "\n";
+    std::string prt = "\t\t\t";
+#endif
 
     auto& rCode = c_Code::GetInstance();
     auto& rGprop = rCode.get_GeometryProperties();
@@ -230,47 +344,163 @@ c_Output::WriteSingleLevelPlotFile(int step, amrex::Real time)
     int Ncomp1=1;
     int Nghost0=0;
 
-    for (auto it : m_p_name_str) {
-        int field_number = map_param_all[it];
+    amrex::Vector< std::string > m_p_name_str;
 
-        #ifdef PRINT_HIGH
-        amrex::Print() << prt << "copying parameter: " << it << " field_number: " << field_number << " num_ghost: " << num_ghost[field_number] << "\n";
-        #endif
-        amrex::MultiFab::Copy(*m_p_mf_all, *m_p_mf[field_number], 0, field_number, Ncomp1, Nghost0);
+    int c=0;
+    for (auto it : map_all_mf) 
+    {
+        auto field_number = it.second;
+        auto field_name = it.first;
 
+        if(m_output_option[field_number] == 0 or m_output_option[field_number] == 1) 
+        {
+            #ifdef PRINT_HIGH
+            amrex::Print() << prt << " copying parameter: " << field_name 
+                                  << " counter : " << c 
+                                  << " field_number: " << field_number 
+                                  << " m_output_option: " << m_output_option[field_number] << "\n";
+            #endif
+
+            m_p_name_str.push_back(field_name);
+
+            amrex::MultiFab::Copy(*p_all_mf, *m_p_mf[field_number], 0, c, Ncomp1, Nghost0);
+            ++c;
+        }
     }
 
-    int iteration=0;
-    Vector<std::string> extra_dirs;
-    if(num_ghost.size() > 0)  extra_dirs.emplace_back("raw_fields");
-
-    amrex::WriteSingleLevelPlotfile( plot_file_name, 
-                                    *m_p_mf_all, m_p_name_str, 
+    amrex::WriteSingleLevelPlotfile( m_plot_file_name, 
+                                    *p_all_mf, m_p_name_str, 
                                      geom, 
-                                     time, iteration, 
-                                     "HyperCLaw-V1.1", default_level_prefix, "Cell",
-                                     extra_dirs);
+                                     time, step, 
+                                     "HyperCLaw-V1.1", m_default_level_prefix, "Cell",
+                                     m_extra_dirs);
 
+    m_p_name_str.clear();
 
-    /*Writing raw fields with ghost cells*/
-    for (auto it : m_p_name_str) 
+#ifdef PRINT_NAME
+    amrex::Print() << "\t\t\t}************************c_Output::WriteSingleLevelPlotFile()************************\n";
+#endif
+}
+
+ 
+//void
+//c_Output::WriteSingleLevelPlotFile_AfterInit(int step, amrex::Real time)
+//{
+//#ifdef PRINT_NAME
+//    amrex::Print() << "\n\n\t\t\t{************************c_Output::WriteSingleLevelPlotFile_AfterInit(*)************************\n";
+//    amrex::Print() << "\t\t\tin file: " << __FILE__ << " at line: " << __LINE__ << "\n";
+//    std::string prt = "\t\t\t";
+//#endif
+//
+//    auto& rCode = c_Code::GetInstance();
+//    auto& rGprop = rCode.get_GeometryProperties();
+//    auto& geom = rGprop.geom;
+//    int Ncomp1=1;
+//    int Nghost0=0;
+//
+//    amrex::Vector< std::string > m_p_name_str;
+//
+//    int c=0;
+//    for (auto it : m_map_field_to_plot_after_init) 
+//    {
+//        auto field_number = it.second;
+//        auto field_name = it.first;
+//
+//        if(m_output_option[field_number] == 0 or m_output_option[field_number] == 1) 
+//        {
+//            m_p_name_str.push_back(field_name);
+//
+//            #ifdef PRINT_HIGH
+//            amrex::Print() << prt << " copying parameter: " << field_name 
+//                                  << " counter : " << c 
+//                                  << " field_number: " << field_number 
+//                                  << " m_output_option: " << m_output_option[field_number] << "\n";
+//            #endif
+//
+//            amrex::MultiFab::Copy(*m_p_mf_all_init, *m_p_mf[field_number], 0, c, Ncomp1, Nghost0);
+//            ++c;
+//        }
+//    }
+//
+//    amrex::WriteSingleLevelPlotfile( m_plot_file_name, 
+//                                    *m_p_mf_all_init, m_p_name_str, 
+//                                     geom, 
+//                                     time, step, 
+//                                     "HyperCLaw-V1.1", m_default_level_prefix, "Cell",
+//                                     m_extra_dirs);
+//
+//    m_p_name_str.clear();
+//
+//#ifdef PRINT_NAME
+//    amrex::Print() << "\t\t\t}************************c_Output::WriteSingleLevelPlotFile_AfterInit(*)************************\n";
+//#endif
+//}
+
+void
+c_Output::WriteRawFields(std::map<std::string,int>& map_all_mf)
+{
+#ifdef PRINT_NAME
+    amrex::Print() << "\n\n\t\t\t{************************c_Output::WriteRawFields()************************\n";
+    amrex::Print() << "\t\t\tin file: " << __FILE__ << " at line: " << __LINE__ << "\n";
+    std::string prt = "\t\t\t";
+#endif
+
+    for (auto it : map_all_mf) 
     {
-        int field_number = map_param_all[it];
-        if(num_ghost[field_number] == 1) {
+        auto field_number = it.second;
+        auto field_name = it.first;
+
+        if(m_output_option[field_number] == 1 or m_output_option[field_number] == 2) 
+        {
             int lev = 0;
-            const std::string raw_pltname = plot_file_name + "/raw_fields";
-            std::string prefix = amrex::MultiFabFileFullPrefix(lev,
-                                raw_pltname, default_level_prefix, m_p_name_str[field_number]);
+            const std::string raw_pltname = m_plot_file_name + "/raw_fields";
+
+            std::string prefix = amrex::MultiFabFileFullPrefix( lev, raw_pltname, 
+                                                                m_default_level_prefix, field_name );
             VisMF::Write(*m_p_mf[field_number], prefix);
         }
     }
 
 #ifdef PRINT_NAME
-    amrex::Print() << "\t\t}************************c_Output::WriteSingleLevelPlotFile()************************\n";
+    amrex::Print() << "\t\t\t}************************c_Output::WriteRawFields()************************\n";
 #endif
 }
 
-    
+
+//void
+//c_Output::WriteRawFields_AfterInit()
+//{
+//#ifdef PRINT_NAME
+//    amrex::Print() << "\n\n\t\t\t{************************c_Output::WriteRawFields_AfterInit()************************\n";
+//    amrex::Print() << "\t\t\tin file: " << __FILE__ << " at line: " << __LINE__ << "\n";
+//    std::string prt = "\t\t\t";
+//#endif
+//
+//    for (auto it : m_map_field_to_plot_after_init) 
+//    {
+//        auto field_number = it.second;
+//        auto field_name = it.first;
+//
+//        if(m_output_option[field_number] == 1 or m_output_option[field_number] == 2) 
+//        {
+//
+//            int lev = 0;
+//            const std::string raw_pltname = m_plot_file_name + "/raw_fields";
+//
+//            std::string prefix = amrex::MultiFabFileFullPrefix( lev, raw_pltname, 
+//                                                                m_default_level_prefix, field_name );
+//            VisMF::Write(*m_p_mf[field_number], prefix);
+//
+//            amrex::Print() << "\n" << prt << " writing raw field after init: " << field_name << ", number: " << field_number << " output_option: " << m_output_option[field_number] << ", prefix: " << prefix << "\n";
+//        }
+//    }
+//
+//#ifdef PRINT_NAME
+//    amrex::Print() << "\t\t\t}************************c_Output::WriteRawFields_AfterInit()************************\n";
+//#endif
+//}
+//
+
 void
 c_Output::AssimilateDataPointers()
 {
@@ -284,7 +514,8 @@ c_Output::AssimilateDataPointers()
     auto& rPost = rCode.get_PostProcessor(); 
     auto& rMprop = rCode.get_MacroscopicProperties();
 
-    for (auto it : map_param_all) {
+    for (auto it : m_map_param_all) 
+    {
         std::string str = it.first;
         int field_counter = it.second;
 
@@ -330,8 +561,8 @@ c_Output::AssimilateDataPointers()
         else 
         {
             std::string subscript = str.substr(str.length()-2);
-    //        amrex::Print() << "macro_str " << str << " subscript " << subscript << " map_subscript_name: " << map_subscript_name[subscript] << "\n";
-            switch (map_subscript_name[subscript])
+    //        amrex::Print() << "macro_str " << str << " subscript " << subscript << " m_map_subscript_name: " << m_map_subscript_name[subscript] << "\n";
+            switch (m_map_subscript_name[subscript])
             {
                 case s_Subscript::x :
                 {

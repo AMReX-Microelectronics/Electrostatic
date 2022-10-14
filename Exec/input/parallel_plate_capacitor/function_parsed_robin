@@ -206,9 +206,27 @@ post_process.fields_to_process = vecField vecFlux
 #
 # -Note that for vector fields (specified as vec<FieldName>) user have an option to plot out only the specific x, y, or z components.
 #  For example, for specifying the y-component of `vecFlux', defined above, user should write, `Flux_y'
+#
+# -plot.filename can be used to indicate the folder prefix for output folder, e.g. setting it to 'ppc' would result in plot folder ppc0000, where 0000 is the iteration step.
+#
+# -There is a way for user to output 'raw fields' with 'ghost cells' in addition fields written out in the usual output folder (e.g. ppc0000/Level_0).
+#  These raw fields are outputted in a new folder 'raw_fields' is created in the output folder, e.g. ppc0000/raw_fields.
+#
+# -These options can be specified as follows:
+#  <field_name>   indicates mutifab <field_name> is outputted in the output folder, e.g. ppc0000, in the usual way.
+#  <field_name>.1 indicates multifab <field_name> is outputted in the output folder as well as separately outputted in the raw_fields folder with its ghost cells.
+#  <field_name>.2 indicates multifab <field_name> is outputted exclusively in the raw_fields folder.
+#
+plot.filename = ppc 
+ppc.fields_to_plot = Field_x Field_y Field_z vecFlux.1 epsilon.1 charge_density phi.1 robinA.2 robinB.2 robinF.2
+plot.write_after_init = 0
 
-plot.filename = ppc
-ppc.fields_to_plot = Field_x Field_y Field_z vecFlux epsilon.1 charge_density phi.1 robinA.1 robinB.1 robinF.1
+# -plot.write_after init is an optional flag, which allows user to write data after initialization (useful for debugging). 
+#  We can chose 0 (default) or 1, which means write after initialization.
+#  plot files are written out in <plot.filename>_init0 folder, including the raw_fields.
+#  Note that only the fields that are initialized up to the point of initialization step are written out, i.e.those defined in  macroscopic.fields_to_define, 
+#  while the post_process.fields_to_process are omitted. 
+#  All fields_to_plot will be written out at the end of the run as usual in folder <plot.filename>0000.
 
 # -Note that there is provision for disregarding repeating field names, e.g. 1) specifying `phi' twice will result in it's output written out only once, 
 #  2) specifying Field_x and vecField will result in output of Field_x, Field_y, and Field_z.

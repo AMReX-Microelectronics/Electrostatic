@@ -166,6 +166,11 @@ c_Code::InitData ()
 
     m_pOutput->InitData();
 
+    if(m_pOutput->m_write_after_init) 
+    {
+        m_pOutput->WriteOutput_AfterInit();
+    }
+
 #ifdef PRINT_NAME
     amrex::Print() << "\t}************************c_Code::InitData()************************\n";
 #endif
@@ -237,7 +242,7 @@ c_Code::Output()
 
     int step=0;
     amrex::Real time=0.0;
-    m_pOutput->WriteSingleLevelPlotFile(step, time);
+    m_pOutput->WriteOutput(step, time);
 
 #ifdef PRINT_NAME
     amrex::Print() << "\t}************************c_Code::Output()************************\n";
