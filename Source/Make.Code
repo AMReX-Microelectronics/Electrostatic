@@ -3,9 +3,7 @@ include $(AMREX_HOME)/Tools/GNUMake/Make.defs
 
 CXXSTD        = c++17
 
-
 include $(CODE_HOME)/Source/Make.package
-include $(CODE_HOME)/Source/ablastr/Make.package
 include $(CODE_HOME)/Source/Utils/Make.package
 include $(CODE_HOME)/Source/Input/Make.package
 include $(CODE_HOME)/Source/Solver/Make.package
@@ -17,3 +15,24 @@ include $(AMREX_HOME)/Src/Boundary/Make.package
 include $(AMREX_HOME)/Src/LinearSolvers/MLMG/Make.package
 
 include $(AMREX_HOME)/Tools/GNUMake/Make.rules
+
+
+ifeq ($(PRINT_HIGH),TRUE)
+  DEFINES += -DPRINT_HIGH -DPRINT_MEDIUM -DPRINT_LOW -DPRINT_NAME
+endif
+
+ifeq ($(PRINT_MEDIUM),TRUE)
+  DEFINES += -DPRINT_MEDIUM -DPRINT_LOW -DPRINT_NAME
+endif
+
+ifeq ($(PRINT_LOW),TRUE)
+  DEFINES += -DPRINT_LOW -DPRINT_NAME
+endif
+
+ifeq ($(PRINT_NAME),TRUE)
+  DEFINES += -DPRINT_NAME
+endif
+
+ifeq ($(TIME_DEPENDENT), TRUE)
+  DEFINES += -DTIME_DEPENDENT
+endif

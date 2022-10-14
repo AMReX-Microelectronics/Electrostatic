@@ -1,12 +1,13 @@
 #ifndef CODE_H_
 #define CODE_H_
 
-#include "Input/GeometryProperties_fwd.H"
-#include "Input/MacroscopicProperties_fwd.H"
+#include "Input/GeometryProperties/GeometryProperties_fwd.H"
+#include "Input/BoundaryConditions/BoundaryConditions_fwd.H"
+#include "Input/MacroscopicProperties/MacroscopicProperties_fwd.H"
 #include "Solver/Electrostatics/MLMG_fwd.H"
 #include "PostProcessor/PostProcessor_fwd.H"
 #include "Output/Output_fwd.H"
-#include "Utils/WarnManager_fwd.H"
+#include "Utils/SelectWarpXUtils/WarnManager_fwd.H"
 
 
 #include <AMReX.H>
@@ -112,6 +113,7 @@ public:
     static bool do_device_synchronize;
 
     c_GeometryProperties& get_GeometryProperties () { return *m_pGeometryProperties;}
+    c_BoundaryConditions& get_BoundaryConditions () { return *m_pBoundaryConditions;}
     c_MacroscopicProperties& get_MacroscopicProperties () { return *m_pMacroscopicProperties;}
     c_MLMGSolver& get_MLMGSolver () { return *m_pMLMGSolver;}
     c_PostProcessor& get_PostProcessor () { return *m_pPostProcessor;}
@@ -122,6 +124,7 @@ private:
     static c_Code* m_instance;
 
     std::unique_ptr<c_GeometryProperties> m_pGeometryProperties;
+    std::unique_ptr<c_BoundaryConditions> m_pBoundaryConditions;
     std::unique_ptr<c_MacroscopicProperties> m_pMacroscopicProperties;
     std::unique_ptr<c_MLMGSolver> m_pMLMGSolver;
     std::unique_ptr<c_PostProcessor> m_pPostProcessor;

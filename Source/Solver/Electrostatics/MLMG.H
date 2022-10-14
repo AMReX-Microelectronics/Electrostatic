@@ -2,6 +2,7 @@
 #define MLMG_H_
 
 #include "MLMG_fwd.H"
+#include "Input/BoundaryConditions/BoundaryConditions_fwd.H"
 
 #include <AMReX_REAL.H>
 #include <AMReX_GpuContainers.H>
@@ -41,33 +42,58 @@ public:
     amrex::LPInfo info;
     amrex::MLABecLaplacian mlabec;
     std::unique_ptr<amrex::MLMG> pMLMG;
-    std::unique_ptr<amrex::MultiFab> alpha_cc; 
     std::array< amrex::MultiFab, AMREX_SPACEDIM > beta_fc; 
     c_MLMGSolver();
+    ~c_MLMGSolver();
 
-    void ReadData();
 
-    void Setup_MLABecLaplacian_ForPoissonEqn();
+    void InitData();
 
     void Solve_PoissonEqn();
 
-    void Compute_vecE(std::array<amrex::MultiFab, AMREX_SPACEDIM>& E);
+    void Compute_vecField(std::array<amrex::MultiFab, AMREX_SPACEDIM>& E);
 
     void Compute_vecFlux(std::array<amrex::MultiFab, AMREX_SPACEDIM>& flux);
 
-    void AverageCellCenteredMultiFabToCellFaces(const amrex::MultiFab& cc_arr,
-                                                std::array< amrex::MultiFab, AMREX_SPACEDIM >& face_arr);
+    //amrex::MultiFab& get_mf  (std::string macro_str) {auto macro_num = param_map[macro_str]; return (*m_p_mf[macro_num]);}
+    //amrex::MultiFab* get_p_mf (std::string macro_str) {auto macro_num = param_map[macro_str]; return m_p_mf[macro_num].get();}
 
+    std::array<std::array<amrex::LinOpBCType,AMREX_SPACEDIM>,2> LinOpBCType_2d;
 
-//    void InitData();
-    
-//    amrex::MultiFab& get_mf  (std::string macro_str) {auto macro_num = param_map[macro_str]; return (*m_p_mf[macro_num]);}
-//    amrex::MultiFab* get_p_mf (std::string macro_str) {auto macro_num = param_map[macro_str]; return m_p_mf[macro_num].get();}
 
 private:
-//    amrex::Vector<std::unique_ptr<amrex::MultiFab>> m_p_mf;
-//    void ParseBasicDomainInput();
-//    void InitializeBoxArrayAndDistributionMap ();
+    amrex::MultiFab* alpha=nullptr;
+    amrex::MultiFab* beta=nullptr;
+    amrex::MultiFab* soln=nullptr;
+    amrex::MultiFab*  rhs=nullptr;
+
+    amrex::MultiFab* robin_a=nullptr;
+    amrex::MultiFab* robin_b=nullptr;
+    amrex::MultiFab* robin_f=nullptr;
+
+    std::string alpha_str;
+    std::string beta_str;
+    std::string soln_str;
+    std::string rhs_str;
+    std::string robin_a_str;
+    std::string robin_b_str;
+    std::string robin_f_str;
+
+
+    void ReadData();
+
+    void Set_MLMG_CellCentered_Multifabs();
+
+    void Setup_MLABecLaplacian_ForPoissonEqn();
+
+    void AssignLinOpBCTypeToBoundaries ();
+
+    bool all_homogeneous_boundaries;
+    bool some_functionbased_inhomogeneous_boundaries;
+    bool some_constant_inhomogeneous_boundaries;
+
+    void Fill_Constant_Inhomogeneous_Boundaries();
+    void Fill_FunctionBased_Inhomogeneous_Boundaries();
 
 };
 

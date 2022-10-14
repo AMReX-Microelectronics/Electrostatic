@@ -11,7 +11,7 @@
 
 
 struct s_PostProcessMacroName {
-    enum macro_name { vecE, vecFlux };
+    enum macro_name { vecField, vecFlux };
 };
 
 class 
@@ -62,8 +62,17 @@ public:
 private:
     void DefineParameterNameMap()
     {
-        map_macro_name["vecE"] = s_PostProcessMacroName::vecE;
+#ifdef PRINT_NAME
+    amrex::Print() << "\n\n\t\t\t\t{************************c_PostProcessor:DefineParameterNameMap()************************\n";
+    amrex::Print() << "\t\t\t\tin file: " << __FILE__ << " at line: " << __LINE__ << "\n";
+#endif
+
+        map_macro_name["vecField"] = s_PostProcessMacroName::vecField;
         map_macro_name["vecFlux"] = s_PostProcessMacroName::vecFlux;
+
+#ifdef PRINT_NAME
+    amrex::Print() << "\t\t\t\t}************************c_PostProcessor:DefineParameterNameMap()************************\n";
+#endif
     };
     int SortParameterType();
 

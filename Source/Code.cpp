@@ -1,12 +1,13 @@
 #include "Code.H"
 
-#include "Utils/MsgLogger/MsgLogger.H"
-#include "Utils/WarnManager.H"
-#include "Utils/WarpXUtil.H"
-#include "Utils/WarpXProfilerWrapper.H"
+#include "Utils/SelectWarpXUtils/MsgLogger/MsgLogger.H"
+#include "Utils/SelectWarpXUtils/WarnManager.H"
+#include "Utils/SelectWarpXUtils/WarpXUtil.H"
+#include "Utils/SelectWarpXUtils/WarpXProfilerWrapper.H"
 
-#include "Input/GeometryProperties.H"
-#include "Input/MacroscopicProperties.H"
+#include "Input/GeometryProperties/GeometryProperties.H"
+#include "Input/BoundaryConditions/BoundaryConditions.H"
+#include "Input/MacroscopicProperties/MacroscopicProperties.H"
 #include "Solver/Electrostatics/MLMG.H"
 #include "PostProcessor/PostProcessor.H"
 #include "Output/Output.H"
@@ -41,17 +42,29 @@ c_Code::ResetInstance ()
 
 c_Code::c_Code ()
 {
+#ifdef PRINT_NAME
+    amrex::Print() << "\n\n\t{************************c_Code Constructor()************************\n";
+#endif
     m_instance = this;
     m_p_warn_manager = std::make_unique<Utils::WarnManager>();
 
     ReadData();
 
+#ifdef PRINT_NAME
+    amrex::Print() << "\t}************************c_Code Constructor()************************\n";
+#endif
 }
 
 
 c_Code::~c_Code ()
 {
-//
+#ifdef PRINT_NAME
+    amrex::Print() << "\n\n\t{************************c_Code Destructor()************************\n";
+#endif
+
+#ifdef PRINT_NAME
+    amrex::Print() << "\t}************************c_Code Destructor()************************\n";
+#endif
 }
 
 
@@ -110,8 +123,14 @@ c_Code::PrintGlobalWarnings(const std::string& when)
 void 
 c_Code::ReadData ()
 {
+#ifdef PRINT_NAME
+    amrex::Print() << "\n\n\t\t{************************c_Code::ReadData()************************\n";
+    amrex::Print() << "\t\tin file: " << __FILE__ << " at line: " << __LINE__ << "\n";
+#endif
 
      m_pGeometryProperties = std::make_unique<c_GeometryProperties>();
+
+     m_pBoundaryConditions = std::make_unique<c_BoundaryConditions>();
      
      m_pMacroscopicProperties = std::make_unique<c_MacroscopicProperties>();
      
@@ -121,29 +140,45 @@ c_Code::ReadData ()
 
      m_pOutput = std::make_unique<c_Output>();
 
+#ifdef PRINT_NAME
+    amrex::Print() << "\t\t}************************c_Code::ReadData()************************\n";
+#endif
 }
 
 
 void 
 c_Code::InitData ()
 {
+#ifdef PRINT_NAME
+    amrex::Print() << "\n\n\t{************************c_Code::InitData()************************\n";
+    amrex::Print() << "\tin file: " << __FILE__ << " at line: " << __LINE__ << "\n";
+#endif
  
     m_pGeometryProperties->InitData();
 
+    m_pBoundaryConditions->InitData();
+
     m_pMacroscopicProperties->InitData();
 
-    m_pMLMGSolver->Setup_MLABecLaplacian_ForPoissonEqn();
+    m_pMLMGSolver->InitData();
 
     m_pPostProcessor->InitData();
 
     m_pOutput->InitData();
 
+#ifdef PRINT_NAME
+    amrex::Print() << "\t}************************c_Code::InitData()************************\n";
+#endif
 }
 
 
 void 
 c_Code::Solve()
 {
+#ifdef PRINT_NAME
+    amrex::Print() << "\n\n\t{************************c_Code::Solve()************************\n";
+    amrex::Print() << "\tin file: " << __FILE__ << " at line: " << __LINE__ << "\n";
+#endif
 //    auto& phi = m_pMacroscopicProperties->get_mf("phi");
 //    const auto& phi_arr = phi[0].array();
 
@@ -157,12 +192,20 @@ c_Code::Solve()
 //    amrex::Print() << "phi_74,49,49:  " << phi_arr(74,49,49) << "\n";
 //    amrex::Print() << "phi_75,49,49:  " << phi_arr(75,49,49) << "\n";
 //    amrex::Print() << "phi_85,49,49:  " << phi_arr(85,49,49) << "\n";
+//
+#ifdef PRINT_NAME
+    amrex::Print() << "\t}************************c_Code::Solve()************************\n";
+#endif
 }
 
 
 void 
 c_Code::PostProcess()
 {
+#ifdef PRINT_NAME
+    amrex::Print() << "\n\n\t{************************c_Code::PostProcess()************************\n";
+    amrex::Print() << "\tin file: " << __FILE__ << " at line: " << __LINE__ << "\n";
+#endif
     
     m_pPostProcessor->Compute(); 
 
@@ -178,15 +221,25 @@ c_Code::PostProcess()
 //    amrex::Print() << "Ex_100,49,49:  " << Ex_arr(100,49,49) << "\n";
 //    amrex::Print() << "Ex_101,49,49:  " << Ex_arr(101,49,49) << "\n";
 
+#ifdef PRINT_NAME
+    amrex::Print() << "\t}************************c_Code::PostProcess()************************\n";
+#endif
 }
 
 
 void 
 c_Code::Output()
 {
+#ifdef PRINT_NAME
+    amrex::Print() << "\n\n\t{************************c_Code::Output()************************\n";
+    amrex::Print() << "\tin file: " << __FILE__ << " at line: " << __LINE__ << "\n";
+#endif
 
     int step=0;
     amrex::Real time=0.0;
     m_pOutput->WriteSingleLevelPlotFile(step, time);
 
+#ifdef PRINT_NAME
+    amrex::Print() << "\t}************************c_Code::Output()************************\n";
+#endif
 }
