@@ -364,14 +364,13 @@ c_MLMGSolver:: Setup_MLABecLaplacian_ForPoissonEqn()
     {
         Fill_FunctionBased_Inhomogeneous_Boundaries();
     }
-    bool fill_corners = false; //false means corners are filled
-    soln->FillBoundary(geom.periodicity(),fill_corners);
+    soln->FillBoundary(geom.periodicity());
 
     if(rBC.some_robin_boundaries) 
     {
-        robin_a->FillBoundary(geom.periodicity(),fill_corners);
-        robin_b->FillBoundary(geom.periodicity(),fill_corners);
-        robin_f->FillBoundary(geom.periodicity(),fill_corners);
+        robin_a->FillBoundary(geom.periodicity());
+        robin_b->FillBoundary(geom.periodicity());
+        robin_f->FillBoundary(geom.periodicity());
     }
 
     mlabec.setLevelBC(amrlev, soln, robin_a, robin_b, robin_f);
@@ -687,18 +686,9 @@ c_MLMGSolver:: Solve_PoissonEqn()
 
     auto& rCode = c_Code::GetInstance();
     auto& rGprop = rCode.get_GeometryProperties();
-    //auto& rBC = rCode.get_BoundaryConditions();
     auto& geom = rGprop.geom;
 
-    bool fill_corners = true;
-    soln->FillBoundary(geom.periodicity(),fill_corners);
-
-    //if(rBC.some_robin_boundaries) 
-    //{
-    //    robin_a->FillBoundary(geom.periodicity(),fill_corners);
-    //    robin_b->FillBoundary(geom.periodicity(),fill_corners);
-    //    robin_f->FillBoundary(geom.periodicity(),fill_corners);
-    //}
+    soln->FillBoundary(geom.periodicity());
 
 #ifdef PRINT_NAME
     amrex::Print() << "\t\t}************************c_MLMGSolver::Solve_PoissonEqn()************************\n";

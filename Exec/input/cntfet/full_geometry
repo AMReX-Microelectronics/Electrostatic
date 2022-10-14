@@ -15,8 +15,8 @@ my_constants.CM_l = CM_w
 my_constants.CM_h = 2e-6
 
 my_constants.epsilon_CM = 1.7*epsilon_0
-my_constants.SV = 0.      #source voltage [V]
-my_constants.DV = -100e-3 #drain voltage [V]
+my_constants.SV = 50e-3      #source voltage [V]
+my_constants.DV = -50e-3 #drain voltage [V]
 
 #gate metal
 my_constants.GM_w = 7e-6
@@ -24,7 +24,7 @@ my_constants.GM_l = GM_w
 my_constants.GM_h = CM_h
 
 my_constants.epsilon_GM = 1.7*epsilon_0  #Aluminum
-my_constants.GV = 1              #drain voltage [V]
+my_constants.GV = 25e-3              #drain voltage [V]
 
 #gate oxide
 my_constants.GO_w = Lx
@@ -68,8 +68,8 @@ my_constants.epsilon_domain = 3.8*epsilon_0 #SiO2
 #
 # - The following AMReX specific properties are defined in c_GeometryProperties.
 
-domain.n_cell = 320 400 400
-domain.max_grid_size = 320 400 400
+domain.n_cell = 400 600 200
+domain.max_grid_size = 400 600 200
 #domain.blocking_factor = 320 400 400
 
 domain.prob_lo = -Lx/2. -Ly/2.  0.
@@ -116,8 +116,8 @@ domain.coord_sys = cartesian
 #   then they are ignored and a warning is raised stating that these boundary conditions are set to periodic.
 #   E.g. below `neu' for directions 0 and 1 will be ignored.
 #
-boundary.hi = rob(Xmax) neu neu
-boundary.lo = rob(Xmin) neu rob(Zmin)
+boundary.hi = neu(0) rob(Ymax) neu(0)
+boundary.lo = neu(0) rob(Ymin) rob(Zmin)
 
 boundary.Zmin_a_function(x,y,z) = "0. 
 + 1.   *(y < GM_l/2.)         *(y > -GM_l/2.)        *(x < GM_w/2.)          *(x > -GM_w/2.)
@@ -125,31 +125,31 @@ boundary.Zmin_a_function(x,y,z) = "0.
 + 1.   *(y <= Ly/2.)          *(y > Ly/2. - CM_l)    *(x < CM_w/2.)          *(x > -CM_w/2.)"
 
 boundary.Zmin_b_function(x,y,z) = "1.
-+ 0.   *(y < GM_l/2.)         *(y > -GM_l/2.)        *(x < GM_w/2.)          *(x > -GM_w/2.)
-+ 0.   *(y < -Ly/2. + CM_l)   *(y >= -Ly/2.)         *(x < CM_w/2.)          *(x > -CM_w/2.)
-+ 0.   *(y <= Ly/2.)          *(y > Ly/2. - CM_l)    *(x < CM_w/2.)          *(x > -CM_w/2.)"
++ (0. - 1)   *(y < GM_l/2.)         *(y > -GM_l/2.)        *(x < GM_w/2.)          *(x > -GM_w/2.)
++ (0. - 1)   *(y < -Ly/2. + CM_l)   *(y >= -Ly/2.)         *(x < CM_w/2.)          *(x > -CM_w/2.)
++ (0. - 1)   *(y <= Ly/2.)          *(y > Ly/2. - CM_l)    *(x < CM_w/2.)          *(x > -CM_w/2.)"
 
 boundary.Zmin_f_function(x,y,z) = "0.
 + GV  *(y < GM_l/2.)         *(y > -GM_l/2.)        *(x < GM_w/2.)          *(x > -GM_w/2.)
 + SV  *(y < -Ly/2. + CM_l)   *(y >= -Ly/2.)         *(x < CM_w/2.)          *(x > -CM_w/2.)
 + DV  *(y <= Ly/2.)          *(y > Ly/2. - CM_l)    *(x < CM_w/2.)          *(x > -CM_w/2.)"
 
-boundary.Xmin_a_function(x,y,z) = "0.
+boundary.Ymin_a_function(x,y,z) = "0.
 + 1. *(x < CM_w/2.)          *(x > -CM_w/2.)        *(z >= 0)           *(z < CM_h)"
 
-boundary.Xmin_b_function(x,y,z) = "1.
-+ 0. *(x < CM_w/2.)          *(x > -CM_w/2.)        *(z >= 0)           *(z < CM_h)"
+boundary.Ymin_b_function(x,y,z) = "1.
++ (0. - 1) *(x < CM_w/2.)          *(x > -CM_w/2.)        *(z >= 0)           *(z < CM_h)"
 
-boundary.Xmin_f_function(x,y,z) = "0.
+boundary.Ymin_f_function(x,y,z) = "0.
 + SV *(x < CM_w/2.)          *(x > -CM_w/2.)        *(z >= 0)           *(z < CM_h)"
  
-boundary.Xmax_a_function(x,y,z) = "0.
+boundary.Ymax_a_function(x,y,z) = "0.
 + 1. *(x < CM_w/2.)          *(x > -CM_w/2.)        *(z >= 0)           *(z < CM_h)"
 
-boundary.Xmax_b_function(x,y,z) = "1.
-+ 0. *(x < CM_w/2.)          *(x > -CM_w/2.)        *(z >= 0)           *(z < CM_h)"
+boundary.Ymax_b_function(x,y,z) = "1.
++ (0. - 1) *(x < CM_w/2.)          *(x > -CM_w/2.)        *(z >= 0)           *(z < CM_h)"
 
-boundary.Xmax_f_function(x,y,z) = "0.
+boundary.Ymax_f_function(x,y,z) = "0.
 + DV *(x < CM_w/2.)          *(x > -CM_w/2.)        *(z >= 0)           *(z < CM_h)"
 ####################################
 ###### MACROSCOPIC PROPERTIES ######
