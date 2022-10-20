@@ -3,12 +3,12 @@ AMREX_HOME  ?= ../../amrex
 DEBUG        = FALSE
 USE_MPI      = TRUE
 USE_OMP      = FALSE
-USE_CUDA     = TRUE
+USE_CUDA     = FALSE
 COMP         = gnu
 DIM          = 3
 CXXSTD       = c++17
 
-PRINT_NAME   = TRUE
+PRINT_NAME   = FALSE
 PRINT_LOW   = FALSE
 PRINT_HIGH   = FALSE
 TIME_DEPENDENT = FALSE 
