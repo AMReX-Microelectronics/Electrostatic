@@ -179,7 +179,6 @@ c_PostProcessor::Compute()
     for(auto it: map_param_all) 
     {
         auto macro_str = it.first;
-        auto macro_num = it.second;
 
         it_Post = map_macro_name.find(macro_str);
 
