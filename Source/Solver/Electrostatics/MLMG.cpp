@@ -449,12 +449,11 @@ c_MLMGSolver:: Fill_Constant_Inhomogeneous_Boundaries()
         const auto& bx = mfi.tilebox();
         
         if(found_lo) {
-            for (auto dir : dir_inhomo_const_lo) {
-
+            for (auto dir : dir_inhomo_const_lo) 
+	    {
                 if (bx.smallEnd(dir) == domain.smallEnd(dir)) 
 		{
-	            auto value = std::any_cast<amrex::Real>(bcAny_2d[0][dir]);
-
+	            auto value = std::any_cast<amrex::Real>(bcAny_2d[0][dir]);		
                     Box const& bxlo = amrex::adjCellLo(bx, dir,len);
                     amrex::ParallelFor(bxlo,
                     [=] AMREX_GPU_DEVICE (int i, int j, int k) noexcept
@@ -465,11 +464,11 @@ c_MLMGSolver:: Fill_Constant_Inhomogeneous_Boundaries()
             }
         }
         if(found_hi) {
-            for (auto dir : dir_inhomo_const_hi) {
+            for (auto dir : dir_inhomo_const_hi) 
+	    {
                 if (bx.bigEnd(dir) == domain.bigEnd(dir)) 
 		{
-	            auto value = std::any_cast<amrex::Real>(bcAny_2d[1][dir]);
-
+		    auto value = std::any_cast<amrex::Real>(bcAny_2d[1][dir]);	
                     Box const& bxhi = amrex::adjCellHi(bx, dir,len);
                     amrex::ParallelFor(bxhi,
                     [=] AMREX_GPU_DEVICE (int i, int j, int k) noexcept
