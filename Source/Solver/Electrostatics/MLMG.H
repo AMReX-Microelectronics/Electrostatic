@@ -61,10 +61,15 @@ public:
     std::array<std::array<amrex::LinOpBCType,AMREX_SPACEDIM>,2> LinOpBCType_2d;
 
 
+    /*The following is public for GPUs*/
+    void Fill_Constant_Inhomogeneous_Boundaries(); 
+    void Fill_FunctionBased_Inhomogeneous_Boundaries(); 
+    std::string soln_str;
+    amrex::MultiFab* soln=nullptr;
+
 private:
     amrex::MultiFab* alpha=nullptr;
     amrex::MultiFab* beta=nullptr;
-    amrex::MultiFab* soln=nullptr;
     amrex::MultiFab*  rhs=nullptr;
 
     amrex::MultiFab* robin_a=nullptr;
@@ -73,7 +78,6 @@ private:
 
     std::string alpha_str;
     std::string beta_str;
-    std::string soln_str;
     std::string rhs_str;
     std::string robin_a_str;
     std::string robin_b_str;
@@ -92,8 +96,6 @@ private:
     bool some_functionbased_inhomogeneous_boundaries;
     bool some_constant_inhomogeneous_boundaries;
 
-    void Fill_Constant_Inhomogeneous_Boundaries();
-    void Fill_FunctionBased_Inhomogeneous_Boundaries();
 
 };
 
