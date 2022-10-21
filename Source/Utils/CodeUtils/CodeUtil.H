@@ -13,6 +13,8 @@
 #include <vector>
 #include <any>
 
+using namespace amrex;
+
 
 namespace Multifab_Manipulation
 {
@@ -26,11 +28,39 @@ void AverageCellCenteredMultiFabToCellFaces(const amrex::MultiFab& cc_arr,
                                             AMREX_SPACEDIM >& face_arr);
 
 
-void GetXYZ(const int i, const int j, const int k, 
+AMREX_GPU_DEVICE AMREX_FORCE_INLINE
+void ConvertParserIntoMultiFab_3vars(const int i, const int j, const int k, 
             const amrex::GpuArray<amrex::Real, AMREX_SPACEDIM>& dx, 
 	    const amrex::RealBox& real_box, 
 	    const amrex::IntVect& iv, 
-	    amrex::GpuArray<amrex::Real, AMREX_SPACEDIM>& coord_vec);
+	    amrex::ParserExecutor<3> const& macro_parser,
+	    amrex::Array4<amrex::Real> const& mf_array)
+{
+#ifdef PRINT_NAME
+    amrex::Print() << "\n\n\t\t\t\t\t{************************Multifab_Manipulation::GetXYZ()************************\n";
+    amrex::Print() << "\t\t\t\t\tin file: " << __FILE__ << " at line: " << __LINE__ << "\n";
+#endif
+      
+    amrex::Real fac_x = (1._rt - iv[0]) * dx[0] * 0.5_rt;
+    amrex::Real x = i * dx[0] + real_box.lo(0) + fac_x;
+
+    amrex::Real fac_y = (1._rt - iv[1]) * dx[1] * 0.5_rt;
+    amrex::Real y = j * dx[1] + real_box.lo(1) + fac_y;
+
+    amrex::Real fac_z = (1._rt - iv[2]) * dx[2] * 0.5_rt;
+    amrex::Real z = k * dx[2] + real_box.lo(2) + fac_z;
+
+    mf_array(i,j,k) = macro_parser(x,y,z);
+
+#ifdef PRINT_NAME
+    amrex::Print() << "\t\t\t\t\t}************************Multifab_Manipulation::GetXYZ()************************\n";
+#endif
+}
+//void GetXYZ(const int i, const int j, const int k, 
+//            const amrex::GpuArray<amrex::Real, AMREX_SPACEDIM>& dx, 
+//	    const amrex::RealBox& real_box, 
+//	    const amrex::IntVect& iv, 
+//	    amrex::GpuArray<amrex::Real, AMREX_SPACEDIM>& coord_vec);
 
 
 }
