@@ -24,6 +24,15 @@ void InitializeMacroMultiFabUsingParser_3vars (
 void AverageCellCenteredMultiFabToCellFaces(const amrex::MultiFab& cc_arr,
                                             std::array< amrex::MultiFab, 
                                             AMREX_SPACEDIM >& face_arr);
+
+
+void GetXYZ(const int i, const int j, const int k, 
+            const amrex::GpuArray<amrex::Real, AMREX_SPACEDIM>& dx, 
+	    const amrex::RealBox& real_box, 
+	    const amrex::IntVect& iv, 
+	    amrex::GpuArray<amrex::Real, AMREX_SPACEDIM>& coord_vec);
+
+
 }
 
 void PrintRunDiagnostics(amrex::Real initial_time);

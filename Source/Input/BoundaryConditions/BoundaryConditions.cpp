@@ -329,12 +329,8 @@ c_BoundaryConditions::DefineMacroVariableVectorSizes()
     amrex::Print() << "\t\t\t\t\tin file: " << __FILE__ << " at line: " << __LINE__ << "\n";
 #endif
 
-
     m_macro_str_function.resize(num_function_parsers);
     m_p_macro_parser.resize(num_function_parsers);
-    m_p_mf.resize(num_function_parsers);
-
-
 
 #ifdef PRINT_NAME
     amrex::Print() << "\t\t\t\t\t}************************c_BoundaryConditions::DefineMacroVariableVectorSizes()************************\n";
@@ -382,43 +378,5 @@ c_BoundaryConditions::ReadBoundaryConditionsParser(std::string macro_str, int ma
 
 #ifdef PRINT_NAME
     amrex::Print() << "\t\t\t\t\t}************************c_BoundaryConditions::ReadBoundaryConditionsParser(*)************************\n\n";
-#endif    
-}
-
-
-
-void 
-c_BoundaryConditions::InitData()
-{
-#ifdef PRINT_NAME
-    amrex::Print() << "\n\n\t\t{************************c_BoundaryConditions::InitData()************************\n";
-    amrex::Print() << "\t\tin file: " << __FILE__ << " at line: " << __LINE__ << "\n";
-#endif
-
-    const int Ncomp1=1;
-    const int Nghost1=1;
-
-    auto& rCode = c_Code::GetInstance();
-    auto& rGprop = rCode.get_GeometryProperties();
-    auto& ba = rGprop.ba;
-    auto& dm = rGprop.dm;
-    auto& geom = rGprop.geom;
-
-    for (auto it: map_function_parser_name)
-    {
-        auto macro_str = it.first;
-        auto macro_num = it.second;
-
-        m_p_mf[macro_num] = std::make_unique<amrex::MultiFab>(ba, dm, Ncomp1, Nghost1); //cell3
-        if(m_parser_varname_vector.size() == 3) {
-            Multifab_Manipulation::InitializeMacroMultiFabUsingParser_3vars(m_p_mf[macro_num].get(), m_p_macro_parser[macro_num]->compile<3>(), geom);
-        }
-        else if(m_parser_varname_vector.size() == 4) {
-            //Multifab_Manipulation::InitializeMacroMultiFabUsingParser_3vars(m_p_mf[macro_num].get(), m_p_macro_parser[macro_num]->compile<4>(), geom);
-        }
-    }
-
-#ifdef PRINT_NAME
-    amrex::Print() << "\t\t}************************c_BoundaryConditions::InitData()************************\n\n";
 #endif    
 }

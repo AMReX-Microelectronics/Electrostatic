@@ -156,8 +156,6 @@ c_Code::InitData ()
  
     m_pGeometryProperties->InitData();
 
-    m_pBoundaryConditions->InitData();
-
     m_pMacroscopicProperties->InitData();
 
     m_pMLMGSolver->InitData();

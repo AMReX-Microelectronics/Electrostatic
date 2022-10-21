@@ -499,6 +499,10 @@ c_MLMGSolver:: Fill_FunctionBased_Inhomogeneous_Boundaries()
     auto& rGprop = rCode.get_GeometryProperties();
     Box const& domain = rGprop.geom.Domain();
 
+    auto dx = rGprop.geom.CellSizeArray();
+    auto& real_box = rGprop.geom.ProbDomain();
+    auto iv = soln->ixType().toIntVect();
+
     auto& rBC = rCode.get_BoundaryConditions();
     auto& bcAny_2d = rBC.bcAny_2d;
     auto& map_bcAny_2d = rBC.map_bcAny_2d;
@@ -533,7 +537,6 @@ c_MLMGSolver:: Fill_FunctionBased_Inhomogeneous_Boundaries()
         const auto& robin_a_arr = robin_a->array(mfi);
         const auto& robin_b_arr = robin_b->array(mfi);
         const auto& robin_f_arr = robin_f->array(mfi);
-
         const auto& bx = mfi.tilebox();
         
         /*for low sides*/
@@ -552,8 +555,12 @@ c_MLMGSolver:: Fill_FunctionBased_Inhomogeneous_Boundaries()
                         {
                             std::string macro_str = main_str + it_rob.first; 
 
-                            auto& parser_mf = rBC.get_mf(macro_str);
-                            const auto& parser_mf_arr = parser_mf.array(mfi);
+                            auto pParser = rBC.get_p_parser(macro_str);
+			    #ifdef TIME_DEPENDENT
+			        const auto& macro_parser = pParser->compile<4>();
+			    #else
+			        const auto& macro_parser = pParser->compile<3>();
+			    #endif
 
                             switch(it_rob.second)
                             {
@@ -562,7 +569,14 @@ c_MLMGSolver:: Fill_FunctionBased_Inhomogeneous_Boundaries()
                                     amrex::ParallelFor(bxlo,
                                     [=] AMREX_GPU_DEVICE (int i, int j, int k) noexcept
                                     {
-                                        robin_a_arr(i,j,k) = parser_mf_arr(i,j,k);
+					amrex::GpuArray<amrex::Real, AMREX_SPACEDIM> coord;
+                                        Multifab_Manipulation::GetXYZ(i,j,k,dx,real_box, iv,coord);  
+                                        robin_a_arr(i,j,k) = macro_parser(coord[0],coord[1],coord[2]);
+			                #ifdef TIME_DEPENDENT
+                                            //robin_a_arr(i,j,k) = macro_parser(coord[0],coord[1],coord[2],time);
+			                #else
+                                            robin_a_arr(i,j,k) = macro_parser(coord[0],coord[1],coord[2]);
+			                #endif
                                     });
                                     break;
                                 }
@@ -571,7 +585,13 @@ c_MLMGSolver:: Fill_FunctionBased_Inhomogeneous_Boundaries()
                                     amrex::ParallelFor(bxlo,
                                     [=] AMREX_GPU_DEVICE (int i, int j, int k) noexcept
                                     {
-                                        robin_b_arr(i,j,k) = parser_mf_arr(i,j,k);
+					amrex::GpuArray<amrex::Real, AMREX_SPACEDIM> coord;
+                                        Multifab_Manipulation::GetXYZ(i,j,k,dx,real_box, iv,coord);  
+			                #ifdef TIME_DEPENDENT
+                                            //robin_b_arr(i,j,k) = macro_parser(coord[0],coord[1],coord[2],time);
+			                #else
+                                            robin_b_arr(i,j,k) = macro_parser(coord[0],coord[1],coord[2]);
+                                        #endif 
                                     });
                                     break;
                                 }
@@ -580,7 +600,13 @@ c_MLMGSolver:: Fill_FunctionBased_Inhomogeneous_Boundaries()
                                     amrex::ParallelFor(bxlo,
                                     [=] AMREX_GPU_DEVICE (int i, int j, int k) noexcept
                                     {
-                                        robin_f_arr(i,j,k) = parser_mf_arr(i,j,k);
+					amrex::GpuArray<amrex::Real, AMREX_SPACEDIM> coord;
+                                        Multifab_Manipulation::GetXYZ(i,j,k,dx,real_box, iv,coord);  
+			                #ifdef TIME_DEPENDENT
+                                            //robin_f_arr(i,j,k) = macro_parser(coord[0],coord[1],coord[2],time);
+			                #else
+                                            robin_f_arr(i,j,k) = macro_parser(coord[0],coord[1],coord[2]);
+					#endif 
                                     });
                                     break;
                                 }
@@ -591,13 +617,23 @@ c_MLMGSolver:: Fill_FunctionBased_Inhomogeneous_Boundaries()
                     {
                         std::string macro_str = std::any_cast<std::string>(bcAny_2d[0][dir]);
 
-                        auto& parser_mf = rBC.get_mf(macro_str);
-                        const auto& parser_mf_arr = parser_mf.array(mfi);
+                        auto pParser = rBC.get_p_parser(macro_str);
+			#ifdef TIME_DEPENDENT
+			    const auto& macro_parser = pParser->compile<4>();
+			#else
+			    const auto& macro_parser = pParser->compile<3>();
+			#endif
 
                         amrex::ParallelFor(bxlo,
                         [=] AMREX_GPU_DEVICE (int i, int j, int k) noexcept
                         {
-                            soln_arr(i,j,k) = parser_mf_arr(i,j,k);
+		            amrex::GpuArray<amrex::Real, AMREX_SPACEDIM> coord;
+                            Multifab_Manipulation::GetXYZ(i,j,k,dx,real_box, iv,coord);  
+		            #ifdef TIME_DEPENDENT
+                                //soln_arr(i,j,k) = macro_parser(coord[0],coord[1],coord[2],time);
+		            #else
+                                soln_arr(i,j,k) = macro_parser(coord[0],coord[1],coord[2]);
+                            #endif
                         });
                     }
                 }
@@ -619,8 +655,12 @@ c_MLMGSolver:: Fill_FunctionBased_Inhomogeneous_Boundaries()
                         {
                             std::string macro_str = main_str + it_rob.first; 
 
-                            auto& parser_mf = rBC.get_mf(macro_str);
-                            const auto& parser_mf_arr = parser_mf.array(mfi);
+                            auto pParser = rBC.get_p_parser(macro_str);
+			    #ifdef TIME_DEPENDENT
+			        const auto& macro_parser = pParser->compile<4>();
+			    #else
+			        const auto& macro_parser = pParser->compile<3>();
+			    #endif
 
                             switch(it_rob.second)
                             {
@@ -629,7 +669,14 @@ c_MLMGSolver:: Fill_FunctionBased_Inhomogeneous_Boundaries()
                                     amrex::ParallelFor(bxhi,
                                     [=] AMREX_GPU_DEVICE (int i, int j, int k) noexcept
                                     {
-                                        robin_a_arr(i,j,k) = parser_mf_arr(i,j,k);
+					amrex::GpuArray<amrex::Real, AMREX_SPACEDIM> coord;
+                                        Multifab_Manipulation::GetXYZ(i,j,k,dx,real_box, iv,coord);  
+                                        robin_a_arr(i,j,k) = macro_parser(coord[0],coord[1],coord[2]);
+			                #ifdef TIME_DEPENDENT
+                                            //robin_a_arr(i,j,k) = macro_parser(coord[0],coord[1],coord[2],time);
+			                #else
+                                            robin_a_arr(i,j,k) = macro_parser(coord[0],coord[1],coord[2]);
+                                        #endif
                                     });
                                     break;
                                 }
@@ -638,7 +685,13 @@ c_MLMGSolver:: Fill_FunctionBased_Inhomogeneous_Boundaries()
                                     amrex::ParallelFor(bxhi,
                                     [=] AMREX_GPU_DEVICE (int i, int j, int k) noexcept
                                     {
-                                        robin_b_arr(i,j,k) = parser_mf_arr(i,j,k);
+					amrex::GpuArray<amrex::Real, AMREX_SPACEDIM> coord;
+                                        Multifab_Manipulation::GetXYZ(i,j,k,dx,real_box, iv,coord);  
+			                #ifdef TIME_DEPENDENT
+                                            //robin_b_arr(i,j,k) = macro_parser(coord[0],coord[1],coord[2],time);
+			                #else
+                                            robin_b_arr(i,j,k) = macro_parser(coord[0],coord[1],coord[2]);
+                                        #endif
                                     });
                                     break;
                                 }
@@ -647,7 +700,13 @@ c_MLMGSolver:: Fill_FunctionBased_Inhomogeneous_Boundaries()
                                     amrex::ParallelFor(bxhi,
                                     [=] AMREX_GPU_DEVICE (int i, int j, int k) noexcept
                                     {
-                                        robin_f_arr(i,j,k) = parser_mf_arr(i,j,k);
+					amrex::GpuArray<amrex::Real, AMREX_SPACEDIM> coord;
+                                        Multifab_Manipulation::GetXYZ(i,j,k,dx,real_box, iv,coord);  
+			                #ifdef TIME_DEPENDENT
+                                            //robin_f_arr(i,j,k) = macro_parser(coord[0],coord[1],coord[2],time);
+			                #else
+                                            robin_f_arr(i,j,k) = macro_parser(coord[0],coord[1],coord[2]);
+                                        #endif
                                     });
                                     break;
                                 }
@@ -658,13 +717,23 @@ c_MLMGSolver:: Fill_FunctionBased_Inhomogeneous_Boundaries()
                     {
                         std::string macro_str = std::any_cast<std::string>(bcAny_2d[1][dir]);
 
-                        auto& parser_mf = rBC.get_mf(macro_str);
-                        const auto& parser_mf_arr = parser_mf.array(mfi);
+                        auto pParser = rBC.get_p_parser(macro_str);
+			#ifdef TIME_DEPENDENT
+			    const auto& macro_parser = pParser->compile<4>();
+			#else
+			    const auto& macro_parser = pParser->compile<3>();
+			#endif
 
                         amrex::ParallelFor(bxhi,
                         [=] AMREX_GPU_DEVICE (int i, int j, int k) noexcept
                         {
-                            soln_arr(i,j,k) = parser_mf_arr(i,j,k);
+		            amrex::GpuArray<amrex::Real, AMREX_SPACEDIM> coord;
+                            Multifab_Manipulation::GetXYZ(i,j,k,dx,real_box, iv,coord);  
+		            #ifdef TIME_DEPENDENT
+                                //soln_arr(i,j,k) = macro_parser(coord[0],coord[1],coord[2],time);
+		            #else
+                                soln_arr(i,j,k) = macro_parser(coord[0],coord[1],coord[2]);
+                            #endif
                         });
                     }
                 }

@@ -89,6 +89,31 @@ Multifab_Manipulation::AverageCellCenteredMultiFabToCellFaces(const amrex::Multi
 }
 
 
+void
+Multifab_Manipulation::GetXYZ(const int i, const int j, const int k, 
+		              const amrex::GpuArray<amrex::Real, AMREX_SPACEDIM>& dx, 
+		              const amrex::RealBox& real_box, const amrex::IntVect& iv, 
+		              amrex::GpuArray<amrex::Real, AMREX_SPACEDIM>& coord_vec)
+{
+#ifdef PRINT_NAME
+    amrex::Print() << "\n\n\t\t\t\t\t{************************Multifab_Manipulation::GetXYZ()************************\n";
+    amrex::Print() << "\t\t\t\t\tin file: " << __FILE__ << " at line: " << __LINE__ << "\n";
+#endif
+
+    amrex::Real fac_x = (1._rt - iv[0]) * dx[0] * 0.5_rt;
+    coord_vec[0] = i * dx[0] + real_box.lo(0) + fac_x;
+
+    amrex::Real fac_y = (1._rt - iv[1]) * dx[1] * 0.5_rt;
+    coord_vec[1] = j * dx[1] + real_box.lo(1) + fac_y;
+
+    amrex::Real fac_z = (1._rt - iv[2]) * dx[2] * 0.5_rt;
+    coord_vec[2] = k * dx[2] + real_box.lo(2) + fac_z;
+
+#ifdef PRINT_NAME
+    amrex::Print() << "\t\t\t\t\t}************************Multifab_Manipulation::GetXYZ()************************\n";
+#endif
+}
+
 void PrintRunDiagnostics(amrex::Real initial_time) 
 {
 #ifdef PRINT_NAME
