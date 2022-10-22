@@ -95,7 +95,7 @@ boundary.Zmin_function(x,y,z) = "0"
 # - For the electrostatic problem, we need epsilon, charge_density, phi.
 # - At present, there is no option for specifying vector fields of type e.g. Array<amrex::Multifab, AMREX_SPACEDIM>.
  
-macroscopic.fields_to_define = alpha epsilon charge_density phi robinA robinB robinF
+macroscopic.fields_to_define = alpha epsilon charge_density phi 
 
 # - `ghostcells_for_fields' defines the ghost cell for the multifabs defined in fields_to_define, as <FieldName>.<NumberOfGhostCells>. 
 #    The default is 0.

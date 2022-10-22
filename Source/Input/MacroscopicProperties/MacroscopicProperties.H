@@ -38,6 +38,8 @@ public:
     std::map<std::string,s_MacroscopicPropertiesMacroName::macro_name> map_macro_name;
     std::map<std::string,int> map_param_all;
 
+    int num_params;
+
 private:
     void DefineParameterNameMap()
     {
@@ -78,7 +80,6 @@ private:
 
     int ReadParameterMapAndNumberOfGhostCells();
 
-    int num_params;
     void DefineMacroVariableVectorSizes();
 
     amrex::Vector<std::unique_ptr<amrex::Parser>> m_p_macro_parser; //pointer to parser object

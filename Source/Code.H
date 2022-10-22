@@ -109,6 +109,7 @@ public:
     void Solve();
     void PostProcess();
     void Output();
+    void EstimateOfRequiredMemory();
 
     static bool do_device_synchronize;
 

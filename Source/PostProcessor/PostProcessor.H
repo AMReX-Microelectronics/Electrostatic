@@ -26,6 +26,10 @@ public:
     void InitData();
     void Compute();
 
+    int num_mf_params;
+    int num_arraymf_params;
+    std::map<std::string,int> map_param_arraymf;
+
     amrex::MultiFab& get_mf  (std::string macro_name) {auto m = map_param_mf[macro_name]; return (*m_p_mf[m]);}
     amrex::MultiFab* get_p_mf (std::string macro_name) {auto m = map_param_mf[macro_name]; return m_p_mf[m].get();}
 
@@ -78,10 +82,7 @@ private:
 
     std::map<std::string,int> map_param_all;
     std::map<std::string,int> map_param_mf;
-    std::map<std::string,int> map_param_arraymf;
     int num_all_params;
-    int num_mf_params;
-    int num_arraymf_params;
 
 
     amrex::Vector< std::unique_ptr<amrex::MultiFab> > m_p_mf;

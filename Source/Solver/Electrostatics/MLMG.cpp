@@ -313,9 +313,15 @@ c_MLMGSolver:: Set_MLMG_CellCentered_Multifabs()
     beta = rMprop.get_p_mf(beta_str);
     soln = rMprop.get_p_mf(soln_str);
     rhs  = rMprop.get_p_mf(rhs_str);
-    robin_a  = rMprop.get_p_mf(robin_a_str);
-    robin_b  = rMprop.get_p_mf(robin_b_str);
-    robin_f  = rMprop.get_p_mf(robin_f_str);
+
+    auto& rBC = rCode.get_BoundaryConditions();
+
+    if(rBC.some_robin_boundaries) 
+    {
+        robin_a  = rMprop.get_p_mf(robin_a_str);
+        robin_b  = rMprop.get_p_mf(robin_b_str);
+        robin_f  = rMprop.get_p_mf(robin_f_str);
+    }
 
 #ifdef PRINT_NAME
     amrex::Print() << "\t\t\t}************************c_MLMGSolver::Set_MLMG_CellCentered_Multifabs()************************\n";
@@ -371,9 +377,13 @@ c_MLMGSolver:: Setup_MLABecLaplacian_ForPoissonEqn()
         robin_a->FillBoundary(geom.periodicity());
         robin_b->FillBoundary(geom.periodicity());
         robin_f->FillBoundary(geom.periodicity());
+        mlabec.setLevelBC(amrlev, soln, robin_a, robin_b, robin_f);
+    }
+    else 
+    {
+        mlabec.setLevelBC(amrlev, soln);
     }
 
-    mlabec.setLevelBC(amrlev, soln, robin_a, robin_b, robin_f);
 
     // set scaling factors 
     mlabec.setScalars(ascalar, bscalar);
@@ -534,9 +544,6 @@ c_MLMGSolver:: Fill_FunctionBased_Inhomogeneous_Boundaries()
     for (MFIter mfi(*soln, TilingIfNotGPU()); mfi.isValid(); ++mfi)
     {
         const auto& soln_arr = soln->array(mfi);
-        const auto& robin_a_arr = robin_a->array(mfi);
-        const auto& robin_b_arr = robin_b->array(mfi);
-        const auto& robin_f_arr = robin_f->array(mfi);
         const auto& bx = mfi.tilebox();
         
         /*for low sides*/
@@ -550,6 +557,10 @@ c_MLMGSolver:: Fill_FunctionBased_Inhomogeneous_Boundaries()
 
                     if(LinOpBCType_2d[0][dir] == LinOpBCType::Robin) //if the boundary is robin then it is treated differently
                     {  
+                        const auto& robin_a_arr = robin_a->array(mfi);
+                        const auto& robin_b_arr = robin_b->array(mfi);
+                        const auto& robin_f_arr = robin_f->array(mfi);
+
                         std::string main_str = std::any_cast<std::string>(bcAny_2d[0][dir]);
                         for(auto it_rob : map_robin_coeff) //loop over parser names with robin subscripts e.g. Zmin_a, Zmin_b, Zmin_f
                         {
@@ -641,6 +652,10 @@ c_MLMGSolver:: Fill_FunctionBased_Inhomogeneous_Boundaries()
 
                     if(LinOpBCType_2d[1][dir] == LinOpBCType::Robin) //if the boundary is robin then it is treated differently
                     {  
+                        const auto& robin_a_arr = robin_a->array(mfi);
+                        const auto& robin_b_arr = robin_b->array(mfi);
+                        const auto& robin_f_arr = robin_f->array(mfi);
+
                         std::string main_str = std::any_cast<std::string>(bcAny_2d[1][dir]);
                         for(auto it_rob : map_robin_coeff) //loop over parser names with robin subscripts e.g. Zmin_a, Zmin_b, Zmin_f
                         {

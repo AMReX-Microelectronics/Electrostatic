@@ -29,6 +29,8 @@ public:
 
     int m_write_after_init;
 
+    int m_num_params_plot_single_level;
+
 private:
 
     std::map<std::string,s_Subscript::subscript_name> m_map_subscript_name;
@@ -58,7 +60,6 @@ private:
     amrex::Vector<std::string> m_extra_dirs;
 
     std::map<std::string,int> m_map_param_all;
-    int m_num_params_plot_single_level;
     int m_raw_fields_to_plot;
 
     std::map<std::string,int> m_map_field_to_plot_after_init;
