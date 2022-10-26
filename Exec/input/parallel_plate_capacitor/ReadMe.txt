@@ -5,8 +5,8 @@
   -This example models a parallel plate capacitor such that 
    a voltage of 10 V is specified at Zmax boundary and 0 V 
    is specified at Zmin boundary.
- 
-  -Four examples provided in this folder show different ways
+  
+  -First four examples provided in this folder show different ways
    to specify these voltages.
 
      1) inhomo_const_dirichlet: 
@@ -27,9 +27,11 @@
             This example is similar to example 2 but voltage at the top plate
         is applied as a cosine function 10*cos(2 pi x/(2Lx)).
 
+  -Fifth example, is for the case with two dielectrics, where in upper Lz/2 region there is air 
+   and in the lower, SiO2, epsilon_2 = 3.8.
+
   -On all lateral sides we can either specify Neumann boundaries 
    or periodic boundaries.
-
 
 For verification:
 -Check that voltage in the ghost cells is as specified.
