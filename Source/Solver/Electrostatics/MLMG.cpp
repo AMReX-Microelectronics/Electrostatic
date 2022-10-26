@@ -313,9 +313,15 @@ c_MLMGSolver:: Set_MLMG_CellCentered_Multifabs()
     beta = rMprop.get_p_mf(beta_str);
     soln = rMprop.get_p_mf(soln_str);
     rhs  = rMprop.get_p_mf(rhs_str);
-    robin_a  = rMprop.get_p_mf(robin_a_str);
-    robin_b  = rMprop.get_p_mf(robin_b_str);
-    robin_f  = rMprop.get_p_mf(robin_f_str);
+
+    auto& rBC = rCode.get_BoundaryConditions();
+
+    if(rBC.some_robin_boundaries) 
+    {
+        robin_a  = rMprop.get_p_mf(robin_a_str);
+        robin_b  = rMprop.get_p_mf(robin_b_str);
+        robin_f  = rMprop.get_p_mf(robin_f_str);
+    }
 
 #ifdef PRINT_NAME
     amrex::Print() << "\t\t\t}************************c_MLMGSolver::Set_MLMG_CellCentered_Multifabs()************************\n";
@@ -371,9 +377,13 @@ c_MLMGSolver:: Setup_MLABecLaplacian_ForPoissonEqn()
         robin_a->FillBoundary(geom.periodicity());
         robin_b->FillBoundary(geom.periodicity());
         robin_f->FillBoundary(geom.periodicity());
+        mlabec.setLevelBC(amrlev, soln, robin_a, robin_b, robin_f);
+    }
+    else 
+    {
+        mlabec.setLevelBC(amrlev, soln);
     }
 
-    mlabec.setLevelBC(amrlev, soln, robin_a, robin_b, robin_f);
 
     // set scaling factors 
     mlabec.setScalars(ascalar, bscalar);
@@ -499,6 +509,10 @@ c_MLMGSolver:: Fill_FunctionBased_Inhomogeneous_Boundaries()
     auto& rGprop = rCode.get_GeometryProperties();
     Box const& domain = rGprop.geom.Domain();
 
+    const auto dx = rGprop.geom.CellSizeArray();
+    const auto& real_box = rGprop.geom.ProbDomain();
+    const auto iv = soln->ixType().toIntVect();
+
     auto& rBC = rCode.get_BoundaryConditions();
     auto& bcAny_2d = rBC.bcAny_2d;
     auto& map_bcAny_2d = rBC.map_bcAny_2d;
@@ -530,10 +544,6 @@ c_MLMGSolver:: Fill_FunctionBased_Inhomogeneous_Boundaries()
     for (MFIter mfi(*soln, TilingIfNotGPU()); mfi.isValid(); ++mfi)
     {
         const auto& soln_arr = soln->array(mfi);
-        const auto& robin_a_arr = robin_a->array(mfi);
-        const auto& robin_b_arr = robin_b->array(mfi);
-        const auto& robin_f_arr = robin_f->array(mfi);
-
         const auto& bx = mfi.tilebox();
         
         /*for low sides*/
@@ -547,13 +557,21 @@ c_MLMGSolver:: Fill_FunctionBased_Inhomogeneous_Boundaries()
 
                     if(LinOpBCType_2d[0][dir] == LinOpBCType::Robin) //if the boundary is robin then it is treated differently
                     {  
+                        const auto& robin_a_arr = robin_a->array(mfi);
+                        const auto& robin_b_arr = robin_b->array(mfi);
+                        const auto& robin_f_arr = robin_f->array(mfi);
+
                         std::string main_str = std::any_cast<std::string>(bcAny_2d[0][dir]);
                         for(auto it_rob : map_robin_coeff) //loop over parser names with robin subscripts e.g. Zmin_a, Zmin_b, Zmin_f
                         {
                             std::string macro_str = main_str + it_rob.first; 
 
-                            auto& parser_mf = rBC.get_mf(macro_str);
-                            const auto& parser_mf_arr = parser_mf.array(mfi);
+                            auto pParser = rBC.get_p_parser(macro_str);
+			    #ifdef TIME_DEPENDENT
+			        const auto& macro_parser = pParser->compile<4>();
+			    #else
+			        const auto& macro_parser = pParser->compile<3>();
+			    #endif
 
                             switch(it_rob.second)
                             {
@@ -562,7 +580,11 @@ c_MLMGSolver:: Fill_FunctionBased_Inhomogeneous_Boundaries()
                                     amrex::ParallelFor(bxlo,
                                     [=] AMREX_GPU_DEVICE (int i, int j, int k) noexcept
                                     {
-                                        robin_a_arr(i,j,k) = parser_mf_arr(i,j,k);
+			                #ifdef TIME_DEPENDENT
+                                            //Multifab_Manipulation::ConvertParserIntoMultiFab_4vars(i,j,k,dx,real_box,iv,macro_parser,robin_a_arr);  
+			                #else
+                                            Multifab_Manipulation::ConvertParserIntoMultiFab_3vars(i,j,k,dx,real_box,iv,macro_parser,robin_a_arr);  
+			                #endif
                                     });
                                     break;
                                 }
@@ -571,7 +593,11 @@ c_MLMGSolver:: Fill_FunctionBased_Inhomogeneous_Boundaries()
                                     amrex::ParallelFor(bxlo,
                                     [=] AMREX_GPU_DEVICE (int i, int j, int k) noexcept
                                     {
-                                        robin_b_arr(i,j,k) = parser_mf_arr(i,j,k);
+			                #ifdef TIME_DEPENDENT
+                                            //Multifab_Manipulation::ConvertParserIntoMultiFab_4vars(i,j,k,dx,real_box,iv,macro_parser,robin_b_arr);  
+			                #else
+                                            Multifab_Manipulation::ConvertParserIntoMultiFab_3vars(i,j,k,dx,real_box,iv,macro_parser,robin_b_arr);  
+                                        #endif 
                                     });
                                     break;
                                 }
@@ -580,7 +606,11 @@ c_MLMGSolver:: Fill_FunctionBased_Inhomogeneous_Boundaries()
                                     amrex::ParallelFor(bxlo,
                                     [=] AMREX_GPU_DEVICE (int i, int j, int k) noexcept
                                     {
-                                        robin_f_arr(i,j,k) = parser_mf_arr(i,j,k);
+			                #ifdef TIME_DEPENDENT
+                                            //Multifab_Manipulation::ConvertParserIntoMultiFab_4vars(i,j,k,dx,real_box,iv,macro_parser,robin_f_arr);  
+			                #else
+                                            Multifab_Manipulation::ConvertParserIntoMultiFab_3vars(i,j,k,dx,real_box,iv,macro_parser,robin_f_arr);  
+					#endif 
                                     });
                                     break;
                                 }
@@ -591,13 +621,21 @@ c_MLMGSolver:: Fill_FunctionBased_Inhomogeneous_Boundaries()
                     {
                         std::string macro_str = std::any_cast<std::string>(bcAny_2d[0][dir]);
 
-                        auto& parser_mf = rBC.get_mf(macro_str);
-                        const auto& parser_mf_arr = parser_mf.array(mfi);
+                        auto pParser = rBC.get_p_parser(macro_str);
+			#ifdef TIME_DEPENDENT
+			    const auto& macro_parser = pParser->compile<4>();
+			#else
+			    const auto& macro_parser = pParser->compile<3>();
+			#endif
 
                         amrex::ParallelFor(bxlo,
                         [=] AMREX_GPU_DEVICE (int i, int j, int k) noexcept
                         {
-                            soln_arr(i,j,k) = parser_mf_arr(i,j,k);
+		            #ifdef TIME_DEPENDENT
+                                //Multifab_Manipulation::ConvertParserIntoMultiFab_4vars(i,j,k,dx,real_box,iv,macro_parser,soln_arr);  
+		            #else
+                                Multifab_Manipulation::ConvertParserIntoMultiFab_3vars(i,j,k,dx,real_box,iv,macro_parser,soln_arr);  
+                            #endif
                         });
                     }
                 }
@@ -614,13 +652,21 @@ c_MLMGSolver:: Fill_FunctionBased_Inhomogeneous_Boundaries()
 
                     if(LinOpBCType_2d[1][dir] == LinOpBCType::Robin) //if the boundary is robin then it is treated differently
                     {  
+                        const auto& robin_a_arr = robin_a->array(mfi);
+                        const auto& robin_b_arr = robin_b->array(mfi);
+                        const auto& robin_f_arr = robin_f->array(mfi);
+
                         std::string main_str = std::any_cast<std::string>(bcAny_2d[1][dir]);
                         for(auto it_rob : map_robin_coeff) //loop over parser names with robin subscripts e.g. Zmin_a, Zmin_b, Zmin_f
                         {
                             std::string macro_str = main_str + it_rob.first; 
 
-                            auto& parser_mf = rBC.get_mf(macro_str);
-                            const auto& parser_mf_arr = parser_mf.array(mfi);
+                            auto pParser = rBC.get_p_parser(macro_str);
+			    #ifdef TIME_DEPENDENT
+			        const auto& macro_parser = pParser->compile<4>();
+			    #else
+			        const auto& macro_parser = pParser->compile<3>();
+			    #endif
 
                             switch(it_rob.second)
                             {
@@ -629,7 +675,11 @@ c_MLMGSolver:: Fill_FunctionBased_Inhomogeneous_Boundaries()
                                     amrex::ParallelFor(bxhi,
                                     [=] AMREX_GPU_DEVICE (int i, int j, int k) noexcept
                                     {
-                                        robin_a_arr(i,j,k) = parser_mf_arr(i,j,k);
+			                #ifdef TIME_DEPENDENT
+                                            //Multifab_Manipulation::ConvertParserIntoMultiFab_4vars(i,j,k,dx,real_box,iv,macro_parser,robin_a_arr);  
+			                #else
+                                            Multifab_Manipulation::ConvertParserIntoMultiFab_3vars(i,j,k,dx,real_box,iv,macro_parser,robin_a_arr);  
+                                        #endif
                                     });
                                     break;
                                 }
@@ -638,7 +688,11 @@ c_MLMGSolver:: Fill_FunctionBased_Inhomogeneous_Boundaries()
                                     amrex::ParallelFor(bxhi,
                                     [=] AMREX_GPU_DEVICE (int i, int j, int k) noexcept
                                     {
-                                        robin_b_arr(i,j,k) = parser_mf_arr(i,j,k);
+			                #ifdef TIME_DEPENDENT
+                                            //Multifab_Manipulation::ConvertParserIntoMultiFab_4vars(i,j,k,dx,real_box,iv,macro_parser,robin_b_arr);  
+			                #else
+                                            Multifab_Manipulation::ConvertParserIntoMultiFab_3vars(i,j,k,dx,real_box,iv,macro_parser,robin_b_arr);  
+                                        #endif
                                     });
                                     break;
                                 }
@@ -647,7 +701,11 @@ c_MLMGSolver:: Fill_FunctionBased_Inhomogeneous_Boundaries()
                                     amrex::ParallelFor(bxhi,
                                     [=] AMREX_GPU_DEVICE (int i, int j, int k) noexcept
                                     {
-                                        robin_f_arr(i,j,k) = parser_mf_arr(i,j,k);
+			                #ifdef TIME_DEPENDENT
+                                            //Multifab_Manipulation::ConvertParserIntoMultiFab_4vars(i,j,k,dx,real_box,iv,macro_parser,robin_f_arr);  
+			                #else
+                                            Multifab_Manipulation::ConvertParserIntoMultiFab_3vars(i,j,k,dx,real_box,iv,macro_parser,robin_f_arr);  
+                                        #endif
                                     });
                                     break;
                                 }
@@ -658,13 +716,21 @@ c_MLMGSolver:: Fill_FunctionBased_Inhomogeneous_Boundaries()
                     {
                         std::string macro_str = std::any_cast<std::string>(bcAny_2d[1][dir]);
 
-                        auto& parser_mf = rBC.get_mf(macro_str);
-                        const auto& parser_mf_arr = parser_mf.array(mfi);
+                        auto pParser = rBC.get_p_parser(macro_str);
+			#ifdef TIME_DEPENDENT
+			    const auto& macro_parser = pParser->compile<4>();
+			#else
+			    const auto& macro_parser = pParser->compile<3>();
+			#endif
 
                         amrex::ParallelFor(bxhi,
                         [=] AMREX_GPU_DEVICE (int i, int j, int k) noexcept
                         {
-                            soln_arr(i,j,k) = parser_mf_arr(i,j,k);
+		            #ifdef TIME_DEPENDENT
+                                //Multifab_Manipulation::ConvertParserIntoMultiFab_4vars(i,j,k,dx,real_box,iv,macro_parser,soln_arr);  
+		            #else
+                                Multifab_Manipulation::ConvertParserIntoMultiFab_3vars(i,j,k,dx,real_box,iv,macro_parser,soln_arr);  
+                            #endif
                         });
                     }
                 }

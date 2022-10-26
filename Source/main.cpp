@@ -31,6 +31,8 @@ int main (int argc, char* argv[])
 
         pCode.InitData();
 
+        pCode.EstimateOfRequiredMemory();
+
         pCode.PrintGlobalWarnings("the initialization step"); //Print warning at this stage
 
         pCode.Solve();

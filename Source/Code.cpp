@@ -156,8 +156,6 @@ c_Code::InitData ()
  
     m_pGeometryProperties->InitData();
 
-    m_pBoundaryConditions->InitData();
-
     m_pMacroscopicProperties->InitData();
 
     m_pMLMGSolver->InitData();
@@ -178,26 +176,105 @@ c_Code::InitData ()
 
 
 void 
+c_Code::EstimateOfRequiredMemory ()
+{
+#ifdef PRINT_NAME
+    amrex::Print() << "\n\n\t{************************c_Code::EstimateOfRequiredMemory()************************\n";
+    amrex::Print() << "\tin file: " << __FILE__ << " at line: " << __LINE__ << "\n";
+#endif
+    amrex::Print() << "\n";
+    std::string prt = "\t";
+
+    auto& rGprop = *m_pGeometryProperties;
+    auto& rMprop = *m_pMacroscopicProperties;
+    auto& rBC = *m_pBoundaryConditions;
+    auto& rPost = *m_pPostProcessor;
+    auto& rOutput = *m_pOutput;
+
+    amrex::Print() << prt << "Rough estimation of required memory: \n";
+    int num_cells = 1;
+//    num_cells = rGprop.n_cell[0]*rGprop.n_cell[1]*rGprop.n_cell[2];
+    for (auto i: rGprop.n_cell) num_cells *= i;
+
+    amrex::Print() << prt << "Number of cells: " << num_cells << "\n";
+    amrex::Real ratio = num_cells / pow(512,3);
+    auto Gprop_mem = ratio*1; //GB
+    amrex::Print() << prt << "To defined geometry: " << Gprop_mem << " GBs\n";
+
+    auto num_Mprop_mf = rMprop.num_params;
+    auto Mprop_mem = ratio*num_Mprop_mf; //GB
+    amrex::Print() << prt << "To create " << num_Mprop_mf << " macroscopic multifabs: " << Mprop_mem << " GBs\n";
+
+
+    auto num_PostPro_mf = rPost.num_mf_params + rPost.num_arraymf_params*AMREX_SPACEDIM;
+    auto PostPro_mem = num_PostPro_mf*ratio;
+    amrex::Print() << prt << "To create " << num_PostPro_mf << " post-processed multifabs: " << PostPro_mem << " GBs\n";
+
+    auto MLMG_extra_mf_mem = ratio*1; //GB (to copy cell centered beta into nodal)
+    auto MLMG_setup_mem = 0.;
+    auto MLMG_solve_mem = 0.;
+    //if(!rBC.some_robin_boundaries) 
+    //{
+    MLMG_setup_mem = ratio*7; //GB
+    MLMG_solve_mem = ratio*6; //GB
+    //} 
+    //else
+    //{
+    //    MLMG_setup_mem = ratio*7; //GB
+    //    MLMG_solve_mem = ratio*6; //GB
+    //}
+    auto MLMG_PostPro_solve_mem = 0.0;
+
+    if(rPost.map_param_arraymf.find("vecField") != rPost.map_param_arraymf.end()) 
+    {
+        MLMG_PostPro_solve_mem += ratio*3;
+    }
+    if(rPost.map_param_arraymf.find("vecFlux") != rPost.map_param_arraymf.end()) 
+    {
+        MLMG_PostPro_solve_mem += ratio*6;
+    }
+    amrex::Print() << prt << "To copy beta into nodal mf in MLMG: " << MLMG_extra_mf_mem << " GBs\n";
+    amrex::Print() << prt << "To setup MLMG [internal memory]: " << MLMG_setup_mem << " GBs\n";
+    amrex::Print() << prt << "To postprocess some quantities using MLMG [internal memory]: " << MLMG_PostPro_solve_mem << " GBs\n";
+
+    auto num_Output_mf = rOutput.m_num_params_plot_single_level;
+    //auto& write_after_init = rOutput.m_write_after_init;
+    //if(write_after_init) {
+    //   num_Output_mf =  
+    //}
+    auto Output_mem = ratio*num_Output_mf;
+    amrex::Print() << prt << "To copy " << num_Output_mf << " multifabs while outputting single level plot file: " << Output_mem << " GBs\n";
+
+    auto Total_mem = Gprop_mem + Mprop_mem + PostPro_mem + MLMG_extra_mf_mem + MLMG_setup_mem + MLMG_solve_mem + MLMG_PostPro_solve_mem + Output_mem;
+
+    amrex::Print() << prt << "Total memory: " << Total_mem << " GBs\n";
+    auto Free_mem = 32 - Total_mem;
+
+    if(Free_mem < 0) 
+    {
+        amrex::Print() << prt << "More than 1 GPU is required because total required global memory is greater than 32 GBs! \n";
+    }
+    else 
+    {
+        amrex::Print() << prt << "Free global memory if 1 GPU is used: " << Free_mem << " GBs\n";
+    }
+    amrex::Print() << "\n";
+
+#ifdef PRINT_NAME
+    amrex::Print() << "\t}************************c_Code::EstimateOfRequiredMemory()************************\n";
+#endif
+}
+
+void 
 c_Code::Solve()
 {
 #ifdef PRINT_NAME
     amrex::Print() << "\n\n\t{************************c_Code::Solve()************************\n";
     amrex::Print() << "\tin file: " << __FILE__ << " at line: " << __LINE__ << "\n";
 #endif
-//    auto& phi = m_pMacroscopicProperties->get_mf("phi");
-//    const auto& phi_arr = phi[0].array();
 
     m_pMLMGSolver->Solve_PoissonEqn();
-//    amrex::Print() << "\nphi AFTER Poisson solve: \n";
-//    amrex::Print() << "phi_0,0,0 :  "   << phi_arr(0,0,0) << "\n";
-//    amrex::Print() << "phi_15,49,49:  " << phi_arr(15,49,49) << "\n";
-//    amrex::Print() << "phi_24,49,49:  " << phi_arr(24,49,49) << "\n";
-//    amrex::Print() << "phi_25,49,49:  " << phi_arr(25,49,49) << "\n";
-//    amrex::Print() << "phi_49,49,49:  " << phi_arr(49,49,49) << "\n";
-//    amrex::Print() << "phi_74,49,49:  " << phi_arr(74,49,49) << "\n";
-//    amrex::Print() << "phi_75,49,49:  " << phi_arr(75,49,49) << "\n";
-//    amrex::Print() << "phi_85,49,49:  " << phi_arr(85,49,49) << "\n";
-//
+
 #ifdef PRINT_NAME
     amrex::Print() << "\t}************************c_Code::Solve()************************\n";
 #endif

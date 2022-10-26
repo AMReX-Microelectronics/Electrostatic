@@ -52,7 +52,7 @@ c_MacroscopicProperties::ReadData()
 #endif
 
     num_params = ReadParameterMapAndNumberOfGhostCells();
-    
+
     DefineMacroVariableVectorSizes();
     std::map<std::string,amrex::Real>::iterator it_default;
 

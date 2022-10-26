@@ -32,10 +32,9 @@ public:
     ~c_BoundaryConditions();
 
     void ReadData();
-    void InitData();
 
-    amrex::MultiFab& get_mf  (std::string macro_str) {auto macro_num = map_function_parser_name[macro_str]; return (*m_p_mf[macro_num]);}
-    amrex::MultiFab* get_p_mf (std::string macro_str) {auto macro_num = map_function_parser_name[macro_str]; return m_p_mf[macro_num].get();}
+    amrex::Parser& get_parser  (std::string macro_str) {auto macro_num = map_function_parser_name[macro_str]; return (*m_p_macro_parser[macro_num]);}
+    amrex::Parser* get_p_parser (std::string macro_str) {auto macro_num = map_function_parser_name[macro_str]; return m_p_macro_parser[macro_num].get();}
 
     std::map<std::string, s_BoundaryConditions::boundary_type> map_boundary_type;
     std::map<std::string, s_RobinCoefficient::subscript_type> map_robin_coeff;
@@ -74,8 +73,6 @@ private:
 
     amrex::Vector<std::unique_ptr<amrex::Parser>> m_p_macro_parser; //pointer to parser object
     amrex::Vector<std::string> m_macro_str_function;
-
-    amrex::Vector<std::unique_ptr<amrex::MultiFab>> m_p_mf; //Pointer to multifabs 
 
     void ReadBoundaryConditionsParser(std::string macro_str, int macro_num);
 #ifdef TIME_DEPENDENT
