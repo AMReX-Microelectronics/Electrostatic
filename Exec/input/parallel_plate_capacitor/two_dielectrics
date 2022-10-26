@@ -1,0 +1,233 @@
+##################################
+##### USER DEFINED CONSTANTS #####
+##################################
+#
+### GEOMETRY PROPERTIES 
+my_constants.Lx = 0.2
+my_constants.Ly = 0.2
+my_constants.Lz = 0.05
+
+### Physical Constants 
+#my_constants.pi = 3.14159265358979
+#my_constants.q = 1.602e-19
+my_constants.epsilon_0 = 8.8541878128e-12
+my_constants.epsilon_r = 3.8
+
+### MACROSCOPIC PROPERTIES
+#my_constants.A = Lx*Ly #area of parallel plate capacitor
+#my_constants.d = Lz    #distance between plates
+#my_constants.t = 0.001  #thickness of plates which hold the charge
+#my_constants.C = epsilon_0*A/d #capacitance
+#my_constants.dV = 10 #Volts
+#my_constants.rho = C*dV/(A*t) #Volts
+#####################################
+
+
+#################################
+###### GEOMETRY PROPERTIES ######
+#################################
+#
+# - The following AMReX specific properties are defined in c_GeometryProperties.
+
+##for a single processor
+#domain.n_cell = 160 160 40
+#domain.max_grid_size = 160 160 40
+#domain.blocking_factor = 160 160 40
+
+##for multiple processors
+domain.n_cell = 160 160 160
+domain.max_grid_size = 40 160 1600
+domain.blocking_factor = 40 160 160
+
+domain.prob_lo = -Lx/2. -Ly/2. -Lz/2.
+domain.prob_hi = Lx/2. Ly/2. Lz/2.
+
+#domain.is_periodic = 1: yes, 0: no
+domain.is_periodic = 1 1 0
+
+#domain.coord_sys can be cartesian or radial (at present, only cartesian is supported).
+domain.coord_sys = cartesian 
+
+#################################
+###### BOUNDARY CONDITIONS ######
+#################################
+# - User must specify boundary conditions using `boundary.lo' array for X_min, Y_min, and Z_min boundaries
+#   and `boundary.hi' for X_max, Y_max, and Z_max boundaries.
+#
+# - User has an option to choose from the following:
+#   dir: homogeneous dirichlet
+#   neu: homogeneous neumann
+#   per: periodic
+#   rob: robin
+#   ref: reflect
+#   
+#   The options are as follows:
+#
+#   dir or neu: homogeneous dirichlet or neumann boundaries.
+#
+#   dir(<value>) or neu(<value>): inhomogeneous dirichlet or neumann with a value of <value> in SI units, 
+#                                 e.g. <value> = 5.0, -3e-6, 5e7 etc.
+#   dir(<string>) or neu(<string>) or rob(<string>): inhomogeneous dirichlet, neumann or robin 
+#                                                    with a function parser name of <string>, 
+#                                                    e.g. <string> = Xmin, Ymax, Z_hi, etc.
+#
+#   see examples: input/parallel_plate_capacitor/function_parsed_robin and function_parsed_dirichlet                                                 
+#
+# - For homogeneous dirichlet or neumann, boundary values are initialized based on the solution multifab, e.g. phi in this case.
+#
+# - For periodic and reflect boundary conditions, we do not need to specify any value in the bracket.
+#   If such value or string is specified then it is ignored.
+#
+# - Periodic boundary conditions are imposed based on domain.is_periodic set above.
+#   At these boundaries, if some boundaries other than "per" are specified through boundary.hi and boundary.lo,
+#   then they are ignored and a warning is raised stating that these boundary conditions are set to periodic.
+#   E.g. below `neu' for directions 0 and 1 will be ignored.
+#
+boundary.hi = per per rob(Zmax)
+boundary.lo = per per rob(Zmin)
+
+# - Note that for function parsers, we do not need to indicate the ghost region. 
+#   The function above for Zmax_a, for example,  is equivalent to 1 * (z > Lz/2).
+#   This is taken care of in the code.
+boundary.Zmax_a_function(x,y,z) = "1" 
+boundary.Zmax_b_function(x,y,z) = "0"
+boundary.Zmax_f_function(x,y,z) = "10"
+
+boundary.Zmin_a_function(x,y,z) = "1"
+boundary.Zmin_b_function(x,y,z) = "0"
+boundary.Zmin_f_function(x,y,z) = "0"
+
+####################################
+###### MACROSCOPIC PROPERTIES ######
+####################################
+#
+# - `fields_to_define' defines cell-centered multifabs (amrex::Multifab) initialized as input. 
+#
+# - For the electrostatic problem, we need epsilon, charge_density, phi.
+# - At present, there is no option for specifying vector fields of type e.g. Array<amrex::Multifab, AMREX_SPACEDIM>.
+ 
+macroscopic.fields_to_define = alpha epsilon charge_density phi robinA robinB robinF
+
+# - `ghostcells_for_fields' defines the ghost cell for the multifabs defined in fields_to_define, as <FieldName>.<NumberOfGhostCells>. 
+#    The default is 0.
+
+macroscopic.ghostcells_for_fields = alpha.0 epsilon.1 charge_density.0 phi.1 robinA.1 robinB.1 robinF.1
+
+
+# - The fields defined in `fields_to_define' can be initialized as constants or using a function parser as follows.
+#
+# - Their default values are set in function c_MacroscopicProperties::DefineDefaultValueMap(), which are used 
+#   if neither a `constant' or `function parser' based initialization is defined in the input file.
+#
+# - If the default value is not specified in the above function, then the multifab is initialized as `0'.
+#
+# - In the following example, epsilon and charge_density are given constant values, however, they can be specified using a function parser as well,
+#   e.g. macroscopic.epsilon_function(x,y,z) = "epsilon_0 + (epsilon_r_sph-1)*epsilon_0 * ( sqrt(x**2 + y**2 + z**2) <= R_sph )"
+#
+# - robinA, robinB, and robinF field parameters are only initialized to 0. Later they will be filled with appropriate functions specified through parsers.
+
+macroscopic.alpha = 0.
+macroscopic.epsilon_function(x,y,z) = " (z > 0) * epsilon_0 + (z <= 0) * epsilon_0*epsilon_r"
+macroscopic.charge_density = 0.
+macroscopic.phi = 0.
+macroscopic.robinA = 0.
+macroscopic.robinB = 0.
+macroscopic.robinF = 0.
+
+####################################
+###### MLMG SOLVER PROPERTIES ######
+####################################
+#
+# - MLMG solver solves alpha asclalar + bscalar ( Divergence{  beta_fc * Gradient{ soln }  } ) = rhs, 
+#   where subscripts `fc' denotes a face-centered multifab. rhs, soln and alpha are cell-centered multifabs.
+
+# - For Poisson problem, ascalar = 0 and bscalar=1.
+
+mlmg.ascalar=0
+mlmg.bscalar=1
+
+# - Below we assign cell-centered multifabs defined in "macroscopic.fields_to_define" to MLMG cell-centered multifabs.
+# - Note that we need beta_fc which is derived from beta set equal to epsilon here.
+
+mlmg.soln   = phi
+mlmg.rhs    = charge_density
+mlmg.alpha  = alpha
+mlmg.beta   = epsilon
+mlmg.robin_a   = robinA 
+mlmg.robin_b   = robinB
+mlmg.robin_f   = robinF
+
+
+
+# - Other optional parameters to specify are: 
+#    - Three robin boundary parameters if robin boundaries are specified.
+#      Note: these parameters are set equal to corresponding multifabs initialized in macroscopic.fields_to_define,
+#      e.g. robinA, robinB and robinF. (see example, input/parallel_plate_capacitor/robin)
+#      - mlmg.robin_a = robinA
+#      - mlmg.robin_b = robinB
+#      - mlmg.robin_f = robinF
+#    - set_verbose (default=0), 
+#    - max_order (default=2), 
+#    - relative_tolerance (default=1e-10),
+#    - absolute_tolerance(default=0).
+
+mlmg.set_verbose=0
+mlmg.max_order=2
+mlmg.absolute_tolerance=0
+mlmg.relative_tolerance=1e-10
+
+
+
+#############################
+###### POST PROCESSING ######
+#############################
+#
+# -User may want an option to compute additional vector or scalar fields derived from the solution-fields or input fields. 
+#  User can specify these through fields_to_process parameter as follows.
+# 
+# -The recipe for computing these vector or scalar fields need to be specified in the code. 
+#  Specifically, class c_PostProcessor handles this. 
+#
+# -At present, the recipe for the following two vector fields is coded, using the functions provided by the MLMG solver.:
+#
+#   1) the vector of Field, denoted as `vecField', which gives -Gradient(soln). This is E-field.
+#   2) the vector of Flux, denoted as `vecFlux', which computes  beta_fc * Gradient( soln ).
+#
+# - Note that since the functions provided by MLMG solver do not have an option to compute specific components of the vector fields.
+#   Therefore, specifying individual components such as Field_x, Field_y etc. will still force the code to compute the entire vector fields.
+
+post_process.fields_to_process = vecField vecFlux 
+
+####################
+###### OUTPUT ######
+####################
+#
+# -User can specify the fields to plot as follows by choosing from fields defined specified in `macroscopic.fields_to_define' and 
+#  `post_process.fields_to_process'. 
+#
+# -Note that for vector fields (specified as vec<FieldName>) user have an option to plot out only the specific x, y, or z components.
+#  For example, for specifying the y-component of `vecFlux', defined above, user should write, `Flux_y'
+#
+# -plot.filename can be used to indicate the folder prefix for output folder, e.g. setting it to 'ppc' would result in plot folder ppc0000, where 0000 is the iteration step.
+#
+# -There is a way for user to output 'raw fields' with 'ghost cells' in addition fields written out in the usual output folder (e.g. ppc0000/Level_0).
+#  These raw fields are outputted in a new folder 'raw_fields' is created in the output folder, e.g. ppc0000/raw_fields.
+#
+# -These options can be specified as follows:
+#  <field_name>   indicates mutifab <field_name> is outputted in the output folder, e.g. ppc0000, in the usual way.
+#  <field_name>.1 indicates multifab <field_name> is outputted in the output folder as well as separately outputted in the raw_fields folder with its ghost cells.
+#  <field_name>.2 indicates multifab <field_name> is outputted exclusively in the raw_fields folder.
+#
+plot.filename = ppc 
+ppc.fields_to_plot = Field_x Field_y Field_z vecFlux.1 epsilon.1 charge_density phi.1 robinA.2 robinB.2 robinF.2
+plot.write_after_init = 0
+
+# -plot.write_after init is an optional flag, which allows user to write data after initialization (useful for debugging). 
+#  We can chose 0 (default) or 1, which means write after initialization.
+#  plot files are written out in <plot.filename>_init0 folder, including the raw_fields.
+#  Note that only the fields that are initialized up to the point of initialization step are written out, i.e.those defined in  macroscopic.fields_to_define, 
+#  while the post_process.fields_to_process are omitted. 
+#  All fields_to_plot will be written out at the end of the run as usual in folder <plot.filename>0000.
+
+# -Note that there is provision for disregarding repeating field names, e.g. 1) specifying `phi' twice will result in it's output written out only once, 
+#  2) specifying Field_x and vecField will result in output of Field_x, Field_y, and Field_z.

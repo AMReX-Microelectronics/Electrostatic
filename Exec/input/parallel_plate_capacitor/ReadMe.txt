@@ -29,3 +29,35 @@
 
   -On all lateral sides we can either specify Neumann boundaries 
    or periodic boundaries.
+
+
+For verification:
+-Check that voltage in the ghost cells is as specified.
+-Note: 
+ Charge on the plate, Q = C V_0 (where V_0 = 10 V in our case)
+ Surface charge density, sigma = Q/A (A = 0.2**2 in our case) 
+ From Gauss' law, sigma = D (D_z in our 1-D example)
+ For single dielectric, D_z = E_z / epsilon_0
+ 
+ From above equations, E_z = D_z/epsilon_0  = sigma/epsilon_0 = Q/(A*epsilon_0) = (C V_0)/(A*epsilon_0)
+ So, C = E_z *A*epsilon_0 / V_0 
+ 
+ Now from solution, we can find that |E_z| = 200 V/m
+ By calculating, we obtain C = 7.04 pF (as expected from theory).
+
+-For the two dielectric case:
+ potential phi at the interface is given by,
+ phi_int = epsilon_1 d_2 / (epsilon_2 d_1 + epsilon_1 d_2) V_0 
+ 
+ In our example, epsilon_1 = epsilon_0 and epsilon_2 = 3.8*epsilon_0, d_1 = d_2 = L_z/2
+ this gives, phi_int = 2.04 V
+ 
+ By probing cell-centered phi at the air-dielectric interface we indeed find this phi_int.
+
+-E_z in the air and dielectric can also be easily estimated by taking the gradient, e.g.
+ E_z1 = (10 - 2.04) / d_1 
+ E_z2 = (2.04 - 0) / d_2 
+ These values are close to what we see from the solution.
+
+
+ 
