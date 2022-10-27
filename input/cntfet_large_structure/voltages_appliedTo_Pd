@@ -62,7 +62,7 @@ my_constants.El_offset = CN_fl/2.
 #total domain dimensions
 my_constants.Lx = 8e-6
 my_constants.Ly = 27e-6 
-my_constants.Lz = 4e-6 #Lz - CM_h + GO_h + El_h = 1.88e-6 between Xmax and electrode top
+my_constants.Lz = 16e-6 #Lz - CM_h + GO_h + El_h = 1.88e-6 between Xmax and electrode top
 
 my_constants.epsilon_domain = 3.8*epsilon_0 #SiO2
 
@@ -78,8 +78,8 @@ my_constants.epsilon_domain = 3.8*epsilon_0 #SiO2
 
 #domain.n_cell = 200 800 100
 #domain.max_grid_size = 200 800 100
-domain.n_cell = 400 800 200
-domain.max_grid_size = 400 800 200
+domain.n_cell = 400 800 800
+domain.max_grid_size = 400 800 800
 
 domain.prob_lo = -Lx/2. -Ly/2.  0.
 domain.prob_hi =  Lx/2.  Ly/2.  Lz

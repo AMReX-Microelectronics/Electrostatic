@@ -24,7 +24,7 @@ my_constants.GM_l = GM_w
 my_constants.GM_h = CM_h
 
 my_constants.epsilon_GM = 1.7*epsilon_0  #Aluminum
-my_constants.GV = 25e-3              #drain voltage [V]
+my_constants.GV = 25e-3              #gate voltage [V]
 
 #gate oxide
 my_constants.GO_w = Lx
