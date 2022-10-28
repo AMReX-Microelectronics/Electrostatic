@@ -8,6 +8,9 @@ COMP         = gnu
 DIM          = 3
 CXXSTD       = c++17
 
+USE_EB = TRUE
+
+
 PRINT_NAME   = FALSE
 PRINT_LOW   = FALSE
 PRINT_HIGH   = FALSE

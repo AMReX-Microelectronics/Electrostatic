@@ -10,14 +10,41 @@
 #include <AMReX_BoxArray.H>
 #include <AMReX_Geometry.H>
 
-//#include <AMReX_BaseFwd.H>
-
+#include <AMReX.H>
+#include <AMReX_EB2.H>
+#include <AMReX_EB2_IF.H>
+#include <AMReX_EBSupport.H>
 
 
 #include <string>
+class
+c_EmbeddedBoundary
+{
+public:
+    c_EmbeddedBoundary();
+
+    amrex::EBSupport support;
+    std::unique_ptr<amrex::EBFArrayBoxFactory> pFactory;
+    int required_coarsening_level;
+    int max_coarsening_level;
+
+    void ReadGeometry();
+private:
+
+    std::map<std::string,amrex::EBSupport>
+    map_eb_support = {
+                     {"full", amrex::EBSupport::full},
+             		 {"basic", amrex::EBSupport::basic},
+        	    	 {"volume",amrex::EBSupport::volume},
+                     {"Full", amrex::EBSupport::full},
+        		     {"Basic", amrex::EBSupport::basic},
+            		 {"Volume",amrex::EBSupport::volume},
+                     };
+};
+
 
 class 
-c_GeometryProperties
+c_GeometryProperties:public c_EmbeddedBoundary
 {
 public: 
     c_GeometryProperties();
@@ -34,10 +61,14 @@ public:
     amrex::BoxArray ba; // a list of boxes that cover the domain
     amrex::Geometry geom;
     amrex::DistributionMapping dm;
-//    amrex::GpuArray<amrex::Real,AMREX_SPACEDIM> dx;
+
+    int embedded_boundary_flag;
+    c_EmbeddedBoundary eb;
 
     void ReadData();
     void InitData();
+
+    void CreateEmbeddedBoundary();
 
 private:
     void ParseBasicDomainInput();

@@ -6,7 +6,7 @@
 #include "PostProcessor/PostProcessor.H"
 
 #include <AMReX_ParmParse.H>
-#include "AMReX_PlotFileUtil.H"
+#include <AMReX_PlotFileUtil.H>
 #include <AMReX_VisMF.H>
 
 
@@ -244,7 +244,11 @@ c_Output::InitData()
     auto& dm = rGprop.dm;
     int Nghost0=0;
 
-    m_p_mf_all = std::make_unique<amrex::MultiFab>(ba, dm, m_num_params_plot_single_level, Nghost0); //cell-centered multifab
+#ifdef AMREX_USE_EB
+    m_p_mf_all = std::make_unique<amrex::MultiFab>(ba, dm, m_num_params_plot_single_level, Nghost0, *rGprop.eb.pFactory); //cell-centered multifab
+#else
+    m_p_mf_all = std::make_unique<amrex::MultiFab>(ba, dm, m_num_params_plot_single_level, Nghost0); 
+#endif
 
     if(m_write_after_init) 
     {
@@ -296,7 +300,7 @@ c_Output::WriteOutput(int step, amrex::Real time)
 
     AssimilateDataPointers();
     m_plot_file_name = amrex::Concatenate(m_filename_prefix_str, step, m_plt_name_digits);
-    
+
     WriteSingleLevelPlotFile(step, time, m_p_mf_all, m_map_param_all);
 
     if(m_raw_fields_to_plot) WriteRawFields(m_map_param_all); 
@@ -368,12 +372,21 @@ c_Output::WriteSingleLevelPlotFile(int step, amrex::Real time, std::unique_ptr<a
         }
     }
 
+#ifdef AMREX_USE_EB
+    amrex::EB_WriteSingleLevelPlotfile( m_plot_file_name, 
+                                    *p_all_mf, m_p_name_str, 
+                                     geom, 
+                                     time, step, 
+                                     "HyperCLaw-V1.1", m_default_level_prefix, "Cell",
+                                     m_extra_dirs);
+#else
     amrex::WriteSingleLevelPlotfile( m_plot_file_name, 
                                     *p_all_mf, m_p_name_str, 
                                      geom, 
                                      time, step, 
                                      "HyperCLaw-V1.1", m_default_level_prefix, "Cell",
                                      m_extra_dirs);
+#endif
 
     m_p_name_str.clear();
 
