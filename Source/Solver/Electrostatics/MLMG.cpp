@@ -152,6 +152,7 @@ c_MLMGSolver::ReadData()
     auto some_robin_boundaries = rBC.some_robin_boundaries;
 
     if(some_robin_boundaries) {
+
         pp_mlmg.get("robin_a"  ,robin_a_str);
         it_Mprop = rMprop.map_param_all.find(robin_a_str);
         WARPX_ALWAYS_ASSERT_WITH_MESSAGE(it_Mprop != rMprop.map_param_all.end(), 
@@ -290,7 +291,12 @@ c_MLMGSolver:: InitData()
 #endif
 
     Set_MLMG_CellCentered_Multifabs();
+
+#ifdef AMREX_USE_EB
+    Setup_MLEBABecLaplacian_ForPoissonEqn();
+#else
     Setup_MLABecLaplacian_ForPoissonEqn();
+#endif
 
 #ifdef PRINT_NAME
     amrex::Print() << "\t\t}************************c_MLMGSolver::InitData()************************\n";
@@ -328,6 +334,88 @@ c_MLMGSolver:: Set_MLMG_CellCentered_Multifabs()
 #endif
 }
 
+#ifdef AMREX_USE_EB
+void
+c_MLMGSolver:: Setup_MLEBABecLaplacian_ForPoissonEqn()
+{
+#ifdef PRINT_NAME
+    amrex::Print() << "\n\n\t\t\t{************************c_MLMGSolver::Setup_MLEBABecLaplacian_ForPoissonEqn()************************\n";
+    amrex::Print() << "\t\t\tin file: " << __FILE__ << " at line: " << __LINE__ << "\n";
+#endif
+
+
+    auto& rCode = c_Code::GetInstance();
+    auto& rGprop = rCode.get_GeometryProperties();
+    auto& ba = rGprop.ba;
+    auto& dm = rGprop.dm;
+    auto& geom = rGprop.geom;
+
+    mlebabec.define({geom}, {ba}, {dm}, info,{& *rGprop.eb.pFactory}); // Implicit solve using MLABecLaplacian class
+
+    // Force singular system to be solvable
+    mlebabec.setEnforceSingularSolvable(false);
+
+    // set order of stencil
+    mlebabec.setMaxOrder(max_order);
+
+    // assign domain boundary conditions to the solver
+    // see Src/Boundary/AMReX_LO_BCTYPES.H for supported types
+    mlebabec.setDomainBC(LinOpBCType_2d[0], LinOpBCType_2d[1]);
+
+    auto& rBC = rCode.get_BoundaryConditions();
+    // Fill the ghost cells of each grid from the other grids
+    // includes periodic domain boundaries
+
+    int amrlev = 0; //refers to the setcoarsest level of the solve
+
+    if(some_constant_inhomogeneous_boundaries)
+    {
+        Fill_Constant_Inhomogeneous_Boundaries();
+    }
+    if(some_functionbased_inhomogeneous_boundaries) 
+    {
+        Fill_FunctionBased_Inhomogeneous_Boundaries();
+        //Note that previously in c_BoundaryCondition constructor, it has been asserted 
+        //that the use of robin is not supported with embedded boundaries.
+    }
+    soln->FillBoundary(geom.periodicity());
+
+    mlebabec.setLevelBC(amrlev, soln);
+
+    // set scaling factors 
+    mlebabec.setScalars(ascalar, bscalar);
+
+    // set alpha, and beta_fc coefficients
+    mlebabec.setACoeffs(amrlev, *alpha);
+
+    // beta_fc =  std::make_unique<amrex::FArrayBox,AMREX_SPACEDIM>; 
+    // beta_fc is a face-centered multifab
+    AMREX_D_TERM(beta_fc[0].define(convert(ba,IntVect(AMREX_D_DECL(1,0,0))), dm, 1, 0);,
+                 beta_fc[1].define(convert(ba,IntVect(AMREX_D_DECL(0,1,0))), dm, 1, 0);,
+                 beta_fc[2].define(convert(ba,IntVect(AMREX_D_DECL(0,0,1))), dm, 1, 0););
+
+    Multifab_Manipulation::AverageCellCenteredMultiFabToCellFaces(*beta, beta_fc); //converts from cell-centered permittivity to face-center and store in beta_fc
+
+    mlebabec.setBCoeffs(amrlev, amrex::GetArrOfConstPtrs(beta_fc));
+
+    MultiFab beta_surface(ba, dm, 1, 0, MFInfo(), *rGprop.eb.pFactory);
+    beta_surface.setVal(6.195e-11);
+    mlebabec.setEBHomogDirichlet(amrlev,beta_surface);
+
+    //MultiFab phi_on_eb(ba, dm, 1, 0, MFInfo(), *rGprop.eb.pFactory);
+    //phi_on_eb.setVal(1);
+    //mlebabec.setEBDirichlet(amrlev, phi_on_eb, beta_surface);
+
+    pMLMG = std::make_unique<MLMG>(mlebabec);
+
+    pMLMG->setVerbose(set_verbose);
+
+#ifdef PRINT_NAME
+    amrex::Print() << "\t\t\t}************************c_MLMGSolver::Setup_MLEBABecLaplacian_ForPoissonEqn()************************\n";
+#endif
+}
+
+#else 
 
 void
 c_MLMGSolver:: Setup_MLABecLaplacian_ForPoissonEqn()
@@ -399,7 +487,7 @@ c_MLMGSolver:: Setup_MLABecLaplacian_ForPoissonEqn()
 
     Multifab_Manipulation::AverageCellCenteredMultiFabToCellFaces(*beta, beta_fc); //converts from cell-centered permittivity to face-center and store in beta_fc
 
-    mlabec.setBCoeffs(0, amrex::GetArrOfConstPtrs(beta_fc));
+    mlabec.setBCoeffs(amrlev, amrex::GetArrOfConstPtrs(beta_fc));
 
     pMLMG = std::make_unique<MLMG>(mlabec);
 
@@ -410,6 +498,7 @@ c_MLMGSolver:: Setup_MLABecLaplacian_ForPoissonEqn()
 #endif
 }
 
+#endif
 
 void
 c_MLMGSolver:: Fill_Constant_Inhomogeneous_Boundaries()

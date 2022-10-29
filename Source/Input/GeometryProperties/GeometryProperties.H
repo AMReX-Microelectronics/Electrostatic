@@ -2,6 +2,7 @@
 #define GEOMETRY_PROPERTIES_H_
 
 #include "GeometryProperties_fwd.H"
+#include "EmbeddedBoundaries.H"
 
 #include <AMReX_REAL.H>
 #include <AMReX_GpuContainers.H>
@@ -17,34 +18,9 @@
 
 
 #include <string>
-class
-c_EmbeddedBoundary
-{
-public:
-    c_EmbeddedBoundary();
-
-    amrex::EBSupport support;
-    std::unique_ptr<amrex::EBFArrayBoxFactory> pFactory;
-    int required_coarsening_level;
-    int max_coarsening_level;
-
-    void ReadGeometry();
-private:
-
-    std::map<std::string,amrex::EBSupport>
-    map_eb_support = {
-                     {"full", amrex::EBSupport::full},
-             		 {"basic", amrex::EBSupport::basic},
-        	    	 {"volume",amrex::EBSupport::volume},
-                     {"Full", amrex::EBSupport::full},
-        		     {"Basic", amrex::EBSupport::basic},
-            		 {"Volume",amrex::EBSupport::volume},
-                     };
-};
-
 
 class 
-c_GeometryProperties:public c_EmbeddedBoundary
+c_GeometryProperties
 {
 public: 
     c_GeometryProperties();
@@ -63,12 +39,13 @@ public:
     amrex::DistributionMapping dm;
 
     int embedded_boundary_flag;
-    c_EmbeddedBoundary eb;
+#ifdef AMREX_USE_EB
+    c_EmbeddedBoundaries eb;
+    void CreateEmbeddedBoundary();
+#endif
 
     void ReadData();
     void InitData();
-
-    void CreateEmbeddedBoundary();
 
 private:
     void ParseBasicDomainInput();

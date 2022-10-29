@@ -109,8 +109,8 @@ c_Output::ReadData()
     pp_plot.query("filename", m_filename_prefix_str);
     pp_plot.query("write_after_init", m_write_after_init);
 
-    amrex::ParmParse pp_plot_file(m_filename_prefix_str);
-    bool varnames_specified = pp_plot_file.queryarr("fields_to_plot", fields_to_plot_withGhost_str);
+//    amrex::ParmParse pp_plot_file(m_filename_prefix_str);
+    bool varnames_specified = pp_plot.queryarr("fields_to_plot", fields_to_plot_withGhost_str);
 
     const int varsize = fields_to_plot_withGhost_str.size();
 
@@ -245,7 +245,7 @@ c_Output::InitData()
     int Nghost0=0;
 
 #ifdef AMREX_USE_EB
-    m_p_mf_all = std::make_unique<amrex::MultiFab>(ba, dm, m_num_params_plot_single_level, Nghost0, *rGprop.eb.pFactory); //cell-centered multifab
+    m_p_mf_all = std::make_unique<amrex::MultiFab>(ba, dm, m_num_params_plot_single_level, Nghost0, MFInfo(), *rGprop.eb.pFactory); //cell-centered multifabs
 #else
     m_p_mf_all = std::make_unique<amrex::MultiFab>(ba, dm, m_num_params_plot_single_level, Nghost0); 
 #endif
@@ -268,8 +268,11 @@ c_Output::InitData()
                 }
             }
         }
-        m_p_mf_all_init = std::make_unique<amrex::MultiFab>(ba, dm, counter, Nghost0); //cell-centered multifab
-
+#ifdef AMREX_USE_EB
+        m_p_mf_all_init = std::make_unique<amrex::MultiFab>(ba, dm, counter, Nghost0, MFInfo(), *rGprop.eb.pFactory); 
+#else
+        m_p_mf_all_init = std::make_unique<amrex::MultiFab>(ba, dm, counter, Nghost0);
+#endif
 
 #ifdef PRINT_HIGH
         amrex::Print() << "\n" << prt <<  "m_write_after_init is true! \n";

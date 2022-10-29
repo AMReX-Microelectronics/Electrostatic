@@ -83,8 +83,8 @@ c_GeometryProperties::ParseBasicDomainInput()
 #ifdef PRINT_NAME
     amrex::Print() << "\n\n\t\t\t\t{************************c_GeometryProperties::ParseBasicDomainInput()************************\n";
     amrex::Print() << "\t\t\t\tin file: " << __FILE__ << " at line: " << __LINE__ << "\n";
-    std::string prt = "\t\t\t\t";
 #endif
+    std::string prt = "\t\t\t\t";
 
     amrex::Vector<int> num_cell;
     amrex::Vector<amrex::Real> prob_min(AMREX_SPACEDIM);
@@ -141,7 +141,6 @@ c_GeometryProperties::ParseBasicDomainInput()
         coord_sys = amrex::CoordSys::RZ;
     }
 
-#ifdef PRINT_LOW
     for (int i=0; i<AMREX_SPACEDIM; ++i) 
     {
         amrex::Print() << prt << "\n";
@@ -155,7 +154,6 @@ c_GeometryProperties::ParseBasicDomainInput()
     amrex::Print() << prt << "\n";
     amrex::Print() << prt << "coord_sys: " << coord_sys << "\n";
     amrex::Print() << prt << "embedded_boundary_flag: " << embedded_boundary_flag << "\n";
-#endif
 
 #ifdef PRINT_NAME
     amrex::Print() << "\t\t\t\t}************************c_GeometryProperties::ParseBasicDomainInput()************************\n";
@@ -193,95 +191,6 @@ c_GeometryProperties::InitializeBoxArrayAndDistributionMap()
 }
 
 
-c_EmbeddedBoundary::c_EmbeddedBoundary()
-{
-}
-
-
-void
-c_EmbeddedBoundary::ReadGeometry()
-{
-#ifdef PRINT_NAME
-    amrex::Print() << "\n\n\t\t\t\t{************************c_GeometryProperties::ReadGeometry()************************\n";
-    amrex::Print() << "\t\t\t\tin file: " << __FILE__ << " at line: " << __LINE__ << "\n";
-    std::string prt = "\t\t\t\t";
-#endif
-
-    //setting default values
-    required_coarsening_level = 0; // max amr level (at present 0)
-    max_coarsening_level = 100;    // typically a huge number so MG coarsens as much as possible
-    support = EBSupport::full;
-    std::string eb_support_str = "full";
-
-    amrex::ParmParse pp_ebgeom("ebgeom");
-    pp_ebgeom.query("required_coarsening_level", required_coarsening_level);
-    pp_ebgeom.query("max_coarsening_level", max_coarsening_level);
-    pp_ebgeom.query("support", eb_support_str);
-    support = map_eb_support[eb_support_str];
-
-    //pp_domain.query("embedded_boundary", embedded_boundary_flag);
-    //amrex::Vector<int> num_cell;
-    //amrex::Vector<amrex::Real> prob_min(AMREX_SPACEDIM);
-    //amrex::Vector<amrex::Real> prob_max(AMREX_SPACEDIM);
-    //amrex::Vector<amrex::Real> mg{AMREX_D_DECL(128,128,128)}; //default values
-    //amrex::Vector<amrex::Real> bf{AMREX_D_DECL(8,8,8)};
-    //amrex::Vector<amrex::Real> periodicity{AMREX_D_DECL(0,0,0)};
-    //std::string coord_sys_str = "cartesian";
-    //coord_sys =  amrex::CoordSys::cartesian; //default
-    //embedded_boundary_flag = 0;
-
-
-    //getArrWithParser(pp_domain, "prob_lo", prob_min, 0, AMREX_SPACEDIM);
-    //AMREX_ALWAYS_ASSERT(prob_lo.size() == AMREX_SPACEDIM);
-
-    //getArrWithParser(pp_domain, "prob_hi", prob_max, 0, AMREX_SPACEDIM);
-    //AMREX_ALWAYS_ASSERT(prob_hi.size() == AMREX_SPACEDIM);
-
-    //pp_domain.getarr("n_cell", num_cell, 0, AMREX_SPACEDIM);
-    //AMREX_ALWAYS_ASSERT(n_cell.size() == AMREX_SPACEDIM);
-
-    //pp_domain.queryarr("max_grid_size", mg);
-
-    //pp_domain.queryarr("blocking_factor", bf);
-
-    //pp_domain.queryarr("is_periodic", periodicity);
-
-    //pp_domain.query("coord_sys", coord_sys_str);
-
-    //pp_domain.query("embedded_boundary", embedded_boundary_flag);
-
-    //for (int i=0; i<AMREX_SPACEDIM; ++i) 
-    //{
-    //    n_cell[i] = num_cell[i];
-    //    prob_lo[i] = prob_min[i]; //Converting vector to GpuArray
-    //    prob_hi[i] = prob_max[i]; 
-    //    max_grid_size[i] = mg[i];  //Converting Vector to IntVect
-    //    blocking_factor[i] = bf[i]; 
-    //    is_periodic[i] = periodicity[i]; 
-    //}
-
-
-//#ifdef PRINT_LOW
-//    for (int i=0; i<AMREX_SPACEDIM; ++i) 
-//    {
-//        amrex::Print() << prt << "\n";
-//        amrex::Print() << prt << "direction: " << i << "\n";
-//        amrex::Print() << prt << "prob_lo: " << prob_lo[i] << "\n";
-//        amrex::Print() << prt << "prob_hi: " << prob_hi[i] << "\n";
-//        amrex::Print() << prt << "max_grid_size: " << max_grid_size[i] << "\n";
-//        amrex::Print() << prt << "blocking_factor: " << blocking_factor[i] << "\n";
-//        amrex::Print() << prt << "is_periodic: " << is_periodic[i] << "\n";
-//    }
-//    amrex::Print() << prt << "\n";
-//    amrex::Print() << prt << "coord_sys: " << coord_sys << "\n";
-//    amrex::Print() << prt << "embedded_boundary_flag: " << embedded_boundary_flag << "\n";
-//#endif
-
-#ifdef PRINT_NAME
-    amrex::Print() << "\t\t\t\t}************************c_GeometryProperties::ReadGeometry()************************\n";
-#endif
-}
-
 void 
 c_GeometryProperties::CreateEmbeddedBoundary()
 {
@@ -290,7 +199,16 @@ c_GeometryProperties::CreateEmbeddedBoundary()
     amrex::Print() << "\t\t\tin file: " << __FILE__ << " at line: " << __LINE__ << "\n";
 #endif
 
-    EB2::Build(geom, eb.required_coarsening_level, eb.max_coarsening_level);
+    if(eb.specify_input_using_eb2) 
+    {
+        EB2::Build(geom, eb.required_coarsening_level, eb.max_coarsening_level);
+    }
+    else {
+
+ //       EB2::Build(eb.gshop, geom, eb.required_coarsening_level,
+ //                   eb.max_coarsening_level);
+    }
+
 
     const EB2::IndexSpace& eb_is = EB2::IndexSpace::top();
     const EB2::Level& eb_level = eb_is.getLevel(geom);
