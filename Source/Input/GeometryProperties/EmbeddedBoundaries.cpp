@@ -281,24 +281,30 @@ c_EmbeddedBoundaries::ReadObjectInfo(std::string object_name, std::string object
 //    }
 //}
 
+template<typename T>
+class TD;
+
 void
-c_EmbeddedBoundaries::ConstructFinalObject(std::string construct_main)
+c_EmbeddedBoundaries::ConstructFinalObject(std::string construct_main, amrex::Geometry geom)
 {
 
     std::string str = construct_main;
     
-      
     std::map<std::string,std::string>::iterator it;
 
     it = map_basic_objects_type.find(str);
-    if(it != rMprop.map_basic_objects_type.end())
+    if(it != map_basic_objects_type.end())
     {
-        auto object_name = it.first;
-        auto geom_type = it.second;
+        auto object_name = it->first;
+        auto geom_type = it->second;
 
-        auto ob1 = std::any_cast<EB2::SphereIF>(map_basic_objects_info[object_name]);
-//        auto ob2 = std::any_cast<EB2::BoxIF>(map_basic_objects_info[object_name]);
+        auto ob1 = std::any_cast<amrex::EB2::SphereIF>(map_basic_objects_info[object_name]);
+        auto ob2 = std::any_cast<amrex::EB2::BoxIF>(map_basic_objects_info[object_name]);
+        auto cubesphere = amrex::EB2::makeIntersection(ob1, ob2);
+        auto gshop = amrex::EB2::makeShop(cubesphere);
+        EB2::Build(eb.gshop, geom, eb.required_coarsening_level,
+                   eb.max_coarsening_level);
 
-        EB2::GeometryShop<EB2::SphereIF> gshop(ob1);
+//        EB2::GeometryShop<EB2::SphereIF> gshop(ob1);
     }
 }

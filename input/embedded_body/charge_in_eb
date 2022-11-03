@@ -66,7 +66,7 @@ Box1.box_hi = 0.5 0.5 0.5
 Box1.box_has_fluid_inside = 1
 
 ebgeom.final_objects = MyGeom1 
-MyGeom1.construct = Sph1
+MyGeom1.construct = I(Sph1,Box1)
 
 #eb2.geom_type = sphere
 #eb2.sphere_center = 0 0 0 

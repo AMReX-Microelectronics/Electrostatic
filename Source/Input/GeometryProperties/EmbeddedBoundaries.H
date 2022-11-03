@@ -40,6 +40,7 @@ struct s_ObjectType {
     enum object { sphere, box, cylinder, torus, parser, stl };
 };
 
+
 class
 c_EmbeddedBoundaries
 {
@@ -48,16 +49,16 @@ public:
 
     amrex::EBSupport support;
     std::unique_ptr<amrex::EBFArrayBoxFactory> pFactory;
-
     void ReadGeometry();
 
     int required_coarsening_level;
     int max_coarsening_level;
     int specify_input_using_eb2;
+
+    void ConstructFinalObject(std::string construct_main, amrex::Geometry geom);
 private:
     void ReadObjectInfo(std::string object_name, std::string object_type, amrex::ParmParse pp_object);
     void PrintObjectInfo(std::string object_name, std::string object_type, std::any object_info);
-    void ConstructFinalObject(std::string construct_main);
 
     int num_basic_objects;
     std::map<std::string,std::string> map_basic_objects_type;

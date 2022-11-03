@@ -204,9 +204,7 @@ c_GeometryProperties::CreateEmbeddedBoundary()
         EB2::Build(geom, eb.required_coarsening_level, eb.max_coarsening_level);
     }
     else {
-
- //       EB2::Build(eb.gshop, geom, eb.required_coarsening_level,
- //                   eb.max_coarsening_level);
+        eb.ConstructFinalObject("Hey");
     }
 
 
