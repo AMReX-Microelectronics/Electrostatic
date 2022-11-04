@@ -285,7 +285,7 @@ template<typename T>
 class TD;
 
 void
-c_EmbeddedBoundaries::ConstructFinalObject(std::string construct_main, amrex::Geometry geom)
+c_EmbeddedBoundaries::ConstructFinalObject(std::string construct_main, amrex::Geometry geom,amrex::BoxArray ba, amrex::DistributionMapping dm)
 {
 
 //    std::string str = construct_main;
@@ -298,17 +298,55 @@ c_EmbeddedBoundaries::ConstructFinalObject(std::string construct_main, amrex::Ge
 //    }
 //    auto object_name = it->first;
 //    auto geom_type = it->second;
+
+//Geometry1
     auto object_name1 = "Sph1";
     auto object_name2 = "Box1";
 
     auto ob1 = std::any_cast<amrex::EB2::SphereIF>(map_basic_objects_info[object_name1]);
     auto ob2 = std::any_cast<amrex::EB2::BoxIF>(map_basic_objects_info[object_name2]);
 
-    auto cubesphere = amrex::EB2::makeIntersection(ob1, ob2);
-    auto gshop = amrex::EB2::makeShop(cubesphere);
+    auto cubesphere1 = amrex::EB2::makeIntersection(ob1, ob2);
+    auto gshop1 = amrex::EB2::makeShop(cubesphere1);
 
-    amrex::EB2::Build(gshop, geom, required_coarsening_level,
-               max_coarsening_level);
+    amrex::EB2::Build(gshop1, geom, required_coarsening_level, max_coarsening_level);
 
-//    EB2::GeometryShop<EB2::SphereIF> gshop(ob1);
+    const EB2::IndexSpace& eb_is1 = EB2::IndexSpace::top();
+    const EB2::Level& eb_level1 = eb_is1.getLevel(geom);
+
+    // number of ghost cells for each of the 3 EBSupport types
+    Vector<int> ng_ebs = {2,2,2};
+
+    // This object provides access to the EB database in the format of basic AMReX objects
+    // such as BaseFab, FArrayBox, FabArray, and MultiFab
+    pFactory1 = amrex::makeEBFabFactory(&eb_level1, ba, dm, ng_ebs, support);
+
+//Geometry2
+    auto object_name3 = "Sph2";
+    auto object_name4 = "Box2";
+
+    auto ob3 = std::any_cast<amrex::EB2::SphereIF>(map_basic_objects_info[object_name3]);
+    auto ob4 = std::any_cast<amrex::EB2::BoxIF>(map_basic_objects_info[object_name4]);
+
+    auto cubesphere2 = amrex::EB2::makeIntersection(ob3, ob4);
+    auto gshop2 = amrex::EB2::makeShop(cubesphere2);
+
+    amrex::EB2::Build(gshop2, geom, required_coarsening_level, max_coarsening_level);
+
+    const EB2::IndexSpace& eb_is2 = EB2::IndexSpace::top();
+    const EB2::Level& eb_level2 = eb_is2.getLevel(geom);
+
+    pFactory2 = amrex::makeEBFabFactory(&eb_level2, ba, dm, ng_ebs, support);
+
+//Combined Geometry
+
+    
+    auto unionobject = amrex::EB2::makeUnion(cubesphere1, cubesphere2);
+    auto gshop = amrex::EB2::makeShop(unionobject);
+
+    amrex::EB2::Build(gshop, geom, required_coarsening_level, max_coarsening_level);
+
+    const EB2::IndexSpace& eb_is = EB2::IndexSpace::top();
+    const EB2::Level& eb_level = eb_is.getLevel(geom);
+    pFactory = amrex::makeEBFabFactory(&eb_level, ba, dm, ng_ebs, support);
 }

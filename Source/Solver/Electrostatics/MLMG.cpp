@@ -400,11 +400,21 @@ c_MLMGSolver:: Setup_MLEBABecLaplacian_ForPoissonEqn()
 
     MultiFab beta_surface(ba, dm, 1, 0, MFInfo(), *rGprop.eb.pFactory);
     beta_surface.setVal(6.195e-11);
-    mlebabec.setEBHomogDirichlet(amrlev,beta_surface);
+    //mlebabec.setEBHomogDirichlet(amrlev,beta_surface);
 
-    //MultiFab phi_on_eb(ba, dm, 1, 0, MFInfo(), *rGprop.eb.pFactory);
-    //phi_on_eb.setVal(1);
-    //mlebabec.setEBDirichlet(amrlev, phi_on_eb, beta_surface);
+    MultiFab phi_on_eb1(ba, dm, 1, 0, MFInfo(), *rGprop.eb.pFactory1);
+    Multifab_Manipulation::SpecifyValueOnlyOnCutcells( &phi_on_eb1, *rGprop.eb.pFactory1, 6);
+    VisMF::Write(phi_on_eb1, "phi_on_eb1");
+
+    MultiFab phi_on_eb2(ba, dm, 1, 0, MFInfo(), *rGprop.eb.pFactory2);
+    Multifab_Manipulation::SpecifyValueOnlyOnCutcells( &phi_on_eb2, *rGprop.eb.pFactory2, -6);
+
+    MultiFab phi_on_eb(ba, dm, 1, 0, MFInfo(), *rGprop.eb.pFactory);
+    phi_on_eb.setVal(0);    
+    phi_on_eb.plus(phi_on_eb1, 0, 1, 0);
+    phi_on_eb.plus(phi_on_eb2, 0, 1, 0);
+
+    mlebabec.setEBDirichlet(amrlev, phi_on_eb, beta_surface);
 
     pMLMG = std::make_unique<MLMG>(mlebabec);
 

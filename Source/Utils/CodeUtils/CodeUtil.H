@@ -62,6 +62,7 @@ void ConvertParserIntoMultiFab_3vars(const int i, const int j, const int k,
 //	    const amrex::IntVect& iv, 
 //	    amrex::GpuArray<amrex::Real, AMREX_SPACEDIM>& coord_vec);
 
+void SpecifyValueOnlyOnCutcells(amrex::MultiFab* mf, const FabFactory<FArrayBox>& factory, amrex::Real value);
 
 }
 

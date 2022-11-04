@@ -1,0 +1,257 @@
+##################################
+##### USER DEFINED CONSTANTS #####
+##################################
+#
+### GEOMETRY PROPERTIES 
+my_constants.Lx = 2
+my_constants.Ly = 2
+my_constants.Lz = 2
+
+my_constants.nx = 100
+my_constants.ny = 100
+my_constants.nz = 100
+
+### Physical Constants 
+my_constants.pi = 3.14159265358979
+my_constants.epsilon_0 = 8.8541878128e-12
+my_constants.q = 1.602e-19
+
+### MACROSCOPIC PROPERTIES
+my_constants.R_inner_sph = 0.1
+my_constants.V_sph = (4./3)*pi*R_inner_sph**3
+my_constants.Q_sph = 1e9*q
+
+my_constants.epsilon_r_sph = 10
+my_constants.charge_density_sph = Q_sph / V_sph
+my_constants.charge_density_surr = 0.0
+
+#####################################
+
+
+#################################
+###### GEOMETRY PROPERTIES ######
+#################################
+#
+# - The following AMReX specific properties are defined in c_GeometryProperties.
+
+domain.n_cell = 100 100 100
+domain.max_grid_size = 100 100 100
+domain.blocking_factor = 100 100 100
+
+domain.prob_lo = -Lx/2. -Ly/2. -Lz/2.
+domain.prob_hi = Lx/2. Ly/2. Lz/2.
+
+#domain.is_periodic = 1 means yes and 0 means no. 
+domain.is_periodic = 0 0 0                  
+
+#domain.coord_sys = cartesian or radial (currently supports cartesian)
+domain.coord_sys = cartesian        
+
+#domain.basic_object = Sph1 Cyl Sph2 
+#
+#Sph1.type = sphere #Options: Box, Cylinder, Ellipsoid, Plane, Sphere
+#Sph1.center = 
+#Sph1.radius = 
+#
+#Cyl.type   = 
+#Cyl.center = 
+#Cyl.radius = 
+#
+#domain.final_object = MyGeom1 MyGeom2
+#MyGeom1.construct = U( C( I( Sph1, Cyl ) ), Sph2) #Options: U, I, C, T, S, R, L
+#eb2.geom_type = parser
+#eb2.parser_function =  = "( sqrt(x**2 + y**2 + z**2) <= R_outer_sph )"
+
+domain.embedded_boundary = 1  #options: 1=true, 0=false (default)
+
+domain.specify_using_eb2 = 0  #options: 1=true, 0=false (default)
+my_constants.tiny = 1e-8
+ebgeom.basic_objects = Sph1 Box1 Sph2 Box2
+Sph1.geom_type = sphere
+Sph1.sphere_center = -0.5 -0.5 0
+Sph1.sphere_radius = 0.15
+Sph1.sphere_has_fluid_inside = 1
+
+Box1.geom_type = box
+Box1.box_lo = -0.80001 -0.80001 -0.40001
+Box1.box_hi = -0.20001 -0.20001 0.40001
+Box1.box_has_fluid_inside = 0
+
+Sph2.geom_type = sphere
+Sph2.sphere_center = 0.5 0.5 0
+Sph2.sphere_radius = 0.15
+Sph2.sphere_has_fluid_inside = 1
+
+Box2.geom_type = box
+Box2.box_lo = 0.20001 0.20001 -0.30001
+Box2.box_hi = 0.80001 0.80001 0.30001
+Box2.box_has_fluid_inside = 0
+
+ebgeom.final_objects = Source Drain
+Source.construct = I(Sph1,Box1)
+Drain.construct = I(Sph2,Box2)
+
+#eb2.geom_type = boxe
+#eb2.box_lo = -0.5 -0.5 -0.5
+#eb2.box_hi =  0.4  0.4  0.4
+#eb2.box_has_fluid_inside = 1
+
+
+# - User must specify boundary conditions using `domain.boundaryCond_lo' array for X_min, Y_min, and Z_min boundaries
+#   and `domain.boundaryCond_hi' for X_max, Y_max, and Z_max boundaries.
+#
+# - User has an option to choose from the following:
+#   dir: homogeneous dirichlet
+#   neu: homogeneous neumann
+#   per: periodic
+#   rob: robin
+#   ref: reflect
+#
+#   dir(<value>) or neu(<value>): inhomogeneous dirichlet or neumann with a value of <value>, 
+#                                 e.g. <value> = 5.0, -3e-6, 5e7 etc.
+#   dir(<string>) or neu(<string>) or rob(<string>): inhomogeneous dirichlet, neumann or robin 
+#                                                    with a function parser name of <string>, 
+#                                                    e.g. <string> = Xmin, Ymax, Z_hi, etc.
+#
+#   see examples: input/parallel_plate_capacitor/function_parsed_robin and function_parsed_dirichlet                                                 
+#
+# - For periodic and reflect boundary conditions, we do not need to specify any value in the bracket.
+#   If such value or string is specified then it is ignored.
+#
+# - For periodic boundary conditions, if any one side of a dimension (lo or hi) is set as periodic,
+#   then other side of the direction is asserted as periodic. A warning is raised if the other side is set to something else.
+
+boundary.lo = dir(0) dir(0) dir(0)
+boundary.hi = dir(0) dir(0) dir(0)
+
+####################################
+###### MACROSCOPIC PROPERTIES ######
+####################################
+#
+# - `fields_to_define' defines cell-centered multifabs (amrex::Multifab) initialized as input. 
+#
+# - For the electrostatic problem, we need epsilon, charge_density, phi.
+# 
+macroscopic.fields_to_define = alpha epsilon charge_density phi
+#
+# - At present, there is no option for specifying vector fields of type e.g. Array<amrex::Multifab, AMREX_SPACEDIM>.
+
+# - `ghostcells_for_fields' defines the ghost cell for the multifabs defined in fields_to_define, as <FieldName>.<NumberOfGhostCells>. 
+#    The default is 0.
+#
+macroscopic.ghostcells_for_fields = alpha.0 epsilon.1 charge_density.0 phi.1 
+
+# - The fields defined in `fields_to_define' can be initialized as constants or using a function parser as follows.
+#
+# - Their default values are set in function c_MacroscopicProperties::DefineDefaultValueMap(), which are used 
+#   if neither a `constant' or `function parser' based initialization is defined in the input file.
+#
+# - If the default value is not specified in the above function, it is taken as `0'.
+#
+# - In the following example, epsilon and charge_density are given a different value below radius R_inner_sph, defined above.
+#
+macroscopic.alpha = 0.0
+macroscopic.epsilon = epsilon_0
+#macroscopic.epsilon_function(x,y,z) = "epsilon_0 + (epsilon_r_sph-1)*epsilon_0 * ( sqrt(x**2 + y**2 + z**2) <= R_inner_sph )"
+macroscopic.charge_density_function(x,y,z) = "charge_density_sph * ( sqrt((x-0.5)**2 + (y-0.5)**2 + (z)**2) <= R_inner_sph ) - charge_density_sph * ( sqrt((x+0.5)**2 + (y+0.5)**2 + (z)**2) <= R_inner_sph )"
+macroscopic.phi = 0.0
+#
+#
+# - Note that, the particular use of field multifabs defined above need to be coded in the solver depending on the application.
+#   e.g. we have used phi as the `unknown' multifab for the MLMG Poisson solver, as described below.
+
+
+
+####################################
+###### MLMG SOLVER PROPERTIES ######
+####################################
+#
+# - MLMG solver solves alpha asclalar + bscalar ( Divergence{  beta_fc * Gradient{ soln }  } ) = rhs, 
+#   where subscripts `fc' denotes a face-centered multifab. rhs, soln and alpha are cell-centered multifabs.
+
+# - For Poisson problem, ascalar = 0 and bscalar=1.
+
+mlmg.ascalar=0
+mlmg.bscalar=1
+
+# - Below we assign cell-centered multifabs defined in "macroscopic.fields_to_define" to MLMG cell-centered multifabs.
+# - Note that we need beta_fc which is derived from beta set equal to epsilon here.
+
+mlmg.soln   = phi
+mlmg.rhs    = charge_density
+mlmg.alpha  = alpha
+mlmg.beta   = epsilon
+
+# - Other optional parameters to specify are: 
+#    - Three robin boundary parameters if robin boundaries are specified.
+#      Note: these parameters are set equal to corresponding multifabs initialized in macroscopic.fields_to_define,
+#      e.g. robinA, robinB and robinF. (see example, input/parallel_plate_capacitor/robin)
+#      - mlmg.robin_a = robinA
+#      - mlmg.robin_b = robinB
+#      - mlmg.robin_f = robinF
+#    - set_verbose (default=0), 
+#    - max_order (default=2), 
+#    - relative_tolerance (default=1e-10),
+#    - absolute_tolerance(default=0).
+
+mlmg.set_verbose=0
+mlmg.max_order=2
+mlmg.absolute_tolerance=0
+mlmg.relative_tolerance=1e-10
+
+
+
+#############################
+###### POST PROCESSING ######
+#############################
+#
+# -User may want an option to compute additional vector or scalar fields derived from the solution-fields or input fields. 
+#  User can specify these through fields_to_process parameter as follows.
+# 
+# -The recipe for computing these vector or scalar fields need to be specified in the code. 
+#  Specifically, class c_PostProcessor handles this. 
+#
+# -At present, the recipe for the following two vector fields is coded, using the functions provided by the MLMG solver.:
+#
+#   1) the vector of Field, denoted as `vecField', which gives -Gradient(soln). This is E-field.
+#   2) the vector of Flux, denoted as `vecFlux', which computes  beta_fc * Gradient( soln ).
+#
+# - Note that since the functions provided by MLMG solver do not have an option to compute specific components of the vector fields.
+#   Therefore, specifying individual components such as Field_x, Field_y etc. will still force the code to compute the entire vector fields.
+
+post_process.fields_to_process = vecField vecFlux
+
+####################
+###### OUTPUT ######
+####################
+#
+# -User can specify the fields to plot as follows by choosing from fields defined specified in `macroscopic.fields_to_define' and 
+#  `post_process.fields_to_process'. 
+#
+# -Note that for vector fields (specified as vec<FieldName>) user have an option to plot out only the specific x, y, or z components.
+#  For example, for specifying the y-component of `vecFlux', defined above, user should write, `Flux_y'
+#
+# -plot.filename can be used to indicate the folder prefix for output folder, e.g. setting it to 'ppc' would result in plot folder ppc0000, where 0000 is the iteration step.
+#
+# -There is a way for user to output 'raw fields' with 'ghost cells' in addition fields written out in the usual output folder (e.g. ppc0000/Level_0).
+#  These raw fields are outputted in a new folder 'raw_fields' is created in the output folder, e.g. ppc0000/raw_fields.
+#
+# -These options can be specified as follows:
+#  <field_name>   indicates mutifab <field_name> is outputted in the output folder, e.g. ppc0000, in the usual way.
+#  <field_name>.1 indicates multifab <field_name> is outputted in the output folder as well as separately outputted in the raw_fields folder with its ghost cells.
+#  <field_name>.2 indicates multifab <field_name> is outputted exclusively in the raw_fields folder.
+
+plot.filename = two_objects
+plot.fields_to_plot = Field_x Field_y Field_z vecFlux epsilon charge_density phi 
+plot.write_after_init = 1
+
+# -plot.write_after init is an optional flag, which allows user to write data after initialization (useful for debugging). 
+#  We can chose 0 (default) or 1, which means write after initialization.
+#  plot files are written out in <plot.filename>_init0 folder, including the raw_fields.
+#  Note that only the fields that are initialized up to the point of initialization step are written out, i.e.those defined in  macroscopic.fields_to_define, 
+#  while the post_process.fields_to_process are omitted. 
+#  All fields_to_plot will be written out at the end of the run as usual in folder <plot.filename>0000.
+
+#
+# -Note that there is provision for disregarding repeating field names, e.g. 1) specifying `phi' twice will result in it's output written out only once, 
+#  2) specifying E_x and vecE will result in output of E_x, E_y, and E_z.
