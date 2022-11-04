@@ -94,7 +94,7 @@ c_EmbeddedBoundaries::ReadGeometry()
                 std::string construct_main;
                 pp_final_object.get("construct", construct_main);
                 
-                ConstructFinalObject(construct_main);
+                //ConstructFinalObject(construct_main);
                   
                 ++c;
             }
@@ -220,9 +220,9 @@ c_EmbeddedBoundaries::ReadObjectInfo(std::string object_name, std::string object
     }
 }
 
-//void
-//c_EmbeddedBoundaries::PrintObjectInfo(std::string object_name, std::string object_type, std::any object_info)
-//{
+void
+c_EmbeddedBoundaries::PrintObjectInfo(std::string object_name, std::string object_type, std::any object_info)
+{
 //
 //    switch (map_object_type_enum[object_type]) 
 //    {  
@@ -248,7 +248,7 @@ c_EmbeddedBoundaries::ReadObjectInfo(std::string object_name, std::string object
 //            break;
 //        }
 //    }
-//}
+}
 
 
 //void
@@ -288,23 +288,27 @@ void
 c_EmbeddedBoundaries::ConstructFinalObject(std::string construct_main, amrex::Geometry geom)
 {
 
-    std::string str = construct_main;
-    
-    std::map<std::string,std::string>::iterator it;
+//    std::string str = construct_main;
+//    
+//    std::map<std::string,std::string>::iterator it;
+//
+//    it = map_basic_objects_type.find(str);
+//    if(it != map_basic_objects_type.end())
+//    {
+//    }
+//    auto object_name = it->first;
+//    auto geom_type = it->second;
+    auto object_name1 = "Sph1";
+    auto object_name2 = "Box1";
 
-    it = map_basic_objects_type.find(str);
-    if(it != map_basic_objects_type.end())
-    {
-        auto object_name = it->first;
-        auto geom_type = it->second;
+    auto ob1 = std::any_cast<amrex::EB2::SphereIF>(map_basic_objects_info[object_name1]);
+    auto ob2 = std::any_cast<amrex::EB2::BoxIF>(map_basic_objects_info[object_name2]);
 
-        auto ob1 = std::any_cast<amrex::EB2::SphereIF>(map_basic_objects_info[object_name]);
-        auto ob2 = std::any_cast<amrex::EB2::BoxIF>(map_basic_objects_info[object_name]);
-        auto cubesphere = amrex::EB2::makeIntersection(ob1, ob2);
-        auto gshop = amrex::EB2::makeShop(cubesphere);
-        EB2::Build(eb.gshop, geom, eb.required_coarsening_level,
-                   eb.max_coarsening_level);
+    auto cubesphere = amrex::EB2::makeIntersection(ob1, ob2);
+    auto gshop = amrex::EB2::makeShop(cubesphere);
 
-//        EB2::GeometryShop<EB2::SphereIF> gshop(ob1);
-    }
+    amrex::EB2::Build(gshop, geom, required_coarsening_level,
+               max_coarsening_level);
+
+//    EB2::GeometryShop<EB2::SphereIF> gshop(ob1);
 }
