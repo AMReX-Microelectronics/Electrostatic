@@ -345,7 +345,6 @@ int findNumberOfOccurrencesAboveMaxIndex(std::string str, std::string target, in
     return occurrences;
 }
 
-template<class O>
 c_InstructionTreeNode* 
 c_EmbeddedBoundaries::RecursivelyDecodeInstructions(std::string str, int level)
 {
@@ -358,6 +357,11 @@ c_EmbeddedBoundaries::RecursivelyDecodeInstructions(std::string str, int level)
 
     std::string left_str = "*";
     std::string right_str = "*";
+
+    root->map_basic_objects_type = &map_basic_objects_type;
+    root->map_basic_objects_info = &map_basic_objects_info;
+    root->map_object_type_enum = &map_object_type_enum;
+
     //amrex::Print() << "\ninstruction: " << str << "\n";
 
     amrex::Vector<int> loc_Comma;
@@ -412,28 +416,83 @@ c_EmbeddedBoundaries::RecursivelyDecodeInstructions(std::string str, int level)
         }
     }
 
-    //if(root->operation == "*") {
-    //   auto object_name1 = "Sph1";
-    //   object = std::any_cast<amrex::EB2::SphereIF>(map_basic_objects_info[object_name1]);
-    //} 
-    //else {
-    //   auto object_name2 = "Box1";
-    //   object = std::any_cast<amrex::EB2::BoxIF>(map_basic_objects_info[object_name2]);
-    //}
-
     root->left = RecursivelyDecodeInstructions(left_str, root->tree_level + 1);
-
     root->right = RecursivelyDecodeInstructions(right_str, root->tree_level + 1);
 
     return root;
 }
 
-void PrintInstructionTree(c_InstructionTreeNode* root) 
+void 
+c_EmbeddedBoundaries::PrintInstructionTree(c_InstructionTreeNode* root) 
 {
     if(root==NULL) return;
     amrex::Print() << "root->tree_level: " << root->tree_level << ", instruction: " << root->instruction << ", operation: " << root->operation << "\n";
     PrintInstructionTree(root->left);
     PrintInstructionTree(root->right);
+}
+
+
+template<class BasicObject>
+BasicObject* c_InstructionTreeNode::GetABasicObject()
+{
+    auto op = this->operation;
+
+    BasicObject object;
+     
+    auto object_name = this->instruction;
+    auto object_type = (*map_basic_objects_type)[object_name];
+
+    switch ((*map_object_type_enum)[object_type]) 
+    {  
+        case s_ObjectType::object::sphere:
+        {
+            object = std::any_cast<amrex::EB2::SphereIF>((*map_basic_objects_info)[object_name]);
+            break;
+        }
+        case s_ObjectType::object::box:
+        {
+            object = std::any_cast<amrex::EB2::BoxIF>((*map_basic_objects_info)[object_name]);
+            break;
+        }
+    }
+    return &object;
+}
+
+
+template<typename CompoundObject, typename ObjectType1, typename ObjectType2> 
+CompoundObject*
+c_EmbeddedBoundaries::RecursivelyPerformObjectConstruction(c_InstructionTreeNode* root) 
+{
+    CompoundObject compound_object;
+    ObjectType1* object1;
+    ObjectType2* object2;
+
+    if(root!=NULL) {
+    
+        if(root->left->operation == "*")
+        {  
+            object1 = root->left->GetABasicObject<ObjectType1>();
+        }
+        else 
+        {
+            object1 = RecursivelyPerformObjectConstruction<ObjectType1>(root->left);
+        }
+    
+        if(root->right->operation == "*")
+        {
+            object2 = root->right->GetABasicObject<ObjectType2>();
+        } 
+        else 
+        {
+            object2 = RecursivelyPerformObjectConstruction<ObjectType2>(root->right);
+        }
+    
+        if(root->operation == "I") 
+        {
+            compound_object = amrex::EB2::makeIntersection(*object1, *object2); 
+        }
+    }
+    return &compound_object;
 }
 
 
@@ -456,36 +515,26 @@ c_EmbeddedBoundaries::DecodeConstructInstructionTree(std::string top)
     
     if( TOBO == TCBO )
     {
-        amrex::Print() << "Equal number of open and close brackets. \n";
+       // amrex::Print() << "Assert equal number of open and close brackets. \n";
     }  
  
-   //amrex::Print() << "\nRecursively Decode Instructions: \n";
-   itree = RecursivelyDecodeInstructions(top,0);
+   int root_level = 0;
+   itree = RecursivelyDecodeInstructions(top,root_level);
+
    amrex::Print() << "\nPrinting Instruction Tree: \n";
    PrintInstructionTree(itree);
 
-   // int FM_CBO = loc_CBO[0];
-   // if(FM_CBO < loc_OBO[TOBO-1]) {
-   // //   FM_CBO = find_FirstMax_CBO_AfterLast_OBO(loc_OBO, loc_CBO);
-   // } 
-   // amrex::Print() << "First Maximum Close Bracket Occurance (FM_CBO) after last open bracket occurrence: "<< FM_CBO << "\n";
-   // 
-   // //for (int i=TOBO-1; i >= 0; --i) 
-   // //{ 
-   // //   map_OBO_to_Level[];
-   // //}
-   // int level=0;
-   // for (int i=TOBO-1; i >= 0; --i) 
-   // { 
-   //     if(loc_OBO[i] < FM_CBO) 
-   //     {
-   //        std::string instruction_str = top.substr(loc_OBO[i]-1, (loc_CBO[TCBO-i-1])-(loc_OBO[i]-1) + 1);
-   //        amrex::Print() << "level: " << level << " instruction string: " << instruction_str << "\n";
-   //        map_instruction_tree[level] = instruction_str;
-   //        ++level;
-   //     }
-   // }
+//   auto* final_object = RecursivelyPerformObjectConstruction<amrex::EB2::IntersectionIF<{amrex::EB2::SphereIF, amrex::EB2::BoxIF},amrex::EB2::SphereIF,amrex::EB2::BoxIF>(itree);
+
+   //auto gshop1 = amrex::EB2::makeShop(final_object);
+   //amrex::EB2::Build(gshop1, geom, required_coarsening_level, max_coarsening_level);
+   //const EB2::IndexSpace& eb_is1 = EB2::IndexSpace::top();
+   //const EB2::Level& eb_level1 = eb_is1.getLevel(geom);
+   //Vector<int> ng_ebs = {2,2,2};
+   //pFactory1 = amrex::makeEBFabFactory(&eb_level1, ba, dm, ng_ebs, support);
+
 }
+
 
 template<typename T>
 class TD;
@@ -545,11 +594,11 @@ c_EmbeddedBoundaries::ConstructFinalObject(std::string construct_main, amrex::Ge
     pFactory2 = amrex::makeEBFabFactory(&eb_level2, ba, dm, ng_ebs, support);
 
 //Combined Geometry
-
-    
     auto unionobject = amrex::EB2::makeUnion(cubesphere1, cubesphere2);
     auto gshop = amrex::EB2::makeShop(unionobject);
 
+//    TD<decltype(unionobject)> type;
+//    amrex::EB2::UnionIF<amrex::EB2::IntersectionIF<amrex::EB2::SphereIF, amrex::EB2::BoxIF>, amrex::EB2::IntersectionIF<amrex::EB2::SphereIF, amrex::EB2::BoxIF>>
     amrex::EB2::Build(gshop, geom, required_coarsening_level, max_coarsening_level);
 
     const EB2::IndexSpace& eb_is = EB2::IndexSpace::top();

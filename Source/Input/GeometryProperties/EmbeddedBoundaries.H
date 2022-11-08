@@ -40,17 +40,19 @@ struct s_ObjectType {
     enum object { sphere, box, cylinder, torus, parser, stl };
 };
 
-template <typename O>
 class c_InstructionTreeNode 
 {
     public:
     std::string instruction;
     std::string operation;
     int tree_level;
-    O object;
 
     c_InstructionTreeNode* left;
     c_InstructionTreeNode* right;
+
+    std::map<std::string,std::string>* map_basic_objects_type;
+    std::map<std::string,std::any>* map_basic_objects_info;
+    std::map<std::string, s_ObjectType::object>* map_object_type_enum;
 
     c_InstructionTreeNode(std::string str) 
     {
@@ -60,6 +62,9 @@ class c_InstructionTreeNode
         left = NULL;
         right = NULL;
     }
+
+    template<class BasicObject> BasicObject* GetABasicObject();
+
 };
 
 
@@ -90,7 +95,6 @@ private:
     std::map<std::string,std::string> map_basic_objects_type;
     std::map<std::string,std::any> map_basic_objects_info;
 
-    void DecodeConstructInstructionTree(std::string top);
 
 
     std::map<std::string, s_ObjectType::object>
@@ -108,10 +112,14 @@ private:
 
     std::map<int,int> map_basic_objects;
 
-    template <class O>
-    c_InstructionTreeNode* RecursivelyDecodeInstructions(std::string str, int level);
-
     c_InstructionTreeNode* itree;
+    c_InstructionTreeNode* RecursivelyDecodeInstructions(std::string str, int level);
+    void PrintInstructionTree(c_InstructionTreeNode* root);
+
+    template<typename CompoundObject, typename ObjectType1, typename ObjectType2>
+    CompoundObject* RecursivelyPerformObjectConstruction(c_InstructionTreeNode* root);
+
+    void DecodeConstructInstructionTree(std::string top);
 
     std::map<std::string,amrex::EBSupport>
     map_eb_support = {
