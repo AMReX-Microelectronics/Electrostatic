@@ -35,11 +35,11 @@ int main (int argc, char* argv[])
 
         pCode.PrintGlobalWarnings("the initialization step"); //Print warning at this stage
 
-        pCode.Solve();
+        //pCode.Solve();
 
-        pCode.PostProcess();
+        //pCode.PostProcess();
 
-        pCode.Output();
+        //pCode.Output();
  
         WARPX_PROFILE_VAR_STOP(pmain);
 

@@ -20,24 +20,44 @@
 #include <any>
 
 
-struct
-s_Sphere
-{
-    amrex::RealArray center;
-    amrex::Real radius;
-    bool has_fluid_inside;
-};
-
-struct
-s_Box
-{
-    amrex::RealArray lo;
-    amrex::RealArray hi;
-    bool has_fluid_inside;
-};
-
+//struct
+//s_Sphere
+//{
+//    amrex::RealArray center;
+//    amrex::Real radius;
+//    bool has_fluid_inside;
+//};
+//
+//struct
+//s_Box
+//{
+//    amrex::RealArray lo;
+//    amrex::RealArray hi;
+//    bool has_fluid_inside;
+//};
+//
 struct s_ObjectType {
     enum object { sphere, box, cylinder, torus, parser, stl };
+};
+
+class c_InstructionTreeNode 
+{
+    public:
+    std::string instruction;
+    std::string operation;
+    int tree_level;
+
+    c_InstructionTreeNode* left;
+    c_InstructionTreeNode* right;
+
+    c_InstructionTreeNode(std::string str) 
+    {
+        instruction = str;
+        operation = "*";
+        tree_level=0;
+        left = NULL;
+        right = NULL;
+    }
 };
 
 
@@ -48,21 +68,29 @@ public:
     c_EmbeddedBoundaries();
 
     amrex::EBSupport support;
-    std::unique_ptr<amrex::EBFArrayBoxFactory> pFactory;
+std::unique_ptr<amrex::EBFArrayBoxFactory> pFactory;
+std::unique_ptr<amrex::EBFArrayBoxFactory> pFactory1;
+std::unique_ptr<amrex::EBFArrayBoxFactory> pFactory2;
+//amrex::Vector< std::unique_ptr<amrex::EBFArrayBoxFactory> > pFactory;
+
     void ReadGeometry();
 
     int required_coarsening_level;
     int max_coarsening_level;
     int specify_input_using_eb2;
 
-    void ConstructFinalObject(std::string construct_main, amrex::Geometry geom);
+    void ConstructFinalObject(std::string construct_main, amrex::Geometry geom,amrex::BoxArray ba, amrex::DistributionMapping dm);
 private:
     void ReadObjectInfo(std::string object_name, std::string object_type, amrex::ParmParse pp_object);
-    void PrintObjectInfo(std::string object_name, std::string object_type, std::any object_info);
+//    void PrintObjectInfo(std::string object_name, std::string object_type, std::any object_info);
 
     int num_basic_objects;
     std::map<std::string,std::string> map_basic_objects_type;
     std::map<std::string,std::any> map_basic_objects_info;
+
+    c_InstructionTreeNode* itree;
+    void DecodeConstructInstructionTree(std::string top);
+
 
     std::map<std::string, s_ObjectType::object>
     map_object_type_enum = {

@@ -76,12 +76,12 @@ c_EmbeddedBoundaries::ReadGeometry()
         num_basic_objects = c;
         amrex::Print() << "\ntotal number of basic objects: " << num_basic_objects << "\n";
         amrex::Print() << "\nObject Info:\n";
-        for (auto it: map_basic_objects_info)
-        {
-            std::string name = it.first; 
-            std::string geom_type = map_basic_objects_type[name];
-            PrintObjectInfo(name, geom_type, it.second);
-        }
+//        for (auto it: map_basic_objects_info)
+//        {
+//            std::string name = it.first; 
+//            std::string geom_type = map_basic_objects_type[name];
+//            PrintObjectInfo(name, geom_type, it.second);
+//        }
 
         amrex::Vector< std::string > vec_final_objects;
         bool final_objects_specified = pp_ebgeom.queryarr("final_objects", vec_final_objects);
@@ -91,10 +91,10 @@ c_EmbeddedBoundaries::ReadGeometry()
             if (map_final_objects_rank.find(it) == map_final_objects_rank.end()) {
                 map_final_objects_rank[it] = c;
                 amrex::ParmParse pp_final_object(it);
-                std::string construct_main;
-                pp_final_object.get("construct", construct_main);
-                
-                //ConstructFinalObject(construct_main);
+                std::string construct_instruction_top;
+                pp_final_object.get("construct",construct_instruction_top);
+                //amrex::Print() << "\ntop construct instruction: " << construct_instruction_top << "\n";                
+                DecodeConstructInstructionTree(construct_instruction_top);
                   
                 ++c;
             }
@@ -105,7 +105,7 @@ c_EmbeddedBoundaries::ReadGeometry()
         amrex::Print() << "\ntotal number of final objects: " << num_final_objects << "\n";
         for (auto it: map_final_objects_rank)
         {
-            amrex::Print() << "final object no: " << it.second  << " name: " << it.first << "\n";
+            amrex::Print() << "final object: " << it.second  << " name: " << it.first << "\n";
         }
         
 
@@ -178,9 +178,13 @@ c_EmbeddedBoundaries::ReadGeometry()
 #endif
 }
 
+
 void
 c_EmbeddedBoundaries::ReadObjectInfo(std::string object_name, std::string object_type, amrex::ParmParse pp_object)
 {
+
+    amrex::Print() << "\nObject name: " << object_name << "\n";
+    amrex::Print() << "Object type: " << object_type << "\n";
 
     switch (map_object_type_enum[object_type]) 
     {  
@@ -193,7 +197,9 @@ c_EmbeddedBoundaries::ReadObjectInfo(std::string object_name, std::string object
             bool has_fluid_inside;
             pp_object.get("sphere_has_fluid_inside", has_fluid_inside);
 
-//            s_Sphere temp = {center, radius, has_fluid_inside};
+            amrex::Print() << "Sphere center: " << center[0] << "  " << center[1] << "  " << center[2] << "\n";
+            amrex::Print() << "Sphere radius: " << radius << "\n";
+            amrex::Print() << "Sphere has_fluid_inside?: " << has_fluid_inside << "\n";
 
             EB2::SphereIF sphere(radius, center, has_fluid_inside);
 
@@ -210,7 +216,10 @@ c_EmbeddedBoundaries::ReadObjectInfo(std::string object_name, std::string object
         
             bool has_fluid_inside;
             pp_object.get("box_has_fluid_inside", has_fluid_inside);
-//          s_Box temp = {lo, hi, has_fluid_inside};
+
+            amrex::Print() << "Box lo: " << lo[0] << "  " << lo[1] << "  " << lo[2] << "\n";
+            amrex::Print() << "Box hi: " << hi[0] << "  " << hi[1] << "  " << hi[2] << "\n";
+            amrex::Print() << "Box has_fluid_inside?: " << has_fluid_inside << "\n";
 
             EB2::BoxIF box(lo, hi, has_fluid_inside);
 
@@ -220,9 +229,9 @@ c_EmbeddedBoundaries::ReadObjectInfo(std::string object_name, std::string object
     }
 }
 
-void
-c_EmbeddedBoundaries::PrintObjectInfo(std::string object_name, std::string object_type, std::any object_info)
-{
+//void
+//c_EmbeddedBoundaries::PrintObjectInfo(std::string object_name, std::string object_type, std::any object_info)
+//{
 //
 //    switch (map_object_type_enum[object_type]) 
 //    {  
@@ -248,7 +257,7 @@ c_EmbeddedBoundaries::PrintObjectInfo(std::string object_name, std::string objec
 //            break;
 //        }
 //    }
-}
+//}
 
 
 //void
@@ -280,6 +289,193 @@ c_EmbeddedBoundaries::PrintObjectInfo(std::string object_name, std::string objec
 //        }
 //    }
 //}
+
+//void TraverseString(string &str, int N)
+//{
+//    for (auto &ch : str) {
+//        cout<< ch<< " ";
+//    }
+//}
+
+// Function to reverse a string
+std::string reverseStr(std::string str)
+{
+    int n = str.length();
+    for (int i = 0; i < n / 2; i++)  std::swap(str[i], str[n - i - 1]);
+    return str;
+}
+
+int findLocationVector(std::string str, std::string target, amrex::Vector<int>& loc_vec)
+{
+    //amrex::Print() << "string: " << str << ", string_to_find: " << target << "\n"; 
+    int occurrences = 0;
+    std::string::size_type pos = 0;
+
+    while ((pos = str.find(target, pos )) != std::string::npos) 
+    {
+        loc_vec.push_back(pos);  
+        ++ occurrences;
+        pos += target.length();
+    }
+    return occurrences;
+}
+
+
+int findNumberOfOccurrencesBelowMaxIndex(std::string str, std::string target, int MaxIndex)
+{
+    int occurrences = 0;
+    std::string::size_type pos = 1;
+    while ((pos = str.find(target, pos )) != std::string::npos && pos < MaxIndex) 
+    {
+        ++ occurrences;
+        pos += target.length();
+    }
+    return occurrences;
+}
+
+int findNumberOfOccurrencesAboveMaxIndex(std::string str, std::string target, int MaxIndex)
+{
+    int occurrences = 0;
+    std::string::size_type pos = MaxIndex;
+    while ((pos = str.find(target, pos )) != std::string::npos && pos < str.length()) 
+    {
+        ++ occurrences;
+        pos += target.length();
+    }
+    return occurrences;
+}
+
+c_InstructionTreeNode* RecursivelyDecodeInstructions(std::string str, int level)
+{
+    if(str == "*") return NULL;
+
+    c_InstructionTreeNode* root = new c_InstructionTreeNode(str);
+
+    root->instruction = str;
+    root->tree_level = level;
+
+    std::string left_str = "*";
+    std::string right_str = "*";
+
+    //amrex::Print() << "\ninstruction: " << str << "\n";
+
+    amrex::Vector<int> loc_Comma;
+    int total_commas = 0;
+    total_commas = findLocationVector(str, ",", loc_Comma);
+    //amrex::Print() << "total_commas: " << total_commas << "\n";
+    //for (auto &loc : loc_Comma) amrex::Print() << " commas at: " << loc << "\n";
+
+    for (auto &icomma: loc_Comma) 
+    {
+        //amrex::Print() << "icomma: "<< icomma << "\n"; 
+
+        int num_OBs_left = findNumberOfOccurrencesBelowMaxIndex(str,"(",icomma);
+        int num_CBs_left = findNumberOfOccurrencesBelowMaxIndex(str,")",icomma);
+        int num_OBs_right = findNumberOfOccurrencesAboveMaxIndex(str,"(",icomma);
+        int num_CBs_right = findNumberOfOccurrencesAboveMaxIndex(str,")",icomma);
+
+        //amrex::Print() << "num_OBs_left: " << num_OBs_left << ", num_CBs_left: " << num_CBs_left << "\n";
+        //amrex::Print() << "num_OBs_right: " << num_OBs_right << ", num_CBs_right: " << num_CBs_right << "\n";
+
+        if(total_commas > 1) {
+            if((num_OBs_left-1 == num_CBs_left) && (num_OBs_right == num_CBs_right-1)) 
+            {
+                //amrex::Print() << "num_OBs_left==num_CBs_left && num_OBs_right == num_CBs_right\n";
+                left_str = str.substr(2, (icomma-1) - 2 + 1);  
+                right_str = str.substr(icomma+1, str.length() - icomma -2);  
+                //amrex::Print() << "left_str: " << left_str << "\n";
+                //amrex::Print() << "right_str: " << right_str << "\n";
+                root->operation = str.substr(0,1);
+            }
+        }
+        else 
+        {
+           if((num_OBs_left==num_CBs_right) && (num_CBs_left == 0) && (num_OBs_right == 0)) 
+           {
+               if(num_OBs_left > 1) {
+                   left_str = str.substr(2, str.length()-2-1);  
+                   right_str = "*";
+                   root->operation = str.substr(0,1);
+               } 
+               else if(num_OBs_left == 1) {
+                   left_str = str.substr(2, (icomma-1) - 2 + 1);  
+                   right_str = str.substr(icomma+1, str.length() - icomma -2);  
+                   root->operation = str.substr(0,1);
+               }
+               else if (num_OBs_left == 0) {
+                   left_str = str.substr(2, (icomma-1) - 2 + 1);  
+                   right_str = str.substr(icomma+1, str.length() - icomma -2);  
+                   root->operation = "*";
+               }
+           }
+        }
+    }
+
+    root->left = RecursivelyDecodeInstructions(left_str, root->tree_level + 1);
+
+    root->right = RecursivelyDecodeInstructions(right_str, root->tree_level + 1);
+
+    return root;
+}
+
+void PrintInstructionTree(c_InstructionTreeNode* root) 
+{
+    if(root==NULL) return;
+    amrex::Print() << "root->tree_level: " << root->tree_level << ", instruction: " << root->instruction << ", operation: " << root->operation << "\n";
+    PrintInstructionTree(root->left);
+    PrintInstructionTree(root->right);
+}
+
+
+void
+c_EmbeddedBoundaries::DecodeConstructInstructionTree(std::string top)
+{
+
+    amrex::Vector<int> loc_OBO;
+    int TOBO=0;
+    TOBO = findLocationVector(top, "(", loc_OBO);
+    //amrex::Print() << "Total open bracket occurances: " << TOBO << "\n";
+    //for (auto &loc : loc_OBO) amrex::Print() << " occurrence at: " << loc << "\n";
+ 
+
+    amrex::Vector<int> loc_CBO;
+    int TCBO=0;
+    TCBO = findLocationVector(top, ")", loc_CBO);
+    //amrex::Print() << "Total close bracket occurances: " << TCBO << "\n";
+    //for (auto &loc : loc_CBO) amrex::Print() << " occurrence at: " << loc << "\n";
+    
+    if( TOBO == TCBO )
+    {
+        amrex::Print() << "Equal number of open and close brackets. \n";
+    }  
+ 
+   //amrex::Print() << "\nRecursively Decode Instructions: \n";
+   itree = RecursivelyDecodeInstructions(top,0);
+   amrex::Print() << "\nPrinting Instruction Tree: \n";
+   PrintInstructionTree(itree);
+
+   // int FM_CBO = loc_CBO[0];
+   // if(FM_CBO < loc_OBO[TOBO-1]) {
+   // //   FM_CBO = find_FirstMax_CBO_AfterLast_OBO(loc_OBO, loc_CBO);
+   // } 
+   // amrex::Print() << "First Maximum Close Bracket Occurance (FM_CBO) after last open bracket occurrence: "<< FM_CBO << "\n";
+   // 
+   // //for (int i=TOBO-1; i >= 0; --i) 
+   // //{ 
+   // //   map_OBO_to_Level[];
+   // //}
+   // int level=0;
+   // for (int i=TOBO-1; i >= 0; --i) 
+   // { 
+   //     if(loc_OBO[i] < FM_CBO) 
+   //     {
+   //        std::string instruction_str = top.substr(loc_OBO[i]-1, (loc_CBO[TCBO-i-1])-(loc_OBO[i]-1) + 1);
+   //        amrex::Print() << "level: " << level << " instruction string: " << instruction_str << "\n";
+   //        map_instruction_tree[level] = instruction_str;
+   //        ++level;
+   //     }
+   // }
+}
 
 template<typename T>
 class TD;

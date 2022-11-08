@@ -88,7 +88,7 @@ Box2.box_hi = 0.80001 0.80001 0.30001
 Box2.box_has_fluid_inside = 0
 
 ebgeom.final_objects = Source Drain
-Source.construct = I(Sph1,Box1)
+Source.construct = K(G(I(Sph1,Box1)),N(Sph2,G(1,2)))
 Drain.construct = I(Sph2,Box2)
 
 #eb2.geom_type = boxe
