@@ -345,7 +345,9 @@ int findNumberOfOccurrencesAboveMaxIndex(std::string str, std::string target, in
     return occurrences;
 }
 
-c_InstructionTreeNode* RecursivelyDecodeInstructions(std::string str, int level)
+template<class O>
+c_InstructionTreeNode* 
+c_EmbeddedBoundaries::RecursivelyDecodeInstructions(std::string str, int level)
 {
     if(str == "*") return NULL;
 
@@ -356,7 +358,6 @@ c_InstructionTreeNode* RecursivelyDecodeInstructions(std::string str, int level)
 
     std::string left_str = "*";
     std::string right_str = "*";
-
     //amrex::Print() << "\ninstruction: " << str << "\n";
 
     amrex::Vector<int> loc_Comma;
@@ -410,6 +411,15 @@ c_InstructionTreeNode* RecursivelyDecodeInstructions(std::string str, int level)
            }
         }
     }
+
+    //if(root->operation == "*") {
+    //   auto object_name1 = "Sph1";
+    //   object = std::any_cast<amrex::EB2::SphereIF>(map_basic_objects_info[object_name1]);
+    //} 
+    //else {
+    //   auto object_name2 = "Box1";
+    //   object = std::any_cast<amrex::EB2::BoxIF>(map_basic_objects_info[object_name2]);
+    //}
 
     root->left = RecursivelyDecodeInstructions(left_str, root->tree_level + 1);
 

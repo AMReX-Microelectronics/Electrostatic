@@ -40,12 +40,14 @@ struct s_ObjectType {
     enum object { sphere, box, cylinder, torus, parser, stl };
 };
 
+template <typename O>
 class c_InstructionTreeNode 
 {
     public:
     std::string instruction;
     std::string operation;
     int tree_level;
+    O object;
 
     c_InstructionTreeNode* left;
     c_InstructionTreeNode* right;
@@ -88,7 +90,6 @@ private:
     std::map<std::string,std::string> map_basic_objects_type;
     std::map<std::string,std::any> map_basic_objects_info;
 
-    c_InstructionTreeNode* itree;
     void DecodeConstructInstructionTree(std::string top);
 
 
@@ -106,6 +107,11 @@ private:
     std::map<std::string,int> map_final_objects_rank;
 
     std::map<int,int> map_basic_objects;
+
+    template <class O>
+    c_InstructionTreeNode* RecursivelyDecodeInstructions(std::string str, int level);
+
+    c_InstructionTreeNode* itree;
 
     std::map<std::string,amrex::EBSupport>
     map_eb_support = {
