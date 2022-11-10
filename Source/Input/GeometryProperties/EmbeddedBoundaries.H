@@ -19,54 +19,9 @@
 #include <string>
 #include <any>
 
-
-//struct
-//s_Sphere
-//{
-//    amrex::RealArray center;
-//    amrex::Real radius;
-//    bool has_fluid_inside;
-//};
-//
-//struct
-//s_Box
-//{
-//    amrex::RealArray lo;
-//    amrex::RealArray hi;
-//    bool has_fluid_inside;
-//};
-//
 struct s_ObjectType {
-    enum object { sphere, box, cylinder, torus, parser, stl };
+    enum object { sphere, box, cylinder, torus, parser, stl, cntfet_contact };
 };
-
-class c_InstructionTreeNode 
-{
-    public:
-    std::string instruction;
-    std::string operation;
-    int tree_level;
-
-    c_InstructionTreeNode* left;
-    c_InstructionTreeNode* right;
-
-    std::map<std::string,std::string>* map_basic_objects_type;
-    std::map<std::string,std::any>* map_basic_objects_info;
-    std::map<std::string, s_ObjectType::object>* map_object_type_enum;
-
-    c_InstructionTreeNode(std::string str) 
-    {
-        instruction = str;
-        operation = "*";
-        tree_level=0;
-        left = NULL;
-        right = NULL;
-    }
-
-    template<class BasicObject> BasicObject* GetABasicObject();
-
-};
-
 
 class
 c_EmbeddedBoundaries
@@ -75,27 +30,30 @@ public:
     c_EmbeddedBoundaries();
 
     amrex::EBSupport support;
-std::unique_ptr<amrex::EBFArrayBoxFactory> pFactory;
-std::unique_ptr<amrex::EBFArrayBoxFactory> pFactory1;
-std::unique_ptr<amrex::EBFArrayBoxFactory> pFactory2;
-//amrex::Vector< std::unique_ptr<amrex::EBFArrayBoxFactory> > pFactory;
-
+    amrex::Vector< std::unique_ptr<amrex::EBFArrayBoxFactory> > pFactory;
+   
     void ReadGeometry();
 
     int required_coarsening_level;
     int max_coarsening_level;
     int specify_input_using_eb2;
+    int specify_separate_surf_beta;
+    amrex::Real surf_beta;
+    int specify_inhomogeneous_dirichlet;
+    int num_objects;
 
-    void ConstructFinalObject(std::string construct_main, amrex::Geometry geom,amrex::BoxArray ba, amrex::DistributionMapping dm);
+    amrex::MultiFab& get_soln_mf  (int i) {return (*m_p_soln_mf[i]);}
+    amrex::MultiFab& get_beta_mf  (int i) {return (*m_p_beta_mf[i]);}
+
+    void BuildObjects(amrex::Geometry geom,amrex::BoxArray ba, amrex::DistributionMapping dm);
 private:
     void ReadObjectInfo(std::string object_name, std::string object_type, amrex::ParmParse pp_object);
-//    void PrintObjectInfo(std::string object_name, std::string object_type, std::any object_info);
 
-    int num_basic_objects;
+    amrex::Vector< std::string > vec_object_names;
     std::map<std::string,std::string> map_basic_objects_type;
     std::map<std::string,std::any> map_basic_objects_info;
-
-
+    std::map<std::string,amrex::Real> map_basic_objects_soln;
+    std::map<std::string,amrex::Real> map_basic_objects_beta;
 
     std::map<std::string, s_ObjectType::object>
     map_object_type_enum = {
@@ -105,21 +63,13 @@ private:
                                {"torus", s_ObjectType::object::torus},
                                {"parser", s_ObjectType::object::parser},
                                {"stl", s_ObjectType::object::stl},
+                               {"cntfet_contact", s_ObjectType::object::cntfet_contact},
                            };
+    using cntfet_contact_type = amrex::EB2::IntersectionIF<amrex::EB2::CylinderIF, amrex::EB2::BoxIF>;
 
     int num_final_objects;
-    std::map<std::string,int> map_final_objects_rank;
-
     std::map<int,int> map_basic_objects;
 
-    c_InstructionTreeNode* itree;
-    c_InstructionTreeNode* RecursivelyDecodeInstructions(std::string str, int level);
-    void PrintInstructionTree(c_InstructionTreeNode* root);
-
-    template<typename CompoundObject, typename ObjectType1, typename ObjectType2>
-    CompoundObject* RecursivelyPerformObjectConstruction(c_InstructionTreeNode* root);
-
-    void DecodeConstructInstructionTree(std::string top);
 
     std::map<std::string,amrex::EBSupport>
     map_eb_support = {
@@ -130,7 +80,14 @@ private:
         		         {"Basic", amrex::EBSupport::basic},
             		     {"Volume",amrex::EBSupport::volume},
                      };
+
+    template<typename ObjectType>
+    void BuildSingleObject(std::string name, amrex::Geometry geom,amrex::BoxArray ba, amrex::DistributionMapping dm);
+
+    template<typename ObjectType1, typename ObjectType2>
+    void BuildUnionObject(std::string name1, std::string name2, amrex::Geometry geom,amrex::BoxArray ba, amrex::DistributionMapping dm);
+
+    amrex::Vector< std::unique_ptr<amrex::MultiFab> > m_p_soln_mf;
+    amrex::Vector< std::unique_ptr<amrex::MultiFab> > m_p_beta_mf;
 };
-
-
 #endif

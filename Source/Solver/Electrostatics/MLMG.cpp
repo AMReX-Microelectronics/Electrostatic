@@ -349,8 +349,9 @@ c_MLMGSolver:: Setup_MLEBABecLaplacian_ForPoissonEqn()
     auto& ba = rGprop.ba;
     auto& dm = rGprop.dm;
     auto& geom = rGprop.geom;
+    auto ilast =  rGprop.eb.pFactory.size()-1;
 
-    mlebabec.define({geom}, {ba}, {dm}, info,{& *rGprop.eb.pFactory}); // Implicit solve using MLABecLaplacian class
+    mlebabec.define({geom}, {ba}, {dm}, info,{& *rGprop.eb.pFactory[ilast]}); // Implicit solve using MLABecLaplacian class
 
     // Force singular system to be solvable
     mlebabec.setEnforceSingularSolvable(false);
@@ -394,27 +395,41 @@ c_MLMGSolver:: Setup_MLEBABecLaplacian_ForPoissonEqn()
                  beta_fc[1].define(convert(ba,IntVect(AMREX_D_DECL(0,1,0))), dm, 1, 0);,
                  beta_fc[2].define(convert(ba,IntVect(AMREX_D_DECL(0,0,1))), dm, 1, 0););
 
-    Multifab_Manipulation::AverageCellCenteredMultiFabToCellFaces(*beta, beta_fc); //converts from cell-centered permittivity to face-center and store in beta_fc
+    //converts from cell-centered permittivity to face-center and store in beta_fc
+    Multifab_Manipulation::AverageCellCenteredMultiFabToCellFaces(*beta, beta_fc); 
 
     mlebabec.setBCoeffs(amrlev, amrex::GetArrOfConstPtrs(beta_fc));
 
-    MultiFab beta_surface(ba, dm, 1, 0, MFInfo(), *rGprop.eb.pFactory);
-    beta_surface.setVal(6.195e-11);
-    //mlebabec.setEBHomogDirichlet(amrlev,beta_surface);
 
-    MultiFab phi_on_eb1(ba, dm, 1, 0, MFInfo(), *rGprop.eb.pFactory1);
-    Multifab_Manipulation::SpecifyValueOnlyOnCutcells( &phi_on_eb1, *rGprop.eb.pFactory1, 6);
-    VisMF::Write(phi_on_eb1, "phi_on_eb1");
+    MultiFab surf_beta(ba, dm, 1, 0, MFInfo(), *rGprop.eb.pFactory[ilast]);
+    if(rGprop.eb.specify_separate_surf_beta == 0) 
+    { 
+        //surf_beta.setVal(rGprop.eb.surf_beta);
+        Multifab_Manipulation::SpecifyValueOnlyOnCutcells(&surf_beta, rGprop.eb.surf_beta);
+    } 
+    else 
+    {
+        surf_beta.setVal(0);    
+        for(int i=0; i < rGprop.eb.num_objects; ++i) 
+        { 
+            surf_beta.plus(rGprop.eb.get_beta_mf(i), 0, 1, 0);
+        }
+    }
 
-    MultiFab phi_on_eb2(ba, dm, 1, 0, MFInfo(), *rGprop.eb.pFactory2);
-    Multifab_Manipulation::SpecifyValueOnlyOnCutcells( &phi_on_eb2, *rGprop.eb.pFactory2, -6);
-
-    MultiFab phi_on_eb(ba, dm, 1, 0, MFInfo(), *rGprop.eb.pFactory);
-    phi_on_eb.setVal(0);    
-    phi_on_eb.plus(phi_on_eb1, 0, 1, 0);
-    phi_on_eb.plus(phi_on_eb2, 0, 1, 0);
-
-    mlebabec.setEBDirichlet(amrlev, phi_on_eb, beta_surface);
+    if(rGprop.eb.specify_inhomogeneous_dirichlet == 0) 
+    {
+        mlebabec.setEBHomogDirichlet(amrlev,surf_beta);
+    }
+    else 
+    {
+        MultiFab surf_soln(ba, dm, 1, 0, MFInfo(), *rGprop.eb.pFactory[ilast]);
+        surf_soln.setVal(0);    
+        for(int i=0; i < rGprop.eb.num_objects; ++i) 
+        { 
+            surf_soln.plus(rGprop.eb.get_soln_mf(i), 0, 1, 0);
+        }
+        mlebabec.setEBDirichlet(amrlev, surf_soln, surf_beta);
+    }
 
     pMLMG = std::make_unique<MLMG>(mlebabec);
 

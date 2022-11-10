@@ -204,19 +204,9 @@ c_GeometryProperties::CreateEmbeddedBoundary()
         EB2::Build(geom, eb.required_coarsening_level, eb.max_coarsening_level);
     }
     else {
-        eb.ConstructFinalObject("Hey",geom, ba, dm);
+        eb.BuildObjects(geom, ba, dm);
     }
 
-//    const EB2::IndexSpace& eb_is = EB2::IndexSpace::top();
-//    const EB2::Level& eb_level = eb_is.getLevel(geom);
-//
-//    // number of ghost cells for each of the 3 EBSupport types
-//    Vector<int> ng_ebs = {2,2,2};
-//
-//    // This object provides access to the EB database in the format of basic AMReX objects
-//    // such as BaseFab, FArrayBox, FabArray, and MultiFab
-//    eb.pFactory = amrex::makeEBFabFactory(&eb_level, ba, dm, ng_ebs, eb.support);
-    
 #ifdef PRINT_NAME
     amrex::Print() << "\t\t\t}************************c_GeometryProperties::CreateEmbeddedBoundary()************************\n";
 #endif

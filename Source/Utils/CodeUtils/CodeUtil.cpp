@@ -90,7 +90,7 @@ Multifab_Manipulation::AverageCellCenteredMultiFabToCellFaces(const amrex::Multi
 }
 
 void
-Multifab_Manipulation::SpecifyValueOnlyOnCutcells(amrex::MultiFab* mf, const FabFactory<FArrayBox>& Factory, amrex::Real value) 
+Multifab_Manipulation::SpecifyValueOnlyOnCutcells(amrex::MultiFab* mf, amrex::Real value) 
 {
 #ifdef PRINT_NAME
     amrex::Print() << "\n\n\t\t\t\t\t{************************Multifab_Manipulation::SpecifyValueOnlyOnCutcells************************\n";

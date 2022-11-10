@@ -240,12 +240,13 @@ c_Output::InitData()
 
     auto& rCode = c_Code::GetInstance();
     auto& rGprop = rCode.get_GeometryProperties();
+    auto ilast =  rGprop.eb.pFactory.size()-1;
     auto& ba = rGprop.ba;
     auto& dm = rGprop.dm;
     int Nghost0=0;
 
 #ifdef AMREX_USE_EB
-    m_p_mf_all = std::make_unique<amrex::MultiFab>(ba, dm, m_num_params_plot_single_level, Nghost0, MFInfo(), *rGprop.eb.pFactory); //cell-centered multifabs
+    m_p_mf_all = std::make_unique<amrex::MultiFab>(ba, dm, m_num_params_plot_single_level, Nghost0, MFInfo(), *rGprop.eb.pFactory[ilast]); //cell-centered multifabs
 #else
     m_p_mf_all = std::make_unique<amrex::MultiFab>(ba, dm, m_num_params_plot_single_level, Nghost0); 
 #endif
@@ -269,7 +270,7 @@ c_Output::InitData()
             }
         }
 #ifdef AMREX_USE_EB
-        m_p_mf_all_init = std::make_unique<amrex::MultiFab>(ba, dm, counter, Nghost0, MFInfo(), *rGprop.eb.pFactory); 
+        m_p_mf_all_init = std::make_unique<amrex::MultiFab>(ba, dm, counter, Nghost0, MFInfo(), *rGprop.eb.pFactory[ilast]); 
 #else
         m_p_mf_all_init = std::make_unique<amrex::MultiFab>(ba, dm, counter, Nghost0);
 #endif

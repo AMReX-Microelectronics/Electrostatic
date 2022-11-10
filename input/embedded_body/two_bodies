@@ -54,7 +54,7 @@ ebgeom.max_coarsening_level = 100
 ebgeom.support = full
 ebgeom.specify_input_using_eb2 = 0  #options: 1=true, 0=false (default)
 
-ebgeom.basic_objects = Sph1 Box1
+ebgeom.objects = Sph1 Box1
 Sph1.geom_type = sphere
 Sph1.sphere_center = 0 0 0 
 Sph1.sphere_radius = 0.5
@@ -65,9 +65,9 @@ Box1.box_lo = -0.55 -0.55 -0.55
 Box1.box_hi = 0.55 0.55 0.55 
 Box1.box_has_fluid_inside = 0
 
-ebgeom.final_objects = MyGeom1 MyGeom2
-MyGeom1.construct = Sph1
-MyGeom2.construct = Box1
+#ebgeom.final_objects = MyGeom1 MyGeom2
+#MyGeom1.construct = Sph1
+#MyGeom2.construct = Box1
 
 #eb2.geom_type = sphere
 #eb2.sphere_center = 0 0 0 
