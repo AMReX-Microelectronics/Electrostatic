@@ -10,14 +10,6 @@ my_constants.tiny = 1e-12
 ### GEOMETRY and MACROSCOPIC PARAMETER PROPERTIES 
 
 
-#gate metal
-my_constants.GM_w = Lx
-my_constants.GM_l = Ly
-my_constants.GM_h = 40e-9 
-
-my_constants.epsilon_GM = 1.7*epsilon_0  #Aluminum
-my_constants.GV = 0                      #gate voltage [V]
-
 #gate oxide
 my_constants.GO_w = Lx
 my_constants.GO_l = Ly
@@ -36,8 +28,8 @@ my_constants.SV =  100e-3      #source voltage [V]
 my_constants.DV = -100e-3 #drain voltage [V]
 
 
-my_constants.CM_lo_z = GM_h + GO_h 
-my_constants.CM_hi_z = GM_h + GO_h + CM_h 
+my_constants.CM_lo_z =  GO_h 
+my_constants.CM_hi_z =  GO_h + CM_h 
 
 my_constants.dy = Ly/ny
 my_constants.tiny_eb = dy/1000;
@@ -54,7 +46,7 @@ my_constants.CN_ch_l = 100e-9 #channel length
 my_constants.R_CN = 5.7e-9    #radius
 my_constants.small_gap = 0.3e-9 #gap between nanotube and the contacts
 my_constants.CN_l = CN_ch_l + 2*CN_co_l
-my_constants.CN_h = GM_h + GO_h + CM_h/2.
+my_constants.CN_h = GO_h + CM_h/2.
 
 my_constants.epsilon_CN = epsilon_0 #vacuum
 
@@ -63,13 +55,13 @@ my_constants.charge_density_CN_drainside = charge_CN/(CN_cl*El_h)
 my_constants.charge_density_CN_sourceside = 0.
 
 #total domain dimensions
-my_constants.Lx = 120e-9   #(Lx - CM_w)*0.5 = 30 nm free on each x side past contacts
+my_constants.Lx = 140e-9   #(Lx - CM_w)*0.5 = 40 nm free on each x side past contacts
 my_constants.Ly = CN_l    #120e-9 total length
-my_constants.Lz = 120e-9  # Lz - (GM_h + GO_h + CM_h) = 40e-9 free in z above the contacts
+my_constants.Lz = 80e-9  # Lz - (GO_h + CM_h) = 40 nm free in z above the contacts
 
-my_constants.nx = 120 
+my_constants.nx = 140 
 my_constants.ny = 120 
-my_constants.nz = 120 
+my_constants.nz = 80 
 
 my_constants.epsilon_domain = 3.8*epsilon_0 #SiO2
 #####################################
@@ -155,42 +147,10 @@ Drain.surf_soln = DV #V
 #   E.g. below `neu' for directions 0 and 1 will be ignored.
 #
 boundary.hi = neu(0) neu(0) neu(0)
-boundary.lo = neu(0) neu(0) neu(0)
+boundary.lo = neu(0) neu(0) dir(GV)
 
-#boundary.hi = neu(0) rob(Ymax) neu(0)
-#boundary.lo = neu(0) rob(Ymin) rob(Zmin)
-#boundary.Zmin_a_function(x,y,z) = "0. 
-#+ 1.   *(y < GM_l/2.)         *(y > -GM_l/2.)        *(x < GM_w/2.)          *(x > -GM_w/2.)
-#+ 1.   *(y < -Ly/2. + CM_l)   *(y >= -Ly/2.)         *(x < CM_w/2.)          *(x > -CM_w/2.)
-#+ 1.   *(y <= Ly/2.)          *(y > Ly/2. - CM_l)    *(x < CM_w/2.)          *(x > -CM_w/2.)"
-#
-#boundary.Zmin_b_function(x,y,z) = "1.
-#+ (0. - 1)   *(y < GM_l/2.)         *(y > -GM_l/2.)        *(x < GM_w/2.)          *(x > -GM_w/2.)
-#+ (0. - 1)   *(y < -Ly/2. + CM_l)   *(y >= -Ly/2.)         *(x < CM_w/2.)          *(x > -CM_w/2.)
-#+ (0. - 1)   *(y <= Ly/2.)          *(y > Ly/2. - CM_l)    *(x < CM_w/2.)          *(x > -CM_w/2.)"
-#
-#boundary.Zmin_f_function(x,y,z) = "0.
-#+ GV  *(y < GM_l/2.)         *(y > -GM_l/2.)        *(x < GM_w/2.)          *(x > -GM_w/2.)
-#+ SV  *(y < -Ly/2. + CM_l)   *(y >= -Ly/2.)         *(x < CM_w/2.)          *(x > -CM_w/2.)
-#+ DV  *(y <= Ly/2.)          *(y > Ly/2. - CM_l)    *(x < CM_w/2.)          *(x > -CM_w/2.)"
-#
-#boundary.Ymin_a_function(x,y,z) = "0.
-#+ 1. *(x < CM_w/2.)          *(x > -CM_w/2.)        *(z >= 0)           *(z < CM_h)"
-#
-#boundary.Ymin_b_function(x,y,z) = "1.
-#+ (0. - 1) *(x < CM_w/2.)          *(x > -CM_w/2.)        *(z >= 0)           *(z < CM_h)"
-#
-#boundary.Ymin_f_function(x,y,z) = "0.
-#+ SV *(x < CM_w/2.)          *(x > -CM_w/2.)        *(z >= 0)           *(z < CM_h)"
-# 
-#boundary.Ymax_a_function(x,y,z) = "0.
-#+ 1. *(x < CM_w/2.)          *(x > -CM_w/2.)        *(z >= 0)           *(z < CM_h)"
-#
-#boundary.Ymax_b_function(x,y,z) = "1.
-#+ (0. - 1) *(x < CM_w/2.)          *(x > -CM_w/2.)        *(z >= 0)           *(z < CM_h)"
-#
-#boundary.Ymax_f_function(x,y,z) = "0.
-#+ DV *(x < CM_w/2.)          *(x > -CM_w/2.)        *(z >= 0)           *(z < CM_h)"
+boundary.GV_function(x,y,z) = "0.05" #V
+
 ####################################
 ###### MACROSCOPIC PROPERTIES ######
 ####################################
@@ -200,7 +160,7 @@ boundary.lo = neu(0) neu(0) neu(0)
 # - For the electrostatic problem, we need epsilon, charge_density, phi.
 # - At present, there is no option for specifying vector fields of type e.g. Array<amrex::Multifab, AMREX_SPACEDIM>.
  
-macroscopic.fields_to_define = alpha epsilon charge_density phi robinA robinB robinF
+macroscopic.fields_to_define = alpha epsilon charge_density phi 
 
 # - `ghostcells_for_fields' defines the ghost cell for the multifabs defined in fields_to_define, as <FieldName>.<NumberOfGhostCells>. 
 #    The default is 0.
@@ -230,20 +190,17 @@ macroscopic.charge_density = 0.
 #gate oxide +
 #cavity between source and drain of radius R_CN+small_gap +
 #carbon nanotube that is placed in the cavity
+
 macroscopic.epsilon_function(x,y,z) = "epsilon_domain
-+ (epsilon_GM - epsilon_domain) *(y < GM_l/2.)         *(y > -GM_l/2.)        *(x < GM_w/2.)           *(x >  -GM_w/2.)          *(z >= 0)           *(z < GM_h)                    
-+ (epsilon_GO - epsilon_domain) *(y < GO_l/2.)         *(y > -GO_l/2.)        *(x < GO_w/2.)           *(x >  -GO_w/2.)          *(z >= GM_h)        *(z < GM_h + GO_h) 
++ (epsilon_GO - epsilon_domain) *(y < GO_l/2.)         *(y > -GO_l/2.)        *(x < GO_w/2.)           *(x >  -GO_w/2.)          *(z >= 0.)        *(z < GO_h) 
 + (epsilon_CN - epsilon_domain) * ( sqrt(x**2 + (z - CN_h)**2) <= R_CN )"
 
- 
-# + source + drain
+# gate_metal + source + drain
+#+ (epsilon_GM - epsilon_domain) *(y < GM_l/2.)         *(y > -GM_l/2.)        *(x < GM_w/2.)           *(x >  -GM_w/2.)          *(z >= 0)           *(z < GM_h)                    
 #+ if( (sqrt(x**2 + (z - CN_h)**2) < R_CN +small_gap), 0.  , (epsilon_CM - epsilon_domain) ) *(x < CM_w/2.)           *(x >  -CM_w/2.)          *(z >= GM_h + GO_h) *(z < GM_h + GO_h + CM_h) * (y < -Ly/2. + CM_l)   *(y >= -Ly/2.)
 #+ if( (sqrt(x**2 + (z - CN_h)**2) < R_CN +small_gap), 0.  , (epsilon_CM - epsilon_domain) ) *(x < CM_w/2.)           *(x >  -CM_w/2.)          *(z >= GM_h + GO_h) *(z < GM_h + GO_h + CM_h)* (y <= Ly/2.)          *(y > Ly/2. - CM_l)
 
 macroscopic.phi = 0.
-macroscopic.robinA = 0.
-macroscopic.robinB = 0.
-macroscopic.robinF = 0.
 
 ####################################
 ###### MLMG SOLVER PROPERTIES ######
@@ -264,9 +221,6 @@ mlmg.soln   = phi
 mlmg.rhs    = charge_density
 mlmg.alpha  = alpha
 mlmg.beta   = epsilon
-mlmg.robin_a   = robinA 
-mlmg.robin_b   = robinB
-mlmg.robin_f   = robinF
 
 # - Other optional parameters to specify are: 
 #    - Three robin boundary parameters if robin boundaries are specified.

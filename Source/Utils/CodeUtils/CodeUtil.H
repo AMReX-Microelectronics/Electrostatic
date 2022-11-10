@@ -126,3 +126,4 @@ template<typename K, typename V> bool findByValue(std::vector<K> & vec, std::map
     return bResult;
 }
 
+amrex::RealArray vecToArr(amrex::Vector<amrex::Real>& vec);

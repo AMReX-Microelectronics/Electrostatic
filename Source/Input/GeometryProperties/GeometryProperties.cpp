@@ -104,12 +104,12 @@ c_GeometryProperties::ParseBasicDomainInput()
     getArrWithParser(pp_domain, "prob_hi", prob_max, 0, AMREX_SPACEDIM);
     AMREX_ALWAYS_ASSERT(prob_hi.size() == AMREX_SPACEDIM);
 
-    pp_domain.getarr("n_cell", num_cell, 0, AMREX_SPACEDIM);
+    getArrWithParser(pp_domain,"n_cell", num_cell, 0, AMREX_SPACEDIM);
     AMREX_ALWAYS_ASSERT(n_cell.size() == AMREX_SPACEDIM);
 
-    pp_domain.queryarr("max_grid_size", mg);
+    queryArrWithParser(pp_domain,"max_grid_size", mg, 0, AMREX_SPACEDIM);
 
-    pp_domain.queryarr("blocking_factor", bf);
+    queryArrWithParser(pp_domain,"blocking_factor", bf, 0, AMREX_SPACEDIM);
 
     pp_domain.queryarr("is_periodic", periodicity);
 

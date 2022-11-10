@@ -48,7 +48,7 @@ c_EmbeddedBoundaries::ReadGeometry()
     pp_ebgeom.query("support", eb_support_str);
     support = map_eb_support[eb_support_str];
     pp_ebgeom.query("specify_input_using_eb2", specify_input_using_eb2);
-    pp_ebgeom.query("specify_separate_surf_beta", specify_separate_surf_beta);
+    queryWithParser(pp_ebgeom,"specify_separate_surf_beta", specify_separate_surf_beta);
     pp_ebgeom.query("specify_inhomo_dir", specify_inhomogeneous_dirichlet);
 
     amrex::Print() << "\n";
@@ -60,7 +60,7 @@ c_EmbeddedBoundaries::ReadGeometry()
     amrex::Print() << prt << "ebgeom.specify_separate_surf_beta: " << specify_separate_surf_beta << "\n";
     if(specify_separate_surf_beta == 0) 
     {
-       pp_ebgeom.get("surf_beta", surf_beta);
+       getWithParser(pp_ebgeom,"surf_beta", surf_beta);
        amrex::Print() << prt << "ebgeom.surf_beta: " << surf_beta << "\n";
     }
 
@@ -79,13 +79,13 @@ c_EmbeddedBoundaries::ReadGeometry()
 
                 if(specify_inhomogeneous_dirichlet == 1) 
                 {
-                    pp_object.get("surf_soln", map_basic_objects_soln[it]);
+                    getWithParser(pp_object,"surf_soln", map_basic_objects_soln[it]);
                     amrex::Print()  << "surf_soln: " << map_basic_objects_soln[it] << "\n";
                 } 
 
                 if(specify_separate_surf_beta == 1) 
                 {
-                    pp_object.get("surf_beta", map_basic_objects_beta[it]);
+                    getWithParser(pp_object,"surf_beta", map_basic_objects_beta[it]);
                     amrex::Print()  << "surf_beta: " << map_basic_objects_beta[it] << "\n";
                 }
 
@@ -122,76 +122,116 @@ c_EmbeddedBoundaries::ReadObjectInfo(std::string object_name, std::string object
     {  
         case s_ObjectType::object::sphere:
         {
-            RealArray center;
-            pp_object.get("sphere_center", center);
-            Real radius;
-            pp_object.get("sphere_radius", radius);
+            amrex::Vector<amrex::Real> center;
+            getArrWithParser(pp_object, "sphere_center", center, 0, AMREX_SPACEDIM);
+
+            amrex::Print() << "Sphere center: ";
+            for (int i=0; i<AMREX_SPACEDIM; ++i) amrex::Print() << center[i] << "  ";
+            amrex::Print() << "\n";
+
+         
+            amrex::Real radius;
+            getWithParser(pp_object, "sphere_radius", radius);
+
+            amrex::Print() << "Sphere radius: " << radius << "\n";
+
+
             bool has_fluid_inside;
             pp_object.get("sphere_has_fluid_inside", has_fluid_inside);
 
-            amrex::Print() << "Sphere center: " << center[0] << "  " << center[1] << "  " << center[2] << "\n";
-            amrex::Print() << "Sphere radius: " << radius << "\n";
             amrex::Print() << "Sphere has_fluid_inside?: " << has_fluid_inside << "\n";
 
-            EB2::SphereIF sphere(radius, center, has_fluid_inside);
+
+            EB2::SphereIF sphere(radius, vecToArr(center), has_fluid_inside);
 
             map_basic_objects_info[object_name] = sphere;  
             break;
         }
         case s_ObjectType::object::box:
         {
-            RealArray lo;
-            pp_object.get("box_lo", lo);
+            amrex::Vector<amrex::Real> lo;
+            getArrWithParser(pp_object,"box_lo", lo,0,AMREX_SPACEDIM);
         
-            RealArray hi;
-            pp_object.get("box_hi", hi);
+            amrex::Print() << "box_lo: ";
+            for (int i=0; i<AMREX_SPACEDIM; ++i) amrex::Print() << lo[i] << "  ";
+            amrex::Print() << "\n";
+
+
+            amrex::Vector<amrex::Real> hi;
+            getArrWithParser(pp_object,"box_hi", hi,0,AMREX_SPACEDIM);
         
+            amrex::Print() << "box_hi: ";
+            for (int i=0; i<AMREX_SPACEDIM; ++i) amrex::Print() << hi[i] << "  ";
+            amrex::Print() << "\n";
+
+
             bool has_fluid_inside;
             pp_object.get("box_has_fluid_inside", has_fluid_inside);
 
-            amrex::Print() << "Box lo: " << lo[0] << "  " << lo[1] << "  " << lo[2] << "\n";
-            amrex::Print() << "Box hi: " << hi[0] << "  " << hi[1] << "  " << hi[2] << "\n";
             amrex::Print() << "Box has_fluid_inside?: " << has_fluid_inside << "\n";
 
-            EB2::BoxIF box(lo, hi, has_fluid_inside);
+
+            EB2::BoxIF box(vecToArr(lo), vecToArr(hi), has_fluid_inside);
 
             map_basic_objects_info[object_name] = box;  
             break;
         }
         case s_ObjectType::object::cntfet_contact:
         {
-            RealArray center;
-            pp_object.get("cyl_cavity_center", center);
+            amrex::Vector<amrex::Real> lo;
+            getArrWithParser(pp_object,"box_lo", lo,0,AMREX_SPACEDIM);
 
-            Real radius;
-            pp_object.get("cyl_cavity_radius", radius);
+            amrex::Print() << "box_lo: ";
+            for (int i=0; i<AMREX_SPACEDIM; ++i) amrex::Print() << lo[i] << "  ";
+            amrex::Print() << "\n";
 
-            Real height = -1.0;
-            pp_object.queryAdd("cyl_cavity_height", height);
-    
+
+            amrex::Vector<amrex::Real> hi;
+            getArrWithParser(pp_object,"box_hi", hi,0,AMREX_SPACEDIM);
+
+            amrex::Print() << "box_hi: ";
+            for (int i=0; i<AMREX_SPACEDIM; ++i) amrex::Print() << hi[i] << "  ";
+            amrex::Print() << "\n";
+
+
+            amrex::Vector<amrex::Real> center;
+            center.resize(AMREX_SPACEDIM);
+            for(int idim=0; idim < AMREX_SPACEDIM; ++idim) 
+            {
+               center[idim] = lo[idim] + (hi[idim] - lo[idim])/2.;  
+            }
+            queryArrWithParser(pp_object,"cyl_cavity_center", center,0,AMREX_SPACEDIM);
+
+            amrex::Print() << "cyl_cavity_center: ";
+            for (int i=0; i<AMREX_SPACEDIM; ++i) amrex::Print() << center[i] << "  ";
+            amrex::Print() << "\n";
+
+
+            amrex::Real radius;
+            getWithParser(pp_object,"cyl_cavity_radius", radius);
+
+            amrex::Print() << "cyl_cavity_radius: " << radius << "\n";
+
+
             int direction;
             pp_object.get("cyl_cavity_direction", direction);
             AMREX_ALWAYS_ASSERT_WITH_MESSAGE(direction >=0 && direction < 3,
-                                             "eb2.cylinder_direction is invalid");
+                                             "cyl_cavity_direction is invalid");
+
+            amrex::Print() << "cyl_cavity_direction: " << direction << "\n";
+
+
+            amrex::Real height = hi[direction] - lo[direction];
+            queryWithParser(pp_object,"cyl_cavity_height", height);
+
+            amrex::Print() << "cyl_cavity_height: " << height << "\n";
+    
+            bool box_has_fluid_inside=0;
             bool cyl_has_fluid_inside=1;
 
-            EB2::CylinderIF cyl(radius, height, direction, center, cyl_has_fluid_inside);
-        
-            RealArray hi;
-            pp_object.get("box_hi", hi);
- 
-            RealArray lo;
-            pp_object.get("box_lo", lo);
-            bool box_has_fluid_inside=0;
+            EB2::CylinderIF cyl(radius, height, direction, vecToArr(center), cyl_has_fluid_inside);
 
-            EB2::BoxIF box(lo, hi, box_has_fluid_inside);
-            
-            amrex::Print() << "cyl_cavity_center: " << center[0] << "  " << center[1] << "  " << center[2] << "\n";
-            amrex::Print() << "cyl_cavity_radius: " << radius << "\n";
-            amrex::Print() << "cyl_cavity_height: " << height << "\n";
-            amrex::Print() << "cyl_cavity_direction: " << direction << "\n";
-            amrex::Print() << "box_lo: " << lo[0] << "  " << lo[1] << "  " << lo[2] << "\n";
-            amrex::Print() << "box_hi: " << hi[0] << "  " << hi[1] << "  " << hi[2] << "\n";
+            EB2::BoxIF box(vecToArr(lo), vecToArr(hi), box_has_fluid_inside);
 
             auto cntfet_contact = amrex::EB2::makeIntersection(cyl, box);
             //TD<decltype(cntfet_contact)> cntfet_contact_type;

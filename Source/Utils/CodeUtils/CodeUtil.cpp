@@ -212,3 +212,11 @@ void PrintRunDiagnostics(amrex::Real initial_time)
     amrex::Print() << "\t}************************PrintRunDiagnostics()************************\n";
 #endif
 }
+
+amrex::RealArray vecToArr(amrex::Vector<amrex::Real>& vec)
+{   
+    amrex::RealArray array;
+    for (int i=0; i<AMREX_SPACEDIM; ++i) array[i] = vec[i];
+    return array;
+}
+

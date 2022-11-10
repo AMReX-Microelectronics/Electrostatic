@@ -7,26 +7,28 @@ my_constants.Lx = 2
 my_constants.Ly = 2
 my_constants.Lz = 2
 
-my_constants.nx = 100
-my_constants.ny = 100
-my_constants.nz = 100
+my_constants.nx = 200
+my_constants.ny = 200
+my_constants.nz = 200
+
+my_constants.tiny = 2e-4
+my_constants.B = 0.5 + tiny
+
+my_constants.dx = Lx/nx
+my_constants.source_lo_x = -Lx/2 + dx + tiny/2 
+my_constants.source_hi_x = source_lo_x + B 
+
+my_constants.drain_hi_x = Lx/2 - dx - tiny/2
+my_constants.drain_lo_x = drain_hi_x - B
+
+my_constants.R = 0.2 
+my_constants.V_source = 1
+my_constants.V_drain = -1
 
 ### Physical Constants 
-my_constants.pi = 3.14159265358979
 my_constants.epsilon_0 = 8.8541878128e-12
-my_constants.q = 1.602e-19
-
-### MACROSCOPIC PROPERTIES
-my_constants.R_inner_sph = 0.1
-my_constants.V_sph = (4./3)*pi*R_inner_sph**3
-my_constants.Q_sph = 1e9*q
-
-my_constants.epsilon_r_sph = 10
-my_constants.charge_density_sph = Q_sph / V_sph
-my_constants.charge_density_surr = 0.0
 
 #####################################
-
 
 #################################
 ###### GEOMETRY PROPERTIES ######
@@ -34,9 +36,9 @@ my_constants.charge_density_surr = 0.0
 #
 # - The following AMReX specific properties are defined in c_GeometryProperties.
 
-domain.n_cell = 100 100 100
-domain.max_grid_size = 100 100 100
-domain.blocking_factor = 100 100 100
+domain.n_cell = nx ny nz
+domain.max_grid_size = nx ny nz
+domain.blocking_factor = nx ny nz
 
 domain.prob_lo = -Lx/2. -Ly/2. -Lz/2.
 domain.prob_hi = Lx/2. Ly/2. Lz/2.
@@ -55,35 +57,30 @@ domain.coord_sys = cartesian
 domain.embedded_boundary = 1  #options: 1=true, 0=false (default)
 domain.specify_using_eb2 = 0  #options: 1=true, 0=false (default)
 
-my_constants.tiny = 1e-8
 ebgeom.objects = Source Drain 
 ebgeom.specify_separate_surf_beta = 0
-ebgeom.surf_beta = 8.8541878128e-12
+ebgeom.surf_beta = epsilon_0
 ebgeom.specify_inhomo_dir = 1
 
 Source.geom_type = cntfet_contact
-Source.cyl_cavity_center = -0.78001 0 0
-Source.cyl_cavity_radius = 0.2
-Source.cyl_cavity_height = 0.4
+Source.box_lo = source_lo_x  -B/2 -B/2
+Source.box_hi = source_hi_x   B/2  B/2
+Source.cyl_cavity_radius = R
 Source.cyl_cavity_direction = 0
-Source.box_lo = -0.98001 -0.40001 -0.40001
-Source.box_hi = -0.58001  0.40001 0.40001
-Source.surf_soln = 1 #V
+Source.surf_soln = V_source #V
 
 Drain.geom_type = cntfet_contact
-Drain.cyl_cavity_center = 0.78001 0 0
-Drain.cyl_cavity_radius = 0.2
-Drain.cyl_cavity_height = 0.4
+Drain.box_lo = drain_lo_x -B/2 -B/2
+Drain.box_hi = drain_hi_x  B/2  B/2
+Drain.cyl_cavity_radius = R
 Drain.cyl_cavity_direction = 0
-Drain.box_lo = 0.58001 -0.40001 -0.40001
-Drain.box_hi = 0.98001 0.40001 0.40001
-Drain.surf_soln = -1 #V
+Drain.surf_soln = V_drain #V
 
 ####################################
 ###### BOUNDARY CONDITIONS ######
 ####################################
 
-boundary.lo = neu(0) neu(0) neu(0)
+boundary.lo = neu(0) neu(0) dir(0.5)
 boundary.hi = neu(0) neu(0) neu(0)
 
 ####################################

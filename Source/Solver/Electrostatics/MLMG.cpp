@@ -866,9 +866,17 @@ c_MLMGSolver:: Solve_PoissonEqn()
     amrex::Print() << "\t\tin file: " << __FILE__ << " at line: " << __LINE__ << "\n";
 #endif
 
+    amrex::Real mlmg_solve_beg_step = amrex::second();
+
     pMLMG->solve({soln}, {rhs},
                  relative_tolerance,
                  absolute_tolerance);
+
+    amrex::Real mlmg_solve_end_step = amrex::second();
+
+    amrex::Real mlmg_solve_time = mlmg_solve_end_step - mlmg_solve_beg_step;
+
+    amrex::Print() << "mlmg_solve_time: " << mlmg_solve_time << "\n";
 
     auto& rCode = c_Code::GetInstance();
     auto& rGprop = rCode.get_GeometryProperties();
