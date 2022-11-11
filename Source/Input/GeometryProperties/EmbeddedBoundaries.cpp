@@ -166,7 +166,7 @@ c_EmbeddedBoundaries::ReadObjectInfo(std::string object_name, std::string object
 
 
             bool has_fluid_inside;
-            pp_object.get("box_has_fluid_inside", has_fluid_inside);
+            pp_object.get("has_fluid_inside", has_fluid_inside);
 
             amrex::Print() << "Box has_fluid_inside?: " << has_fluid_inside << "\n";
 
@@ -174,6 +174,40 @@ c_EmbeddedBoundaries::ReadObjectInfo(std::string object_name, std::string object
             EB2::BoxIF box(vecToArr(lo), vecToArr(hi), has_fluid_inside);
 
             map_basic_objects_info[object_name] = box;  
+            break;
+        }
+        case s_ObjectType::object::cylinder:
+        {
+            amrex::Vector<amrex::Real> center;
+            getArrWithParser(pp_object, "center", center, 0, AMREX_SPACEDIM);
+
+            amrex::Print() << "cylinder center: ";
+            for (int i=0; i<AMREX_SPACEDIM; ++i) amrex::Print() << center[i] << "  ";
+            amrex::Print() << "\n";
+
+            amrex::Real radius;
+            getWithParser(pp_object,"radius", radius);
+
+            amrex::Print() << "cylinder radius: " << radius << "\n";
+
+            int direction;
+            pp_object.get("direction", direction);
+            AMREX_ALWAYS_ASSERT_WITH_MESSAGE(direction >=0 && direction < 3,
+                                             "cyl_cavity_direction is invalid");
+
+            amrex::Print() << "cylinder direction: " << direction << "\n";
+
+            amrex::Real height=-1;
+            queryWithParser(pp_object,"height", height);
+
+            amrex::Print() << "cylinder height: " << height << "\n";
+    
+            bool cyl_has_fluid_inside;
+            pp_object.get("has_fluid_inside", cyl_has_fluid_inside);
+
+            EB2::CylinderIF cyl(radius, height, direction, vecToArr(center), cyl_has_fluid_inside);
+
+            map_basic_objects_info[object_name] = cyl;  
             break;
         }
         case s_ObjectType::object::cntfet_contact:
@@ -270,6 +304,12 @@ c_EmbeddedBoundaries::BuildObjects(amrex::Geometry geom,amrex::BoxArray ba, amre
             case s_ObjectType::object::box:
             {
                 using ObjectType = amrex::EB2::BoxIF;
+                BuildSingleObject<ObjectType>(name, c, geom, ba, dm);
+                break;
+            }
+            case s_ObjectType::object::cylinder:
+            {
+                using ObjectType = amrex::EB2::CylinderIF;
                 BuildSingleObject<ObjectType>(name, c, geom, ba, dm);
                 break;
             }

@@ -62,12 +62,26 @@ ebgeom.specify_separate_surf_beta = 0
 ebgeom.surf_beta = epsilon_0
 ebgeom.specify_inhomo_dir = 1
 
-Source.geom_type = cntfet_contact
-Source.box_lo = source_lo_x  -B/2 -B/2
-Source.box_hi = source_hi_x   B/2  B/2
-Source.cyl_cavity_radius = R
-Source.cyl_cavity_direction = 0
+#Source.geom_type = box
+#Source.box_lo = source_lo_x  -B/2 -B/2
+#Source.box_hi = source_hi_x   B/2  B/2
+#Source.has_fluid_inside = 0
+#Source.surf_soln = V_source #V
+
+Source.geom_type = cylinder
+Source.center = (source_lo_x + 0.5*(source_hi_x-source_lo_x)) 0 0 
+Source.height = source_hi_x - source_lo_x
+Source.radius = R
+Source.direction = 0
+Source.has_fluid_inside = 0
 Source.surf_soln = V_source #V
+
+#//Source.geom_type = cntfet_contact
+#//Source.box_lo = source_lo_x  -B/2 -B/2
+#//Source.box_hi = source_hi_x   B/2  B/2
+#//Source.cyl_cavity_radius = R
+#//Source.cyl_cavity_direction = 0
+#//Source.surf_soln = V_source #V
 
 
 ####################################
