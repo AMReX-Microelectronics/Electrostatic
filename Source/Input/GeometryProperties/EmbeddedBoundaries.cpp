@@ -248,6 +248,7 @@ c_EmbeddedBoundaries::BuildObjects(amrex::Geometry geom,amrex::BoxArray ba, amre
 
     Vector<int> ng_ebs = {2,2,2};
     
+    pFactory.resize(num_objects);
     if(specify_inhomogeneous_dirichlet == 1)  m_p_soln_mf.resize(num_objects);
     if(specify_separate_surf_beta == 1)  m_p_beta_mf.resize(num_objects);
 
@@ -263,19 +264,19 @@ c_EmbeddedBoundaries::BuildObjects(amrex::Geometry geom,amrex::BoxArray ba, amre
             case s_ObjectType::object::sphere:
             {
                 using ObjectType = amrex::EB2::SphereIF;
-                BuildSingleObject<ObjectType>(name, geom, ba, dm);
+                BuildSingleObject<ObjectType>(name, c, geom, ba, dm);
                 break;
             }
             case s_ObjectType::object::box:
             {
                 using ObjectType = amrex::EB2::BoxIF;
-                BuildSingleObject<ObjectType>(name, geom, ba, dm);
+                BuildSingleObject<ObjectType>(name, c, geom, ba, dm);
                 break;
             }
             case s_ObjectType::object::cntfet_contact:
             {
                 using ObjectType = cntfet_contact_type;
-                BuildSingleObject<ObjectType>(name, geom, ba, dm);
+                BuildSingleObject<ObjectType>(name, c, geom, ba, dm);
                 break;
             }
         }
@@ -283,16 +284,17 @@ c_EmbeddedBoundaries::BuildObjects(amrex::Geometry geom,amrex::BoxArray ba, amre
         if(specify_separate_surf_beta == 1) 
         {
             m_p_beta_mf[c] = std::make_unique<amrex::MultiFab>(ba, dm, 1, 0, MFInfo(), *pFactory[c]); 
-            Multifab_Manipulation::SpecifyValueOnlyOnCutcells(&(*m_p_beta_mf[c]), map_basic_objects_beta[name]);
+            Multifab_Manipulation::SpecifyValueOnlyOnCutcells(*m_p_beta_mf[c], map_basic_objects_beta[name]);
         }
         if(specify_inhomogeneous_dirichlet == 1) 
         {
             m_p_soln_mf[c] = std::make_unique<amrex::MultiFab>(ba, dm, 1, 0, MFInfo(), *pFactory[c]); 
-            Multifab_Manipulation::SpecifyValueOnlyOnCutcells(&(*m_p_soln_mf[c]), map_basic_objects_soln[name]);
+            //(*m_p_soln_mf[c]).setVal(-1); 
+            Multifab_Manipulation::SpecifyValueOnlyOnCutcells(*m_p_soln_mf[c], map_basic_objects_soln[name]);
         }
         ++c;
     }
-     
+
     if(num_objects == 2) 
     {  
         auto name1 = vec_object_names[0];  
@@ -336,7 +338,7 @@ c_EmbeddedBoundaries::BuildObjects(amrex::Geometry geom,amrex::BoxArray ba, amre
 
 template<typename ObjectType>
 void
-c_EmbeddedBoundaries::BuildSingleObject(std::string name, amrex::Geometry geom,amrex::BoxArray ba, amrex::DistributionMapping dm)
+c_EmbeddedBoundaries::BuildSingleObject(std::string name, int c, amrex::Geometry geom,amrex::BoxArray ba, amrex::DistributionMapping dm)
 {
     auto object = std::any_cast<ObjectType>(map_basic_objects_info[name]);
     auto gshop = amrex::EB2::makeShop(object);
@@ -344,7 +346,8 @@ c_EmbeddedBoundaries::BuildSingleObject(std::string name, amrex::Geometry geom,a
     const EB2::IndexSpace& eb_is = EB2::IndexSpace::top();
     const EB2::Level& eb_level = eb_is.getLevel(geom);
     Vector<int> ng_ebs = {2,2,2};
-    pFactory.push_back(amrex::makeEBFabFactory(&eb_level, ba, dm, ng_ebs, support));
+    //pFactory.push_back(amrex::makeEBFabFactory(&eb_level, ba, dm, ng_ebs, support));
+    pFactory[c] = amrex::makeEBFabFactory(&eb_level, ba, dm, ng_ebs, support);
 }
 
 

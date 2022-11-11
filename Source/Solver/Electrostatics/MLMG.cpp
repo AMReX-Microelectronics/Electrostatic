@@ -404,8 +404,8 @@ c_MLMGSolver:: Setup_MLEBABecLaplacian_ForPoissonEqn()
     MultiFab surf_beta(ba, dm, 1, 0, MFInfo(), *rGprop.eb.pFactory[ilast]);
     if(rGprop.eb.specify_separate_surf_beta == 0) 
     { 
-        //surf_beta.setVal(rGprop.eb.surf_beta);
-        Multifab_Manipulation::SpecifyValueOnlyOnCutcells(&surf_beta, rGprop.eb.surf_beta);
+        surf_beta.setVal(rGprop.eb.surf_beta);
+        //Multifab_Manipulation::SpecifyValueOnlyOnCutcells(&surf_beta, rGprop.eb.surf_beta);
     } 
     else 
     {
@@ -423,7 +423,8 @@ c_MLMGSolver:: Setup_MLEBABecLaplacian_ForPoissonEqn()
     else 
     {
         MultiFab surf_soln(ba, dm, 1, 0, MFInfo(), *rGprop.eb.pFactory[ilast]);
-        surf_soln.setVal(0);    
+        //Multifab_Manipulation::SpecifyValueOnlyOnCutcells(&surf_soln, 10);
+        surf_soln.setVal(0.);    
         for(int i=0; i < rGprop.eb.num_objects; ++i) 
         { 
             surf_soln.plus(rGprop.eb.get_soln_mf(i), 0, 1, 0);

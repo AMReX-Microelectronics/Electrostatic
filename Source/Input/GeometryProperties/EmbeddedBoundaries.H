@@ -44,6 +44,8 @@ public:
 
     amrex::MultiFab& get_soln_mf  (int i) {return (*m_p_soln_mf[i]);}
     amrex::MultiFab& get_beta_mf  (int i) {return (*m_p_beta_mf[i]);}
+    amrex::MultiFab* get_p_soln_mf (int i) {return m_p_soln_mf[i].get();}
+    amrex::MultiFab* get_p_beta_mf (int i) {return m_p_beta_mf[i].get();}
 
     void BuildObjects(amrex::Geometry geom,amrex::BoxArray ba, amrex::DistributionMapping dm);
 private:
@@ -82,7 +84,7 @@ private:
                      };
 
     template<typename ObjectType>
-    void BuildSingleObject(std::string name, amrex::Geometry geom,amrex::BoxArray ba, amrex::DistributionMapping dm);
+    void BuildSingleObject(std::string name, int c, amrex::Geometry geom,amrex::BoxArray ba, amrex::DistributionMapping dm);
 
     template<typename ObjectType1, typename ObjectType2>
     void BuildUnionObject(std::string name1, std::string name2, amrex::Geometry geom,amrex::BoxArray ba, amrex::DistributionMapping dm);

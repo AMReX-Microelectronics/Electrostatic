@@ -24,8 +24,8 @@ my_constants.CM_h = 40e-9
 
 
 my_constants.epsilon_CM = 13*epsilon_0 #Palladium
-my_constants.SV =  100e-3      #source voltage [V]
-my_constants.DV = -100e-3 #drain voltage [V]
+my_constants.SV =  1 #100e-3      #source voltage [V]
+my_constants.DV = -1 #-100e-3 #drain voltage [V]
 
 
 my_constants.CM_lo_z =  GO_h 
@@ -147,9 +147,10 @@ Drain.surf_soln = DV #V
 #   E.g. below `neu' for directions 0 and 1 will be ignored.
 #
 boundary.hi = neu(0) neu(0) neu(0)
-boundary.lo = neu(0) neu(0) dir(GV)
+boundary.lo = neu(0) neu(0) neu(0)
+#boundary.lo = neu(0) neu(0) dir(GV)
 
-boundary.GV_function(x,y,z) = "0.05" #V
+boundary.GV_function(x,y,z) = "0.0" #V
 
 ####################################
 ###### MACROSCOPIC PROPERTIES ######
