@@ -97,7 +97,7 @@ Multifab_Manipulation::SpecifyValueOnlyOnCutcells(amrex::MultiFab& mf, amrex::Re
     amrex::Print() << "\t\t\t\t\tin file: " << __FILE__ << " at line: " << __LINE__ << "\n";
 #endif
 
-    auto factory  = dynamic_cast<amrex::EBFArrayBoxFactory const*>(&(mf.Factory()));
+    //auto factory  = dynamic_cast<amrex::EBFArrayBoxFactory const*>(&(mf.Factory()));
 
     //auto const &flags = factory->getMultiEBCellFlagFab();
     //auto const &vfrac = factory->getVolFrac();
@@ -140,13 +140,20 @@ Multifab_Manipulation::SpecifyValueOnlyOnCutcells(amrex::MultiFab& mf, amrex::Re
     //    }
     //}
 
+    auto factory  = dynamic_cast<amrex::EBFArrayBoxFactory const*>(&(mf.Factory()));
+    if (factory) {
+       amrex::Print() << "This is EBFArrayBoxFactory! \n";
+    } else {
+       amrex::Print() << "This is regular FabFactory<FArrayBox>! \n";
+     // regular FabFactory<FArrayBox>
+    }
     auto const &vfrac = factory->getVolFrac();
     auto iv = mf.ixType().toIntVect();
 
     for ( amrex::MFIter mfi(mf, amrex::TilingIfNotGPU()); mfi.isValid(); ++mfi ) 
     {
-        const auto& box = mfi.tilebox( iv, mf.nGrowVect() ); 
-
+       // const auto& box = mfi.tilebox( iv, mf.nGrowVect() ); 
+        const Box& box = mfi.tilebox();
         auto const& mf_array =  mf.array(mfi); 
 
         auto const &vfrac_array = vfrac.const_array(mfi);

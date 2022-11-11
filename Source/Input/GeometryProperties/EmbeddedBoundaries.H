@@ -76,11 +76,11 @@ private:
     std::map<std::string,amrex::EBSupport>
     map_eb_support = {
                          {"full", amrex::EBSupport::full},
-             		     {"basic", amrex::EBSupport::basic},
-        	    	     {"volume",amrex::EBSupport::volume},
+             		 {"basic", amrex::EBSupport::basic},
+        	    	 {"volume",amrex::EBSupport::volume},
                          {"Full", amrex::EBSupport::full},
-        		         {"Basic", amrex::EBSupport::basic},
-            		     {"Volume",amrex::EBSupport::volume},
+        		 {"Basic", amrex::EBSupport::basic},
+            		 {"Volume",amrex::EBSupport::volume},
                      };
 
     template<typename ObjectType>

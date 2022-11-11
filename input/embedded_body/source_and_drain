@@ -15,10 +15,10 @@ my_constants.tiny = 2e-3
 my_constants.B = 0.5 + tiny
 
 my_constants.dx = Lx/nx
-my_constants.source_lo_x = -Lx/2 + dx + tiny/2 
+my_constants.source_lo_x = -Lx/2 + dx/2. + tiny/2 
 my_constants.source_hi_x = source_lo_x + B 
 
-my_constants.drain_hi_x = Lx/2 - dx - tiny/2
+my_constants.drain_hi_x = Lx/2 - dx/2. - tiny/2
 my_constants.drain_lo_x = drain_hi_x - B
 
 my_constants.R = 0.2 
@@ -57,6 +57,8 @@ domain.coord_sys = cartesian
 domain.embedded_boundary = 1  #options: 1=true, 0=false (default)
 domain.specify_using_eb2 = 0  #options: 1=true, 0=false (default)
 
+ebgeom.required_coarsening_level = 0
+ebgeom.max_coarsening_level = 100
 ebgeom.objects = Source Drain 
 ebgeom.specify_separate_surf_beta = 0
 ebgeom.surf_beta = epsilon_0
