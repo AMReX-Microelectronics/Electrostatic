@@ -21,7 +21,7 @@ my_constants.source_hi_x = source_lo_x + B
 my_constants.drain_hi_x = Lx/2 - dx/2. - tiny/2
 my_constants.drain_lo_x = drain_hi_x - B
 
-my_constants.R = 0.2 
+my_constants.R = 0.205
 my_constants.V_source = 1
 my_constants.V_drain = -1
 

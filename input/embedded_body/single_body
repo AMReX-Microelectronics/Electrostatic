@@ -21,7 +21,7 @@ my_constants.source_hi_x = source_lo_x + B
 my_constants.drain_hi_x = Lx/2 - dx - tiny/2
 my_constants.drain_lo_x = drain_hi_x - B
 
-my_constants.R = 0.2 
+my_constants.R = 0.205
 my_constants.V_source = 1
 my_constants.V_drain = -1
 
@@ -68,20 +68,20 @@ ebgeom.specify_inhomo_dir = 1
 #Source.has_fluid_inside = 0
 #Source.surf_soln = V_source #V
 
-Source.geom_type = cylinder
-Source.center = (source_lo_x + 0.5*(source_hi_x-source_lo_x)) 0 0 
-Source.height = source_hi_x - source_lo_x
-Source.radius = R
-Source.direction = 0
-Source.has_fluid_inside = 0
-Source.surf_soln = V_source #V
+#Source.geom_type = cylinder
+#Source.center = 0 0 0 
+#Source.height = source_hi_x - source_lo_x
+#Source.radius = R
+#Source.direction = 0
+#Source.has_fluid_inside = 0
+#Source.surf_soln = V_source #V
 
-#//Source.geom_type = cntfet_contact
-#//Source.box_lo = source_lo_x  -B/2 -B/2
-#//Source.box_hi = source_hi_x   B/2  B/2
-#//Source.cyl_cavity_radius = R
-#//Source.cyl_cavity_direction = 0
-#//Source.surf_soln = V_source #V
+Source.geom_type = cntfet_contact
+Source.box_lo = source_lo_x  -B/2 -B/2
+Source.box_hi = source_hi_x   B/2  B/2
+Source.cyl_cavity_radius = R
+Source.cyl_cavity_direction = 0
+Source.surf_soln = V_source #V
 
 
 ####################################
@@ -209,7 +209,7 @@ post_process.fields_to_process = vecField vecFlux
 
 plot.filename = single_body
 plot.fields_to_plot = Field_x Field_y Field_z vecFlux epsilon charge_density phi 
-plot.write_after_init = 1
+plot.write_after_init = 0
 
 # -plot.write_after init is an optional flag, which allows user to write data after initialization (useful for debugging). 
 #  We can chose 0 (default) or 1, which means write after initialization.
