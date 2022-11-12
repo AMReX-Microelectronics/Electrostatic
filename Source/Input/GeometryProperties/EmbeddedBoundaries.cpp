@@ -366,6 +366,14 @@ c_EmbeddedBoundaries::BuildObjects(amrex::Geometry geom,amrex::BoxArray ba, amre
 
             BuildUnionObject<ObjectType1, ObjectType2>(name1, name2, geom, ba, dm);
         }
+        else if ( (map_object_type_enum[geom_type1] == s_ObjectType::object::cylinder) &&
+                  (map_object_type_enum[geom_type2] == s_ObjectType::object::cylinder) )
+        {
+            using ObjectType1 = amrex::EB2::CylinderIF;
+            using ObjectType2 = amrex::EB2::CylinderIF;
+
+            BuildUnionObject<ObjectType1, ObjectType2>(name1, name2, geom, ba, dm);
+        }
         else 
         {
             amrex::Abort("Error: 1) For more than 1 objects, one must code the operation such as union, intersection, etc.\
