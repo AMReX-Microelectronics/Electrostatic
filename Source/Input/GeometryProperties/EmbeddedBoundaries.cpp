@@ -331,7 +331,7 @@ c_EmbeddedBoundaries::BuildObjects(amrex::Geometry geom,amrex::BoxArray ba, amre
             m_p_soln_mf[c] = std::make_unique<amrex::MultiFab>(ba, dm, 1, 0, MFInfo(), *m_p_factory[c]); 
             //(*m_p_soln_mf[c]).setVal(-1); 
             Multifab_Manipulation::SpecifyValueOnlyOnCutcells(*m_p_soln_mf[c], map_basic_objects_soln[name]);
-            amrex::EB2::IndexSpace::clear();
+            amrex::EB2::IndexSpace::empty();
         }
         ++c;
     }
