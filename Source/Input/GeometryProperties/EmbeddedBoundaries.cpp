@@ -381,7 +381,6 @@ c_EmbeddedBoundaries::BuildObjects(amrex::Geometry geom,amrex::BoxArray ba, amre
                              amrex::EB2::BoxIF, amrex::EB2::SphereIF");
         }   
     }
-    amrex::Print() << "Hey! " << "\n";
     if(specify_separate_surf_beta == 1)
     {
         p_surf_beta_union = std::make_unique<amrex::MultiFab>(ba, dm, 1, 0, MFInfo(), *p_factory_union);

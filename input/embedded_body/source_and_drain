@@ -15,10 +15,10 @@ my_constants.tiny = 2e-3
 my_constants.B = 0.5 + tiny
 
 my_constants.dx = Lx/nx
-my_constants.source_lo_x = -Lx/2 + dx/2. + tiny/2 
+my_constants.source_lo_x = -Lx/2 + 5*dx/2. + tiny/2 
 my_constants.source_hi_x = source_lo_x + B 
 
-my_constants.drain_hi_x = Lx/2 - dx/2. - tiny/2
+my_constants.drain_hi_x = Lx/2 - 5*dx/2. - tiny/2
 my_constants.drain_lo_x = drain_hi_x - B
 
 my_constants.R = 0.205
