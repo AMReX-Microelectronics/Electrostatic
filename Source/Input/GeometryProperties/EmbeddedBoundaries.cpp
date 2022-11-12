@@ -282,7 +282,7 @@ c_EmbeddedBoundaries::BuildObjects(amrex::Geometry geom,amrex::BoxArray ba, amre
 
     Vector<int> ng_ebs = {2,2,2};
     
-    pFactory.resize(num_objects);
+    m_p_factory.resize(num_objects);
     if(specify_inhomogeneous_dirichlet == 1)  m_p_soln_mf.resize(num_objects);
     if(specify_separate_surf_beta == 1)  m_p_beta_mf.resize(num_objects);
 
@@ -323,12 +323,12 @@ c_EmbeddedBoundaries::BuildObjects(amrex::Geometry geom,amrex::BoxArray ba, amre
 
         if(specify_separate_surf_beta == 1) 
         {
-            m_p_beta_mf[c] = std::make_unique<amrex::MultiFab>(ba, dm, 1, 0, MFInfo(), *pFactory[c]); 
+            m_p_beta_mf[c] = std::make_unique<amrex::MultiFab>(ba, dm, 1, 0, MFInfo(), *m_p_factory[c]); 
             Multifab_Manipulation::SpecifyValueOnlyOnCutcells(*m_p_beta_mf[c], map_basic_objects_beta[name]);
         }
         if(specify_inhomogeneous_dirichlet == 1) 
         {
-            m_p_soln_mf[c] = std::make_unique<amrex::MultiFab>(ba, dm, 1, 0, MFInfo(), *pFactory[c]); 
+            m_p_soln_mf[c] = std::make_unique<amrex::MultiFab>(ba, dm, 1, 0, MFInfo(), *m_p_factory[c]); 
             //(*m_p_soln_mf[c]).setVal(-1); 
             Multifab_Manipulation::SpecifyValueOnlyOnCutcells(*m_p_soln_mf[c], map_basic_objects_soln[name]);
         }
@@ -381,6 +381,32 @@ c_EmbeddedBoundaries::BuildObjects(amrex::Geometry geom,amrex::BoxArray ba, amre
                              amrex::EB2::BoxIF, amrex::EB2::SphereIF");
         }   
     }
+    amrex::Print() << "Hey! " << "\n";
+    if(specify_separate_surf_beta == 1)
+    {
+        p_surf_beta_union = std::make_unique<amrex::MultiFab>(ba, dm, 1, 0, MFInfo(), *p_factory_union);
+
+        p_surf_beta_union->setVal(0);    
+        for(int i=0; i < num_objects; ++i)
+        {
+            p_surf_beta_union->plus(get_beta_mf(i), 0, 1, 0);
+        }
+    }
+    else {
+        p_surf_beta_union = std::make_unique<amrex::MultiFab>(ba, dm, 1, 0, MFInfo(), *p_factory_union);
+        p_surf_beta_union->setVal(surf_beta);
+    }
+    if(specify_inhomogeneous_dirichlet == 1)
+    {
+        p_surf_soln_union = std::make_unique<amrex::MultiFab>(ba, dm, 1, 0, MFInfo(), *p_factory_union);
+
+        p_surf_soln_union->setVal(0);    
+        for(int i=0; i < num_objects; ++i)
+        {
+            p_surf_soln_union->plus(get_soln_mf(i), 0, 1, 0);
+        }
+    }
+
 }
 
 
@@ -395,7 +421,7 @@ c_EmbeddedBoundaries::BuildSingleObject(std::string name, int c, amrex::Geometry
     const EB2::Level& eb_level = eb_is.getLevel(geom);
     Vector<int> ng_ebs = {2,2,2};
     //pFactory.push_back(amrex::makeEBFabFactory(&eb_level, ba, dm, ng_ebs, support));
-    pFactory[c] = amrex::makeEBFabFactory(&eb_level, ba, dm, ng_ebs, support);
+    m_p_factory[c] = amrex::makeEBFabFactory(&eb_level, ba, dm, ng_ebs, support);
 }
 
 
@@ -413,5 +439,5 @@ c_EmbeddedBoundaries::BuildUnionObject(std::string name1, std::string name2, amr
     const EB2::Level& eb_level = eb_is.getLevel(geom);
     Vector<int> ng_ebs = {2,2,2};
 
-    pFactory.push_back(amrex::makeEBFabFactory(&eb_level, ba, dm, ng_ebs, support));
+    p_factory_union = amrex::makeEBFabFactory(&eb_level, ba, dm, ng_ebs, support);
 }

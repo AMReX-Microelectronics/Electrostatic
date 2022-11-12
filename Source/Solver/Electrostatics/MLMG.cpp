@@ -349,9 +349,8 @@ c_MLMGSolver:: Setup_MLEBABecLaplacian_ForPoissonEqn()
     auto& ba = rGprop.ba;
     auto& dm = rGprop.dm;
     auto& geom = rGprop.geom;
-    auto ilast =  rGprop.eb.pFactory.size()-1;
 
-    mlebabec.define({geom}, {ba}, {dm}, info,{& *rGprop.eb.pFactory[ilast]}); // Implicit solve using MLABecLaplacian class
+    mlebabec.define({geom}, {ba}, {dm}, info,{& *rGprop.eb.p_factory_union}); // Implicit solve using MLABecLaplacian class
 
     // Force singular system to be solvable
     mlebabec.setEnforceSingularSolvable(false);
@@ -400,36 +399,13 @@ c_MLMGSolver:: Setup_MLEBABecLaplacian_ForPoissonEqn()
 
     mlebabec.setBCoeffs(amrlev, amrex::GetArrOfConstPtrs(beta_fc));
 
-
-    MultiFab surf_beta(ba, dm, 1, 0, MFInfo(), *rGprop.eb.pFactory[ilast]);
-    if(rGprop.eb.specify_separate_surf_beta == 0) 
-    { 
-        surf_beta.setVal(rGprop.eb.surf_beta);
-        //Multifab_Manipulation::SpecifyValueOnlyOnCutcells(&surf_beta, rGprop.eb.surf_beta);
-    } 
-    else 
-    {
-        surf_beta.setVal(0);    
-        for(int i=0; i < rGprop.eb.num_objects; ++i) 
-        { 
-            surf_beta.plus(rGprop.eb.get_beta_mf(i), 0, 1, 0);
-        }
-    }
-
     if(rGprop.eb.specify_inhomogeneous_dirichlet == 0) 
     {
-        mlebabec.setEBHomogDirichlet(amrlev,surf_beta);
+        mlebabec.setEBHomogDirichlet(amrlev, *rGprop.eb.p_surf_beta_union);
     }
     else 
     {
-        MultiFab surf_soln(ba, dm, 1, 0, MFInfo(), *rGprop.eb.pFactory[ilast]);
-        //Multifab_Manipulation::SpecifyValueOnlyOnCutcells(&surf_soln, 10);
-        surf_soln.setVal(0.);    
-        for(int i=0; i < rGprop.eb.num_objects; ++i) 
-        { 
-            surf_soln.plus(rGprop.eb.get_soln_mf(i), 0, 1, 0);
-        }
-        mlebabec.setEBDirichlet(amrlev, surf_soln, surf_beta);
+        mlebabec.setEBDirichlet(amrlev, *rGprop.eb.p_surf_soln_union, *rGprop.eb.p_surf_beta_union);
     }
 
     pMLMG = std::make_unique<MLMG>(mlebabec);

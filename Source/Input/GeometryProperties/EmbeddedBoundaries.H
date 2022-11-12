@@ -29,9 +29,6 @@ c_EmbeddedBoundaries
 public:
     c_EmbeddedBoundaries();
 
-    amrex::EBSupport support;
-    amrex::Vector< std::unique_ptr<amrex::EBFArrayBoxFactory> > pFactory;
-   
     void ReadGeometry();
 
     int required_coarsening_level;
@@ -41,11 +38,15 @@ public:
     amrex::Real surf_beta;
     int specify_inhomogeneous_dirichlet;
     int num_objects;
+    amrex::EBSupport support;
+
+
+    std::unique_ptr<amrex::EBFArrayBoxFactory> p_factory_union;
+    std::unique_ptr<amrex::MultiFab> p_surf_beta_union;
+    std::unique_ptr<amrex::MultiFab> p_surf_soln_union;
 
     amrex::MultiFab& get_soln_mf  (int i) {return (*m_p_soln_mf[i]);}
     amrex::MultiFab& get_beta_mf  (int i) {return (*m_p_beta_mf[i]);}
-    amrex::MultiFab* get_p_soln_mf (int i) {return m_p_soln_mf[i].get();}
-    amrex::MultiFab* get_p_beta_mf (int i) {return m_p_beta_mf[i].get();}
 
     void BuildObjects(amrex::Geometry geom,amrex::BoxArray ba, amrex::DistributionMapping dm);
 private:
@@ -91,5 +92,6 @@ private:
 
     amrex::Vector< std::unique_ptr<amrex::MultiFab> > m_p_soln_mf;
     amrex::Vector< std::unique_ptr<amrex::MultiFab> > m_p_beta_mf;
+    amrex::Vector< std::unique_ptr<amrex::EBFArrayBoxFactory> > m_p_factory;
 };
 #endif
