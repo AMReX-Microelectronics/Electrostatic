@@ -147,9 +147,8 @@ Multifab_Manipulation::SpecifyValueOnlyOnCutcells(amrex::MultiFab& mf,amrex::EBF
        amrex::Print() << "This is EBFArrayBoxFactory! \n";
     } else {
        amrex::Print() << "This is regular FabFactory<FArrayBox>! \n";
-     // regular FabFactory<FArrayBox>
     }
-    auto const &vfrac = ebfactory.getVolFrac();
+    auto const &vfrac = factory->getVolFrac();
     auto iv = mf.ixType().toIntVect();
 
     for ( amrex::MFIter mfi(mf, amrex::TilingIfNotGPU()); mfi.isValid(); ++mfi ) 
@@ -164,7 +163,7 @@ Multifab_Manipulation::SpecifyValueOnlyOnCutcells(amrex::MultiFab& mf,amrex::EBF
         {
            if(vfrac_array(i,j,k) > 0 and vfrac_array(i,j,k) < 1) 
            {
-               mf_array(i, j, k) = value;
+               mf_array(i, j, k) = vfrac_array(i,j,k);
            } 
         });
     }
