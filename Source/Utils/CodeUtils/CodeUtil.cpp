@@ -163,7 +163,7 @@ Multifab_Manipulation::SpecifyValueOnlyOnCutcells(amrex::MultiFab& mf,amrex::EBF
         {
            if(vfrac_array(i,j,k) > 0 and vfrac_array(i,j,k) < 1) 
            {
-               mf_array(i, j, k) = vfrac_array(i,j,k);
+               mf_array(i, j, k) = value;
            } 
         });
     }
