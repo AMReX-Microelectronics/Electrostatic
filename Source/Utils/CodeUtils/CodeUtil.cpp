@@ -90,7 +90,7 @@ Multifab_Manipulation::AverageCellCenteredMultiFabToCellFaces(const amrex::Multi
 }
 
 void
-Multifab_Manipulation::SpecifyValueOnlyOnCutcells(amrex::MultiFab& mf, amrex::Real const value) 
+Multifab_Manipulation::SpecifyValueOnlyOnCutcells(amrex::MultiFab& mf,amrex::EBFArrayBoxFactory const& ebfactory, amrex::Real const value) 
 {
 #ifdef PRINT_NAME
     amrex::Print() << "\n\n\t\t\t\t\t{************************Multifab_Manipulation::SpecifyValueOnlyOnCutcells************************\n";
@@ -140,7 +140,9 @@ Multifab_Manipulation::SpecifyValueOnlyOnCutcells(amrex::MultiFab& mf, amrex::Re
     //    }
     //}
 
-    auto factory  = dynamic_cast<amrex::EBFArrayBoxFactory const*>(&(mf.Factory()));
+    //auto factory  = dynamic_cast<amrex::EBFArrayBoxFactory const*>(&(mf.Factory()));
+    auto factory  = dynamic_cast<amrex::EBFArrayBoxFactory const*>(&(ebfactory));
+     
     if (factory) {
        amrex::Print() << "This is EBFArrayBoxFactory! \n";
     } else {
