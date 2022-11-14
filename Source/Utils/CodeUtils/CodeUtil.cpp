@@ -160,10 +160,10 @@ Multifab_Manipulation::SpecifyValueOnlyOnCutcells(amrex::MultiFab& mf, amrex::Re
 
         amrex::ParallelFor(box, [=] AMREX_GPU_DEVICE (int i, int j, int k)
         {
-           if(vfrac_array(i,j,k) > 0 and vfrac_array(i,j,k) < 1) 
-           {
+//           if(vfrac_array(i,j,k) > 0 and vfrac_array(i,j,k) < 1) 
+//           {
                mf_array(i, j, k) = value;
-           } 
+//           } 
         });
     }
 #ifdef PRINT_NAME
