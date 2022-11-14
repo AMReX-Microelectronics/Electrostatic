@@ -149,7 +149,7 @@ Multifab_Manipulation::SpecifyValueOnlyOnCutcells(amrex::MultiFab& mf,amrex::EBF
        amrex::Print() << "This is regular FabFactory<FArrayBox>! \n";
      // regular FabFactory<FArrayBox>
     }
-    auto const &vfrac = factory->getVolFrac();
+    auto const &vfrac = ebfactory.getVolFrac();
     auto iv = mf.ixType().toIntVect();
 
     for ( amrex::MFIter mfi(mf, amrex::TilingIfNotGPU()); mfi.isValid(); ++mfi ) 
@@ -162,10 +162,10 @@ Multifab_Manipulation::SpecifyValueOnlyOnCutcells(amrex::MultiFab& mf,amrex::EBF
 
         amrex::ParallelFor(box, [=] AMREX_GPU_DEVICE (int i, int j, int k)
         {
-//           if(vfrac_array(i,j,k) > 0 and vfrac_array(i,j,k) < 1) 
-//           {
+           if(vfrac_array(i,j,k) > 0 and vfrac_array(i,j,k) < 1) 
+           {
                mf_array(i, j, k) = value;
-//           } 
+           } 
         });
     }
 #ifdef PRINT_NAME
