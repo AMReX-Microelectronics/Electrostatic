@@ -49,13 +49,13 @@ domain.is_periodic = 0 0 0
 #domain.coord_sys = cartesian or radial (currently supports cartesian)
 domain.coord_sys = cartesian        
 
+domain.embedded_boundary = 1  #options: 1=true, 0=false (default)
 
 ####################################
 ###### EMBEDDED BOUNDARIES ######
 ####################################
 
-domain.embedded_boundary = 1  #options: 1=true, 0=false (default)
-domain.specify_using_eb2 = 0  #options: 1=true, 0=false (default)
+ebgeom.specify_input_using_eb2 = 0  #options: 1=true, 0=false (default)
 
 ebgeom.required_coarsening_level = 0
 ebgeom.max_coarsening_level = 100
@@ -64,39 +64,31 @@ ebgeom.specify_separate_surf_beta = 0
 ebgeom.surf_beta = epsilon_0
 ebgeom.specify_inhomo_dir = 1
 
-#Source.geom_type = cntfet_contact
-#Source.box_lo = source_lo_x  -B/2 -B/2
-#Source.box_hi = source_hi_x   B/2  B/2
-#Source.cyl_cavity_radius = R
-#Source.cyl_cavity_direction = 0
-#Source.surf_soln = V_source #V
-#
-#Drain.geom_type = cntfet_contact
-#Drain.box_lo = drain_lo_x -B/2 -B/2
-#Drain.box_hi = drain_hi_x  B/2  B/2
-#Drain.cyl_cavity_radius = R
-#Drain.cyl_cavity_direction = 0
-#Drain.surf_soln = V_drain #V
-
-Source.geom_type = box
+Source.geom_type = cntfet_contact
 Source.box_lo = source_lo_x  -B/2 -B/2
 Source.box_hi = source_hi_x   B/2  B/2
-Source.has_fluid_inside = 0
+Source.cyl_cavity_radius = R
+Source.cyl_cavity_direction = 0
 Source.surf_soln = V_source #V
 
-Drain.geom_type = box
-Drain.box_lo = drain_lo_x  -B/2 -B/2
-Drain.box_hi = drain_hi_x   B/2  B/2
-Drain.has_fluid_inside = 0
+Drain.geom_type = cntfet_contact
+Drain.box_lo = drain_lo_x -B/2 -B/2
+Drain.box_hi = drain_hi_x  B/2  B/2
+Drain.cyl_cavity_radius = R
+Drain.cyl_cavity_direction = 0
 Drain.surf_soln = V_drain #V
 
-#Source.geom_type = cylinder
-#Source.center = (drain_lo_x + (drain_hi_x - drain_lo_x)/2.) 0 0 
-#Source.height = drain_hi_x - drain_lo_x
-#Source.radius = R
-#Source.direction = 0
+#Source.geom_type = box
+#Source.box_lo = source_lo_x  -B/2 -B/2
+#Source.box_hi = source_hi_x   B/2  B/2
 #Source.has_fluid_inside = 0
-#Source.surf_soln = V_drain #V
+#Source.surf_soln = V_source #V
+#
+#Drain.geom_type = box
+#Drain.box_lo = drain_lo_x  -B/2 -B/2
+#Drain.box_hi = drain_hi_x   B/2  B/2
+#Drain.has_fluid_inside = 0
+#Drain.surf_soln = V_drain #V
 
 ####################################
 ###### BOUNDARY CONDITIONS ######

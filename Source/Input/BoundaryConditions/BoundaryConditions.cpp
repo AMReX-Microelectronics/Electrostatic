@@ -199,19 +199,16 @@ c_BoundaryConditions::ReadBoundaryConditionsType()
     pp_boundary.queryarr("lo", bc_str_2d[0]);
     pp_boundary.queryarr("hi", bc_str_2d[1]);
 
-#ifdef PRINT_LOW
-    amrex::Print() << "\n" << prt << "boundary conditions strings, bc_str: \n";
+    amrex::Print() << "\n##### BOUNDARY CONDITIONS #####\n\n";
     for (auto& i: bc_str_2d)
     {
+        amrex::Print()  << "##### ";
         for (auto& j: i) 
         {
-            amrex::Print() << prt << j << "  ";
+            amrex::Print()  << j << "  ";
         }
         amrex::Print() << "\n";
     }
-    amrex::Print() << "\n";
-#endif
-
         
     for (std::size_t i = 0; i < 2; ++i) 
     {
@@ -276,9 +273,9 @@ c_BoundaryConditions::ReadBoundaryConditionsType()
         for (std::size_t j = 0; j < AMREX_SPACEDIM; ++j) 
         {
             
-            amrex::Print()  << "\n" << prt << "boundary type, bcType_2d: " << bcType_2d[i][j] << "\n";
-            amrex::Print()  << prt << "boundary map, map_bcAny_2d: " << map_bcAny_2d[i][j] << "\n";
-            amrex::Print()  << prt << "(bcAny_2d) bracket ";
+            amrex::Print()   << "\n" << prt << " boundary type, bcType_2d: " << bcType_2d[i][j] << "\n";
+            amrex::Print()   << prt << " boundary map, map_bcAny_2d: " << map_bcAny_2d[i][j] << "\n";
+            amrex::Print()   << prt << " (bcAny_2d) bracket ";
 
             process_std_any(bcAny_2d[i][j]);
 

@@ -93,12 +93,13 @@ c_PostProcessor::ReadData()
     }
     m_fields_to_process.clear();
 
-    //amrex::Print() <<  " map_param_all: \n";
-    //for (auto it: map_param_all) 
-    //{
-    //    amrex::Print() <<  it.first << "   " << it.second << "\n";
-    //}
-    //amrex::Print() << "total parameters to process (final): " << map_param_all.size() << "\n\n";
+    amrex::Print() <<  "\n##### POST PROCESSOR #####\n\n";
+    amrex::Print() <<  "##### fields_to_process:\n";
+    for (auto it: map_param_all) 
+    {
+        amrex::Print() << "##### " <<  it.second << "   " << it.first << "\n";
+    }
+    //amrex::Print() << "##### Total fields to process: " << map_param_all.size() << "\n\n";
 
 #ifdef PRINT_NAME
     amrex::Print() << "\t\t\t\t}************************c_PostProcessor:ReadData()************************\n";

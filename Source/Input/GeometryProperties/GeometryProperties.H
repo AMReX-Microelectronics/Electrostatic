@@ -41,7 +41,6 @@ public:
     int embedded_boundary_flag;
 #ifdef AMREX_USE_EB
     c_EmbeddedBoundaries eb;
-    void CreateEmbeddedBoundary();
 #endif
 
     void ReadData();

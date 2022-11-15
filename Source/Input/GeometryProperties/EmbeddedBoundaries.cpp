@@ -3,8 +3,6 @@
 #include "../../Utils/SelectWarpXUtils/WarpXUtil.H"
 #include "../../Utils/CodeUtils/CodeUtil.H"
 
-//#include "Code.H"
-
 #include <AMReX.H>
 #include <AMReX_ParmParse.H>
 #include <AMReX_Parser.H>
@@ -16,22 +14,58 @@
 
 using namespace amrex;
 
+//template<typename T>
+//class TD;
+
 c_EmbeddedBoundaries::c_EmbeddedBoundaries()
 {
+#ifdef PRINT_NAME
+    amrex::Print() << "\n\n\t\t\t{************************c_EmbeddedBoundaries() Constructor************************\n";
+    amrex::Print() << "\t\t\tin file: " << __FILE__ << " at line: " << __LINE__ << "\n";
+#endif
 
+    ReadGeometry();
+
+#ifdef PRINT_NAME
+    amrex::Print() << "\n\n\t\t\t}************************c_EmbeddedBoundaries() Constructor************************\n";
+#endif
 }
 
-template<typename T>
-class TD;
+
+c_EmbeddedBoundaries::~c_EmbeddedBoundaries()
+{
+#ifdef PRINT_NAME
+    amrex::Print() << "\n\n\t\t\t{************************c_EmbeddedBoundaries() Destructor************************\n";
+    amrex::Print() << "\t\t\tin file: " << __FILE__ << " at line: " << __LINE__ << "\n";
+#endif
+
+    m_p_soln_mf.clear();
+    m_p_beta_mf.clear();
+    m_p_factory.clear();
+    vec_object_names.clear();
+    map_basic_objects_type.clear();
+    map_basic_objects_info.clear();
+    map_basic_objects_soln.clear();
+    map_basic_objects_beta.clear(); 
+
+    geom = nullptr;
+    ba = nullptr;
+    dm = nullptr;
+
+#ifdef PRINT_NAME
+    amrex::Print() << "\n\n\t\t\t}************************c_EmbeddedBoundaries() Destructor************************\n";
+#endif
+}
+
 
 void
 c_EmbeddedBoundaries::ReadGeometry()
 {
 #ifdef PRINT_NAME
-    amrex::Print() << "\n\n\t\t\t\t{************************c_GeometryProperties::ReadGeometry()************************\n";
-    amrex::Print() << "\t\t\t\tin file: " << __FILE__ << " at line: " << __LINE__ << "\n";
+    amrex::Print() << "\n\n\t\t\t\t\t{************************c_EmbeddedBoundaries()::ReadGeometry()************************\n";
+    amrex::Print() << "\t\t\t\t\tin file: " << __FILE__ << " at line: " << __LINE__ << "\n";
+    std::string prt = "\t\t\t\t\t";
 #endif
-    std::string prt = "\t\t\t\t";
 
     //setting default values
     required_coarsening_level = 0; // max amr level (at present 0)
@@ -51,17 +85,17 @@ c_EmbeddedBoundaries::ReadGeometry()
     queryWithParser(pp_ebgeom,"specify_separate_surf_beta", specify_separate_surf_beta);
     pp_ebgeom.query("specify_inhomo_dir", specify_inhomogeneous_dirichlet);
 
-    amrex::Print() << "\n";
-    amrex::Print() << prt << "ebgeom.required_coarsening_level: " << required_coarsening_level << "\n";
-    amrex::Print() << prt << "ebgeom.max_coarsening_level: " << max_coarsening_level << "\n";
-    amrex::Print() << prt << "ebgeom.support: " << eb_support_str << "\n";
-    amrex::Print() << prt << "ebgeom.specify_input_using_eb2: " << specify_input_using_eb2 << "\n";
-    amrex::Print() << prt << "ebgeom.specify_inhomo_dir: " << specify_inhomogeneous_dirichlet << "\n";
-    amrex::Print() << prt << "ebgeom.specify_separate_surf_beta: " << specify_separate_surf_beta << "\n";
+    amrex::Print() << "\n##### EMBEDDED BOUNDARY PROPERTIES #####\n\n";
+    amrex::Print() << "##### ebgeom.required_coarsening_level: " << required_coarsening_level << "\n";
+    amrex::Print() << "##### ebgeom.max_coarsening_level: " << max_coarsening_level << "\n";
+    amrex::Print() << "##### ebgeom.support: " << eb_support_str << "\n";
+    amrex::Print() << "##### ebgeom.specify_input_using_eb2: " << specify_input_using_eb2 << "\n";
+    amrex::Print() << "##### ebgeom.specify_inhomo_dir: " << specify_inhomogeneous_dirichlet << "\n";
+    amrex::Print() << "##### ebgeom.specify_separate_surf_beta: " << specify_separate_surf_beta << "\n";
     if(specify_separate_surf_beta == 0) 
     {
        getWithParser(pp_ebgeom,"surf_beta", surf_beta);
-       amrex::Print() << prt << "ebgeom.surf_beta: " << surf_beta << "\n";
+       amrex::Print() << "##### ebgeom.surf_beta: " << surf_beta << "\n";
     }
 
     if(!specify_input_using_eb2) 
@@ -80,33 +114,24 @@ c_EmbeddedBoundaries::ReadGeometry()
                 if(specify_inhomogeneous_dirichlet == 1) 
                 {
                     getWithParser(pp_object,"surf_soln", map_basic_objects_soln[it]);
-                    amrex::Print()  << "surf_soln: " << map_basic_objects_soln[it] << "\n";
+                    amrex::Print()  << "##### surf_soln: " << map_basic_objects_soln[it] << "\n";
                 } 
 
                 if(specify_separate_surf_beta == 1) 
                 {
                     getWithParser(pp_object,"surf_beta", map_basic_objects_beta[it]);
-                    amrex::Print()  << "surf_beta: " << map_basic_objects_beta[it] << "\n";
+                    amrex::Print()  << "##### surf_beta: " << map_basic_objects_beta[it] << "\n";
                 }
 
                 ++c;
             }
         }
         num_objects = c;
-        amrex::Print() << "\ntotal number of objects: " << num_objects << "\n";
-
-        //amrex::Print() << "\nObject Info:\n";
-//        for (auto it: map_basic_objects_info)
-//        {
-//            std::string name = it.first; 
-//            std::string geom_type = map_basic_objects_type[name];
-//            PrintObjectInfo(name, geom_type, it.second);
-//        }
-
+        amrex::Print() << "\n##### total number of basic objects: " << num_objects << "\n";
     }
 
 #ifdef PRINT_NAME
-    amrex::Print() << "\t\t\t\t}************************c_GeometryProperties::ReadGeometry()************************\n";
+    amrex::Print() << "\t\t\t\t\t}************************c_EmbeddedBoundaries()::ReadGeometry()************************\n";
 #endif
 }
 
@@ -114,9 +139,13 @@ c_EmbeddedBoundaries::ReadGeometry()
 void
 c_EmbeddedBoundaries::ReadObjectInfo(std::string object_name, std::string object_type, amrex::ParmParse pp_object)
 {
+#ifdef PRINT_NAME
+    amrex::Print() << "\n\n\t\t\t\t\t\t{************************c_EmbeddedBoundaries()::ReadObjectInfo()************************\n";
+    amrex::Print() << "\t\t\t\t\t\tin file: " << __FILE__ << " at line: " << __LINE__ << "\n";
+#endif
 
-    amrex::Print() << "\nObject name: " << object_name << "\n";
-    amrex::Print() << "Object type: " << object_type << "\n";
+    amrex::Print() << "\n##### Object name: " << object_name << "\n";
+    amrex::Print() << "##### Object type: " << object_type << "\n";
 
     switch (map_object_type_enum[object_type]) 
     {  
@@ -125,7 +154,7 @@ c_EmbeddedBoundaries::ReadObjectInfo(std::string object_name, std::string object
             amrex::Vector<amrex::Real> center;
             getArrWithParser(pp_object, "sphere_center", center, 0, AMREX_SPACEDIM);
 
-            amrex::Print() << "Sphere center: ";
+            amrex::Print() << "##### Sphere center: ";
             for (int i=0; i<AMREX_SPACEDIM; ++i) amrex::Print() << center[i] << "  ";
             amrex::Print() << "\n";
 
@@ -133,16 +162,16 @@ c_EmbeddedBoundaries::ReadObjectInfo(std::string object_name, std::string object
             amrex::Real radius;
             getWithParser(pp_object, "sphere_radius", radius);
 
-            amrex::Print() << "Sphere radius: " << radius << "\n";
+            amrex::Print() << "##### Sphere radius: " << radius << "\n";
 
 
             bool has_fluid_inside;
             pp_object.get("sphere_has_fluid_inside", has_fluid_inside);
 
-            amrex::Print() << "Sphere has_fluid_inside?: " << has_fluid_inside << "\n";
+            amrex::Print() << "##### Sphere has_fluid_inside?: " << has_fluid_inside << "\n";
 
 
-            EB2::SphereIF sphere(radius, vecToArr(center), has_fluid_inside);
+            amrex::EB2::SphereIF sphere(radius, vecToArr(center), has_fluid_inside);
 
             map_basic_objects_info[object_name] = sphere;  
             break;
@@ -152,7 +181,7 @@ c_EmbeddedBoundaries::ReadObjectInfo(std::string object_name, std::string object
             amrex::Vector<amrex::Real> lo;
             getArrWithParser(pp_object,"box_lo", lo,0,AMREX_SPACEDIM);
         
-            amrex::Print() << "box_lo: ";
+            amrex::Print() << "##### box_lo: ";
             for (int i=0; i<AMREX_SPACEDIM; ++i) amrex::Print() << lo[i] << "  ";
             amrex::Print() << "\n";
 
@@ -160,7 +189,7 @@ c_EmbeddedBoundaries::ReadObjectInfo(std::string object_name, std::string object
             amrex::Vector<amrex::Real> hi;
             getArrWithParser(pp_object,"box_hi", hi,0,AMREX_SPACEDIM);
         
-            amrex::Print() << "box_hi: ";
+            amrex::Print() << "##### box_hi: ";
             for (int i=0; i<AMREX_SPACEDIM; ++i) amrex::Print() << hi[i] << "  ";
             amrex::Print() << "\n";
 
@@ -168,10 +197,10 @@ c_EmbeddedBoundaries::ReadObjectInfo(std::string object_name, std::string object
             bool has_fluid_inside;
             pp_object.get("has_fluid_inside", has_fluid_inside);
 
-            amrex::Print() << "Box has_fluid_inside?: " << has_fluid_inside << "\n";
+            amrex::Print() << "##### Box has_fluid_inside?: " << has_fluid_inside << "\n";
 
 
-            EB2::BoxIF box(vecToArr(lo), vecToArr(hi), has_fluid_inside);
+            amrex::EB2::BoxIF box(vecToArr(lo), vecToArr(hi), has_fluid_inside);
 
             map_basic_objects_info[object_name] = box;  
             break;
@@ -181,31 +210,31 @@ c_EmbeddedBoundaries::ReadObjectInfo(std::string object_name, std::string object
             amrex::Vector<amrex::Real> center;
             getArrWithParser(pp_object, "center", center, 0, AMREX_SPACEDIM);
 
-            amrex::Print() << "cylinder center: ";
+            amrex::Print() << "##### cylinder center: ";
             for (int i=0; i<AMREX_SPACEDIM; ++i) amrex::Print() << center[i] << "  ";
             amrex::Print() << "\n";
 
             amrex::Real radius;
             getWithParser(pp_object,"radius", radius);
 
-            amrex::Print() << "cylinder radius: " << radius << "\n";
+            amrex::Print() << "##### cylinder radius: " << radius << "\n";
 
             int direction;
             pp_object.get("direction", direction);
             AMREX_ALWAYS_ASSERT_WITH_MESSAGE(direction >=0 && direction < 3,
                                              "cyl_cavity_direction is invalid");
 
-            amrex::Print() << "cylinder direction: " << direction << "\n";
+            amrex::Print() << "##### cylinder direction: " << direction << "\n";
 
             amrex::Real height=-1;
             queryWithParser(pp_object,"height", height);
 
-            amrex::Print() << "cylinder height: " << height << "\n";
+            amrex::Print() << "##### cylinder height: " << height << "\n";
     
             bool cyl_has_fluid_inside;
             pp_object.get("has_fluid_inside", cyl_has_fluid_inside);
 
-            EB2::CylinderIF cyl(radius, height, direction, vecToArr(center), cyl_has_fluid_inside);
+            amrex::EB2::CylinderIF cyl(radius, height, direction, vecToArr(center), cyl_has_fluid_inside);
 
             map_basic_objects_info[object_name] = cyl;  
             break;
@@ -215,7 +244,7 @@ c_EmbeddedBoundaries::ReadObjectInfo(std::string object_name, std::string object
             amrex::Vector<amrex::Real> lo;
             getArrWithParser(pp_object,"box_lo", lo,0,AMREX_SPACEDIM);
 
-            amrex::Print() << "box_lo: ";
+            amrex::Print() << "##### box_lo: ";
             for (int i=0; i<AMREX_SPACEDIM; ++i) amrex::Print() << lo[i] << "  ";
             amrex::Print() << "\n";
 
@@ -223,7 +252,7 @@ c_EmbeddedBoundaries::ReadObjectInfo(std::string object_name, std::string object
             amrex::Vector<amrex::Real> hi;
             getArrWithParser(pp_object,"box_hi", hi,0,AMREX_SPACEDIM);
 
-            amrex::Print() << "box_hi: ";
+            amrex::Print() << "##### box_hi: ";
             for (int i=0; i<AMREX_SPACEDIM; ++i) amrex::Print() << hi[i] << "  ";
             amrex::Print() << "\n";
 
@@ -236,7 +265,7 @@ c_EmbeddedBoundaries::ReadObjectInfo(std::string object_name, std::string object
             }
             queryArrWithParser(pp_object,"cyl_cavity_center", center,0,AMREX_SPACEDIM);
 
-            amrex::Print() << "cyl_cavity_center: ";
+            amrex::Print() << "##### cyl_cavity_center: ";
             for (int i=0; i<AMREX_SPACEDIM; ++i) amrex::Print() << center[i] << "  ";
             amrex::Print() << "\n";
 
@@ -244,7 +273,7 @@ c_EmbeddedBoundaries::ReadObjectInfo(std::string object_name, std::string object
             amrex::Real radius;
             getWithParser(pp_object,"cyl_cavity_radius", radius);
 
-            amrex::Print() << "cyl_cavity_radius: " << radius << "\n";
+            amrex::Print() << "##### cyl_cavity_radius: " << radius << "\n";
 
 
             int direction;
@@ -252,20 +281,20 @@ c_EmbeddedBoundaries::ReadObjectInfo(std::string object_name, std::string object
             AMREX_ALWAYS_ASSERT_WITH_MESSAGE(direction >=0 && direction < 3,
                                              "cyl_cavity_direction is invalid");
 
-            amrex::Print() << "cyl_cavity_direction: " << direction << "\n";
+            amrex::Print() << "##### cyl_cavity_direction: " << direction << "\n";
 
 
             amrex::Real height = hi[direction] - lo[direction];
             queryWithParser(pp_object,"cyl_cavity_height", height);
 
-            amrex::Print() << "cyl_cavity_height: " << height << "\n";
+            amrex::Print() << "##### cyl_cavity_height: " << height << "\n";
     
             bool box_has_fluid_inside=0;
             bool cyl_has_fluid_inside=1;
 
-            EB2::CylinderIF cyl(radius, height, direction, vecToArr(center), cyl_has_fluid_inside);
+            amrex::EB2::CylinderIF cyl(radius, height, direction, vecToArr(center), cyl_has_fluid_inside);
 
-            EB2::BoxIF box(vecToArr(lo), vecToArr(hi), box_has_fluid_inside);
+            amrex::EB2::BoxIF box(vecToArr(lo), vecToArr(hi), box_has_fluid_inside);
 
             auto cntfet_contact = amrex::EB2::makeIntersection(cyl, box);
             //TD<decltype(cntfet_contact)> cntfet_contact_type;
@@ -274,178 +303,228 @@ c_EmbeddedBoundaries::ReadObjectInfo(std::string object_name, std::string object
             break;
         }
     }
+#ifdef PRINT_NAME
+    amrex::Print() << "\t\t\t\t\t\t}************************c_EmbeddedBoundaries()::ReadObjectInfo()************************\n";
+#endif
 }
 
+
 void
-c_EmbeddedBoundaries::BuildObjects(amrex::Geometry geom,amrex::BoxArray ba, amrex::DistributionMapping dm)
+c_EmbeddedBoundaries::BuildGeometry(const amrex::Geometry* GEOM, const amrex::BoxArray* BA, const amrex::DistributionMapping* DM)
 {
+#ifdef PRINT_NAME
+    amrex::Print() << "\n\n\t\t\t\t{************************c_EmbeddedBoundaries()::BuildObjects()************************\n";
+    amrex::Print() << "\t\t\t\tin file: " << __FILE__ << " at line: " << __LINE__ << "\n";
+    std::string prt = "\t\t\t\t";
+#endif
 
-    Vector<int> ng_ebs = {2,2,2};
-    
-    m_p_factory.resize(num_objects);
-    if(specify_inhomogeneous_dirichlet == 1)  m_p_soln_mf.resize(num_objects);
-    if(specify_separate_surf_beta == 1)  m_p_beta_mf.resize(num_objects);
+    geom = GEOM;
+    ba = BA;
+    dm = DM;
 
-    int c=0;
-    for (auto it: map_basic_objects_type)
+    if(specify_input_using_eb2)
     {
-        std::string name = it.first; 
-        std::string geom_type = it.second;
-        amrex::Print() << "name: " << name << ", geom_type: " << geom_type << "\n";
+        amrex::EB2::Build(*geom, required_coarsening_level, max_coarsening_level);
+    }
+    else 
+    {
+        Vector<int> ng_ebs = {2,2,2};
+        
+        if(specify_inhomogeneous_dirichlet == 1)  m_p_soln_mf.resize(num_objects);
+        if(specify_separate_surf_beta == 1)  m_p_beta_mf.resize(num_objects);
 
-        switch (map_object_type_enum[geom_type]) 
+        int c=0;
+        for (auto it: map_basic_objects_type)
+        {
+            std::string name = it.first; 
+            std::string geom_type = it.second;
+              
+            #ifdef PRINT_LOW
+            amrex::Print() << prt << "\nname: " << name << ", geom_type: " << geom_type << "\n";
+            #endif 
+
+            switch (map_object_type_enum[geom_type]) 
+            {  
+                case s_ObjectType::object::sphere:
+                {
+                    using ObjectType = amrex::EB2::SphereIF;
+                    BuildSingleObject<ObjectType>(name);
+                    break;
+                }
+                case s_ObjectType::object::box:
+                {
+                    using ObjectType = amrex::EB2::BoxIF;
+                    BuildSingleObject<ObjectType>(name);
+                    break;
+                }
+                case s_ObjectType::object::cylinder:
+                {
+                    using ObjectType = amrex::EB2::CylinderIF;
+                    BuildSingleObject<ObjectType>(name);
+                    break;
+                }
+                case s_ObjectType::object::cntfet_contact:
+                {
+                    using ObjectType = cntfet_contact_type;
+                    BuildSingleObject<ObjectType>(name);
+                    break;
+                }
+            }
+
+            if(specify_separate_surf_beta == 1) 
+            {
+                m_p_beta_mf[c] = std::make_unique<amrex::MultiFab>(*ba, *dm, 1, 0, MFInfo(), *m_p_factory[c]); 
+                Multifab_Manipulation::SpecifyValueOnlyOnCutcells(*m_p_beta_mf[c], map_basic_objects_beta[name]);
+            }
+            if(specify_inhomogeneous_dirichlet == 1) 
+            {
+                m_p_soln_mf[c] = std::make_unique<amrex::MultiFab>(*ba, *dm, 1, 0, MFInfo(), *m_p_factory[c]); 
+                (*m_p_soln_mf[c]).setVal(0.); 
+                Multifab_Manipulation::SpecifyValueOnlyOnCutcells(*m_p_soln_mf[c], map_basic_objects_soln[name]);
+
+                #ifdef PRINT_LOW
+                amrex::Print() << prt << "Index space size : " << amrex::EB2::IndexSpace::size() << "\n";
+                #endif
+
+                if(num_objects > 1) amrex::EB2::IndexSpace::clear();
+            }
+            ++c;
+        }
+
+        if(num_objects == 1) 
+        {
+            p_factory_union = std::move(m_p_factory[0]);
+        }
+        else if(num_objects == 2) 
         {  
-            case s_ObjectType::object::sphere:
-            {
-                using ObjectType = amrex::EB2::SphereIF;
-                BuildSingleObject<ObjectType>(name, c, geom, ba, dm);
-                break;
+            auto name1 = vec_object_names[0];  
+            auto geom_type1 = map_basic_objects_type[name1];  
+            auto name2 = vec_object_names[1];
+            auto geom_type2 = map_basic_objects_type[name2];  
+
+            if( (map_object_type_enum[geom_type1] == s_ObjectType::object::cntfet_contact) && 
+                (map_object_type_enum[geom_type2] == s_ObjectType::object::cntfet_contact) ) 
+            {  
+                using ObjectType1 = cntfet_contact_type;
+                using ObjectType2 = cntfet_contact_type;
+
+                BuildUnionObject<ObjectType1, ObjectType2>(name1, name2);
             }
-            case s_ObjectType::object::box:
+            else if ( (map_object_type_enum[geom_type1] == s_ObjectType::object::sphere) &&
+                      (map_object_type_enum[geom_type2] == s_ObjectType::object::sphere) )
             {
-                using ObjectType = amrex::EB2::BoxIF;
-                BuildSingleObject<ObjectType>(name, c, geom, ba, dm);
-                break;
+                using ObjectType1 = amrex::EB2::SphereIF;
+                using ObjectType2 = amrex::EB2::SphereIF;
+
+                BuildUnionObject<ObjectType1, ObjectType2>(name1, name2);
             }
-            case s_ObjectType::object::cylinder:
+            else if ( (map_object_type_enum[geom_type1] == s_ObjectType::object::box) &&
+                      (map_object_type_enum[geom_type2] == s_ObjectType::object::box) )
             {
-                using ObjectType = amrex::EB2::CylinderIF;
-                BuildSingleObject<ObjectType>(name, c, geom, ba, dm);
-                break;
+                using ObjectType1 = amrex::EB2::BoxIF;
+                using ObjectType2 = amrex::EB2::BoxIF;
+
+                BuildUnionObject<ObjectType1, ObjectType2>(name1, name2);
             }
-            case s_ObjectType::object::cntfet_contact:
+            else if ( (map_object_type_enum[geom_type1] == s_ObjectType::object::cylinder) &&
+                      (map_object_type_enum[geom_type2] == s_ObjectType::object::cylinder) )
             {
-                using ObjectType = cntfet_contact_type;
-                BuildSingleObject<ObjectType>(name, c, geom, ba, dm);
-                break;
+                using ObjectType1 = amrex::EB2::CylinderIF;
+                using ObjectType2 = amrex::EB2::CylinderIF;
+
+                BuildUnionObject<ObjectType1, ObjectType2>(name1, name2);
             }
+            else 
+            {
+                amrex::Abort("Error: 1) For more than 1 objects, one must code the operation such as union, intersection, etc.\
+                              2) At present, union operation is performed only when two geometries are of type cntfet_contact,\
+                                 amrex::EB2::BoxIF, amrex::EB2::SphereIF");
+            }   
+
+#ifdef PRINT_LOW
+            amrex::Print() << prt  << "Index space size after making union of two objects: " << EB2::IndexSpace::size() << "\n";
+#endif
         }
 
-        if(specify_separate_surf_beta == 1) 
+        if(specify_separate_surf_beta == 1)
         {
-            m_p_beta_mf[c] = std::make_unique<amrex::MultiFab>(ba, dm, 1, 0, MFInfo(), *m_p_factory[c]); 
-            Multifab_Manipulation::SpecifyValueOnlyOnCutcells(*m_p_beta_mf[c], *m_p_factory[c], map_basic_objects_beta[name]);
+            p_surf_beta_union = std::make_unique<amrex::MultiFab>(*ba, *dm, 1, 0, MFInfo(), *p_factory_union);
+
+            p_surf_beta_union->setVal(0);    
+            for(int i=0; i < num_objects; ++i)
+            {
+                p_surf_beta_union->plus(get_beta_mf(i), 0, 1, 0);
+            }
+            clear_beta_mf();
         }
-        if(specify_inhomogeneous_dirichlet == 1) 
-        {
-            m_p_soln_mf[c] = std::make_unique<amrex::MultiFab>(ba, dm, 1, 0, MFInfo(), *m_p_factory[c]); 
-            (*m_p_soln_mf[c]).setVal(0.); 
-            Multifab_Manipulation::SpecifyValueOnlyOnCutcells(*m_p_soln_mf[c], *m_p_factory[c], map_basic_objects_soln[name]);
-            amrex::Print() << "Index space size : " << EB2::IndexSpace::size() << "\n";
-
-            if(num_objects > 1) EB2::IndexSpace::clear();
+        else {
+            p_surf_beta_union = std::make_unique<amrex::MultiFab>(*ba, *dm, 1, 0, MFInfo(), *p_factory_union);
+            p_surf_beta_union->setVal(surf_beta);
         }
-        ++c;
-    }
-
-    if(num_objects == 1) 
-    {
-        p_factory_union = std::move(m_p_factory[0]);
-    }
-    else if(num_objects == 2) 
-    {  
-        auto name1 = vec_object_names[0];  
-        auto geom_type1 = map_basic_objects_type[name1];  
-        auto name2 = vec_object_names[1];
-        auto geom_type2 = map_basic_objects_type[name2];  
-
-        if( (map_object_type_enum[geom_type1] == s_ObjectType::object::cntfet_contact) && 
-            (map_object_type_enum[geom_type2] == s_ObjectType::object::cntfet_contact) ) 
-        {  
-            using ObjectType1 = cntfet_contact_type;
-            using ObjectType2 = cntfet_contact_type;
-
-            BuildUnionObject<ObjectType1, ObjectType2>(name1, name2, geom, ba, dm);
-        }
-        else if ( (map_object_type_enum[geom_type1] == s_ObjectType::object::sphere) &&
-                  (map_object_type_enum[geom_type2] == s_ObjectType::object::sphere) )
+        if(specify_inhomogeneous_dirichlet == 1)
         {
-            using ObjectType1 = amrex::EB2::SphereIF;
-            using ObjectType2 = amrex::EB2::SphereIF;
+            p_surf_soln_union = std::make_unique<amrex::MultiFab>(*ba, *dm, 1, 0, MFInfo(), *p_factory_union);
 
-            BuildUnionObject<ObjectType1, ObjectType2>(name1, name2, geom, ba, dm);
-        }
-        else if ( (map_object_type_enum[geom_type1] == s_ObjectType::object::box) &&
-                  (map_object_type_enum[geom_type2] == s_ObjectType::object::box) )
-        {
-            using ObjectType1 = amrex::EB2::BoxIF;
-            using ObjectType2 = amrex::EB2::BoxIF;
-
-            BuildUnionObject<ObjectType1, ObjectType2>(name1, name2, geom, ba, dm);
-        }
-        else if ( (map_object_type_enum[geom_type1] == s_ObjectType::object::cylinder) &&
-                  (map_object_type_enum[geom_type2] == s_ObjectType::object::cylinder) )
-        {
-            using ObjectType1 = amrex::EB2::CylinderIF;
-            using ObjectType2 = amrex::EB2::CylinderIF;
-
-            BuildUnionObject<ObjectType1, ObjectType2>(name1, name2, geom, ba, dm);
-        }
-        else 
-        {
-            amrex::Abort("Error: 1) For more than 1 objects, one must code the operation such as union, intersection, etc.\
-                          2) At present, union operation is performed only when two geometries are of type cntfet_contact,\
-                             amrex::EB2::BoxIF, amrex::EB2::SphereIF");
-        }   
-    }
-
-    amrex::Print() << "Index space size : " << EB2::IndexSpace::size() << "\n";
-    if(specify_separate_surf_beta == 1)
-    {
-        p_surf_beta_union = std::make_unique<amrex::MultiFab>(ba, dm, 1, 0, MFInfo(), *p_factory_union);
-
-        p_surf_beta_union->setVal(0);    
-        for(int i=0; i < num_objects; ++i)
-        {
-            p_surf_beta_union->plus(get_beta_mf(i), 0, 1, 0);
+            p_surf_soln_union->setVal(0);    
+            for(int i=0; i < num_objects; ++i)
+            {
+                p_surf_soln_union->plus(get_soln_mf(i), 0, 1, 0);
+            }
+            clear_soln_mf();
         }
     }
-    else {
-        p_surf_beta_union = std::make_unique<amrex::MultiFab>(ba, dm, 1, 0, MFInfo(), *p_factory_union);
-        p_surf_beta_union->setVal(surf_beta);
-    }
-    if(specify_inhomogeneous_dirichlet == 1)
-    {
-        p_surf_soln_union = std::make_unique<amrex::MultiFab>(ba, dm, 1, 0, MFInfo(), *p_factory_union);
-
-        p_surf_soln_union->setVal(0);    
-        for(int i=0; i < num_objects; ++i)
-        {
-            p_surf_soln_union->plus(get_soln_mf(i), 0, 1, 0);
-        }
-    }
-
+#ifdef PRINT_NAME
+    amrex::Print() << "\t\t\t\t}************************c_EmbeddedBoundaries()::BuildObjects()************************\n";
+#endif
 }
 
 
 template<typename ObjectType>
 void
-c_EmbeddedBoundaries::BuildSingleObject(std::string name, int c, amrex::Geometry geom,amrex::BoxArray ba, amrex::DistributionMapping dm)
+c_EmbeddedBoundaries::BuildSingleObject(std::string name)
 {
+#ifdef PRINT_NAME
+    amrex::Print() << "\n\n\t\t\t\t\t{************************c_EmbeddedBoundaries()::BuildSingleObject()************************\n";
+    amrex::Print() << "\t\t\t\t\tin file: " << __FILE__ << " at line: " << __LINE__ << "\n";
+#endif
+
     auto object = std::any_cast<ObjectType>(map_basic_objects_info[name]);
     auto gshop = amrex::EB2::makeShop(object);
-    amrex::EB2::Build(gshop, geom, required_coarsening_level, max_coarsening_level);
-    const EB2::IndexSpace& eb_is = EB2::IndexSpace::top();
-    const EB2::Level& eb_level = eb_is.getLevel(geom);
+    amrex::EB2::Build(gshop, *geom, required_coarsening_level, max_coarsening_level);
+    const auto& eb_is = EB2::IndexSpace::top();
+    const auto& eb_level = eb_is.getLevel(*geom);
     Vector<int> ng_ebs = {2,2,2};
-    //pFactory.push_back(amrex::makeEBFabFactory(&eb_level, ba, dm, ng_ebs, support));
-    m_p_factory[c] = amrex::makeEBFabFactory(&eb_level, ba, dm, ng_ebs, support);
+
+    m_p_factory.push_back(amrex::makeEBFabFactory(&eb_level, *ba, *dm, ng_ebs, support));
+
+#ifdef PRINT_NAME
+    amrex::Print() << "\t\t\t\t\t}************************c_EmbeddedBoundaries()::BuildSingleObject()************************\n";
+#endif
 }
 
 
 template<typename ObjectType1, typename ObjectType2>
 void
-c_EmbeddedBoundaries::BuildUnionObject(std::string name1, std::string name2, amrex::Geometry geom,amrex::BoxArray ba, amrex::DistributionMapping dm)
+c_EmbeddedBoundaries::BuildUnionObject(std::string name1, std::string name2)
 {
+#ifdef PRINT_NAME
+    amrex::Print() << "\n\n\t\t\t\t\t{************************c_EmbeddedBoundaries()::BuildUnionObject()************************\n";
+    amrex::Print() << "\t\t\t\t\tin file: " << __FILE__ << " at line: " << __LINE__ << "\n";
+#endif
+
     auto object1 = std::any_cast<ObjectType1>(map_basic_objects_info[name1]);
     auto object2 = std::any_cast<ObjectType2>(map_basic_objects_info[name2]);
     auto union_object = amrex::EB2::makeUnion(object1, object2);
 
     auto gshop = amrex::EB2::makeShop(union_object);
-    amrex::EB2::Build(gshop, geom, required_coarsening_level, max_coarsening_level);
-    const EB2::IndexSpace& eb_is = EB2::IndexSpace::top();
-    const EB2::Level& eb_level = eb_is.getLevel(geom);
+    amrex::EB2::Build(gshop, *geom, required_coarsening_level, max_coarsening_level);
+    const auto& eb_is = EB2::IndexSpace::top();
+    const auto& eb_level = eb_is.getLevel(*geom);
     Vector<int> ng_ebs = {2,2,2};
 
-    p_factory_union = amrex::makeEBFabFactory(&eb_level, ba, dm, ng_ebs, support);
+    p_factory_union = amrex::makeEBFabFactory(&eb_level, *ba, *dm, ng_ebs, support);
+
+#ifdef PRINT_NAME
+    amrex::Print() << "\t\t\t\t\t}************************c_EmbeddedBoundaries()::BuildUnionObject()************************\n";
+#endif
 }

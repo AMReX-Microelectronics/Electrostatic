@@ -51,8 +51,6 @@ c_GeometryProperties::ReadData()
 
      ParseBasicDomainInput();
 
-    if(embedded_boundary_flag) eb.ReadGeometry();
-
 #ifdef PRINT_NAME
     amrex::Print() << "\n\n\t\t\t\t}************************c_GeometryProperties::ReadData()************************\n";
 #endif
@@ -69,7 +67,7 @@ c_GeometryProperties::InitData()
 
     InitializeBoxArrayAndDistributionMap();
 
-    if(embedded_boundary_flag) CreateEmbeddedBoundary();
+    if(embedded_boundary_flag) eb.BuildGeometry(&geom, &ba, &dm);
 
 #ifdef PRINT_NAME
     amrex::Print() << "\t\t}************************c_GeometryProperties::InitData()************************\n";
@@ -83,8 +81,8 @@ c_GeometryProperties::ParseBasicDomainInput()
 #ifdef PRINT_NAME
     amrex::Print() << "\n\n\t\t\t\t{************************c_GeometryProperties::ParseBasicDomainInput()************************\n";
     amrex::Print() << "\t\t\t\tin file: " << __FILE__ << " at line: " << __LINE__ << "\n";
-#endif
     std::string prt = "\t\t\t\t";
+#endif
 
     amrex::Vector<int> num_cell;
     amrex::Vector<amrex::Real> prob_min(AMREX_SPACEDIM);
@@ -141,19 +139,27 @@ c_GeometryProperties::ParseBasicDomainInput()
         coord_sys = amrex::CoordSys::RZ;
     }
 
-    for (int i=0; i<AMREX_SPACEDIM; ++i) 
-    {
-        amrex::Print() << prt << "\n";
-        amrex::Print() << prt << "direction: " << i << "\n";
-        amrex::Print() << prt << "prob_lo: " << prob_lo[i] << "\n";
-        amrex::Print() << prt << "prob_hi: " << prob_hi[i] << "\n";
-        amrex::Print() << prt << "max_grid_size: " << max_grid_size[i] << "\n";
-        amrex::Print() << prt << "blocking_factor: " << blocking_factor[i] << "\n";
-        amrex::Print() << prt << "is_periodic: " << is_periodic[i] << "\n";
-    }
-    amrex::Print() << prt << "\n";
-    amrex::Print() << prt << "coord_sys: " << coord_sys << "\n";
-    amrex::Print() << prt << "embedded_boundary_flag: " << embedded_boundary_flag << "\n";
+    amrex::Print() << "\n##### GEOMETRY PROPERTIES #####\n\n";
+    amrex::Print() << "##### n_cell: ";
+    for (int i=0; i<AMREX_SPACEDIM; ++i) amrex::Print() << n_cell[i] << "  ";
+    amrex::Print() << "\n";
+    amrex::Print() << "##### prob_lo: ";
+    for (int i=0; i<AMREX_SPACEDIM; ++i) amrex::Print() << prob_lo[i] << "  ";
+    amrex::Print() << "\n";
+    amrex::Print() << "##### prob_hi: ";
+    for (int i=0; i<AMREX_SPACEDIM; ++i) amrex::Print() << prob_hi[i] << "  ";
+    amrex::Print() << "\n";
+    amrex::Print() << "##### max_grid_size: ";
+    for (int i=0; i<AMREX_SPACEDIM; ++i) amrex::Print() << max_grid_size[i] << "  ";
+    amrex::Print() << "\n";
+    amrex::Print() << "##### blocking_factor: ";
+    for (int i=0; i<AMREX_SPACEDIM; ++i) amrex::Print() << blocking_factor[i] << "  ";
+    amrex::Print() << "\n";
+    amrex::Print() << "##### is_periodic: ";
+    for (int i=0; i<AMREX_SPACEDIM; ++i) amrex::Print() << is_periodic[i] << "  ";
+    amrex::Print() << "\n";
+    amrex::Print() << "##### coord_sys: " << coord_sys << "\n";
+    amrex::Print() << "##### embedded_boundary_flag: " << embedded_boundary_flag << "\n";
 
 #ifdef PRINT_NAME
     amrex::Print() << "\t\t\t\t}************************c_GeometryProperties::ParseBasicDomainInput()************************\n";
@@ -187,27 +193,5 @@ c_GeometryProperties::InitializeBoxArrayAndDistributionMap()
 
 #ifdef PRINT_NAME
     amrex::Print() << "\t\t\t}************************c_GeometryProperties::InitializeBoxArrayAndDistributionMap()************************\n";
-#endif
-}
-
-
-void 
-c_GeometryProperties::CreateEmbeddedBoundary()
-{
-#ifdef PRINT_NAME
-    amrex::Print() << "\n\n\t\t\t{************************c_GeometryProperties::CreateEmbeddedBoundary()************************\n";
-    amrex::Print() << "\t\t\tin file: " << __FILE__ << " at line: " << __LINE__ << "\n";
-#endif
-
-    if(eb.specify_input_using_eb2) 
-    {
-        EB2::Build(geom, eb.required_coarsening_level, eb.max_coarsening_level);
-    }
-    else {
-        eb.BuildObjects(geom, ba, dm);
-    }
-
-#ifdef PRINT_NAME
-    amrex::Print() << "\t\t\t}************************c_GeometryProperties::CreateEmbeddedBoundary()************************\n";
 #endif
 }

@@ -72,7 +72,7 @@ c_MLMGSolver::ReadData()
     ParmParse pp_mlmg("mlmg");
     pp_mlmg.get("ascalar",ascalar);
     pp_mlmg.get("bscalar",bscalar);
-
+    
     if (queryWithParser(pp_mlmg, "set_verbose" , set_verbose) ) {
     }
     else {
@@ -116,7 +116,6 @@ c_MLMGSolver::ReadData()
                 << " is used.";
         c_Code::GetInstance().RecordWarning("MLMG properties", warnMsg.str());
     }
-     
 
 
     auto& rCode = c_Code::GetInstance();
@@ -167,6 +166,23 @@ c_MLMGSolver::ReadData()
         it_Mprop = rMprop.map_param_all.find(robin_f_str);
         WARPX_ALWAYS_ASSERT_WITH_MESSAGE(it_Mprop != rMprop.map_param_all.end(), 
                                          robin_f_str + " is not specified through 'macroscopic.fields_to_define' in the input file.");
+    }
+
+    amrex::Print() << "\n##### MLMG Solver #####\n\n";
+    amrex::Print() << "##### ascalar: " << ascalar << "\n";
+    amrex::Print() << "##### bscalar: " << bscalar << "\n";
+    amrex::Print() << "##### set_verbose: " << set_verbose << "\n";
+    amrex::Print() << "##### max_order: " << max_order << "\n";
+    amrex::Print() << "##### relative_tolerance: " << relative_tolerance << "\n";
+    amrex::Print() << "##### absolute_tolerance: " << absolute_tolerance << "\n";
+    amrex::Print() << "##### alpha is denoted by: " << alpha_str << "\n";
+    amrex::Print() << "##### beta is denoted by: " << beta_str << "\n";
+    amrex::Print() << "##### soln is denoted by: " << soln_str << "\n";
+    amrex::Print() << "##### rhs is denoted by: " << rhs_str << "\n";
+    if(some_robin_boundaries) {
+        amrex::Print() << "##### robin_a is denoted by: " << robin_a_str << "\n";
+        amrex::Print() << "##### robin_b is denoted by: " << robin_b_str << "\n";
+        amrex::Print() << "##### robin_f is denoted by: " << robin_f_str << "\n";
     }
 #ifdef PRINT_NAME
     amrex::Print() << "\t\t\t\t}************************c_MLMGSolver::ReadData()************************\n";
