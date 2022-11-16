@@ -215,7 +215,7 @@ c_Output::ReadData()
     amrex::Print() <<  "\n##### OUTPUT #####\n\n";
     amrex::Print() <<  "##### file name: " << m_filename_prefix_str << "\n";
     amrex::Print() <<  "##### fields_to_plot:\n";
-    amrex::Print() <<  "##### " << std::setw(20)  << "name" << std::setw(10) << "number" << std::setw(12) << "output_option\n";
+    amrex::Print() <<  "##### " << std::setw(20)  << "name" << std::setw(10) << "number" << std::setw(14) << "output_option\n";
     for (auto it: m_map_param_all) 
     {
         amrex::Print() << "##### " << std::setw(20) << it.first << std::setw(10) << it.second << std::setw(10) << m_output_option[it.second] << "\n";

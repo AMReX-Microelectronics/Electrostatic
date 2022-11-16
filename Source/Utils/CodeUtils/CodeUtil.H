@@ -64,8 +64,6 @@ void ConvertParserIntoMultiFab_3vars(const int i, const int j, const int k,
 
 void SpecifyValueOnlyOnCutcells(amrex::MultiFab& mf, amrex::Real const value);
 
-//void SpecifyValueOnlyOnCutcells(amrex::MultiFab& mf, amrex::EBFArrayBoxFactory const& ebfactory, amrex::Real const value);
-
 }
 
 void PrintRunDiagnostics(amrex::Real initial_time);

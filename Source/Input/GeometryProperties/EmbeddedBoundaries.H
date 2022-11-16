@@ -19,8 +19,27 @@
 #include <string>
 #include <any>
 
+
+struct s_STL {
+    std::string file;
+    amrex::Real scale;
+    std::vector<amrex::Real> center;
+    int reverse_normal;
+  
+    s_STL() {
+             using namespace amrex;
+             scale = 1._rt; 
+             center = {0.0_rt, 0.0_rt, 0.0_rt}; 
+             reverse_normal = 0; 
+            };
+};
+
+struct s_PARSER {
+    std::string parser_function_str;
+};
+
 struct s_ObjectType {
-    enum object { sphere, box, cylinder, torus, parser, stl, cntfet_contact };
+    enum object { sphere, box, cylinder, plane, torus, parser, stl, cntfet_contact };
 };
 
 class
@@ -35,7 +54,9 @@ public:
     int max_coarsening_level;
     int specify_input_using_eb2;
     int specify_separate_surf_beta;
+    int specify_separate_surf_soln;
     amrex::Real surf_beta;
+    amrex::Real surf_soln;
     int specify_inhomogeneous_dirichlet;
     int num_objects;
     amrex::EBSupport support;
@@ -67,10 +88,23 @@ private:
                                {"sphere"         , s_ObjectType::object::sphere},
                                {"box"            , s_ObjectType::object::box},
                                {"cylinder"       , s_ObjectType::object::cylinder},
+                               {"plane"          , s_ObjectType::object::plane},
                                {"torus"          , s_ObjectType::object::torus},
                                {"parser"         , s_ObjectType::object::parser},
                                {"stl"            , s_ObjectType::object::stl},
                                {"cntfet_contact" , s_ObjectType::object::cntfet_contact},
+
+                               {"Sphere"         , s_ObjectType::object::sphere},
+                               {"Box"            , s_ObjectType::object::box},
+                               {"Cylinder"       , s_ObjectType::object::cylinder},
+                               {"Plane"          , s_ObjectType::object::plane},
+                               {"Torus"          , s_ObjectType::object::torus},
+                               {"Parser"         , s_ObjectType::object::parser},
+                               {"Stl"            , s_ObjectType::object::stl},
+                               {"Cntfet_contact" , s_ObjectType::object::cntfet_contact},
+
+                               {"STL"            , s_ObjectType::object::stl},
+                               {"CNTFET_contact" , s_ObjectType::object::cntfet_contact},
                            };
     using cntfet_contact_type = amrex::EB2::IntersectionIF<amrex::EB2::CylinderIF, amrex::EB2::BoxIF>;
 
@@ -94,8 +128,18 @@ private:
     template<typename ObjectType>
     void BuildSingleObject(std::string name);
 
+    template<typename ObjectType>
+    void BuildSingleParserObject(std::string name);
+
     template<typename ObjectType1, typename ObjectType2>
     void BuildUnionObject(std::string name1, std::string name2);
+
+    template<typename ObjectType1, typename ObjectType2>
+    void BuildUnionParserObject(std::string name1, std::string name2);
+
+    template<typename ObjectType>
+    void BuildSingleSTLObject(std::string name);
+
 
     amrex::Vector< std::unique_ptr<amrex::MultiFab> > m_p_soln_mf;
     amrex::Vector< std::unique_ptr<amrex::MultiFab> > m_p_beta_mf;

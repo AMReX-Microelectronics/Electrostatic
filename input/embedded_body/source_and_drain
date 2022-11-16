@@ -90,6 +90,17 @@ Drain.surf_soln = V_drain #V
 #Drain.has_fluid_inside = 0
 #Drain.surf_soln = V_drain #V
 
+##### parser (example of an ellipse)
+#my_constants.a = 0.15
+#my_constants.b = 0.05
+#Source.geom_type = parser
+#Source.parser_function = "0*(((x-0.5)**2/a) + (y**2/b) + (z**2/b) == 1) -1*(((x-0.5)**2/a) + (y**2/b) + (z**2/b) > 1) + 1*(((x-0.5)**2/a) + (y**2/b) + (z**2/b) < 1)"
+#Source.surf_soln = V_source #Volts
+#
+#Drain.geom_type = parser
+#Drain.parser_function = "0*(((x+0.5)**2/a) + (y**2/b) + (z**2/b) == 1) -1*(((x+0.5)**2/a) + (y**2/b) + (z**2/b) > 1) + 1*(((x+0.5)**2/a) + (y**2/b) + (z**2/b) < 1)"
+#Drain.surf_soln = V_drain #Volts
+
 ####################################
 ###### BOUNDARY CONDITIONS ######
 ####################################

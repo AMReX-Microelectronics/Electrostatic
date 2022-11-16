@@ -115,18 +115,12 @@ c_GeometryProperties::ParseBasicDomainInput()
 
     pp_domain.query("embedded_boundary", embedded_boundary_flag);
 
-    //pp_domain.addarr("n_cell", num_cell);
-    //pp_domain.addarr("prob_lo", prob_min);
-    //pp_domain.addarr("prob_hi", prob_max);
-    //pp_domain.addarr("max_grid_size", mg);
-    //pp_domain.addarr("blocking_factor", bf);
-
     for (int i=0; i<AMREX_SPACEDIM; ++i) 
     {
         n_cell[i] = num_cell[i];
-        prob_lo[i] = prob_min[i]; //Converting vector to GpuArray
+        prob_lo[i] = prob_min[i];
         prob_hi[i] = prob_max[i]; 
-        max_grid_size[i] = mg[i];  //Converting Vector to IntVect
+        max_grid_size[i] = mg[i];
         blocking_factor[i] = bf[i]; 
         is_periodic[i] = periodicity[i]; 
     }

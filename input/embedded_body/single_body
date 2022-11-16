@@ -15,14 +15,11 @@ my_constants.tiny = 2e-4
 my_constants.B = 0.5 + tiny
 
 my_constants.dx = Lx/nx
-my_constants.source_lo_x = -Lx/2 + dx + tiny/2 
-my_constants.source_hi_x = source_lo_x + B 
-
-my_constants.drain_hi_x = Lx/2 - dx - tiny/2
-my_constants.drain_lo_x = drain_hi_x - B
+my_constants.geom_lo_x = -B/2 - tiny 
+my_constants.geom_hi_x = geom_lo_x + B 
 
 my_constants.R = 0.205
-my_constants.V_source = 1
+my_constants.V_geom = 1
 my_constants.V_drain = -1
 
 ### Physical Constants 
@@ -55,40 +52,79 @@ domain.coord_sys = cartesian
 ####################################
 
 domain.embedded_boundary = 1  #options: 1=true, 0=false (default)
-domain.specify_using_eb2 = 0  #options: 1=true, 0=false (default)
-
-ebgeom.objects = Source
+ebgeom.specify_input_using_eb2 = 0
+ebgeom.objects = MyGeom
 ebgeom.specify_separate_surf_beta = 0
 ebgeom.surf_beta = epsilon_0
 ebgeom.specify_inhomo_dir = 1
+##### sphere
+#MyGeom.geom_type = sphere
+#MyGeom.center = 0 0 0 
+#MyGeom.radius = R
+#MyGeom.has_fluid_inside = 0
+#MyGeom.surf_soln = V_geom #V
 
-#Source.geom_type = box
-#Source.box_lo = source_lo_x  -B/2 -B/2
-#Source.box_hi = source_hi_x   B/2  B/2
-#Source.has_fluid_inside = 0
-#Source.surf_soln = V_source #V
+##### box
+#MyGeom.geom_type = box
+#MyGeom.box_lo = geom_lo_x  -B/2 -B/2
+#MyGeom.box_hi = geom_hi_x   B/2  B/2
+#MyGeom.has_fluid_inside = 0
+#MyGeom.surf_soln = V_geom #V
 
-Source.geom_type = cylinder
-Source.center = 0 0 0 
-Source.height = source_hi_x - source_lo_x
-Source.radius = R
-Source.direction = 0
-Source.has_fluid_inside = 0
-Source.surf_soln = V_source #V
+##### cylinder
+#MyGeom.geom_type = cylinder
+#MyGeom.center = 0 0 0 
+#MyGeom.height = geom_hi_x - geom_lo_x
+#MyGeom.radius = R
+#MyGeom.direction = 0
+#MyGeom.has_fluid_inside = 0
+#MyGeom.surf_soln = V_geom #V
 
-#Source.geom_type = cntfet_contact
-#Source.box_lo = source_lo_x  -B/2 -B/2
-#Source.box_hi = source_hi_x   B/2  B/2
-#Source.cyl_cavity_radius = R
-#Source.cyl_cavity_direction = 0
-#Source.surf_soln = V_source #V
+##### cntfet_contact
+#MyGeom.geom_type = cntfet_contact
+#MyGeom.box_lo = geom_lo_x  -B/2 -B/2
+#MyGeom.box_hi = geom_hi_x   B/2  B/2
+#MyGeom.cyl_cavity_radius = R
+#MyGeom.cyl_cavity_direction = 0
+#MyGeom.surf_soln = V_geom #V
 
+##### torus
+#MyGeom.geom_type = torus
+#MyGeom.center = 0.0 0 0
+#MyGeom.small_radius = R
+#MyGeom.large_radius = 2*R
+#MyGeom.has_fluid_inside = 0
+#MyGeom.surf_soln = V_geom #Volts
+
+##### parser (example of an ellipse)
+my_constants.a = 0.4
+my_constants.b = 0.1
+MyGeom.geom_type = parser
+MyGeom.parser_function = "0*((x**2/a) + (y**2/b) + (z**2/b) == 1) -1*((x**2/a) + (y**2/b) + (z**2/b) > 1) + 1*((x**2/a) + (y**2/b) + (z**2/b) < 1)"
+MyGeom.surf_soln = V_geom #Volts
+
+##### example using eb2
+#eb2.geom_type = sphere
+#eb2.sphere_center = 0 0 0 
+#eb2.sphere_radius = 0.5
+#eb2.sphere_has_fluid_inside = 1
+#ebgeom.surf_soln = V_geom #V
+
+##### stl (example of an stl geometry)
+#eb2.geom_type = stl
+#eb2.stl_file=airfoil.stl
+#eb2.stl_scale = 0.0049
+#eb2.stl_center = 0 0 0
+#eb2.stl_reverse_normal = 0
+#ebgeom.surf_soln = 1
 ####################################
 ###### BOUNDARY CONDITIONS ######
 ####################################
 
-boundary.lo = neu(0) neu(0) dir(0.5)
-boundary.hi = neu(0) neu(0) neu(0)
+#boundary.lo = neu(0) neu(0) neu(0)
+#boundary.hi = neu(0) neu(0) neu(0)
+boundary.lo = dir(0) dir(0) dir(0)
+boundary.hi = dir(0) dir(0) dir(0)
 
 ####################################
 ###### MACROSCOPIC PROPERTIES ######
