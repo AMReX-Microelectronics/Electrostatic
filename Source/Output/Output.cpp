@@ -247,10 +247,13 @@ c_Output::InitData()
     int Nghost0=0;
 
 #ifdef AMREX_USE_EB
-    m_p_mf_all = std::make_unique<amrex::MultiFab>(ba, dm, m_num_params_plot_single_level, Nghost0, MFInfo(), *rGprop.eb.p_factory_union); //cell-centered multifabs
-#else
-    m_p_mf_all = std::make_unique<amrex::MultiFab>(ba, dm, m_num_params_plot_single_level, Nghost0); 
+    if(rGprop.embedded_boundary_flag) {
+        m_p_mf_all = std::make_unique<amrex::MultiFab>(ba, dm, m_num_params_plot_single_level, Nghost0, MFInfo(), *rGprop.pEB->p_factory_union); 
+    }
 #endif
+    if(!rGprop.embedded_boundary_flag) {
+         m_p_mf_all = std::make_unique<amrex::MultiFab>(ba, dm, m_num_params_plot_single_level, Nghost0);  
+    }
 
     if(m_write_after_init) 
     {
@@ -271,10 +274,13 @@ c_Output::InitData()
             }
         }
 #ifdef AMREX_USE_EB
-        m_p_mf_all_init = std::make_unique<amrex::MultiFab>(ba, dm, counter, Nghost0, MFInfo(), *rGprop.eb.p_factory_union);
-#else
-        m_p_mf_all_init = std::make_unique<amrex::MultiFab>(ba, dm, counter, Nghost0);
+        if(rGprop.embedded_boundary_flag) {
+            m_p_mf_all_init = std::make_unique<amrex::MultiFab>(ba, dm, counter, Nghost0, MFInfo(), *rGprop.pEB->p_factory_union);
+        }
 #endif
+        if(!rGprop.embedded_boundary_flag) {
+            m_p_mf_all_init = std::make_unique<amrex::MultiFab>(ba, dm, counter, Nghost0);
+        }
 
 #ifdef PRINT_HIGH
         amrex::Print() << "\n" << prt <<  "m_write_after_init is true! \n";
@@ -378,20 +384,23 @@ c_Output::WriteSingleLevelPlotFile(int step, amrex::Real time, std::unique_ptr<a
     }
 
 #ifdef AMREX_USE_EB
-    amrex::EB_WriteSingleLevelPlotfile( m_plot_file_name, 
-                                    *p_all_mf, m_p_name_str, 
-                                     geom, 
-                                     time, step, 
-                                     "HyperCLaw-V1.1", m_default_level_prefix, "Cell",
-                                     m_extra_dirs);
-#else
-    amrex::WriteSingleLevelPlotfile( m_plot_file_name, 
-                                    *p_all_mf, m_p_name_str, 
-                                     geom, 
-                                     time, step, 
-                                     "HyperCLaw-V1.1", m_default_level_prefix, "Cell",
-                                     m_extra_dirs);
+    if(rGprop.embedded_boundary_flag) {
+        amrex::EB_WriteSingleLevelPlotfile( m_plot_file_name, 
+                                        *p_all_mf, m_p_name_str, 
+                                         geom, 
+                                         time, step, 
+                                         "HyperCLaw-V1.1", m_default_level_prefix, "Cell",
+                                         m_extra_dirs);
+   }
 #endif
+    if(!rGprop.embedded_boundary_flag) {
+        amrex::WriteSingleLevelPlotfile( m_plot_file_name, 
+                                        *p_all_mf, m_p_name_str, 
+                                         geom, 
+                                         time, step, 
+                                         "HyperCLaw-V1.1", m_default_level_prefix, "Cell",
+                                         m_extra_dirs);
+    }
 
     m_p_name_str.clear();
 

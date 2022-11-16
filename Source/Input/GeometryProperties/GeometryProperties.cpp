@@ -67,7 +67,7 @@ c_GeometryProperties::InitData()
 
     InitializeBoxArrayAndDistributionMap();
 
-    if(embedded_boundary_flag) eb.BuildGeometry(&geom, &ba, &dm);
+    if(embedded_boundary_flag) pEB->BuildGeometry(&geom, &ba, &dm);
 
 #ifdef PRINT_NAME
     amrex::Print() << "\t\t}************************c_GeometryProperties::InitData()************************\n";
@@ -154,6 +154,8 @@ c_GeometryProperties::ParseBasicDomainInput()
     amrex::Print() << "\n";
     amrex::Print() << "##### coord_sys: " << coord_sys << "\n";
     amrex::Print() << "##### embedded_boundary_flag: " << embedded_boundary_flag << "\n";
+
+    if(embedded_boundary_flag) pEB = std::make_unique<c_EmbeddedBoundaries>();
 
 #ifdef PRINT_NAME
     amrex::Print() << "\t\t\t\t}************************c_GeometryProperties::ParseBasicDomainInput()************************\n";

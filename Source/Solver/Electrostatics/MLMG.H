@@ -45,10 +45,9 @@ public:
     std::array< amrex::MultiFab, AMREX_SPACEDIM > beta_fc; 
 
 #ifdef AMREX_USE_EB
-    amrex::MLEBABecLap mlebabec;
-#else
-    amrex::MLABecLaplacian mlabec;
+    std::unique_ptr<amrex::MLEBABecLap> p_mlebabec;
 #endif
+    std::unique_ptr<amrex::MLABecLaplacian> p_mlabec;
 
     c_MLMGSolver();
     ~c_MLMGSolver();

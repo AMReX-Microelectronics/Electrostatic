@@ -89,9 +89,7 @@ Multifab_Manipulation::AverageCellCenteredMultiFabToCellFaces(const amrex::Multi
 
 }
 
-//void
-//Multifab_Manipulation::SpecifyValueOnlyOnCutcells(amrex::MultiFab& mf,amrex::EBFArrayBoxFactory const& ebfactory, amrex::Real const value) 
-//{
+#ifdef AMREX_USE_EB
 void
 Multifab_Manipulation::SpecifyValueOnlyOnCutcells(amrex::MultiFab& mf, amrex::Real const value) 
 {
@@ -143,37 +141,11 @@ Multifab_Manipulation::SpecifyValueOnlyOnCutcells(amrex::MultiFab& mf, amrex::Re
         }
     }
 
-   // auto factory  = dynamic_cast<amrex::EBFArrayBoxFactory const*>(&(mf.Factory()));
-   // //auto factory  = dynamic_cast<amrex::EBFArrayBoxFactory const*>(&(ebfactory));
-   //  
-   // if (factory) {
-   //    amrex::Print() << "This is EBFArrayBoxFactory! \n";
-   // } else {
-   //    amrex::Print() << "This is regular FabFactory<FArrayBox>! \n";
-   // }
-   // auto const &vfrac = factory->getVolFrac();
-   // auto iv = mf.ixType().toIntVect();
-
-   // for ( amrex::MFIter mfi(mf, amrex::TilingIfNotGPU()); mfi.isValid(); ++mfi ) 
-   // {
-   //     const Box& box = mfi.tilebox();
-   //     auto const& mf_array =  mf.array(mfi); 
-
-   //     auto const &vfrac_array = vfrac.const_array(mfi);
-
-   //     amrex::ParallelFor(box, [=] AMREX_GPU_DEVICE (int i, int j, int k)
-   //     {
-   //        if(vfrac_array(i,j,k) > 0 and vfrac_array(i,j,k) < 1) 
-   //        {
-   //            mf_array(i, j, k) = value;
-   //        } 
-   //     });
-   // }
 #ifdef PRINT_NAME
     amrex::Print() << "\t\t\t\t\t}************************Multifab_Manipulation::SpecifyValueOnlyOnCutcells************************\n";
 #endif
 }
-
+#endif
 //AMREX_GPU_DEVICE AMREX_FORCE_INLINE
 //void
 ////Multifab_Manipulation::GetXYZ(const int i, const int j, const int k, 

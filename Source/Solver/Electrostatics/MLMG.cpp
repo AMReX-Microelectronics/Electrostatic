@@ -308,11 +308,17 @@ c_MLMGSolver:: InitData()
 
     Set_MLMG_CellCentered_Multifabs();
 
+    auto& rCode = c_Code::GetInstance();
+    auto& rGprop = rCode.get_GeometryProperties();
+
 #ifdef AMREX_USE_EB
-    Setup_MLEBABecLaplacian_ForPoissonEqn();
-#else
-    Setup_MLABecLaplacian_ForPoissonEqn();
+    if(rGprop.embedded_boundary_flag) {
+        Setup_MLEBABecLaplacian_ForPoissonEqn();
+    }
 #endif
+    if(!rGprop.embedded_boundary_flag) {
+        Setup_MLABecLaplacian_ForPoissonEqn();
+    }
 
 #ifdef PRINT_NAME
     amrex::Print() << "\t\t}************************c_MLMGSolver::InitData()************************\n";
@@ -359,24 +365,24 @@ c_MLMGSolver:: Setup_MLEBABecLaplacian_ForPoissonEqn()
     amrex::Print() << "\t\t\tin file: " << __FILE__ << " at line: " << __LINE__ << "\n";
 #endif
 
-
     auto& rCode = c_Code::GetInstance();
     auto& rGprop = rCode.get_GeometryProperties();
     auto& ba = rGprop.ba;
     auto& dm = rGprop.dm;
     auto& geom = rGprop.geom;
 
-    mlebabec.define({geom}, {ba}, {dm}, info,{& *rGprop.eb.p_factory_union}); // Implicit solve using MLABecLaplacian class
+    p_mlebabec = std::make_unique<amrex::MLEBABecLap>();
+    p_mlebabec->define({geom}, {ba}, {dm}, info,{& *rGprop.pEB->p_factory_union});
 
     // Force singular system to be solvable
-    mlebabec.setEnforceSingularSolvable(false);
+    p_mlebabec->setEnforceSingularSolvable(false);
 
     // set order of stencil
-    mlebabec.setMaxOrder(max_order);
+    p_mlebabec->setMaxOrder(max_order);
 
     // assign domain boundary conditions to the solver
     // see Src/Boundary/AMReX_LO_BCTYPES.H for supported types
-    mlebabec.setDomainBC(LinOpBCType_2d[0], LinOpBCType_2d[1]);
+    p_mlebabec->setDomainBC(LinOpBCType_2d[0], LinOpBCType_2d[1]);
 
     auto& rBC = rCode.get_BoundaryConditions();
     // Fill the ghost cells of each grid from the other grids
@@ -396,13 +402,13 @@ c_MLMGSolver:: Setup_MLEBABecLaplacian_ForPoissonEqn()
     }
     soln->FillBoundary(geom.periodicity());
 
-    mlebabec.setLevelBC(amrlev, soln);
+    p_mlebabec->setLevelBC(amrlev, soln);
 
     // set scaling factors 
-    mlebabec.setScalars(ascalar, bscalar);
+    p_mlebabec->setScalars(ascalar, bscalar);
 
     // set alpha, and beta_fc coefficients
-    mlebabec.setACoeffs(amrlev, *alpha);
+    p_mlebabec->setACoeffs(amrlev, *alpha);
 
     // beta_fc =  std::make_unique<amrex::FArrayBox,AMREX_SPACEDIM>; 
     // beta_fc is a face-centered multifab
@@ -413,18 +419,18 @@ c_MLMGSolver:: Setup_MLEBABecLaplacian_ForPoissonEqn()
     //converts from cell-centered permittivity to face-center and store in beta_fc
     Multifab_Manipulation::AverageCellCenteredMultiFabToCellFaces(*beta, beta_fc); 
 
-    mlebabec.setBCoeffs(amrlev, amrex::GetArrOfConstPtrs(beta_fc));
+    p_mlebabec->setBCoeffs(amrlev, amrex::GetArrOfConstPtrs(beta_fc));
 
-    if(rGprop.eb.specify_inhomogeneous_dirichlet == 0) 
+    if(rGprop.pEB->specify_inhomogeneous_dirichlet == 0) 
     {
-        mlebabec.setEBHomogDirichlet(amrlev, *rGprop.eb.p_surf_beta_union);
+        p_mlebabec->setEBHomogDirichlet(amrlev, *rGprop.pEB->p_surf_beta_union);
     }
     else 
     {
-        mlebabec.setEBDirichlet(amrlev, *rGprop.eb.p_surf_soln_union, *rGprop.eb.p_surf_beta_union);
+        p_mlebabec->setEBDirichlet(amrlev, *rGprop.pEB->p_surf_soln_union, *rGprop.pEB->p_surf_beta_union);
     }
 
-    pMLMG = std::make_unique<MLMG>(mlebabec);
+    pMLMG = std::make_unique<MLMG>(*p_mlebabec);
 
     pMLMG->setVerbose(set_verbose);
 
@@ -433,7 +439,7 @@ c_MLMGSolver:: Setup_MLEBABecLaplacian_ForPoissonEqn()
 #endif
 }
 
-#else 
+#endif 
 
 void
 c_MLMGSolver:: Setup_MLABecLaplacian_ForPoissonEqn()
@@ -450,17 +456,18 @@ c_MLMGSolver:: Setup_MLABecLaplacian_ForPoissonEqn()
     auto& dm = rGprop.dm;
     auto& geom = rGprop.geom;
 
-    mlabec.define({geom}, {ba}, {dm}, info); // Implicit solve using MLABecLaplacian class
+    p_mlabec = std::make_unique<amrex::MLABecLaplacian>();
+    p_mlabec->define({geom}, {ba}, {dm}, info);
 
     // Force singular system to be solvable
-    mlabec.setEnforceSingularSolvable(false);
+    p_mlabec->setEnforceSingularSolvable(false);
 
     // set order of stencil
-    mlabec.setMaxOrder(max_order);
+    p_mlabec->setMaxOrder(max_order);
 
     // assign domain boundary conditions to the solver
     // see Src/Boundary/AMReX_LO_BCTYPES.H for supported types
-    mlabec.setDomainBC(LinOpBCType_2d[0], LinOpBCType_2d[1]);
+    p_mlabec->setDomainBC(LinOpBCType_2d[0], LinOpBCType_2d[1]);
 
     auto& rBC = rCode.get_BoundaryConditions();
     // Fill the ghost cells of each grid from the other grids
@@ -483,19 +490,18 @@ c_MLMGSolver:: Setup_MLABecLaplacian_ForPoissonEqn()
         robin_a->FillBoundary(geom.periodicity());
         robin_b->FillBoundary(geom.periodicity());
         robin_f->FillBoundary(geom.periodicity());
-        mlabec.setLevelBC(amrlev, soln, robin_a, robin_b, robin_f);
+        p_mlabec->setLevelBC(amrlev, soln, robin_a, robin_b, robin_f);
     }
     else 
     {
-        mlabec.setLevelBC(amrlev, soln);
+        p_mlabec->setLevelBC(amrlev, soln);
     }
 
-
     // set scaling factors 
-    mlabec.setScalars(ascalar, bscalar);
+    p_mlabec->setScalars(ascalar, bscalar);
 
     // set alpha, and beta_fc coefficients
-    mlabec.setACoeffs(amrlev, *alpha);
+    p_mlabec->setACoeffs(amrlev, *alpha);
 
     // beta_fc =  std::make_unique<amrex::FArrayBox,AMREX_SPACEDIM>; 
     // beta_fc is a face-centered multifab
@@ -505,9 +511,9 @@ c_MLMGSolver:: Setup_MLABecLaplacian_ForPoissonEqn()
 
     Multifab_Manipulation::AverageCellCenteredMultiFabToCellFaces(*beta, beta_fc); //converts from cell-centered permittivity to face-center and store in beta_fc
 
-    mlabec.setBCoeffs(amrlev, amrex::GetArrOfConstPtrs(beta_fc));
+    p_mlabec->setBCoeffs(amrlev, amrex::GetArrOfConstPtrs(beta_fc));
 
-    pMLMG = std::make_unique<MLMG>(mlabec);
+    pMLMG = std::make_unique<MLMG>(*p_mlabec);
 
     pMLMG->setVerbose(set_verbose);
 
@@ -516,7 +522,6 @@ c_MLMGSolver:: Setup_MLABecLaplacian_ForPoissonEqn()
 #endif
 }
 
-#endif
 
 void
 c_MLMGSolver:: Fill_Constant_Inhomogeneous_Boundaries()

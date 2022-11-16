@@ -45,13 +45,13 @@ domain.is_periodic = 0 0 0
 
 #domain.coord_sys = cartesian or radial (currently supports cartesian)
 domain.coord_sys = cartesian        
+domain.embedded_boundary = 1  #options: 1=true, 0=false (default)
 
 
 ####################################
 ###### EMBEDDED BOUNDARIES ######
 ####################################
 
-domain.embedded_boundary = 1  #options: 1=true, 0=false (default)
 ebgeom.specify_input_using_eb2 = 0
 ebgeom.objects = MyGeom
 ebgeom.specify_separate_surf_beta = 0

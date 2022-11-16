@@ -39,9 +39,7 @@ public:
     amrex::DistributionMapping dm;
 
     int embedded_boundary_flag;
-#ifdef AMREX_USE_EB
-    c_EmbeddedBoundaries eb;
-#endif
+    std::unique_ptr<c_EmbeddedBoundaries> pEB;
 
     void ReadData();
     void InitData();
