@@ -522,6 +522,60 @@ c_MLMGSolver:: Setup_MLABecLaplacian_ForPoissonEqn()
 #endif
 }
 
+void
+c_MLMGSolver:: UpdateBoundaryConditions()
+{
+
+    auto& rCode = c_Code::GetInstance();
+    auto& rGprop = rCode.get_GeometryProperties();
+    auto& rBC = rCode.get_BoundaryConditions();
+    auto& ba = rGprop.ba;
+    auto& dm = rGprop.dm;
+    auto& geom = rGprop.geom;
+    int amrlev = 0;
+
+    #ifdef AMREX_USE_EB
+    if(rGprop.embedded_boundary_flag) {
+        if(some_functionbased_inhomogeneous_boundaries) 
+        {
+            Fill_FunctionBased_Inhomogeneous_Boundaries();
+        }
+        soln->FillBoundary(geom.periodicity());
+
+        if(rBC.some_robin_boundaries) 
+        {
+            robin_a->FillBoundary(geom.periodicity());
+            robin_b->FillBoundary(geom.periodicity());
+            robin_f->FillBoundary(geom.periodicity());
+            p_mlebabec->setLevelBC(amrlev, soln, robin_a, robin_b, robin_f);
+        }
+        else 
+        {
+            p_mlebabec->setLevelBC(amrlev, soln);
+        }
+    }
+    #endif
+    if(!rGprop.embedded_boundary_flag) {
+        if(some_functionbased_inhomogeneous_boundaries) 
+        {
+            Fill_FunctionBased_Inhomogeneous_Boundaries();
+        }
+        soln->FillBoundary(geom.periodicity());
+
+        if(rBC.some_robin_boundaries) 
+        {
+            robin_a->FillBoundary(geom.periodicity());
+            robin_b->FillBoundary(geom.periodicity());
+            robin_f->FillBoundary(geom.periodicity());
+            p_mlabec->setLevelBC(amrlev, soln, robin_a, robin_b, robin_f);
+        }
+        else 
+        {
+            p_mlabec->setLevelBC(amrlev, soln);
+        }
+    }
+
+}
 
 void
 c_MLMGSolver:: Fill_Constant_Inhomogeneous_Boundaries()
@@ -633,6 +687,7 @@ c_MLMGSolver:: Fill_FunctionBased_Inhomogeneous_Boundaries()
     std::vector<int> dir_inhomo_func_lo;
     std::string value = "inhomogeneous_function";
     bool found_lo = findByValue(dir_inhomo_func_lo, map_bcAny_2d[0], value);
+    const amrex::Real time = rCode.get_time();
 
 #ifdef PRINT_LOW
     if(found_lo)
@@ -644,7 +699,7 @@ c_MLMGSolver:: Fill_FunctionBased_Inhomogeneous_Boundaries()
 
     std::vector<int> dir_inhomo_func_hi;
     bool found_hi = findByValue(dir_inhomo_func_hi, map_bcAny_2d[1], value);
-
+    
 #ifdef PRINT_LOW
     if(found_hi)
     {
@@ -693,7 +748,7 @@ c_MLMGSolver:: Fill_FunctionBased_Inhomogeneous_Boundaries()
                                     [=] AMREX_GPU_DEVICE (int i, int j, int k) noexcept
                                     {
 			                #ifdef TIME_DEPENDENT
-                                            //Multifab_Manipulation::ConvertParserIntoMultiFab_4vars(i,j,k,dx,real_box,iv,macro_parser,robin_a_arr);  
+                                            Multifab_Manipulation::ConvertParserIntoMultiFab_4vars(i,j,k,time,dx,real_box,iv,macro_parser,robin_a_arr);  
 			                #else
                                             Multifab_Manipulation::ConvertParserIntoMultiFab_3vars(i,j,k,dx,real_box,iv,macro_parser,robin_a_arr);  
 			                #endif
@@ -706,7 +761,7 @@ c_MLMGSolver:: Fill_FunctionBased_Inhomogeneous_Boundaries()
                                     [=] AMREX_GPU_DEVICE (int i, int j, int k) noexcept
                                     {
 			                #ifdef TIME_DEPENDENT
-                                            //Multifab_Manipulation::ConvertParserIntoMultiFab_4vars(i,j,k,dx,real_box,iv,macro_parser,robin_b_arr);  
+                                            Multifab_Manipulation::ConvertParserIntoMultiFab_4vars(i,j,k,time,dx,real_box,iv,macro_parser,robin_b_arr);  
 			                #else
                                             Multifab_Manipulation::ConvertParserIntoMultiFab_3vars(i,j,k,dx,real_box,iv,macro_parser,robin_b_arr);  
                                         #endif 
@@ -719,7 +774,7 @@ c_MLMGSolver:: Fill_FunctionBased_Inhomogeneous_Boundaries()
                                     [=] AMREX_GPU_DEVICE (int i, int j, int k) noexcept
                                     {
 			                #ifdef TIME_DEPENDENT
-                                            //Multifab_Manipulation::ConvertParserIntoMultiFab_4vars(i,j,k,dx,real_box,iv,macro_parser,robin_f_arr);  
+                                            Multifab_Manipulation::ConvertParserIntoMultiFab_4vars(i,j,k,time,dx,real_box,iv,macro_parser,robin_f_arr);  
 			                #else
                                             Multifab_Manipulation::ConvertParserIntoMultiFab_3vars(i,j,k,dx,real_box,iv,macro_parser,robin_f_arr);  
 					#endif 
@@ -744,7 +799,7 @@ c_MLMGSolver:: Fill_FunctionBased_Inhomogeneous_Boundaries()
                         [=] AMREX_GPU_DEVICE (int i, int j, int k) noexcept
                         {
 		            #ifdef TIME_DEPENDENT
-                                //Multifab_Manipulation::ConvertParserIntoMultiFab_4vars(i,j,k,dx,real_box,iv,macro_parser,soln_arr);  
+                                Multifab_Manipulation::ConvertParserIntoMultiFab_4vars(i,j,k,time,dx,real_box,iv,macro_parser,soln_arr);  
 		            #else
                                 Multifab_Manipulation::ConvertParserIntoMultiFab_3vars(i,j,k,dx,real_box,iv,macro_parser,soln_arr);  
                             #endif
@@ -788,7 +843,7 @@ c_MLMGSolver:: Fill_FunctionBased_Inhomogeneous_Boundaries()
                                     [=] AMREX_GPU_DEVICE (int i, int j, int k) noexcept
                                     {
 			                #ifdef TIME_DEPENDENT
-                                            //Multifab_Manipulation::ConvertParserIntoMultiFab_4vars(i,j,k,dx,real_box,iv,macro_parser,robin_a_arr);  
+                                            Multifab_Manipulation::ConvertParserIntoMultiFab_4vars(i,j,k,time,dx,real_box,iv,macro_parser,robin_a_arr);  
 			                #else
                                             Multifab_Manipulation::ConvertParserIntoMultiFab_3vars(i,j,k,dx,real_box,iv,macro_parser,robin_a_arr);  
                                         #endif
@@ -801,7 +856,7 @@ c_MLMGSolver:: Fill_FunctionBased_Inhomogeneous_Boundaries()
                                     [=] AMREX_GPU_DEVICE (int i, int j, int k) noexcept
                                     {
 			                #ifdef TIME_DEPENDENT
-                                            //Multifab_Manipulation::ConvertParserIntoMultiFab_4vars(i,j,k,dx,real_box,iv,macro_parser,robin_b_arr);  
+                                            Multifab_Manipulation::ConvertParserIntoMultiFab_4vars(i,j,k,time,dx,real_box,iv,macro_parser,robin_b_arr);  
 			                #else
                                             Multifab_Manipulation::ConvertParserIntoMultiFab_3vars(i,j,k,dx,real_box,iv,macro_parser,robin_b_arr);  
                                         #endif
@@ -814,7 +869,7 @@ c_MLMGSolver:: Fill_FunctionBased_Inhomogeneous_Boundaries()
                                     [=] AMREX_GPU_DEVICE (int i, int j, int k) noexcept
                                     {
 			                #ifdef TIME_DEPENDENT
-                                            //Multifab_Manipulation::ConvertParserIntoMultiFab_4vars(i,j,k,dx,real_box,iv,macro_parser,robin_f_arr);  
+                                            Multifab_Manipulation::ConvertParserIntoMultiFab_4vars(i,j,k,time,dx,real_box,iv,macro_parser,robin_f_arr);  
 			                #else
                                             Multifab_Manipulation::ConvertParserIntoMultiFab_3vars(i,j,k,dx,real_box,iv,macro_parser,robin_f_arr);  
                                         #endif
@@ -839,7 +894,7 @@ c_MLMGSolver:: Fill_FunctionBased_Inhomogeneous_Boundaries()
                         [=] AMREX_GPU_DEVICE (int i, int j, int k) noexcept
                         {
 		            #ifdef TIME_DEPENDENT
-                                //Multifab_Manipulation::ConvertParserIntoMultiFab_4vars(i,j,k,dx,real_box,iv,macro_parser,soln_arr);  
+                                Multifab_Manipulation::ConvertParserIntoMultiFab_4vars(i,j,k,time,dx,real_box,iv,macro_parser,soln_arr);  
 		            #else
                                 Multifab_Manipulation::ConvertParserIntoMultiFab_3vars(i,j,k,dx,real_box,iv,macro_parser,soln_arr);  
                             #endif
@@ -856,7 +911,7 @@ c_MLMGSolver:: Fill_FunctionBased_Inhomogeneous_Boundaries()
 }
 
 
-void
+amrex::Real
 c_MLMGSolver:: Solve_PoissonEqn()
 {
 #ifdef PRINT_NAME
@@ -870,18 +925,14 @@ c_MLMGSolver:: Solve_PoissonEqn()
                  relative_tolerance,
                  absolute_tolerance);
 
-    amrex::Real mlmg_solve_end_step = amrex::second();
-
-    amrex::Real mlmg_solve_time = mlmg_solve_end_step - mlmg_solve_beg_step;
-
-    amrex::Print() << "mlmg_solve_time: " << mlmg_solve_time << "\n";
+    amrex::Real mlmg_solve_time = amrex::second() - mlmg_solve_beg_step;
 
     auto& rCode = c_Code::GetInstance();
     auto& rGprop = rCode.get_GeometryProperties();
-    auto& geom = rGprop.geom;
 
-    soln->FillBoundary(geom.periodicity());
+    soln->FillBoundary(rGprop.geom.periodicity());
 
+    return mlmg_solve_time;
 #ifdef PRINT_NAME
     amrex::Print() << "\t\t}************************c_MLMGSolver::Solve_PoissonEqn()************************\n";
 #endif

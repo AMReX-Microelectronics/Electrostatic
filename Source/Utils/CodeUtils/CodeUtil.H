@@ -23,6 +23,12 @@ void InitializeMacroMultiFabUsingParser_3vars (
                        amrex::ParserExecutor<3> const& macro_parser,
                        amrex::Geometry& geom);
 
+void InitializeMacroMultiFabUsingParser_4vars (
+                       amrex::MultiFab *macro_mf,
+                       amrex::ParserExecutor<4> const& macro_parser,
+                       amrex::Geometry& geom,
+                       const amrex::Real t);
+
 void AverageCellCenteredMultiFabToCellFaces(const amrex::MultiFab& cc_arr,
                                             std::array< amrex::MultiFab, 
                                             AMREX_SPACEDIM >& face_arr);
@@ -37,7 +43,7 @@ void ConvertParserIntoMultiFab_3vars(const int i, const int j, const int k,
 	    amrex::Array4<amrex::Real> const& mf_array)
 {
 #ifdef PRINT_NAME
-    amrex::Print() << "\n\n\t\t\t\t\t{************************Multifab_Manipulation::GetXYZ()************************\n";
+    amrex::Print() << "\n\n\t\t\t\t\t{************************Multifab_Manipulation::ConvertParserIntoMultiFab_3vars()************************\n";
     amrex::Print() << "\t\t\t\t\tin file: " << __FILE__ << " at line: " << __LINE__ << "\n";
 #endif
       
@@ -53,7 +59,36 @@ void ConvertParserIntoMultiFab_3vars(const int i, const int j, const int k,
     mf_array(i,j,k) = macro_parser(x,y,z);
 
 #ifdef PRINT_NAME
-    amrex::Print() << "\t\t\t\t\t}************************Multifab_Manipulation::GetXYZ()************************\n";
+    amrex::Print() << "\t\t\t\t\t}************************Multifab_Manipulation::ConvertParserIntoMultiFab_3vars()************************\n";
+#endif
+}
+
+AMREX_GPU_DEVICE AMREX_FORCE_INLINE
+void ConvertParserIntoMultiFab_4vars(const int i, const int j, const int k, const amrex::Real t,
+            const amrex::GpuArray<amrex::Real, AMREX_SPACEDIM>& dx, 
+	    const amrex::RealBox& real_box, 
+	    const amrex::IntVect& iv, 
+	    amrex::ParserExecutor<4> const& macro_parser,
+	    amrex::Array4<amrex::Real> const& mf_array)
+{
+#ifdef PRINT_NAME
+    amrex::Print() << "\n\n\t\t\t\t\t{************************Multifab_Manipulation::ConvertParserIntoMultiFab_4vars()************************\n";
+    amrex::Print() << "\t\t\t\t\tin file: " << __FILE__ << " at line: " << __LINE__ << "\n";
+#endif
+      
+    amrex::Real fac_x = (1._rt - iv[0]) * dx[0] * 0.5_rt;
+    amrex::Real x = i * dx[0] + real_box.lo(0) + fac_x;
+
+    amrex::Real fac_y = (1._rt - iv[1]) * dx[1] * 0.5_rt;
+    amrex::Real y = j * dx[1] + real_box.lo(1) + fac_y;
+
+    amrex::Real fac_z = (1._rt - iv[2]) * dx[2] * 0.5_rt;
+    amrex::Real z = k * dx[2] + real_box.lo(2) + fac_z;
+
+    mf_array(i,j,k) = macro_parser(x,y,z,t);
+
+#ifdef PRINT_NAME
+    amrex::Print() << "\t\t\t\t\t}************************Multifab_Manipulation::ConvertParserIntoMultiFab_4vars()************************\n";
 #endif
 }
 //void GetXYZ(const int i, const int j, const int k, 

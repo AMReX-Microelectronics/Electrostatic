@@ -6,6 +6,10 @@
 my_constants.q = 1.602e-19
 my_constants.epsilon_0 = 8.8541878128e-12
 my_constants.tiny = 1e-12
+my_constants.GV_min = -1
+my_constants.GV_max = 1
+my_constants.Nsteps = 101
+my_constants.dt = 1./(Nsteps-1)
 
 ### GEOMETRY and MACROSCOPIC PARAMETER PROPERTIES 
 
@@ -65,6 +69,12 @@ my_constants.nz = 80
 
 my_constants.epsilon_domain = 3.8*epsilon_0 #SiO2
 #####################################
+##################################################
+###### TIME DEPENDENT SIMULATION PROPERTIES ######
+##################################################
+
+timestep = dt
+steps = Nsteps
 
 #################################
 ###### GEOMETRY PROPERTIES ######
@@ -147,10 +157,9 @@ Drain.surf_soln = DV #V
 #   E.g. below `neu' for directions 0 and 1 will be ignored.
 #
 boundary.hi = neu(0) neu(0) neu(0)
-boundary.lo = neu(0) neu(0) neu(0)
-#boundary.lo = neu(0) neu(0) dir(GV)
+boundary.lo = neu(0) neu(0) dir(GV)
 
-boundary.GV_function(x,y,z) = "0.0" #V
+boundary.GV_function = "GV_min + (GV_max-GV_min) * t" #V
 
 ####################################
 ###### MACROSCOPIC PROPERTIES ######

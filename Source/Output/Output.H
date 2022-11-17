@@ -58,6 +58,8 @@ private:
     std::string m_plot_file_name;
     const int m_plt_name_digits=4;
     amrex::Vector<std::string> m_extra_dirs;
+    int m_write_interval;
+    int m_rawfield_write_interval;
 
     std::map<std::string,int> m_map_param_all;
     int m_raw_fields_to_plot;

@@ -233,7 +233,7 @@ c_MacroscopicProperties::ReadMacroparam(std::string macro_str,
     ParmParse pp_macroscopic("macroscopic");
 
     bool specified = false; 
-    std::string macro_functionXYZ = macro_str+"_function(x,y,z)";
+    std::string macro_functionXYZ = macro_str+"_function";
     if (queryWithParser(pp_macroscopic, macro_str.c_str() , m_macro_value[macro_num]) ) {
         m_macro_type[macro_num] = "constant";
         specified = true;
@@ -255,7 +255,7 @@ c_MacroscopicProperties::ReadMacroparam(std::string macro_str,
         Store_parserString(pp_macroscopic, macro_functionXYZ.c_str(),  m_macro_str_function[macro_num]);
 
         m_p_macro_parser[macro_num] = std::make_unique<amrex::Parser>(
-                                           makeParser( m_macro_str_function[macro_num], {"x","y","z"}));
+                                           makeParser( m_macro_str_function[macro_num], m_parser_varname_vector));
     }
 
 #ifdef PRINT_NAME
@@ -290,8 +290,14 @@ c_MacroscopicProperties::DefineAndInitializeMacroparam(std::string macro_str,
     } else if (m_macro_type[macro_num] == "parse_" + macro_str + "_function") {
         amrex::Print() << "##### " << macro_str << " initialized with a parser function with name: " << m_macro_type[macro_num] << "\n";
 
-        Multifab_Manipulation::InitializeMacroMultiFabUsingParser_3vars(m_p_mf[macro_num].get(), m_p_macro_parser[macro_num]->compile<3>(), geom);
+        auto& rCode = c_Code::GetInstance();
+        const amrex::Real time = rCode.get_time();
 
+        #ifdef TIME_DEPENDENT
+           Multifab_Manipulation::InitializeMacroMultiFabUsingParser_4vars(m_p_mf[macro_num].get(), m_p_macro_parser[macro_num]->compile<4>(), geom, time);
+       #else
+           Multifab_Manipulation::InitializeMacroMultiFabUsingParser_3vars(m_p_mf[macro_num].get(), m_p_macro_parser[macro_num]->compile<3>(), geom);
+       #endif 
     }
 
 #ifdef PRINT_NAME
