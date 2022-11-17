@@ -54,11 +54,11 @@ For verification:
  In our example, epsilon_1 = epsilon_0 and epsilon_2 = 3.8*epsilon_0, d_1 = d_2 = L_z/2
  this gives, phi_int = 2.04 V
  
- By probing cell-centered phi at the air-dielectric interface we indeed find this phi_int.
+ By probing cell-centered phi at the air-dielectric interface we find this phi_int = 2.07 V.
 
 -E_z in the air and dielectric can also be easily estimated by taking the gradient, e.g.
- E_z1 = (10 - 2.04) / d_1 
- E_z2 = (2.04 - 0) / d_2 
+ E_z1 = - (10 - 2.04) / d_1 = -317.2 (Theory: -317.34)
+ E_z2 = - (2.04 - 0) / d_2 = -82.8 (Theory: -83.51)
  These values are close to what we see from the solution.
 
 

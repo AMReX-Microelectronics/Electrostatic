@@ -22,6 +22,8 @@ my_constants.epsilon_r = 3.8
 #my_constants.rho = C*dV/(A*t) #Volts
 #####################################
 
+steps=1
+timestep=0
 
 #################################
 ###### GEOMETRY PROPERTIES ######
@@ -89,13 +91,13 @@ boundary.lo = per per rob(Zmin)
 # - Note that for function parsers, we do not need to indicate the ghost region. 
 #   The function above for Zmax_a, for example,  is equivalent to 1 * (z > Lz/2).
 #   This is taken care of in the code.
-boundary.Zmax_a_function(x,y,z) = "1" 
-boundary.Zmax_b_function(x,y,z) = "0"
-boundary.Zmax_f_function(x,y,z) = "10"
+boundary.Zmax_a_function = "1" 
+boundary.Zmax_b_function = "0"
+boundary.Zmax_f_function = "10"
 
-boundary.Zmin_a_function(x,y,z) = "1"
-boundary.Zmin_b_function(x,y,z) = "0"
-boundary.Zmin_f_function(x,y,z) = "0"
+boundary.Zmin_a_function = "1"
+boundary.Zmin_b_function = "0"
+boundary.Zmin_f_function = "0"
 
 ####################################
 ###### MACROSCOPIC PROPERTIES ######
@@ -127,7 +129,7 @@ macroscopic.ghostcells_for_fields = alpha.0 epsilon.1 charge_density.0 phi.1 rob
 # - robinA, robinB, and robinF field parameters are only initialized to 0. Later they will be filled with appropriate functions specified through parsers.
 
 macroscopic.alpha = 0.
-macroscopic.epsilon_function(x,y,z) = " (z > 0) * epsilon_0 + (z <= 0) * epsilon_0*epsilon_r"
+macroscopic.epsilon_function = " (z > 0) * epsilon_0 + (z <= 0) * epsilon_0*epsilon_r"
 macroscopic.charge_density = 0.
 macroscopic.phi = 0.
 macroscopic.robinA = 0.
@@ -218,7 +220,7 @@ post_process.fields_to_process = vecField vecFlux
 #  <field_name>.1 indicates multifab <field_name> is outputted in the output folder as well as separately outputted in the raw_fields folder with its ghost cells.
 #  <field_name>.2 indicates multifab <field_name> is outputted exclusively in the raw_fields folder.
 #
-plot.filename = ppc 
+plot.folder_name = ppc_twoDielect
 plot.fields_to_plot = Field_x Field_y Field_z vecFlux.1 epsilon.1 charge_density phi.1 robinA.2 robinB.2 robinF.2
 plot.write_after_init = 0
 
