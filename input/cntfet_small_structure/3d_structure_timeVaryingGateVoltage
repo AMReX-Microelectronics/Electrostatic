@@ -8,7 +8,7 @@ my_constants.epsilon_0 = 8.8541878128e-12
 my_constants.tiny = 1e-12
 my_constants.GV_min = -1
 my_constants.GV_max = 1
-my_constants.Nsteps = 3
+my_constants.Nsteps = 51
 my_constants.dt = 1./(Nsteps-1)
 
 ### GEOMETRY and MACROSCOPIC PARAMETER PROPERTIES 
@@ -28,8 +28,8 @@ my_constants.CM_h = 40e-9
 
 
 my_constants.epsilon_CM = 1.7*epsilon_0 #Palladium
-my_constants.SV =  1 #100e-3      #source voltage [V]
-my_constants.DV = -1 #-100e-3 #drain voltage [V]
+my_constants.SV =  0 #100e-3      #source voltage [V]
+my_constants.DV = 0.1 #-100e-3 #drain voltage [V]
 
 
 my_constants.CM_lo_z =  GO_h 
