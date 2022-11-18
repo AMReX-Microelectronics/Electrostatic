@@ -8,7 +8,7 @@ my_constants.epsilon_0 = 8.8541878128e-12
 my_constants.tiny = 1e-12
 my_constants.GV_min = -1
 my_constants.GV_max = 1
-my_constants.Nsteps = 101
+my_constants.Nsteps = 3
 my_constants.dt = 1./(Nsteps-1)
 
 ### GEOMETRY and MACROSCOPIC PARAMETER PROPERTIES 
@@ -121,8 +121,6 @@ ebgeom.surf_beta = epsilon_CM
 ebgeom.specify_inhomo_dir = 1
 
 Source.geom_type = cntfet_contact
-#Source.box_lo = -CM_w/2. source_lo_y CM_lo_z
-#Source.box_hi =  CM_w/2. source_hi_y CM_hi_z
 Source.box_lo = (-CM_w/2.+ tiny_eb)  source_lo_y (CM_lo_z-tiny_eb)
 Source.box_hi = (CM_w/2. - tiny_eb)  source_hi_y (CM_hi_z-tiny_eb)
 Source.cyl_cavity_radius = R_CN + small_gap + tiny_eb
@@ -130,8 +128,6 @@ Source.cyl_cavity_direction = 1
 Source.surf_soln = SV #V
 
 Drain.geom_type = cntfet_contact
-#Drain.box_lo = -CM_w/2. drain_lo_y CM_lo_z
-#Drain.box_hi =  CM_w/2. drain_hi_y CM_hi_z
 Drain.box_lo = (-CM_w/2.+ tiny_eb) drain_lo_y (CM_lo_z-tiny_eb)
 Drain.box_hi = (CM_w/2. - tiny_eb) drain_hi_y (CM_hi_z-tiny_eb)
 Drain.cyl_cavity_radius = R_CN + small_gap + tiny_eb
