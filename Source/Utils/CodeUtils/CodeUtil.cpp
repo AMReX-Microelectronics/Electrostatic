@@ -86,9 +86,66 @@ Multifab_Manipulation::AverageCellCenteredMultiFabToCellFaces(const amrex::Multi
 #ifdef PRINT_NAME
     amrex::Print() << "\t\t\t\t\t}************************Multifab_Manipulation::AverageCellCenteredMultiFabToCellFaces()************************\n";
 #endif
+
 }
 
+#ifdef AMREX_USE_EB
+void
+Multifab_Manipulation::SpecifyValueOnlyOnCutcells(amrex::MultiFab& mf, amrex::Real const value) 
+{
+#ifdef PRINT_NAME
+    amrex::Print() << "\n\n\t\t\t\t\t{************************Multifab_Manipulation::SpecifyValueOnlyOnCutcells************************\n";
+    amrex::Print() << "\t\t\t\t\tin file: " << __FILE__ << " at line: " << __LINE__ << "\n";
+#endif
 
+    auto factory  = dynamic_cast<amrex::EBFArrayBoxFactory const*>(&(mf.Factory()));
+
+    auto const &flags = factory->getMultiEBCellFlagFab();
+    auto const &vfrac = factory->getVolFrac();
+
+    auto iv = mf.ixType().toIntVect();
+
+    for ( amrex::MFIter mfi(flags, amrex::TilingIfNotGPU()); mfi.isValid(); ++mfi ) 
+    {
+        const auto& box = mfi.tilebox( iv, mf.nGrowVect() ); 
+
+        auto const& mf_array =  mf.array(mfi); 
+
+        amrex::FabType fab_type = flags[mfi].getType(box);
+
+        if(fab_type == amrex::FabType::regular) 
+        {
+            amrex::ParallelFor(box, [=] AMREX_GPU_DEVICE (int i, int j, int k)
+            {
+               mf_array(i, j, k) = amrex::Real(0.);
+            });
+        }
+        else if (fab_type == amrex::FabType::covered) 
+        {
+            amrex::ParallelFor(box, [=] AMREX_GPU_DEVICE (int i, int j, int k)
+            {
+               mf_array(i, j, k) = amrex::Real(0.);
+            });
+        }
+        else //box contains some cutcells
+        {
+            auto const &vfrac_array = vfrac.const_array(mfi);
+
+            amrex::ParallelFor(box, [=] AMREX_GPU_DEVICE (int i, int j, int k)
+            {
+               if(vfrac_array(i,j,k) > 0 and vfrac_array(i,j,k) < 1) 
+               {
+                   mf_array(i, j, k) = value;
+               } 
+            });
+        }
+    }
+
+#ifdef PRINT_NAME
+    amrex::Print() << "\t\t\t\t\t}************************Multifab_Manipulation::SpecifyValueOnlyOnCutcells************************\n";
+#endif
+}
+#endif
 //AMREX_GPU_DEVICE AMREX_FORCE_INLINE
 //void
 ////Multifab_Manipulation::GetXYZ(const int i, const int j, const int k, 
@@ -157,3 +214,11 @@ void PrintRunDiagnostics(amrex::Real initial_time)
     amrex::Print() << "\t}************************PrintRunDiagnostics()************************\n";
 #endif
 }
+
+amrex::RealArray vecToArr(amrex::Vector<amrex::Real>& vec)
+{   
+    amrex::RealArray array;
+    for (int i=0; i<AMREX_SPACEDIM; ++i) array[i] = vec[i];
+    return array;
+}
+

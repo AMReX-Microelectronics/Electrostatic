@@ -3,24 +3,32 @@
 ##################################
 #
 ### GEOMETRY PROPERTIES 
-my_constants.Lx = 0.2
-my_constants.Ly = 0.2
-my_constants.Lz = 0.05
+my_constants.Lx = 2
+my_constants.Ly = 2
+my_constants.Lz = 2
+
+my_constants.nx = 200
+my_constants.ny = 200
+my_constants.nz = 200
+
+my_constants.tiny = 2e-3
+my_constants.B = 0.5 + tiny
+
+my_constants.dx = Lx/nx
+my_constants.source_lo_x = -Lx/2 + 5*dx/2. + tiny/2 
+my_constants.source_hi_x = source_lo_x + B 
+
+my_constants.drain_hi_x = Lx/2 - 5*dx/2. - tiny/2
+my_constants.drain_lo_x = drain_hi_x - B
+
+my_constants.R = 0.205
+my_constants.V_source = 1
+my_constants.V_drain = -1
 
 ### Physical Constants 
-#my_constants.pi = 3.14159265358979
-#my_constants.q = 1.602e-19
 my_constants.epsilon_0 = 8.8541878128e-12
 
-### MACROSCOPIC PROPERTIES
-#my_constants.A = Lx*Ly #area of parallel plate capacitor
-#my_constants.d = Lz    #distance between plates
-#my_constants.t = 0.001  #thickness of plates which hold the charge
-#my_constants.C = epsilon_0*A/d #capacitance
-#my_constants.dV = 10 #Volts
-#my_constants.rho = C*dV/(A*t) #Volts
 #####################################
-
 
 #################################
 ###### GEOMETRY PROPERTIES ######
@@ -28,55 +36,77 @@ my_constants.epsilon_0 = 8.8541878128e-12
 #
 # - The following AMReX specific properties are defined in c_GeometryProperties.
 
-domain.n_cell = 120 120 80
-domain.max_grid_size = 120 120 80
-# domain.blocking_factor = 120 120 80
+domain.n_cell = nx ny nz
+domain.max_grid_size = nx ny nz
+domain.blocking_factor = nx ny nz
 
 domain.prob_lo = -Lx/2. -Ly/2. -Lz/2.
 domain.prob_hi = Lx/2. Ly/2. Lz/2.
 
-#domain.is_periodic = 1: yes, 0: no
-domain.is_periodic = 1 1 0
+#domain.is_periodic = 1 means yes and 0 means no. 
+domain.is_periodic = 0 0 0                  
 
-#options: cartesian, radial (at present, only cartesian is supported).
-domain.coord_sys = cartesian 
+#domain.coord_sys = cartesian or radial (currently supports cartesian)
+domain.coord_sys = cartesian        
 
-#################################
+domain.embedded_boundary = 1  #options: 1=true, 0=false (default)
+
+####################################
+###### EMBEDDED BOUNDARIES ######
+####################################
+
+ebgeom.specify_input_using_eb2 = 0  #options: 1=true, 0=false (default)
+
+ebgeom.required_coarsening_level = 0
+ebgeom.max_coarsening_level = 100
+ebgeom.objects = Source Drain 
+ebgeom.specify_separate_surf_beta = 0
+ebgeom.surf_beta = epsilon_0
+ebgeom.specify_inhomo_dir = 1
+
+Source.geom_type = cntfet_contact
+Source.box_lo = source_lo_x  -B/2 -B/2
+Source.box_hi = source_hi_x   B/2  B/2
+Source.cyl_cavity_radius = R
+Source.cyl_cavity_direction = 0
+Source.surf_soln = V_source #V
+
+Drain.geom_type = cntfet_contact
+Drain.box_lo = drain_lo_x -B/2 -B/2
+Drain.box_hi = drain_hi_x  B/2  B/2
+Drain.cyl_cavity_radius = R
+Drain.cyl_cavity_direction = 0
+Drain.surf_soln = V_drain #V
+
+#Source.geom_type = box
+#Source.box_lo = source_lo_x  -B/2 -B/2
+#Source.box_hi = source_hi_x   B/2  B/2
+#Source.has_fluid_inside = 0
+#Source.surf_soln = V_source #V
+#
+#Drain.geom_type = box
+#Drain.box_lo = drain_lo_x  -B/2 -B/2
+#Drain.box_hi = drain_hi_x   B/2  B/2
+#Drain.has_fluid_inside = 0
+#Drain.surf_soln = V_drain #V
+
+##### parser (example of an ellipse)
+#my_constants.a = 0.15
+#my_constants.b = 0.05
+#Source.geom_type = parser
+#Source.parser_function = "0*(((x-0.5)**2/a) + (y**2/b) + (z**2/b) == 1) -1*(((x-0.5)**2/a) + (y**2/b) + (z**2/b) > 1) + 1*(((x-0.5)**2/a) + (y**2/b) + (z**2/b) < 1)"
+#Source.surf_soln = V_source #Volts
+#
+#Drain.geom_type = parser
+#Drain.parser_function = "0*(((x+0.5)**2/a) + (y**2/b) + (z**2/b) == 1) -1*(((x+0.5)**2/a) + (y**2/b) + (z**2/b) > 1) + 1*(((x+0.5)**2/a) + (y**2/b) + (z**2/b) < 1)"
+#Drain.surf_soln = V_drain #Volts
+
+####################################
 ###### BOUNDARY CONDITIONS ######
-#################################
-# - User must specify boundary conditions using `boundary.lo' array for X_min, Y_min, and Z_min boundaries
-#   and `boundary.hi' for X_max, Y_max, and Z_max boundaries.
-#
-# - User has an option to choose from the following:
-#   dir: homogeneous dirichlet
-#   neu: homogeneous neumann
-#   per: periodic
-#   rob: robin
-#   ref: reflect
-#   
-#   The options are as follows:
-#
-#   dir or neu: homogeneous dirichlet or neumann boundaries.
-#
-#   dir(<value>) or neu(<value>): inhomogeneous dirichlet or neumann with a value of <value> in SI units, 
-#                                 e.g. <value> = 5.0, -3e-6, 5e7 etc.
-#   dir(<string>) or neu(<string>) or rob(<string>): inhomogeneous dirichlet, neumann or robin 
-#                                                    with a function parser name of <string>, 
-#                                                    e.g. <string> = Xmin, Ymax, Z_hi, etc.
-#
-#   see examples: input/parallel_plate_capacitor/function_parsed_robin and function_parsed_dirichlet                                                 
-#
-# - For homogeneous dirichlet or neumann, boundary values are initialized based on the solution multifab, e.g. phi in this case.
-#
-# - For periodic and reflect boundary conditions, we do not need to specify any value in the bracket.
-#   If such value or string is specified then it is ignored.
-#
-# - Periodic boundary conditions are imposed based on domain.is_periodic set above.
-#   At these boundaries, if some boundaries other than "per" are specified through boundary.hi and boundary.lo,
-#   then they are ignored and a warning is raised stating that these boundary conditions are set to periodic.
+####################################
 
-boundary.hi = neu neu dir(10)
-boundary.lo = neu neu dir(0)
+boundary.lo = neu(0) neu(0) neu(0)
+boundary.hi = neu(0) neu(0) neu(0)
 
 ####################################
 ###### MACROSCOPIC PROPERTIES ######
@@ -102,15 +132,16 @@ macroscopic.ghostcells_for_fields = alpha.0 epsilon.1 charge_density.0 phi.1
 #
 # - If the default value is not specified in the above function, it is taken as `0'.
 #
-# - In the following example, epsilon and charge_density are given constant values, however, they can be specified using a function parser as well,
-#   e.g. macroscopic.epsilon_function(x,y,z) = "epsilon_0 + (epsilon_r_sph-1)*epsilon_0 * ( sqrt(x**2 + y**2 + z**2) <= R_sph )"
-
+# - In the following example, epsilon and charge_density are given a different value below radius R_inner_sph, defined above.
+#
+macroscopic.alpha = 0.0
 macroscopic.epsilon = epsilon_0
-macroscopic.charge_density = 0.
-macroscopic.phi = 0.
-
+macroscopic.charge_density = 0.0
+macroscopic.phi = 0.0
+#
+#
 # - Note that, the particular use of field multifabs defined above need to be coded in the solver depending on the application.
-#   e.g. we have used phi as the `soln' multifab for the MLMG Poisson solver, as described below.
+#   e.g. we have used phi as the `unknown' multifab for the MLMG Poisson solver, as described below.
 
 
 
@@ -147,6 +178,7 @@ mlmg.beta   = epsilon
 #    - absolute_tolerance(default=0).
 
 mlmg.set_verbose=0
+mlmg.max_order=2
 mlmg.absolute_tolerance=0
 mlmg.relative_tolerance=1e-10
 
@@ -164,13 +196,13 @@ mlmg.relative_tolerance=1e-10
 #
 # -At present, the recipe for the following two vector fields is coded, using the functions provided by the MLMG solver.:
 #
-#   1) the vector of Field, denoted as `vecField'. This is equal to -Gradient(soln). 
-#   2) the vector of Flux, denoted as `vecFlux'. This is equal to  beta_fc * Gradient{ soln }.
+#   1) the vector of Field, denoted as `vecField', which gives -Gradient(soln). This is E-field.
+#   2) the vector of Flux, denoted as `vecFlux', which computes  beta_fc * Gradient( soln ).
 #
 # - Note that since the functions provided by MLMG solver do not have an option to compute specific components of the vector fields.
-#   Therefore, specifying individual components such as E_x, E_y etc. will still force the code to compute the entire vector fields.
+#   Therefore, specifying individual components such as Field_x, Field_y etc. will still force the code to compute the entire vector fields.
 
-post_process.fields_to_process = vecField vecFlux 
+post_process.fields_to_process = vecField vecFlux
 
 ####################
 ###### OUTPUT ######
@@ -191,8 +223,8 @@ post_process.fields_to_process = vecField vecFlux
 #  <field_name>   indicates mutifab <field_name> is outputted in the output folder, e.g. ppc0000, in the usual way.
 #  <field_name>.1 indicates multifab <field_name> is outputted in the output folder as well as separately outputted in the raw_fields folder with its ghost cells.
 #  <field_name>.2 indicates multifab <field_name> is outputted exclusively in the raw_fields folder.
-#
-plot.filename = ppc
+
+plot.filename = two_bodies
 plot.fields_to_plot = Field_x Field_y Field_z vecFlux epsilon charge_density phi 
 plot.write_after_init = 0
 
@@ -203,6 +235,6 @@ plot.write_after_init = 0
 #  while the post_process.fields_to_process are omitted. 
 #  All fields_to_plot will be written out at the end of the run as usual in folder <plot.filename>0000.
 
-
+#
 # -Note that there is provision for disregarding repeating field names, e.g. 1) specifying `phi' twice will result in it's output written out only once, 
-#  2) specifying Field_x and vecField will result in output of Field_x, Field_y, and Field_z.
+#  2) specifying E_x and vecE will result in output of E_x, E_y, and E_z.

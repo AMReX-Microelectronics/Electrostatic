@@ -12,6 +12,7 @@
 #include <AMReX_Geometry.H>
 #include <AMReX_MLLinOp.H>
 #include <AMReX_MLABecLaplacian.H>
+#include <AMReX_MLEBABecLap.H>
 #include <AMReX_MLMG.H>
 
 //#include <AMReX_BaseFwd.H>
@@ -40,9 +41,14 @@ public:
     amrex::Real  relative_tolerance, absolute_tolerance;
 
     amrex::LPInfo info;
-    amrex::MLABecLaplacian mlabec;
     std::unique_ptr<amrex::MLMG> pMLMG;
     std::array< amrex::MultiFab, AMREX_SPACEDIM > beta_fc; 
+
+#ifdef AMREX_USE_EB
+    std::unique_ptr<amrex::MLEBABecLap> p_mlebabec;
+#endif
+    std::unique_ptr<amrex::MLABecLaplacian> p_mlabec;
+
     c_MLMGSolver();
     ~c_MLMGSolver();
 
@@ -89,6 +95,10 @@ private:
     void Set_MLMG_CellCentered_Multifabs();
 
     void Setup_MLABecLaplacian_ForPoissonEqn();
+
+#ifdef AMREX_USE_EB 
+    void Setup_MLEBABecLaplacian_ForPoissonEqn();
+#endif
 
     void AssignLinOpBCTypeToBoundaries ();
 

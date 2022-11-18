@@ -6,7 +6,7 @@
 #include "PostProcessor/PostProcessor.H"
 
 #include <AMReX_ParmParse.H>
-#include "AMReX_PlotFileUtil.H"
+#include <AMReX_PlotFileUtil.H>
 #include <AMReX_VisMF.H>
 
 
@@ -109,8 +109,8 @@ c_Output::ReadData()
     pp_plot.query("filename", m_filename_prefix_str);
     pp_plot.query("write_after_init", m_write_after_init);
 
-    amrex::ParmParse pp_plot_file(m_filename_prefix_str);
-    bool varnames_specified = pp_plot_file.queryarr("fields_to_plot", fields_to_plot_withGhost_str);
+//    amrex::ParmParse pp_plot_file(m_filename_prefix_str);
+    bool varnames_specified = pp_plot.queryarr("fields_to_plot", fields_to_plot_withGhost_str);
 
     const int varsize = fields_to_plot_withGhost_str.size();
 
@@ -212,13 +212,15 @@ c_Output::ReadData()
     fields_to_plot_str.clear();
     extra_str.clear();
 
-#ifdef PRINT_LOW
-    amrex::Print() << prt <<  "fields to plot: \n";
+    amrex::Print() <<  "\n##### OUTPUT #####\n\n";
+    amrex::Print() <<  "##### file name: " << m_filename_prefix_str << "\n";
+    amrex::Print() <<  "##### fields_to_plot:\n";
+    amrex::Print() <<  "##### " << std::setw(20)  << "name" << std::setw(10) << "number" << std::setw(14) << "output_option\n";
     for (auto it: m_map_param_all) 
     {
-        amrex::Print() << prt << "field name: " << it.first << " field number " << it.second << " output option: " << m_output_option[it.second] << "\n";
+        amrex::Print() << "##### " << std::setw(20) << it.first << std::setw(10) << it.second << std::setw(10) << m_output_option[it.second] << "\n";
     }
-#endif 
+    amrex::Print() <<  "\n##### write_after_init?: " << m_write_after_init << "\n";
 
 #ifdef PRINT_NAME
     amrex::Print() << "\t\t\t\t}************************c_Output::ReadData()************************\n";
@@ -244,7 +246,14 @@ c_Output::InitData()
     auto& dm = rGprop.dm;
     int Nghost0=0;
 
-    m_p_mf_all = std::make_unique<amrex::MultiFab>(ba, dm, m_num_params_plot_single_level, Nghost0); //cell-centered multifab
+#ifdef AMREX_USE_EB
+    if(rGprop.embedded_boundary_flag) {
+        m_p_mf_all = std::make_unique<amrex::MultiFab>(ba, dm, m_num_params_plot_single_level, Nghost0, MFInfo(), *rGprop.pEB->p_factory_union); 
+    }
+#endif
+    if(!rGprop.embedded_boundary_flag) {
+         m_p_mf_all = std::make_unique<amrex::MultiFab>(ba, dm, m_num_params_plot_single_level, Nghost0);  
+    }
 
     if(m_write_after_init) 
     {
@@ -264,8 +273,14 @@ c_Output::InitData()
                 }
             }
         }
-        m_p_mf_all_init = std::make_unique<amrex::MultiFab>(ba, dm, counter, Nghost0); //cell-centered multifab
-
+#ifdef AMREX_USE_EB
+        if(rGprop.embedded_boundary_flag) {
+            m_p_mf_all_init = std::make_unique<amrex::MultiFab>(ba, dm, counter, Nghost0, MFInfo(), *rGprop.pEB->p_factory_union);
+        }
+#endif
+        if(!rGprop.embedded_boundary_flag) {
+            m_p_mf_all_init = std::make_unique<amrex::MultiFab>(ba, dm, counter, Nghost0);
+        }
 
 #ifdef PRINT_HIGH
         amrex::Print() << "\n" << prt <<  "m_write_after_init is true! \n";
@@ -296,7 +311,7 @@ c_Output::WriteOutput(int step, amrex::Real time)
 
     AssimilateDataPointers();
     m_plot_file_name = amrex::Concatenate(m_filename_prefix_str, step, m_plt_name_digits);
-    
+
     WriteSingleLevelPlotFile(step, time, m_p_mf_all, m_map_param_all);
 
     if(m_raw_fields_to_plot) WriteRawFields(m_map_param_all); 
@@ -368,12 +383,24 @@ c_Output::WriteSingleLevelPlotFile(int step, amrex::Real time, std::unique_ptr<a
         }
     }
 
-    amrex::WriteSingleLevelPlotfile( m_plot_file_name, 
-                                    *p_all_mf, m_p_name_str, 
-                                     geom, 
-                                     time, step, 
-                                     "HyperCLaw-V1.1", m_default_level_prefix, "Cell",
-                                     m_extra_dirs);
+#ifdef AMREX_USE_EB
+    if(rGprop.embedded_boundary_flag) {
+        amrex::EB_WriteSingleLevelPlotfile( m_plot_file_name, 
+                                        *p_all_mf, m_p_name_str, 
+                                         geom, 
+                                         time, step, 
+                                         "HyperCLaw-V1.1", m_default_level_prefix, "Cell",
+                                         m_extra_dirs);
+   }
+#endif
+    if(!rGprop.embedded_boundary_flag) {
+        amrex::WriteSingleLevelPlotfile( m_plot_file_name, 
+                                        *p_all_mf, m_p_name_str, 
+                                         geom, 
+                                         time, step, 
+                                         "HyperCLaw-V1.1", m_default_level_prefix, "Cell",
+                                         m_extra_dirs);
+    }
 
     m_p_name_str.clear();
 

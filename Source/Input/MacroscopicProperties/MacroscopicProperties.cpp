@@ -109,15 +109,6 @@ c_MacroscopicProperties::ReadParameterMapAndNumberOfGhostCells()
     }
     fields_to_define.clear();
 
-#ifdef PRINT_LOW 
-    amrex::Print() <<  "\n" << prt << "map_param_all:\n";
-    for (auto it: map_param_all)
-    {
-        amrex::Print() << prt <<  it.first << "   " << it.second << "\n";
-    }
-    amrex::Print() << prt << "Total parameters to define (final): " << map_param_all.size() << "\n\n";
-#endif
-
     for (auto it: map_param_all)
     {
         std::string str = it.first;
@@ -157,13 +148,16 @@ c_MacroscopicProperties::ReadParameterMapAndNumberOfGhostCells()
     }
     ghostcells_for_fields.clear();
 
-#ifdef PRINT_LOW 
-    amrex::Print() << prt <<  "map_num_ghost_cell: \n";
-    for (auto it: map_num_ghostcell)
+    amrex::Print() <<  "\n##### Macroscopic Properties #####\n\n";
+    amrex::Print() <<  "##### fields_to_define: number, name,  ghost_cells\n";
+    amrex::Print() << "##### " <<  "number" << std::setw(5) << "name" << std::setw(15) << "ghost_cells" << "\n";
+    for (auto it: map_param_all)
     {
-        amrex::Print() << prt <<  it.first << "   " << it.second << "\n";
+        amrex::Print() << "##### " <<  it.second << std::setw(20) << it.first << std::setw(5) << map_num_ghostcell[it.first] << "\n";
     }
-#endif
+    amrex::Print() << "##### Total number of parameters: " << map_param_all.size() << "\n\n";
+
+
 #ifdef PRINT_NAME
     amrex::Print() << "\t\t\t\t\t}************************c_MacroscopicProperties::ReadParameterMapAndNumberOfGhostCells()************************\n";
 #endif
@@ -209,6 +203,7 @@ c_MacroscopicProperties::InitData()
     auto& dm = rGprop.dm;
     auto& geom = rGprop.geom;
 
+    amrex::Print()  << "\n##### MACROSCOPIC INITIALIZATION #####\n\n";
     for (auto it: map_param_all)
     {
         auto macro_str = it.first;
@@ -216,26 +211,6 @@ c_MacroscopicProperties::InitData()
         DefineAndInitializeMacroparam(macro_str, macro_num, ba, dm, geom, Ncomp1, map_num_ghostcell[macro_str]);
     }
 
-    //auto& eps = get_mf("epsilon");
-    //const auto& eps_arr = eps[0].array();
-    //amrex::Print() << "eps_0,0,0 :  " << eps_arr(0,0,0) << "\n";
-    //amrex::Print() << "eps_15,49,49:  " << eps_arr(15,49,49) << "\n";
-    //amrex::Print() << "eps_24,49,49:  " << eps_arr(24,49,49) << "\n";
-    //amrex::Print() << "eps_25,49,49:  " << eps_arr(25,49,49) << "\n";
-    //amrex::Print() << "eps_49,49,49:  " << eps_arr(49,49,49) << "\n";
-    //amrex::Print() << "eps_74,49,49:  " << eps_arr(74,49,49) << "\n";
-    //amrex::Print() << "eps_75,49,49:  " << eps_arr(75,49,49) << "\n";
-    //amrex::Print() << "eps_85,49,49:  " << eps_arr(85,49,49) << "\n";
-    //auto& rho = get_mf("charge_density");
-    //const auto& rho_arr = rho[0].array();
-    //amrex::Print() << "rho_0,0,0 :  " << rho_arr(0,0,0) << "\n";
-    //amrex::Print() << "rho_15,49,49:  " << rho_arr(15,49,49) << "\n";
-    //amrex::Print() << "rho_24,49,49:  " << rho_arr(24,49,49) << "\n";
-    //amrex::Print() << "rho_25,49,49:  " << rho_arr(25,49,49) << "\n";
-    //amrex::Print() << "rho_49,49,49:  " << rho_arr(49,49,49) << "\n";
-    //amrex::Print() << "rho_74,49,49:  " << rho_arr(74,49,49) << "\n";
-    //amrex::Print() << "rho_75,49,49:  " << rho_arr(75,49,49) << "\n";
-    //amrex::Print() << "rho_85,49,49:  " << rho_arr(85,49,49) << "\n";
 #ifdef PRINT_NAME
     amrex::Print() << "\t\t}************************c_MacroscopicProperties::InitData()************************\n";
 #endif
@@ -309,11 +284,11 @@ c_MacroscopicProperties::DefineAndInitializeMacroparam(std::string macro_str,
     m_p_mf[macro_num] = std::make_unique<amrex::MultiFab>(ba, dm, Ncomp, Nghost); //cell-centered multifab
 
     if (m_macro_type[macro_num] == "constant") {
-    //    amrex::Print()  << macro_num << " parse function is constant and set to : " << m_macro_value[macro_num] << "\n";
+        amrex::Print()  << "##### " << macro_str << " initialized with a constant value: " << m_macro_value[macro_num] << "\n";
         m_p_mf[macro_num] -> setVal(m_macro_value[macro_num]);
 
     } else if (m_macro_type[macro_num] == "parse_" + macro_str + "_function") {
-    //    amrex::Print() << macro_num << " parse function is used with name: " << m_macro_type[macro_num] << "\n";
+        amrex::Print() << "##### " << macro_str << " initialized with a parser function with name: " << m_macro_type[macro_num] << "\n";
 
         Multifab_Manipulation::InitializeMacroMultiFabUsingParser_3vars(m_p_mf[macro_num].get(), m_p_macro_parser[macro_num]->compile<3>(), geom);
 

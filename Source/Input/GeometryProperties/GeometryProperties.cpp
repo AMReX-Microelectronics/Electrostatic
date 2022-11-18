@@ -7,6 +7,10 @@
 #include <AMReX_ParmParse.H>
 #include <AMReX_Parser.H>
 #include <AMReX_RealBox.H>
+#include <AMReX_EB2.H>
+#include <AMReX_EB2_IF.H>
+#include <AMReX_EBSupport.H>
+
 
 using namespace amrex;
 
@@ -63,6 +67,8 @@ c_GeometryProperties::InitData()
 
     InitializeBoxArrayAndDistributionMap();
 
+    if(embedded_boundary_flag) pEB->BuildGeometry(&geom, &ba, &dm);
+
 #ifdef PRINT_NAME
     amrex::Print() << "\t\t}************************c_GeometryProperties::InitData()************************\n";
 #endif
@@ -86,6 +92,7 @@ c_GeometryProperties::ParseBasicDomainInput()
     amrex::Vector<amrex::Real> periodicity{AMREX_D_DECL(0,0,0)};
     std::string coord_sys_str = "cartesian";
     coord_sys =  amrex::CoordSys::cartesian; //default
+    embedded_boundary_flag = 0;
 
     amrex::ParmParse pp_domain("domain");
 
@@ -95,29 +102,25 @@ c_GeometryProperties::ParseBasicDomainInput()
     getArrWithParser(pp_domain, "prob_hi", prob_max, 0, AMREX_SPACEDIM);
     AMREX_ALWAYS_ASSERT(prob_hi.size() == AMREX_SPACEDIM);
 
-    pp_domain.getarr("n_cell", num_cell, 0, AMREX_SPACEDIM);
+    getArrWithParser(pp_domain,"n_cell", num_cell, 0, AMREX_SPACEDIM);
     AMREX_ALWAYS_ASSERT(n_cell.size() == AMREX_SPACEDIM);
 
-    pp_domain.queryarr("max_grid_size", mg);
+    queryArrWithParser(pp_domain,"max_grid_size", mg, 0, AMREX_SPACEDIM);
 
-    pp_domain.queryarr("blocking_factor", bf);
+    queryArrWithParser(pp_domain,"blocking_factor", bf, 0, AMREX_SPACEDIM);
 
     pp_domain.queryarr("is_periodic", periodicity);
 
     pp_domain.query("coord_sys", coord_sys_str);
 
-    //pp_domain.addarr("n_cell", num_cell);
-    //pp_domain.addarr("prob_lo", prob_min);
-    //pp_domain.addarr("prob_hi", prob_max);
-    //pp_domain.addarr("max_grid_size", mg);
-    //pp_domain.addarr("blocking_factor", bf);
+    pp_domain.query("embedded_boundary", embedded_boundary_flag);
 
     for (int i=0; i<AMREX_SPACEDIM; ++i) 
     {
         n_cell[i] = num_cell[i];
-        prob_lo[i] = prob_min[i]; //Converting vector to GpuArray
+        prob_lo[i] = prob_min[i];
         prob_hi[i] = prob_max[i]; 
-        max_grid_size[i] = mg[i];  //Converting Vector to IntVect
+        max_grid_size[i] = mg[i];
         blocking_factor[i] = bf[i]; 
         is_periodic[i] = periodicity[i]; 
     }
@@ -130,28 +133,35 @@ c_GeometryProperties::ParseBasicDomainInput()
         coord_sys = amrex::CoordSys::RZ;
     }
 
-#ifdef PRINT_LOW
-    for (int i=0; i<AMREX_SPACEDIM; ++i) 
-    {
-        amrex::Print() << prt << "\n";
-        amrex::Print() << prt << "direction: " << i << "\n";
-        amrex::Print() << prt << "prob_lo: " << prob_lo[i] << "\n";
-        amrex::Print() << prt << "prob_hi: " << prob_hi[i] << "\n";
-        amrex::Print() << prt << "max_grid_size: " << max_grid_size[i] << "\n";
-        amrex::Print() << prt << "blocking_factor: " << blocking_factor[i] << "\n";
-        amrex::Print() << prt << "is_periodic: " << is_periodic[i] << "\n";
-    }
-    amrex::Print() << prt << "\n";
-    amrex::Print() << prt << "coord_sys: " << coord_sys << "\n";
-#endif
+    amrex::Print() << "\n##### GEOMETRY PROPERTIES #####\n\n";
+    amrex::Print() << "##### n_cell: ";
+    for (int i=0; i<AMREX_SPACEDIM; ++i) amrex::Print() << n_cell[i] << "  ";
+    amrex::Print() << "\n";
+    amrex::Print() << "##### prob_lo: ";
+    for (int i=0; i<AMREX_SPACEDIM; ++i) amrex::Print() << prob_lo[i] << "  ";
+    amrex::Print() << "\n";
+    amrex::Print() << "##### prob_hi: ";
+    for (int i=0; i<AMREX_SPACEDIM; ++i) amrex::Print() << prob_hi[i] << "  ";
+    amrex::Print() << "\n";
+    amrex::Print() << "##### max_grid_size: ";
+    for (int i=0; i<AMREX_SPACEDIM; ++i) amrex::Print() << max_grid_size[i] << "  ";
+    amrex::Print() << "\n";
+    amrex::Print() << "##### blocking_factor: ";
+    for (int i=0; i<AMREX_SPACEDIM; ++i) amrex::Print() << blocking_factor[i] << "  ";
+    amrex::Print() << "\n";
+    amrex::Print() << "##### is_periodic: ";
+    for (int i=0; i<AMREX_SPACEDIM; ++i) amrex::Print() << is_periodic[i] << "  ";
+    amrex::Print() << "\n";
+    amrex::Print() << "##### coord_sys: " << coord_sys << "\n";
+    amrex::Print() << "##### embedded_boundary_flag: " << embedded_boundary_flag << "\n";
+
+    if(embedded_boundary_flag) pEB = std::make_unique<c_EmbeddedBoundaries>();
 
 #ifdef PRINT_NAME
     amrex::Print() << "\t\t\t\t}************************c_GeometryProperties::ParseBasicDomainInput()************************\n";
 #endif
 }
 
-template<typename T>
-class TD;
 
 void 
 c_GeometryProperties::InitializeBoxArrayAndDistributionMap()
