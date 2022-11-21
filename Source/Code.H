@@ -106,9 +106,10 @@ public:
 
     void ReadData ();
     void InitData ();
-    void Solve();
-    void PostProcess();
-    void Output();
+    void Solve_PostProcess_Output ();
+    //void Solve();
+    //void PostProcess();
+    //void Output();
     void EstimateOfRequiredMemory();
 
     static bool do_device_synchronize;
@@ -119,10 +120,17 @@ public:
     c_MLMGSolver& get_MLMGSolver () { return *m_pMLMGSolver;}
     c_PostProcessor& get_PostProcessor () { return *m_pPostProcessor;}
     c_Output& get_Output () { return *m_pOutput;}
-
-
+    
+    const amrex::Real get_time() { return m_time_instant;}
+ 
 private:
+    const amrex::Real set_time(int n) { m_time_instant = n*m_timestep; return m_time_instant;}
+
     static c_Code* m_instance;
+
+    amrex::Real m_time_instant = 0;
+    amrex::Real m_timestep;
+    int m_total_steps;
 
     std::unique_ptr<c_GeometryProperties> m_pGeometryProperties;
     std::unique_ptr<c_BoundaryConditions> m_pBoundaryConditions;

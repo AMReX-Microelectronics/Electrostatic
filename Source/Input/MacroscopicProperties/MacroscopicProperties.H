@@ -98,6 +98,12 @@ private:
                                        amrex::Geometry& geom,
                                        int Ncomp, int Nghost);
 
+#ifdef TIME_DEPENDENT
+    amrex::Vector<std::string> m_parser_varname_vector = {"x", "y", "z", "t"};
+#else
+    amrex::Vector<std::string> m_parser_varname_vector = {"x", "y", "z"};
+#endif
+
 };
 
 #endif

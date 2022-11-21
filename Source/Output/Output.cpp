@@ -1,6 +1,7 @@
 #include "Output.H"
 
 #include "Code.H"
+#include "../../Utils/SelectWarpXUtils/WarpXUtil.H"
 #include "Input/GeometryProperties/GeometryProperties.H"
 #include "Input/MacroscopicProperties/MacroscopicProperties.H"
 #include "PostProcessor/PostProcessor.H"
@@ -104,10 +105,18 @@ c_Output::ReadData()
 
     amrex::ParmParse pp_plot("plot");
     
-    m_filename_prefix_str = "plt";
+    m_filename_prefix_str = "output/plt";
 
-    pp_plot.query("filename", m_filename_prefix_str);
+    std::string foldername_str;
+    pp_plot.query("folder_name", foldername_str);
+    m_filename_prefix_str = foldername_str + "/plt";
+
     pp_plot.query("write_after_init", m_write_after_init);
+
+    m_write_interval = 1; //default
+    m_rawfield_write_interval = 1; //default
+    queryWithParser(pp_plot, "write_interval", m_write_interval);
+    queryWithParser(pp_plot, "rawfield_write_interval", m_rawfield_write_interval);
 
 //    amrex::ParmParse pp_plot_file(m_filename_prefix_str);
     bool varnames_specified = pp_plot.queryarr("fields_to_plot", fields_to_plot_withGhost_str);
@@ -309,12 +318,14 @@ c_Output::WriteOutput(int step, amrex::Real time)
     std::string prt = "\t\t";
 #endif
 
-    AssimilateDataPointers();
-    m_plot_file_name = amrex::Concatenate(m_filename_prefix_str, step, m_plt_name_digits);
+    if((step+1)%m_write_interval == 0) {
+        AssimilateDataPointers();
+        m_plot_file_name = amrex::Concatenate(m_filename_prefix_str, step, m_plt_name_digits);
 
-    WriteSingleLevelPlotFile(step, time, m_p_mf_all, m_map_param_all);
+        WriteSingleLevelPlotFile(step, time, m_p_mf_all, m_map_param_all);
+    }
 
-    if(m_raw_fields_to_plot) WriteRawFields(m_map_param_all); 
+    if((m_raw_fields_to_plot == 1) and ((step+1)%m_rawfield_write_interval == 0)) WriteRawFields(m_map_param_all); 
 
 #ifdef PRINT_NAME
     amrex::Print() << "\t\t}************************c_Output::WriteOutput()************************\n";

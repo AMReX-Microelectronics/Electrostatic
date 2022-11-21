@@ -360,7 +360,14 @@ c_BoundaryConditions::ReadBoundaryConditionsParser(std::string macro_str, int ma
 
     ParmParse pp_boundary("boundary");
 
-    std::string macro_functionXYZ = macro_str + "_function(x,y,z)";
+    //std::string function_str;
+    //#ifdef TIME_DEPENDENT
+    //    function_str = "_function(x,y,z,t)";
+    //#else
+    //    function_str = "_function(x,y,z)";
+    //#endif
+
+    std::string macro_functionXYZ = macro_str + "_function";
     bool specified = false;
 
     if (pp_boundary.query( macro_functionXYZ.c_str(), m_macro_str_function[macro_num]) ) {

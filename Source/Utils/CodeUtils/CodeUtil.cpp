@@ -50,6 +50,51 @@ Multifab_Manipulation::InitializeMacroMultiFabUsingParser_3vars (amrex::MultiFab
 
 
 void 
+Multifab_Manipulation::InitializeMacroMultiFabUsingParser_4vars (amrex::MultiFab *macro_mf,
+                                                                 amrex::ParserExecutor<4> const& macro_parser,
+                                                                 amrex::Geometry& geom,
+                                                                 const amrex::Real t)
+{
+#ifdef PRINT_NAME
+    amrex::Print() << "\n\n\t\t\t\t\t{************************Multifab_Manipulation::InitializeMacroMultiFabUsingParser************************\n";
+    amrex::Print() << "\t\t\t\t\tin file: " << __FILE__ << " at line: " << __LINE__ << "\n";
+#endif
+
+    auto dx = geom.CellSizeArray();
+
+    auto& real_box = geom.ProbDomain();
+
+    auto iv = macro_mf->ixType().toIntVect();
+
+    for ( amrex::MFIter mfi(*macro_mf, amrex::TilingIfNotGPU()); mfi.isValid(); ++mfi ) {
+
+        const auto& tb = mfi.tilebox( iv, macro_mf->nGrowVect() ); /** initialize ghost cells in addition to valid cells.
+                                                                       auto = amrex::Box
+                                                                    */
+        auto const& mf_array =  macro_mf->array(mfi); //auto = amrex::Array4<amrex::Real>
+        
+        amrex::ParallelFor (tb,
+            [=] AMREX_GPU_DEVICE (int i, int j, int k) {
+
+                amrex::Real fac_x = (1._rt - iv[0]) * dx[0] * 0.5_rt;
+                amrex::Real x = i * dx[0] + real_box.lo(0) + fac_x;
+
+                amrex::Real fac_y = (1._rt - iv[1]) * dx[1] * 0.5_rt;
+                amrex::Real y = j * dx[1] + real_box.lo(1) + fac_y;
+
+                amrex::Real fac_z = (1._rt - iv[2]) * dx[2] * 0.5_rt;
+                amrex::Real z = k * dx[2] + real_box.lo(2) + fac_z;
+
+                mf_array(i,j,k) = macro_parser(x,y,z,t);
+        });
+    }
+#ifdef PRINT_NAME
+    amrex::Print() << "\t\t\t\t\t}************************Multifab_Manipulation::InitializeMacroMultiFabUsingParser************************\n";
+#endif
+}
+
+
+void 
 Multifab_Manipulation::AverageCellCenteredMultiFabToCellFaces(const amrex::MultiFab& cc_arr,
                                        std::array< amrex::MultiFab, 
                                        AMREX_SPACEDIM >& face_arr)

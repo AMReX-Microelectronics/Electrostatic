@@ -55,7 +55,7 @@ public:
 
     void InitData();
 
-    void Solve_PoissonEqn();
+    amrex::Real Solve_PoissonEqn();
 
     void Compute_vecField(std::array<amrex::MultiFab, AMREX_SPACEDIM>& E);
 
@@ -66,6 +66,7 @@ public:
 
     std::array<std::array<amrex::LinOpBCType,AMREX_SPACEDIM>,2> LinOpBCType_2d;
 
+    void UpdateBoundaryConditions();
 
     /*The following is public for GPUs*/
     void Fill_Constant_Inhomogeneous_Boundaries(); 

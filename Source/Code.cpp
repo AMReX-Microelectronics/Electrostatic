@@ -4,6 +4,7 @@
 #include "Utils/SelectWarpXUtils/WarnManager.H"
 #include "Utils/SelectWarpXUtils/WarpXUtil.H"
 #include "Utils/SelectWarpXUtils/WarpXProfilerWrapper.H"
+#include "../../Utils/SelectWarpXUtils/WarpXUtil.H"
 
 #include "Input/GeometryProperties/GeometryProperties.H"
 #include "Input/BoundaryConditions/BoundaryConditions.H"
@@ -128,17 +129,25 @@ c_Code::ReadData ()
     amrex::Print() << "\t\tin file: " << __FILE__ << " at line: " << __LINE__ << "\n";
 #endif
 
-     m_pGeometryProperties = std::make_unique<c_GeometryProperties>();
+    m_timestep = 0;
+    m_total_steps = 1;
+    #ifdef TIME_DEPENDENT
+        amrex::ParmParse pp;
+        queryWithParser(pp,"timestep", m_timestep);
+        queryWithParser(pp,"steps", m_total_steps);
+    #endif
 
-     m_pBoundaryConditions = std::make_unique<c_BoundaryConditions>();
-     
-     m_pMacroscopicProperties = std::make_unique<c_MacroscopicProperties>();
-     
-     m_pMLMGSolver = std::make_unique<c_MLMGSolver>();
-     
-     m_pPostProcessor = std::make_unique<c_PostProcessor>();
+    m_pGeometryProperties = std::make_unique<c_GeometryProperties>();
 
-     m_pOutput = std::make_unique<c_Output>();
+    m_pBoundaryConditions = std::make_unique<c_BoundaryConditions>();
+    
+    m_pMacroscopicProperties = std::make_unique<c_MacroscopicProperties>();
+    
+    m_pMLMGSolver = std::make_unique<c_MLMGSolver>();
+    
+    m_pPostProcessor = std::make_unique<c_PostProcessor>();
+
+    m_pOutput = std::make_unique<c_Output>();
 
 #ifdef PRINT_NAME
     amrex::Print() << "\t\t}************************c_Code::ReadData()************************\n";
@@ -265,63 +274,42 @@ c_Code::EstimateOfRequiredMemory ()
 #endif
 }
 
+
 void 
-c_Code::Solve()
+c_Code::Solve_PostProcess_Output()
 {
 #ifdef PRINT_NAME
-    amrex::Print() << "\n\n\t{************************c_Code::Solve()************************\n";
+    amrex::Print() << "\n\n\t{************************c_Code::Solve_PostProcess_Output()************************\n";
     amrex::Print() << "\tin file: " << __FILE__ << " at line: " << __LINE__ << "\n";
 #endif
+    amrex::Real avg_mlmg_solve_time = 0.;
+    for(int step=0; step < m_total_steps; ++step) 
+    {
+        auto time = set_time(step);
 
-    m_pMLMGSolver->Solve_PoissonEqn();
+        m_pMLMGSolver->UpdateBoundaryConditions();
+
+        auto mlmg_solve_time = m_pMLMGSolver->Solve_PoissonEqn();
+        avg_mlmg_solve_time += mlmg_solve_time;
+        amrex::Print() << "step: "  << std::setw(5) 
+                       << step      << std::setw(7) 
+                       << "     time: " << std::setw(5) 
+                       << time << std::setw(15) 
+                       << "     mlmg_solve_time: " << std::setw(15) 
+                       << mlmg_solve_time << "\n";
+
+        m_pPostProcessor->Compute(); 
+
+        m_pOutput->WriteOutput(step, time);
+    }
+    avg_mlmg_solve_time = avg_mlmg_solve_time / m_total_steps;
+    amrex::Print() << "avg_mlmg_solve_time: "   
+                   << avg_mlmg_solve_time       
+                   << " calculated over " 
+                   << m_total_steps 
+                   << " total steps.\n";
 
 #ifdef PRINT_NAME
     amrex::Print() << "\t}************************c_Code::Solve()************************\n";
-#endif
-}
-
-
-void 
-c_Code::PostProcess()
-{
-#ifdef PRINT_NAME
-    amrex::Print() << "\n\n\t{************************c_Code::PostProcess()************************\n";
-    amrex::Print() << "\tin file: " << __FILE__ << " at line: " << __LINE__ << "\n";
-#endif
-    
-    m_pPostProcessor->Compute(); 
-
-//    auto& Ex = m_pPostProcessor->get_array_mf_component("vecE", 0);
-//    const auto& Ex_arr = Ex[0].array();
-//    amrex::Print() << "\nEx field: \n";
-//    amrex::Print() << "Ex_0,0,0 :  "   << Ex_arr(0,0,0) << "\n";
-//    amrex::Print() << "Ex_15,49,49:  " << Ex_arr(15,49,49) << "\n";
-//    amrex::Print() << "Ex_24,49,49:  " << Ex_arr(24,49,49) << "\n";
-//    amrex::Print() << "Ex_49,49,49:  " << Ex_arr(49,49,49) << "\n";
-//    amrex::Print() << "Ex_76,49,49:  " << Ex_arr(76,49,49) << "\n";
-//    amrex::Print() << "Ex_85,49,49:  " << Ex_arr(85,49,49) << "\n";
-//    amrex::Print() << "Ex_100,49,49:  " << Ex_arr(100,49,49) << "\n";
-//    amrex::Print() << "Ex_101,49,49:  " << Ex_arr(101,49,49) << "\n";
-
-#ifdef PRINT_NAME
-    amrex::Print() << "\t}************************c_Code::PostProcess()************************\n";
-#endif
-}
-
-
-void 
-c_Code::Output()
-{
-#ifdef PRINT_NAME
-    amrex::Print() << "\n\n\t{************************c_Code::Output()************************\n";
-    amrex::Print() << "\tin file: " << __FILE__ << " at line: " << __LINE__ << "\n";
-#endif
-
-    int step=0;
-    amrex::Real time=0.0;
-    m_pOutput->WriteOutput(step, time);
-
-#ifdef PRINT_NAME
-    amrex::Print() << "\t}************************c_Code::Output()************************\n";
 #endif
 }
