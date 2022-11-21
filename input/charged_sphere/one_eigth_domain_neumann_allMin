@@ -188,8 +188,8 @@ post_process.fields_to_process = vecField vecFlux
 #  <field_name>.2 indicates multifab <field_name> is outputted exclusively in the raw_fields folder.
 
 
-plot.filename = plt
-plt.fields_to_plot = Field_x Field_y Field_z vecFlux epsilon charge_density phi 
+plot.folder_name = charged_sphere
+plot.fields_to_plot = Field_x Field_y Field_z vecFlux epsilon charge_density phi 
 plot.write_after_init = 0
 
 # -plot.write_after init is an optional flag, which allows user to write data after initialization (useful for debugging). 

@@ -129,13 +129,12 @@ c_Code::ReadData ()
     amrex::Print() << "\t\tin file: " << __FILE__ << " at line: " << __LINE__ << "\n";
 #endif
 
+    m_timestep = 0;
+    m_total_steps = 1;
     #ifdef TIME_DEPENDENT
         amrex::ParmParse pp;
-        getWithParser(pp,"timestep", m_timestep);
-        getWithParser(pp,"steps", m_total_steps);
-    #else 
-        m_timestep = 0;
-        m_total_steps = 1;
+        queryWithParser(pp,"timestep", m_timestep);
+        queryWithParser(pp,"steps", m_total_steps);
     #endif
 
     m_pGeometryProperties = std::make_unique<c_GeometryProperties>();

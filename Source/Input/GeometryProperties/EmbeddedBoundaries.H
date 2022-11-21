@@ -53,16 +53,16 @@ public:
     int required_coarsening_level;
     int max_coarsening_level;
     int specify_input_using_eb2;
-    int specify_separate_surf_beta;
+    //int specify_separate_surf_beta;
     int specify_separate_surf_soln;
-    amrex::Real surf_beta;
+    //amrex::Real surf_beta;
     amrex::Real surf_soln;
     int specify_inhomogeneous_dirichlet;
     int num_objects;
     amrex::EBSupport support;
 
     std::unique_ptr<amrex::EBFArrayBoxFactory> p_factory_union;
-    std::unique_ptr<amrex::MultiFab> p_surf_beta_union;
+    //std::unique_ptr<amrex::MultiFab> p_surf_beta_union;
     std::unique_ptr<amrex::MultiFab> p_surf_soln_union;
 
     const amrex::Geometry* geom;
@@ -70,9 +70,9 @@ public:
     const amrex::DistributionMapping* dm; 
 
     amrex::MultiFab& get_soln_mf  (int i) {return (*m_p_soln_mf[i]);}
-    amrex::MultiFab& get_beta_mf  (int i) {return (*m_p_beta_mf[i]);}
+    //amrex::MultiFab& get_beta_mf  (int i) {return (*m_p_beta_mf[i]);}
     void clear_soln_mf() { m_p_soln_mf.clear(); };
-    void clear_beta_mf() { m_p_beta_mf.clear(); };
+    //void clear_beta_mf() { m_p_beta_mf.clear(); };
 
     void BuildGeometry(const amrex::Geometry* geom, const amrex::BoxArray* ba, const amrex::DistributionMapping* dm);
 
@@ -142,7 +142,7 @@ private:
 
 
     amrex::Vector< std::unique_ptr<amrex::MultiFab> > m_p_soln_mf;
-    amrex::Vector< std::unique_ptr<amrex::MultiFab> > m_p_beta_mf;
+    //amrex::Vector< std::unique_ptr<amrex::MultiFab> > m_p_beta_mf;
     amrex::Vector< std::unique_ptr<amrex::EBFArrayBoxFactory> > m_p_factory;
 };
 #endif

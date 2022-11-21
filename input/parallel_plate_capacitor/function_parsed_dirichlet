@@ -77,14 +77,14 @@ domain.coord_sys = cartesian
 #   E.g. below `neu' for directions 0 and 1 will be ignored.
 #
 # - Note that for function parsers, we do not need to indicate the ghost region. 
-#   i.e. The function parser for Zmax_a_function(x,y,z) = "1" is equivalent to "1 * (z > Lz/2)".
+#   i.e. The function parser for Zmax_a_function = "1" is equivalent to "1 * (z > Lz/2)".
 #   This is taken care of in the code.
 #
 boundary.hi = neu neu dir(Zmax)
 boundary.lo = neu neu dir(Zmin)
 
-boundary.Zmax_function(x,y,z) = "10"
-boundary.Zmin_function(x,y,z) = "0"
+boundary.Zmax_function = "10"
+boundary.Zmin_function = "0"
 
 ####################################
 ###### MACROSCOPIC PROPERTIES ######
@@ -111,7 +111,7 @@ macroscopic.ghostcells_for_fields = alpha.0 epsilon.1 charge_density.0 phi.1
 # - If the default value is not specified in the above function, then the multifab is initialized as `0'.
 #
 # - In the following example, epsilon and charge_density are given constant values, however, they can be specified using a function parser as well,
-#   e.g. macroscopic.epsilon_function(x,y,z) = "epsilon_0 + (epsilon_r_sph-1)*epsilon_0 * ( sqrt(x**2 + y**2 + z**2) <= R_sph )"
+#   e.g. macroscopic.epsilon_function = "epsilon_0 + (epsilon_r_sph-1)*epsilon_0 * ( sqrt(x**2 + y**2 + z**2) <= R_sph )"
 
 macroscopic.epsilon = epsilon_0
 macroscopic.charge_density = 0.
@@ -196,7 +196,7 @@ post_process.fields_to_process = vecField vecFlux
 #  <field_name>.1 indicates multifab <field_name> is outputted in the output folder as well as separately outputted in the raw_fields folder with its ghost cells.
 #  <field_name>.2 indicates multifab <field_name> is outputted exclusively in the raw_fields folder.
 #
-plot.filename = ppc
+plot.folder_name = ppc
 plot.fields_to_plot = Field_x Field_y Field_z vecFlux epsilon charge_density phi 
 
 plot.write_after_init = 0

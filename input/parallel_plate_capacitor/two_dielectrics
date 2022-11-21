@@ -20,10 +20,6 @@ my_constants.epsilon_r = 3.8
 #my_constants.C = epsilon_0*A/d #capacitance
 #my_constants.dV = 10 #Volts
 #my_constants.rho = C*dV/(A*t) #Volts
-#####################################
-
-steps=1
-timestep=0
 
 #################################
 ###### GEOMETRY PROPERTIES ######
@@ -124,7 +120,7 @@ macroscopic.ghostcells_for_fields = alpha.0 epsilon.1 charge_density.0 phi.1 rob
 # - If the default value is not specified in the above function, then the multifab is initialized as `0'.
 #
 # - In the following example, epsilon and charge_density are given constant values, however, they can be specified using a function parser as well,
-#   e.g. macroscopic.epsilon_function(x,y,z) = "epsilon_0 + (epsilon_r_sph-1)*epsilon_0 * ( sqrt(x**2 + y**2 + z**2) <= R_sph )"
+#   e.g. macroscopic.epsilon_function = "epsilon_0 + (epsilon_r_sph-1)*epsilon_0 * ( sqrt(x**2 + y**2 + z**2) <= R_sph )"
 #
 # - robinA, robinB, and robinF field parameters are only initialized to 0. Later they will be filled with appropriate functions specified through parsers.
 

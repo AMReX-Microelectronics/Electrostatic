@@ -423,12 +423,12 @@ c_MLMGSolver:: Setup_MLEBABecLaplacian_ForPoissonEqn()
 
     if(rGprop.pEB->specify_inhomogeneous_dirichlet == 0) 
     {
-//        p_mlebabec->setEBHomogDirichlet(amrlev, *rGprop.pEB->p_surf_beta_union);
+        //p_mlebabec->setEBHomogDirichlet(amrlev, *rGprop.pEB->p_surf_beta_union);
         p_mlebabec->setEBHomogDirichlet(amrlev, *beta);
     }
     else 
     {
-//        p_mlebabec->setEBDirichlet(amrlev, *rGprop.pEB->p_surf_soln_union, *rGprop.pEB->p_surf_beta_union);
+        //p_mlebabec->setEBDirichlet(amrlev, *rGprop.pEB->p_surf_soln_union, *rGprop.pEB->p_surf_beta_union);
         p_mlebabec->setEBDirichlet(amrlev, *rGprop.pEB->p_surf_soln_union, *beta);
     }
 

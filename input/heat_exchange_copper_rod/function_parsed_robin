@@ -77,13 +77,13 @@ domain.coord_sys = cartesian
 boundary.hi = rob(Xmax) per neu
 boundary.lo = rob(Xmin) per neu
 
-boundary.Xmax_a_function(x,y,z) = "1" 
-boundary.Xmax_b_function(x,y,z) = "1./lambda"
-boundary.Xmax_f_function(x,y,z) = "700"
+boundary.Xmax_a_function = "1" 
+boundary.Xmax_b_function = "1./lambda"
+boundary.Xmax_f_function = "700"
 
-boundary.Xmin_a_function(x,y,z) = "1"
-boundary.Xmin_b_function(x,y,z) = "0."
-boundary.Xmin_f_function(x,y,z) = "300"
+boundary.Xmin_a_function = "1"
+boundary.Xmin_b_function = "0."
+boundary.Xmin_f_function = "300"
 
 ####################################
 ###### MACROSCOPIC PROPERTIES ######
@@ -110,7 +110,7 @@ macroscopic.ghostcells_for_fields = alpha_mlmg.0 rhs_mlmg.0 thermal_diffusivity.
 # - If the default value is not specified in the above function, then the multifab is initialized as `0'.
 #
 # - In the following example, epsilon and charge_density are given constant values, however, they can be specified using a function parser as well,
-#   e.g. macroscopic.epsilon_function(x,y,z) = "epsilon_0 + (epsilon_r_sph-1)*epsilon_0 * ( sqrt(x**2 + y**2 + z**2) <= R_sph )"
+#   e.g. macroscopic.epsilon_function = "epsilon_0 + (epsilon_r_sph-1)*epsilon_0 * ( sqrt(x**2 + y**2 + z**2) <= R_sph )"
 #
 # - robinA, robinB, and robinF field parameters are only initialized to 0. Later they will be filled with appropriate functions specified through parsers.
 #
@@ -209,8 +209,8 @@ post_process.fields_to_process = vecField vecFlux
 #  <field_name>.2 indicates multifab <field_name> is outputted exclusively in the raw_fields folder.
 
 
-plot.filename = plt
-plt.fields_to_plot = thermal_diffusivity temperature vecField vecFlux robinA robinB robinF
+plot.folder_name = heatingrod
+plot.fields_to_plot = thermal_diffusivity temperature vecField vecFlux robinA robinB robinF
 plot.write_after_init = 0
 
 # -plot.write_after init is an optional flag, which allows user to write data after initialization (useful for debugging). 
