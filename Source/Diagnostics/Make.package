@@ -1,0 +1,6 @@
+CEXE_sources += Diagnostics.cpp
+CEXE_headers += Diagnostics.H
+CEXE_headers += Diagnostics_fwd.H
+
+VPATH_LOCATIONS += $(CODE_HOME)/Source/Diagnostics
+INCLUDE_LOCATIONS += $(CODE_HOME)/Source/Diagnostics

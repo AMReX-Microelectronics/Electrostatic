@@ -1,0 +1,157 @@
+##################################
+##### USER DEFINED CONSTANTS #####
+##################################
+#
+### GEOMETRY PROPERTIES 
+my_constants.Lx = 2
+my_constants.Ly = 2
+my_constants.Lz = 2
+
+my_constants.nx = 200
+my_constants.ny = 200
+my_constants.nz = 200
+
+my_constants.tiny = 2e-3
+my_constants.B = 0.5 + tiny
+
+my_constants.dx = Lx/nx
+my_constants.source_lo_x = -Lx/2 + 5*dx/2. + tiny/2 
+my_constants.source_hi_x = source_lo_x + B 
+
+my_constants.drain_hi_x = Lx/2 - 5*dx/2. - tiny/2
+my_constants.drain_lo_x = drain_hi_x - B
+
+my_constants.R = 0.205
+my_constants.V_source = 1
+my_constants.V_drain = -1
+
+### Physical Constants 
+my_constants.epsilon_0 = 8.8541878128e-12
+
+#################################
+###### GEOMETRY PROPERTIES ######
+#################################
+domain.n_cell = nx ny nz
+domain.max_grid_size = nx ny nz
+domain.blocking_factor = nx ny nz
+
+domain.prob_lo = -Lx/2. -Ly/2. -Lz/2.
+domain.prob_hi = Lx/2. Ly/2. Lz/2.
+
+domain.is_periodic = 0 0 0                  
+
+domain.coord_sys = cartesian        
+
+domain.embedded_boundary = 1  #options: 1=true, 0=false (default)
+
+####################################
+###### EMBEDDED BOUNDARIES ######
+####################################
+
+ebgeom.specify_input_using_eb2 = 0  #options: 1=true, 0=false (default)
+
+ebgeom.required_coarsening_level = 0
+ebgeom.max_coarsening_level = 100
+ebgeom.objects = Source Drain 
+ebgeom.specify_inhomo_dir = 1
+
+Source.geom_type = cntfet_contact
+Source.box_lo = source_lo_x  -B/2 -B/2
+Source.box_hi = source_hi_x   B/2  B/2
+Source.cyl_cavity_radius = R
+Source.cyl_cavity_direction = 0
+Source.surf_soln = V_source #V
+
+Drain.geom_type = cntfet_contact
+Drain.box_lo = drain_lo_x -B/2 -B/2
+Drain.box_hi = drain_hi_x  B/2  B/2
+Drain.cyl_cavity_radius = R
+Drain.cyl_cavity_direction = 0
+Drain.surf_soln = V_drain #V
+
+#Source.geom_type = box
+#Source.box_lo = source_lo_x  -B/2 -B/2
+#Source.box_hi = source_hi_x   B/2  B/2
+#Source.has_fluid_inside = 0
+#Source.surf_soln = V_source #V
+#
+#Drain.geom_type = box
+#Drain.box_lo = drain_lo_x  -B/2 -B/2
+#Drain.box_hi = drain_hi_x   B/2  B/2
+#Drain.has_fluid_inside = 0
+#Drain.surf_soln = V_drain #V
+
+##### parser (example of an ellipse)
+#my_constants.a = 0.15
+#my_constants.b = 0.05
+#Source.geom_type = parser
+#Source.parser_function = "0*(((x-0.5)**2/a) + (y**2/b) + (z**2/b) == 1) -1*(((x-0.5)**2/a) + (y**2/b) + (z**2/b) > 1) + 1*(((x-0.5)**2/a) + (y**2/b) + (z**2/b) < 1)"
+#Source.surf_soln = V_source #Volts
+#
+#Drain.geom_type = parser
+#Drain.parser_function = "0*(((x+0.5)**2/a) + (y**2/b) + (z**2/b) == 1) -1*(((x+0.5)**2/a) + (y**2/b) + (z**2/b) > 1) + 1*(((x+0.5)**2/a) + (y**2/b) + (z**2/b) < 1)"
+#Drain.surf_soln = V_drain #Volts
+
+####################################
+###### BOUNDARY CONDITIONS ######
+####################################
+
+boundary.lo = neu(0) neu(0) neu(0)
+boundary.hi = neu(0) neu(0) neu(0)
+
+####################################
+###### MACROSCOPIC PROPERTIES ######
+####################################
+macroscopic.fields_to_define = alpha epsilon charge_density phi
+macroscopic.ghostcells_for_fields = alpha.0 epsilon.1 charge_density.0 phi.1 
+
+macroscopic.alpha = 0.0
+macroscopic.epsilon = epsilon_0
+macroscopic.charge_density = 0.0
+macroscopic.phi = 0.0
+
+####################################
+###### MLMG SOLVER PROPERTIES ######
+####################################
+mlmg.ascalar=0
+mlmg.bscalar=1
+
+mlmg.soln   = phi
+mlmg.rhs    = charge_density
+mlmg.alpha  = alpha
+mlmg.beta   = epsilon
+
+mlmg.set_verbose=0
+mlmg.max_order=2
+mlmg.absolute_tolerance=0
+mlmg.relative_tolerance=1e-10
+
+#############################
+###### POST PROCESSING ######
+#############################
+
+post_process.fields_to_process = vecField vecFlux
+
+
+####################
+###### OUTPUT ######
+####################
+
+plot.folder_name = two_bodies
+plot.fields_to_plot = Field_x Field_y Field_z vecFlux epsilon charge_density phi 
+plot.write_after_init = 0
+
+########################
+###### DIAGNOSTICS #####
+########################
+diagnostics = 1
+
+diag.specify_using_eb = 1
+diag.objects = Surf1 
+Surf1.geom_type = cylinder
+Surf1.center = 0 0 0 
+Surf1.radius = R
+Surf1.axial_direction = 0
+Surf1.theta_reference_direction = 1
+Surf1.has_fluid_inside = 0
+Surf1.fields_to_plot = phi 
