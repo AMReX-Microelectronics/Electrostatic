@@ -1,7 +1,8 @@
 #include "Output.H"
 
 #include "Code.H"
-#include "../../Utils/SelectWarpXUtils/WarpXUtil.H"
+#include "../Utils/SelectWarpXUtils/WarpXUtil.H"
+#include "../Utils/CodeUtils/CodeUtil.H"
 #include "Input/GeometryProperties/GeometryProperties.H"
 #include "Input/MacroscopicProperties/MacroscopicProperties.H"
 #include "PostProcessor/PostProcessor.H"
@@ -105,10 +106,9 @@ c_Output::ReadData()
 
     amrex::ParmParse pp_plot("plot");
     
-    m_filename_prefix_str = "output/plt";
-
-    std::string foldername_str;
+    foldername_str = "output";
     pp_plot.query("folder_name", foldername_str);
+
     m_filename_prefix_str = foldername_str + "/plt";
 
     pp_plot.query("write_after_init", m_write_after_init);
@@ -332,7 +332,6 @@ c_Output::WriteOutput(int step, amrex::Real time)
 #endif
 }
 
-
 void
 c_Output::WriteOutput_AfterInit()
 {
@@ -347,6 +346,7 @@ c_Output::WriteOutput_AfterInit()
     amrex::Real time = 0;
     m_plot_file_name = amrex::Concatenate(m_filename_prefix_str+"_init", step, 0);
     WriteSingleLevelPlotFile(step, time, m_p_mf_all_init, m_map_field_to_plot_after_init);
+
     if(m_raw_fields_to_plot) WriteRawFields(m_map_field_to_plot_after_init); 
 
 #ifdef PRINT_NAME
@@ -651,44 +651,44 @@ c_Output::AssimilateDataPointers()
 #endif
 }
 
-int c_Output::Evaluate_TypeOf_MacroStr(std::string macro_str) 
-{
-#ifdef PRINT_NAME
-    amrex::Print() << "\n\n\t\t\t\t{************************c_Output::Evaluate_TypeOf_MacroStr(*)************************\n";
-    amrex::Print() << "\t\t\t\tin file: " << __FILE__ << " at line: " << __LINE__ << "\n";
-    std::string prt = "\t\t\t\t";
-#endif
-    /** if macro_str is defined in c_MacroscopicProperties then return is 0.
-     *  if macro_str is defined in c_PostProcessor then return is 1.
-     **/
-    int return_type = -1;
-    auto& rCode = c_Code::GetInstance();
-    auto& rPost = rCode.get_PostProcessor();
-    auto& rMprop = rCode.get_MacroscopicProperties();
-
-    std::map<std::string,int>::iterator it_Mprop;
-    std::map<std::string,s_PostProcessMacroName::macro_name>::iterator it_Post;
-
-    it_Mprop = rMprop.map_param_all.find(macro_str);
-    it_Post = rPost.map_macro_name.find(macro_str);
-
-    if(it_Mprop != rMprop.map_param_all.end())
-    { 
-        #ifdef PRINT_HIGH
-        amrex::Print() << prt << "macro_string " << macro_str << " is a part of c_MacroscopicProperties. \n";
-        #endif 
-        return_type = 0;
-    }
-    else if(it_Post != rPost.map_macro_name.end())
-    { 
-        #ifdef PRINT_HIGH
-        amrex::Print() << prt << "macro_string " << macro_str << " is a part of c_PostProcessor. \n";
-        #endif 
-        return_type = 1;
-    }
-
-#ifdef PRINT_NAME
-    amrex::Print() << "\t\t\t\t}************************c_Output::Evaluate_TypeOf_MacroStr(*)************************\n";
-#endif
-    return return_type;
-}
+//int c_Output::Evaluate_TypeOf_MacroStr(std::string macro_str) 
+//{
+//#ifdef PRINT_NAME
+//    amrex::Print() << "\n\n\t\t\t\t{************************c_Output::Evaluate_TypeOf_MacroStr(*)************************\n";
+//    amrex::Print() << "\t\t\t\tin file: " << __FILE__ << " at line: " << __LINE__ << "\n";
+//    std::string prt = "\t\t\t\t";
+//#endif
+//    /** if macro_str is defined in c_MacroscopicProperties then return is 0.
+//     *  if macro_str is defined in c_PostProcessor then return is 1.
+//     **/
+//    int return_type = -1;
+//    auto& rCode = c_Code::GetInstance();
+//    auto& rPost = rCode.get_PostProcessor();
+//    auto& rMprop = rCode.get_MacroscopicProperties();
+//
+//    std::map<std::string,int>::iterator it_Mprop;
+//    std::map<std::string,s_PostProcessMacroName::macro_name>::iterator it_Post;
+//
+//    it_Mprop = rMprop.map_param_all.find(macro_str);
+//    it_Post = rPost.map_macro_name.find(macro_str);
+//
+//    if(it_Mprop != rMprop.map_param_all.end())
+//    { 
+//        #ifdef PRINT_HIGH
+//        amrex::Print() << prt << "macro_string " << macro_str << " is a part of c_MacroscopicProperties. \n";
+//        #endif 
+//        return_type = 0;
+//    }
+//    else if(it_Post != rPost.map_macro_name.end())
+//    { 
+//        #ifdef PRINT_HIGH
+//        amrex::Print() << prt << "macro_string " << macro_str << " is a part of c_PostProcessor. \n";
+//        #endif 
+//        return_type = 1;
+//    }
+//
+//#ifdef PRINT_NAME
+//    amrex::Print() << "\t\t\t\t}************************c_Output::Evaluate_TypeOf_MacroStr(*)************************\n";
+//#endif
+//    return return_type;
+//}

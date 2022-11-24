@@ -31,6 +31,8 @@ public:
 
     int m_num_params_plot_single_level;
 
+    std::string foldername_str;
+
 private:
 
     std::map<std::string,s_Subscript::subscript_name> m_map_subscript_name;
@@ -73,7 +75,7 @@ private:
 
 
     void AssimilateDataPointers();
-    int Evaluate_TypeOf_MacroStr(std::string macro_str);
+    //int Evaluate_TypeOf_MacroStr(std::string macro_str);
 
     void WriteSingleLevelPlotFile(int step, amrex::Real time, std::unique_ptr<amrex::MultiFab>& p_all_mf, std::map<std::string,int>& map_all_mf);
     void WriteRawFields(std::map<std::string,int>& map_all_mf);
