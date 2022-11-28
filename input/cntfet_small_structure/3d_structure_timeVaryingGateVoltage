@@ -194,3 +194,18 @@ plot.fields_to_plot = epsilon.1 charge_density.1 phi.1 vecField
 plot.write_after_init = 0
 plot.write_interval = 1 
 plot.rawfield_write_interval = 1
+
+########################
+###### DIAGNOSTICS #####
+########################
+diagnostics = 1
+
+diag.specify_using_eb = 1
+diag.objects = Surf1
+Surf1.geom_type = cylinder
+Surf1.center = 0 0 (GO_h + CM_h/2.)
+Surf1.radius = R_CN
+Surf1.axial_direction = 1
+Surf1.theta_reference_direction = 0
+Surf1.has_fluid_inside = 0
+Surf1.fields_to_plot = phi

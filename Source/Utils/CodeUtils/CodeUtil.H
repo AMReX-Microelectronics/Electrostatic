@@ -4,6 +4,7 @@
 #include <AMReX_MultiFab.H>
 #include <AMReX_Parser.H>
 
+#include "../../Code_Definitions.H"
 
 #include <ctype.h>
 #include <typeindex>
@@ -61,6 +62,7 @@ void ConvertParserIntoMultiFab_3vars(const int i, const int j, const int k,
 #ifdef PRINT_NAME
     amrex::Print() << "\t\t\t\t\t}************************Multifab_Manipulation::ConvertParserIntoMultiFab_3vars()************************\n";
 #endif
+
 }
 
 AMREX_GPU_DEVICE AMREX_FORCE_INLINE
@@ -99,6 +101,21 @@ void ConvertParserIntoMultiFab_4vars(const int i, const int j, const int k, cons
 
 #ifdef AMREX_USE_EB
 void SpecifyValueOnlyOnCutcells(amrex::MultiFab& mf, amrex::Real const value);
+
+void CopyValuesIntoAMultiFabOnCutcells(amrex::MultiFab& target_mf, amrex::MultiFab& source_mf);
+
+amrex::Real GetTotalNumberOfCutcells(amrex::MultiFab& mf);
+
+void
+Copy_3DCartesian_To_2DAzimuthalLongitudinal
+(const amrex::Geometry& geom,
+ amrex::MultiFab& mf, 
+ amrex::Array2D<amrex::Real,1,Max_Ncell_Azim,1,Max_Ncell_Long,amrex::Order::C>* cyl_surf_grid,
+ int cyl_ncell_ring, 
+ int ncell_ncell_axis, 
+ amrex::RealArray& center, 
+ int dir_axial, 
+ int dir_ref2);
 #endif
 
 }
@@ -163,3 +180,8 @@ template<typename K, typename V> bool findByValue(std::vector<K> & vec, std::map
 }
 
 amrex::RealArray vecToArr(amrex::Vector<amrex::Real>& vec);
+
+int Evaluate_TypeOf_MacroStr(std::string macro_str);
+
+int Get_Third_Reference_Direction(int dir1, int dir2);
+

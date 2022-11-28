@@ -11,6 +11,7 @@
 #include "Input/MacroscopicProperties/MacroscopicProperties.H"
 #include "Solver/Electrostatics/MLMG.H"
 #include "PostProcessor/PostProcessor.H"
+#include "Diagnostics/Diagnostics.H"
 #include "Output/Output.H"
 
 
@@ -131,8 +132,9 @@ c_Code::ReadData ()
 
     m_timestep = 0;
     m_total_steps = 1;
+    amrex::ParmParse pp;
+
     #ifdef TIME_DEPENDENT
-        amrex::ParmParse pp;
         queryWithParser(pp,"timestep", m_timestep);
         queryWithParser(pp,"steps", m_total_steps);
     #endif
@@ -146,6 +148,12 @@ c_Code::ReadData ()
     m_pMLMGSolver = std::make_unique<c_MLMGSolver>();
     
     m_pPostProcessor = std::make_unique<c_PostProcessor>();
+
+    diagnostics_flag = 0;
+    pp.query("diagnostics", diagnostics_flag);
+    amrex::Print() << "##### diagnostics: " << diagnostics_flag << "\n";
+
+    if(diagnostics_flag) m_pDiagnostics = std::make_unique<c_Diagnostics>();
 
     m_pOutput = std::make_unique<c_Output>();
 
@@ -164,6 +172,8 @@ c_Code::InitData ()
 #endif
  
     m_pGeometryProperties->InitData();
+
+    if(diagnostics_flag==1) m_pDiagnostics->InitData();
 
     m_pMacroscopicProperties->InitData();
 
@@ -299,6 +309,8 @@ c_Code::Solve_PostProcess_Output()
                        << mlmg_solve_time << "\n";
 
         m_pPostProcessor->Compute(); 
+
+        if(diagnostics_flag==1) m_pDiagnostics->ComputeAndWriteDiagnostics(step,time);
 
         m_pOutput->WriteOutput(step, time);
     }

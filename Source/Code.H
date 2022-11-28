@@ -6,6 +6,7 @@
 #include "Input/MacroscopicProperties/MacroscopicProperties_fwd.H"
 #include "Solver/Electrostatics/MLMG_fwd.H"
 #include "PostProcessor/PostProcessor_fwd.H"
+#include "Diagnostics/Diagnostics_fwd.H"
 #include "Output/Output_fwd.H"
 #include "Utils/SelectWarpXUtils/WarnManager_fwd.H"
 
@@ -119,6 +120,7 @@ public:
     c_MacroscopicProperties& get_MacroscopicProperties () { return *m_pMacroscopicProperties;}
     c_MLMGSolver& get_MLMGSolver () { return *m_pMLMGSolver;}
     c_PostProcessor& get_PostProcessor () { return *m_pPostProcessor;}
+    c_Diagnostics& get_Diagnostics () { return *m_pDiagnostics;}
     c_Output& get_Output () { return *m_pOutput;}
     
     const amrex::Real get_time() { return m_time_instant;}
@@ -138,6 +140,9 @@ private:
     std::unique_ptr<c_MLMGSolver> m_pMLMGSolver;
     std::unique_ptr<c_PostProcessor> m_pPostProcessor;
     std::unique_ptr<c_Output> m_pOutput;
+
+    int diagnostics_flag;
+    std::unique_ptr<c_Diagnostics> m_pDiagnostics;
 
 };
 #endif
