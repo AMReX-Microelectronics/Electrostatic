@@ -2,5 +2,11 @@ CEXE_sources += Diagnostics.cpp
 CEXE_headers += Diagnostics.H
 CEXE_headers += Diagnostics_fwd.H
 
+ifeq ($(USE_EB),TRUE)
+   CEXE_sources += Diagnostics_Using_EB.cpp
+   CEXE_headers += Diagnostics_Using_EB.H
+   CEXE_headers += Diagnostics_Using_EB_fwd.H
+endif
+
 VPATH_LOCATIONS += $(CODE_HOME)/Source/Diagnostics
 INCLUDE_LOCATIONS += $(CODE_HOME)/Source/Diagnostics
