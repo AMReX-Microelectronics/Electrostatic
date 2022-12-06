@@ -180,8 +180,16 @@ template<typename K, typename V> bool findByValue(std::vector<K> & vec, std::map
 }
 
 amrex::RealArray vecToArr(amrex::Vector<amrex::Real>& vec);
+amrex::IntArray vecToArr(amrex::Vector<int>& vec);
 
 int Evaluate_TypeOf_MacroStr(std::string macro_str);
 
 int Get_Third_Reference_Direction(int dir1, int dir2);
 
+template<typename ARR_TYPE, std::size_t ARR_SIZE>
+amrex::Array<ARR_TYPE, ARR_SIZE> vecToArr_Templated(amrex::Vector<ARR_TYPE>& vec)
+{
+    amrex::Array<ARR_TYPE, ARR_SIZE> array;
+    for (int i=0; i<vec.size(); ++i) array[i] = vec[i];
+    return array;
+}

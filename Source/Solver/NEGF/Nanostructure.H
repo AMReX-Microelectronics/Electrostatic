@@ -2,19 +2,14 @@
 #define NANOSTRUCTURE_H_
 
 #include "Nanostructure_fwd.H"
-#include "../../Code_definitions.H"
+#include "Materials/CNT.H"
+#include "Materials/Graphene.H"
+#include "Materials/Silicon.H"
 
 #include <AMReX_REAL.H>
-//#include <AMReX_GpuContainers.H>
-//#include <AMReX_Vector.H>
-//#include <AMReX_IntVect.H>
-//#include <AMReX_BoxArray.H>
-//#include <AMReX_Geometry.H>
-//#include <AMReX_MLLinOp.H>
-//#include <AMReX_MLABecLaplacian.H>
-//#include <AMReX_MLEBABecLap.H>
-//#include <AMReX_MLMG.H>
-//#include <AMReX_BaseFwd.H>
+#include <AMReX_BoxArray.H>
+#include <AMReX_Geometry.H>
+#include <AMReX_Particles.H>
 
 #include <string>
 
@@ -40,7 +35,6 @@ struct intPA //integer Particle Attribute
 {
     enum { 
           cid, //cell id
-          aid, //atom id
           NUM 
     };
 };
@@ -51,13 +45,13 @@ struct realPD //real Particle Data
           NUM 
     };
 };
+
 struct intPD //integer Particle Data
 {
     enum {
           NUM 
     };
 };
-
 
 class MyParIter
     : public amrex::ParIter<realPD::NUM, intPD::NUM, realPA::NUM, intPA::NUM>
@@ -94,37 +88,40 @@ public:
     }
     //get intPA component
     const IntVector& get_intPA_comp (int comp) const {
-        return GetStructOfArrays().GetRealData(comp);
+        return GetStructOfArrays().GetIntData(comp);
     }
     
     IntVector& get_intPA_comp (int comp) {
-        return GetStructOfArrays().GetRealData(comp);
+        return GetStructOfArrays().GetIntData(comp);
     }
 
 };
 
 
-
+template<typename NSType>
 class 
 c_Nanostructure
                : public amrex::ParticleContainer<realPD::NUM, 
                                                  intPD::NUM, 
                                                  realPA::NUM, 
-                                                 intPA::NUM>
+                                                 intPA::NUM>, public NSType
 {
 public:
+   ~c_Nanostructure();
+    c_Nanostructure (const amrex::Geometry            & geom,
+                     const amrex::DistributionMapping & dm,
+                     const amrex::BoxArray            & ba,
+                     const std::string ns_name);
+
+
+    virtual void ReadNanostructureProperties () override;
 
 private:
     
-    c_Nanostructure (const amrex::Geometry            & geom,
-                     const amrex::DistributionMapping & dmap,
-                     const amrex::BoxArray            & ba)
-        : amrex::ParticleContainer<realPD::NUM, intPD::NUM, 
-                                   realPA::NUM, intPA::NUM> (geom, dmap, ba);
-    //~c_Nanostructure_Atom_Container();
-
     void ReadAtomLocations ();
-    void ReadNanostructureProperties ();
+    std::string read_filename;
+
+    //amrex::Vector<s_CNT_Atoms> p_atom_data;
 
     //void pushX (const amrex::Real& dt);
 
@@ -137,10 +134,6 @@ private:
     //             const amrex::Vector<const amrex::MultiFab*>& rho, const amrex::Real& dt);
 
     //void writeParticles (int n);
-
-    //amrex::Real charge, mass;
-
-    amrex::Real acc; //bond length
 
 };
 

@@ -9,6 +9,7 @@
 #include "Input/GeometryProperties/GeometryProperties.H"
 #include "Input/BoundaryConditions/BoundaryConditions.H"
 #include "Input/MacroscopicProperties/MacroscopicProperties.H"
+#include "Solver/NEGF/NEGF.H"
 #include "Solver/Electrostatics/MLMG.H"
 #include "PostProcessor/PostProcessor.H"
 #include "Diagnostics/Diagnostics.H"
@@ -144,6 +145,8 @@ c_Code::ReadData ()
     m_pBoundaryConditions = std::make_unique<c_BoundaryConditions>();
     
     m_pMacroscopicProperties = std::make_unique<c_MacroscopicProperties>();
+
+    m_pNEGFSolver = std::make_unique<c_NEGFSolver>();
     
     m_pMLMGSolver = std::make_unique<c_MLMGSolver>();
     
@@ -176,6 +179,8 @@ c_Code::InitData ()
     if(diagnostics_flag==1) m_pDiagnostics->InitData();
 
     m_pMacroscopicProperties->InitData();
+
+    m_pNEGFSolver->InitData();
 
     m_pMLMGSolver->InitData();
 

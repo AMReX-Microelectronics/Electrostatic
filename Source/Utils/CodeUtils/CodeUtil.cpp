@@ -434,6 +434,12 @@ amrex::RealArray vecToArr(amrex::Vector<amrex::Real>& vec)
     return array;
 }
 
+amrex::IntArray vecToArr(amrex::Vector<int>& vec)
+{   
+    amrex::IntArray array;
+    for (int i=0; i<AMREX_SPACEDIM; ++i) array[i] = vec[i];
+    return array;
+}
 
 int Evaluate_TypeOf_MacroStr(std::string macro_str)
 {

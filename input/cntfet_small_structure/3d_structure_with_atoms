@@ -8,7 +8,7 @@ my_constants.epsilon_0 = 8.8541878128e-12
 my_constants.tiny = 1e-12
 my_constants.GV_min = -1
 my_constants.GV_max = 1
-my_constants.Nsteps = 51
+my_constants.Nsteps = 1
 my_constants.dt = 1./(Nsteps-1)
 
 ### GEOMETRY and MACROSCOPIC PARAMETER PROPERTIES 
@@ -213,6 +213,15 @@ Surf1.fields_to_plot = phi
 #################
 ###### NEGF #####
 #################
+my_constants.bond_length = 0.142e-9
+my_constants.N_unitcells = 280
 
-atom.read_filename = input/cntfet_small_structure/cnt_zigzag_17_0.txt
-#atom.write_filename = 
+use_negf = 1
+negf.NS_names = cnt #nanostructure names
+cnt.type = CNT
+cnt.read_filename = ../input/cntfet_small_structure/cnt_zigzag_17_0.txt
+cnt.type_id = 17 0 #m n
+cnt.acc = bond_length
+cnt.gamma = 2.5 #coupling factor (eV)
+cnt.num_unitcells = N_unitcells
+cnt.offset = 0 (-(280/2.)*3*bond_length - bond_length/2.) 40e-9

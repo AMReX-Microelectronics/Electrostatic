@@ -4,6 +4,7 @@
 #include "Input/GeometryProperties/GeometryProperties_fwd.H"
 #include "Input/BoundaryConditions/BoundaryConditions_fwd.H"
 #include "Input/MacroscopicProperties/MacroscopicProperties_fwd.H"
+#include "Solver/NEGF/NEGF_fwd.H"
 #include "Solver/Electrostatics/MLMG_fwd.H"
 #include "PostProcessor/PostProcessor_fwd.H"
 #include "Diagnostics/Diagnostics_fwd.H"
@@ -118,6 +119,7 @@ public:
     c_GeometryProperties& get_GeometryProperties () { return *m_pGeometryProperties;}
     c_BoundaryConditions& get_BoundaryConditions () { return *m_pBoundaryConditions;}
     c_MacroscopicProperties& get_MacroscopicProperties () { return *m_pMacroscopicProperties;}
+    c_NEGFSolver& get_NEGFSolver () { return *m_pNEGFSolver;}
     c_MLMGSolver& get_MLMGSolver () { return *m_pMLMGSolver;}
     c_PostProcessor& get_PostProcessor () { return *m_pPostProcessor;}
     c_Diagnostics& get_Diagnostics () { return *m_pDiagnostics;}
@@ -126,7 +128,8 @@ public:
     const amrex::Real get_time() { return m_time_instant;}
  
 private:
-    const amrex::Real set_time(int n) { m_time_instant = n*m_timestep; return m_time_instant;}
+    const amrex::Real set_time(int n) 
+    { m_time_instant = n*m_timestep; return m_time_instant;}
 
     static c_Code* m_instance;
 
@@ -140,6 +143,7 @@ private:
     std::unique_ptr<c_MLMGSolver> m_pMLMGSolver;
     std::unique_ptr<c_PostProcessor> m_pPostProcessor;
     std::unique_ptr<c_Output> m_pOutput;
+    std::unique_ptr<c_NEGFSolver> m_pNEGFSolver;
 
     int diagnostics_flag;
     std::unique_ptr<c_Diagnostics> m_pDiagnostics;

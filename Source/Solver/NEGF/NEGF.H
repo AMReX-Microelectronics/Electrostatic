@@ -2,103 +2,53 @@
 #define NEGF_H_
 
 #include "NEGF_fwd.H"
-#include "../../Code_definitions.H"
-//#include "Input/BoundaryConditions/BoundaryConditions_fwd.H"
-//
-//#include <AMReX_REAL.H>
-//#include <AMReX_GpuContainers.H>
-//#include <AMReX_Vector.H>
-//#include <AMReX_IntVect.H>
-//#include <AMReX_BoxArray.H>
-//#include <AMReX_Geometry.H>
-//#include <AMReX_MLLinOp.H>
-//#include <AMReX_MLABecLaplacian.H>
-//#include <AMReX_MLEBABecLap.H>
-//#include <AMReX_MLMG.H>
-//
-////#include <AMReX_BaseFwd.H>
+#include "Nanostructure.H"
+
+#include <AMReX_BoxArray.H>
+#include <AMReX_Geometry.H>
 
 #include <string>
 
-class 
-c_NEGFSolver:public c_CNT
-{
-public: 
-    c_AtomicStructure cnt;
+struct s_NS {
+    enum Type { CNT, Graphene, Silicon };
+};
 
-//    amrex::Real ascalar, bscalar;
-//    int set_verbose;
-//    int max_order;
-//    amrex::Real  relative_tolerance, absolute_tolerance;
-//
-//    amrex::LPInfo info;
-//    std::unique_ptr<amrex::MLMG> pMLMG;
-//    std::array< amrex::MultiFab, AMREX_SPACEDIM > beta_fc; 
-//
-//#ifdef AMREX_USE_EB
-//    std::unique_ptr<amrex::MLEBABecLap> p_mlebabec;
-//#endif
-//    std::unique_ptr<amrex::MLABecLaplacian> p_mlabec;
-//
-//    c_MLMGSolver();
-//    ~c_MLMGSolver();
-//
-//
-//    void InitData();
-//
-//    amrex::Real Solve_PoissonEqn();
-//
-//    void Compute_vecField(std::array<amrex::MultiFab, AMREX_SPACEDIM>& E);
-//
-//    void Compute_vecFlux(std::array<amrex::MultiFab, AMREX_SPACEDIM>& flux);
-//
-//    //amrex::MultiFab& get_mf  (std::string macro_str) {auto macro_num = param_map[macro_str]; return (*m_p_mf[macro_num]);}
-//    //amrex::MultiFab* get_p_mf (std::string macro_str) {auto macro_num = param_map[macro_str]; return m_p_mf[macro_num].get();}
-//
-//    std::array<std::array<amrex::LinOpBCType,AMREX_SPACEDIM>,2> LinOpBCType_2d;
-//
-//    void UpdateBoundaryConditions();
-//
-//    /*The following is public for GPUs*/
-//    void Fill_Constant_Inhomogeneous_Boundaries(); 
-//    void Fill_FunctionBased_Inhomogeneous_Boundaries(); 
-//    std::string soln_str;
-//    amrex::MultiFab* soln=nullptr;
-//
+class 
+c_NEGFSolver
+{
+
+public:
+    amrex::Vector<std::unique_ptr<c_Nanostructure<c_CNT>>> vp_CNT;
+    amrex::Vector<std::unique_ptr<c_Nanostructure<c_Graphene>>> vp_Graphene;
+    amrex::Vector<std::unique_ptr<c_Nanostructure<c_Silicon>>> vp_Silicon;
+
+    c_NEGFSolver();
+    ~c_NEGFSolver();
+
+
+    void InitData();
+
 private:
-//    amrex::MultiFab* alpha=nullptr;
-//    amrex::MultiFab* beta=nullptr;
-//    amrex::MultiFab*  rhs=nullptr;
-//
-//    amrex::MultiFab* robin_a=nullptr;
-//    amrex::MultiFab* robin_b=nullptr;
-//    amrex::MultiFab* robin_f=nullptr;
-//
-//    std::string alpha_str;
-//    std::string beta_str;
-//    std::string rhs_str;
-//    std::string robin_a_str;
-//    std::string robin_b_str;
-//    std::string robin_f_str;
-//
-//
-//    void ReadData();
-//
-//    void Set_MLMG_CellCentered_Multifabs();
-//
-//    void Setup_MLABecLaplacian_ForPoissonEqn();
-//
-//#ifdef AMREX_USE_EB 
-//    void Setup_MLEBABecLaplacian_ForPoissonEqn();
-//#endif
-//
-//    void AssignLinOpBCTypeToBoundaries ();
-//
-//    bool all_homogeneous_boundaries;
-//    bool some_functionbased_inhomogeneous_boundaries;
-//    bool some_constant_inhomogeneous_boundaries;
-//
-//
+    int num_NS=0;
+    const amrex::Geometry * _geom;
+    const amrex::BoxArray * _ba;
+    const amrex::DistributionMapping * _dm;
+    amrex::Vector< std::string > vec_NS_names;
+
+    void ReadData();
+
+    std::map<std::string, s_NS::Type>
+    map_NSType_enum = 
+        {
+           {"carbon nanotube" , s_NS::Type::CNT},
+           {"Carbon Nanotube" , s_NS::Type::CNT},
+           {"CNT"             , s_NS::Type::CNT},
+           {"graphene"        , s_NS::Type::Graphene},
+           {"Graphene"        , s_NS::Type::Graphene},
+           {"silicon"         , s_NS::Type::Silicon},
+           {"Silicon"         , s_NS::Type::Silicon}
+        };
+
 };
 
 #endif
