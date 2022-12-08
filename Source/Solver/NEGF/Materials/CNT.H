@@ -29,7 +29,8 @@ public:
     {
          std::array<int,2> id;
          id = Get_Ring_Atom_IDs(cell_id);
-         amrex::Print() << "ring id: " << id[0] << ", atom id: " << id[1] << "\n";
+         amrex::Print() << "ring id: " << id[0] << 
+                           ", atom id: " << id[1] << "\n";
 
     };
 
