@@ -86,7 +86,8 @@ c_NEGFSolver::InitData()
     _geom = &rGprop.geom;
     _dm   = &rGprop.dm;
     _ba   = &rGprop.ba;
- 
+    //_n_cell = &rGprop.n_cell;
+
     std::string type;
     int c=0;
     for (auto name: vec_NS_names)

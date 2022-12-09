@@ -69,6 +69,14 @@ public:
     std::array<RealVector, realPA::NUM>& get_realPA () {
         return GetStructOfArrays().GetRealData();
     }
+    //get realPA component
+    const RealVector& get_realPA_comp (int comp) const {
+        return GetStructOfArrays().GetRealData(comp);
+    }
+    
+    RealVector& get_realPA_comp (int comp) {
+        return GetStructOfArrays().GetRealData(comp);
+    }
 
     //get intPA
     const std::array<IntVector, intPA::NUM>& get_intPA () const {
@@ -78,14 +86,6 @@ public:
     std::array<IntVector, intPA::NUM>& get_intPA () {
         return GetStructOfArrays().GetIntData();
     }
-    //get realPA component
-    const RealVector& get_realPA_comp (int comp) const {
-        return GetStructOfArrays().GetRealData(comp);
-    }
-    
-    RealVector& get_realPA_comp (int comp) {
-        return GetStructOfArrays().GetRealData(comp);
-    }
     //get intPA component
     const IntVector& get_intPA_comp (int comp) const {
         return GetStructOfArrays().GetIntData(comp);
@@ -94,6 +94,11 @@ public:
     IntVector& get_intPA_comp (int comp) {
         return GetStructOfArrays().GetIntData(comp);
     }
+
+    //get realPA
+    //std::array<> (int comp) {
+    //    return GetArrayOfStructs();
+    //}
 
 };
 
@@ -117,10 +122,13 @@ public:
     virtual void ReadNanostructureProperties () override;
 
 private:
-    
+    const amrex::GpuArray<int, AMREX_SPACEDIM>* _n_cell; 
+    const amrex::Geometry * _geom;
+
     void ReadAtomLocations ();
     std::string read_filename;
-
+    void MarkCellsWithAtoms();
+    //void FieldGather();
     //amrex::Vector<s_CNT_Atoms> p_atom_data;
 
     //void pushX (const amrex::Real& dt);

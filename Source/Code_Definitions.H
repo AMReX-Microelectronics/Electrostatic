@@ -7,4 +7,7 @@
 //#define NUM_RING 280
 //#define ATOMS_PER_RING 17
 
+template<typename T>
+class TD;
+
 #endif

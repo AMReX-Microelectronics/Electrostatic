@@ -25,7 +25,6 @@ public:
     c_NEGFSolver();
     ~c_NEGFSolver();
 
-
     void InitData();
 
 private:
@@ -33,6 +32,7 @@ private:
     const amrex::Geometry * _geom;
     const amrex::BoxArray * _ba;
     const amrex::DistributionMapping * _dm;
+    //const amrex::GpuArray<int, AMREX_SPACEDIM> * _n_cell;
     amrex::Vector< std::string > vec_NS_names;
 
     void ReadData();

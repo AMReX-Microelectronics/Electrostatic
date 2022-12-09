@@ -3,6 +3,11 @@
 #include "../../Utils/SelectWarpXUtils/WarpXUtil.H"
 #include "../../Utils/SelectWarpXUtils/TextMsg.H"
 #include "../../Utils/CodeUtils/CodeUtil.H"
+#include "../../Code.H"
+#include "../../Input/GeometryProperties/GeometryProperties.H"
+#include "../../Input/MacroscopicProperties/MacroscopicProperties.H"
+
+#include "../../Code_Definitions.H"
 
 #include <iostream>
 
@@ -22,7 +27,13 @@ c_Nanostructure<NSType>::c_Nanostructure (const amrex::Geometry            & geo
     amrex::Print() << "\n\n\t\t\t{************************c_Nanostructure() Constructor************************\n";
     amrex::Print() << "\t\t\tin file: " << __FILE__ << " at line: " << __LINE__ << "\n";
 #endif
+
     NSType::name = ns_name;
+
+    auto& rCode = c_Code::GetInstance();
+    auto& rGprop = rCode.get_GeometryProperties();
+    _n_cell = &rGprop.n_cell;
+    _geom = &geom;
 
     ReadNanostructureProperties();
     ReadAtomLocations();
@@ -88,13 +99,21 @@ c_Nanostructure<NSType>::ReadAtomLocations()
             infile.seekg(0, std::ios_base::beg);
            
             std::string id[2];
+            const auto dx =_geom->CellSizeArray();
+            amrex::Print() << "dx: " << dx[0] << "  " 
+                                     << dx[1] << "  " 
+                                     << dx[2] << "\n";
+
+            amrex::Print() << "_n_cell: " << (*_n_cell)[0] << "  " 
+                                          << (*_n_cell)[1] << "  " 
+                                          << (*_n_cell)[2] << "\n";
+
             for(int i=0; i < NSType::num_atoms; ++i) 
             {
                 ParticleType p;
                 p.id() = ParticleType::NextID();
                 p.cpu() = ParallelDescriptor::MyProc();
                 
-               
                 infile >> id[0] >> id[1];
                 //if(p.id() < 20) {  
                 //    amrex::Print() << "IDs: " << p.id() << "  " << id[0] << "  " << id[1] << "\n";
@@ -103,10 +122,25 @@ c_Nanostructure<NSType>::ReadAtomLocations()
                   
                 for(int j=0; j < AMREX_SPACEDIM; ++j) {
                     infile >> p.pos(j);
+                    p.pos(j) += NSType::offset[j];
                 }
+                
+                amrex::GpuArray<int,AMREX_SPACEDIM> 
+                   index_arr = { AMREX_D_DECL(int(p.pos(0)/dx[0]), 
+                                              int(p.pos(1)/dx[1]), 
+                                              int(p.pos(2)/dx[2])) };
+//
+                int cell_id = Compute_Cell_ID<int>(index_arr, *_n_cell); 
+                if(p.id() < 20) {  
+                    amrex::Print() << "index_arr: " << index_arr[0] << "  " 
+                                                    << index_arr[1] << "  " 
+                                                    << index_arr[2] << "  "
+                                   << "cell_id: "   << cell_id << "\n";
+                } 
 
                 std::array<int,intPA::NUM> int_attribs;
-                int_attribs[intPA::cid]  = 0.0;
+                int_attribs[intPA::cid]  = cell_id;
+
                 std::array<ParticleReal,realPA::NUM> real_attribs;
                 real_attribs[realPA::phi]  = 0.0;
                 real_attribs[realPA::charge]  = 0.0;
@@ -136,3 +170,69 @@ c_Nanostructure<NSType>::ReadAtomLocations()
     Redistribute();
 
 }
+
+
+template<typename NSType>
+void 
+c_Nanostructure<NSType>::MarkCellsWithAtoms() 
+{
+    auto& rCode = c_Code::GetInstance();
+    auto& rPost = rCode.get_PostProcessor();
+    auto& rMprop = rCode.get_MacroscopicProperties();
+    
+    const auto& plo = _geom->ProbLoArray();
+    const auto dx =_geom->CellSizeArray();
+
+    amrex::Print() << "plo array: " << plo[0] << "  " 
+                                    << plo[1] << "  " 
+                                    << plo[2] << "\n";
+
+    auto& mf = rMprop.get_mf("atom_locations");  
+    
+    int lev = 0;
+    for (MyParIter pti(*this, lev); pti.isValid(); ++pti) 
+    { 
+        auto np = pti.numParticles();
+        const auto& par_cid = pti.get_intPA_comp(intPA::cid);
+        const auto p_par_cid = par_cid.data();
+
+        const auto& particles = pti.GetArrayOfStructs();
+        const auto p_par = particles().data();
+
+        auto mf_arr = mf.array(pti);
+        amrex::ParallelFor(np, [=] AMREX_GPU_DEVICE (int p) noexcept 
+        {
+            amrex::GpuArray<int,AMREX_SPACEDIM> 
+               index = { AMREX_D_DECL(int((p_par[p].pos(0) - plo[0])/dx[0]), 
+                                      int((p_par[p].pos(1) - plo[1])/dx[1]), 
+                                      int((p_par[p].pos(2) - plo[2])/dx[2])) };
+
+            mf_arr(index[0],index[1],index[2]) = -1;                            
+        });
+    }
+    mf.FillBoundary(_geom->periodicity());
+   
+}
+
+//template<typename NSType>
+//void 
+//c_Nanostructure<NSType>::FieldGather() 
+//{
+////    auto& rCode = c_Code::GetInstance();
+////    auto& rPost = rCode.get_PostProcessor();
+////    auto& rMprop = rCode.get_MacroscopicProperties();
+////    auto& atom_locations = rMprop.get_mf("atom_locations");  
+////
+////    int lev = 0;
+////    for (MyParIter pti(*this, lev); pti.isValid(); ++pti) 
+////    { 
+////        auto np = pti.numParticles();
+////        const auto& par_phi = pti.get_realPA_comp(realPA::phi);
+////        const auto& particles = pti.GetArrayOfStructs();
+////        
+////        amrex::Real 
+////        for (int i = 0; i < pti.numParticles; ++i) {
+////            // do stuff with your SoA data...
+////        }
+////    } 
+//}
