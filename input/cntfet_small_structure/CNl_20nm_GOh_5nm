@@ -11,13 +11,15 @@ my_constants.GV_max = 1
 my_constants.Nsteps = 2
 my_constants.dt = 1./(Nsteps-1)
 
+my_constants.bond_length = 0.142e-9
+my_constants.N_unitcells = 70
+my_constants.L_unitcell = 3*bond_length #0.426e-9
 ### GEOMETRY and MACROSCOPIC PARAMETER PROPERTIES 
-
 
 #gate oxide
 my_constants.GO_w = Lx
 my_constants.GO_l = Ly
-my_constants.GO_h = 20e-9      #smallest dimension that limits n_cell in z.
+my_constants.GO_h = 5e-9      #smallest dimension that limits n_cell in z.
 
 my_constants.epsilon_GO = 3.8*epsilon_0
  
@@ -28,7 +30,7 @@ my_constants.CM_h = 15e-9
 
 
 my_constants.epsilon_CM = 1.7*epsilon_0 #Palladium
-my_constants.SV =  0 #100e-3      #source voltage [V]
+my_constants.SV =  0  #100e-3      #source voltage [V]
 my_constants.DV = 0.1 #-100e-3 #drain voltage [V]
 
 
@@ -36,21 +38,22 @@ my_constants.CM_lo_z =  GO_h
 my_constants.CM_hi_z =  GO_h + CM_h 
 
 my_constants.dy = Ly/ny
-my_constants.tiny_eb = dy/100
+my_constants.tiny_eb = dy/2
 
-my_constants.source_lo_y = -Ly/2 + 2*dy + tiny_eb/2
-my_constants.source_hi_y = source_lo_y + CM_l
+my_constants.source_lo_y = -Ly/2 + bond_length + tiny_eb
+my_constants.source_hi_y = source_lo_y + CM_l + 2*tiny_eb
 
-my_constants.drain_hi_y = Ly/2 - 2*dy - tiny_eb/2
-my_constants.drain_lo_y = drain_hi_y - CM_l
+my_constants.drain_hi_y = Ly/2 - bond_length - tiny_eb
+my_constants.drain_lo_y = drain_hi_y - CM_l - 2*tiny_eb
+
 
 #carbon nanotube 
-my_constants.CN_co_l = 5.112e-9  #contact length 12 unit cells can fit.
-my_constants.CN_ch_l = 19.596e-9 #channel length 46 unit cells (unit_cell_length = 0.426nm)
+my_constants.CN_co_l = 5.112e-9  #contact length 12 unit cells
+my_constants.CN_ch_l = 19.596e-9 #channel length 46 unit cells
 my_constants.R_CN = 5.7e-9    #radius
-my_constants.small_gap = 0.3e-9 #gap between nanotube and the contacts
+my_constants.small_gap = 5*bond_length #0.355e-9, gap between nanotube and the contacts
 my_constants.CN_l = CN_ch_l + 2*CN_co_l  # 29.82nm = 70 unit cells 
-my_constants.CN_h = GO_h + CM_h/2. #CNT center is at z=40 nm.
+my_constants.CN_h = GO_h + CM_h/2. #CNT center is at 12.5 nm
 
 my_constants.epsilon_CN = epsilon_0 #vacuum
 
@@ -58,18 +61,19 @@ my_constants.charge_CN = 0.
 my_constants.charge_density_CN_drainside = charge_CN/(CN_cl*El_h)
 my_constants.charge_density_CN_sourceside = 0.
 
+
 #total domain dimensions
-my_constants.Lx = 18e-9  #(Lx - CM_w)*0.5 = (18-15)*0.5*1e-9=1.5 nm free on each x side past contacts
-my_constants.Ly = CN_l + 4*0.071e-9 #CN_l + 4*dy = 30.104e-9 total length
-my_constants.Lz = 36e-9  #Lz - (GO_h + CM_h) = 36-(20+15) = 1 nm free in z above the contacts
+my_constants.Lx = 30.104e-9  
+#(30.672nm-15nm)/2=7.836 nm free on each x side past contacts
 
-#my_constants.nx = 300  #dy=0.06 nm
-#my_constants.ny = 424  #dx=0.071 nm
-#my_constants.nz = 600  #dz=0.06 nm
+my_constants.Ly = CN_l + 2*bond_length
+#72 unit cells = 30.672 nm total length
 
-#my_constants.nx = 600  #dy=0.03 nm
-#my_constants.ny = 424  #dx=0.071 nm
-#my_constants.nz = 1200 #dz=0.03 nm
+my_constants.Lz = 30.104e-9 #30.672-(5 (GO_h) +15) = 5.336 nm free in z above the contacts
+
+my_constants.nx = 424  #dx= 0.071 nm
+my_constants.ny = 424  #dy= 0.071 nm
+my_constants.nz = 424  #dz= 0.071 nm
 
 #my_constants.nx = 1500  #Lx=45e-9, so that 15 nm left on each side after contact
 ##5x channel length 5*(19.596e-9/0.426e-9)*6(cells_per_unitcell) + 2*contact_lengths + 4 dy
@@ -112,14 +116,14 @@ ebgeom.specify_inhomo_dir = 1
 Source.geom_type = cntfet_contact
 Source.box_lo = (-CM_w/2.+ tiny_eb)  source_lo_y (CM_lo_z-tiny_eb)
 Source.box_hi = (CM_w/2. - tiny_eb)  source_hi_y (CM_hi_z-tiny_eb)
-Source.cyl_cavity_radius = R_CN + small_gap + tiny_eb
+Source.cyl_cavity_radius = R_CN + small_gap
 Source.cyl_cavity_direction = 1
 Source.surf_soln = SV #V
 
 Drain.geom_type = cntfet_contact
 Drain.box_lo = (-CM_w/2.+ tiny_eb) drain_lo_y (CM_lo_z-tiny_eb)
 Drain.box_hi = (CM_w/2. - tiny_eb) drain_hi_y (CM_hi_z-tiny_eb)
-Drain.cyl_cavity_radius = R_CN + small_gap + tiny_eb
+Drain.cyl_cavity_radius = R_CN + small_gap
 Drain.cyl_cavity_direction = 1
 Drain.surf_soln = DV #V
 
@@ -135,7 +139,7 @@ boundary.GV_function = "GV_min + (GV_max-GV_min) * t" #V
 ###### MACROSCOPIC PROPERTIES ######
 ####################################
 macroscopic.fields_to_define = alpha epsilon charge_density phi atom_locations
-macroscopic.ghostcells_for_fields = alpha.0 epsilon.1 charge_density.0 phi.1 
+macroscopic.ghostcells_for_fields = alpha.0 epsilon.1 charge_density.0 phi.1  atom_locations.0
 
 macroscopic.alpha = 0.
 macroscopic.charge_density = 0.
@@ -157,6 +161,7 @@ macroscopic.epsilon_function = "epsilon_0 + (epsilon_GO - epsilon_0)    *(z >= 0
 #+ if( (sqrt(x**2 + (z - CN_h)**2) < R_CN +small_gap), 0.  , (epsilon_CM - epsilon_domain) ) *(x < CM_w/2.)           *(x >  -CM_w/2.)          *(z >= GM_h + GO_h) *(z < GM_h + GO_h + CM_h)* (y <= Ly/2.)          *(y > Ly/2. - CM_l)
 
 macroscopic.phi = 0.
+macroscopic.atom_locations = 0.
 
 ####################################
 ###### MLMG SOLVER PROPERTIES ######
@@ -173,7 +178,7 @@ mlmg.beta   = epsilon
 mlmg.set_verbose=0
 mlmg.max_order=2
 mlmg.absolute_tolerance=0
-mlmg.relative_tolerance=1e-10
+mlmg.relative_tolerance=1e-9
 
 #############################
 ###### POST PROCESSING ######
@@ -194,12 +199,12 @@ plot.rawfield_write_interval = 1
 ########################
 ###### DIAGNOSTICS #####
 ########################
-diagnostics = 1
+diagnostics = 0
 
 diag.specify_using_eb = 1
 diag.objects = Surf1
 Surf1.geom_type = cylinder
-Surf1.center = 0 0 (GO_h + CM_h/2.)
+Surf1.center = 0 0 CN_h
 Surf1.radius = R_CN
 Surf1.axial_direction = 1
 Surf1.theta_reference_direction = 0
@@ -209,10 +214,8 @@ Surf1.fields_to_plot = phi
 #################
 ###### NEGF #####
 #################
-my_constants.bond_length = 0.142e-9
-my_constants.N_unitcells = 70
 
-use_negf = 1
+use_negf = 0
 negf.NS_names = cnt #nanostructure names
 cnt.type = CNT
 cnt.read_filename = ../input/cntfet_small_structure/cnt_zigzag_17_0_20nm.txt
@@ -220,4 +223,4 @@ cnt.type_id = 17 0 #m n
 cnt.acc = bond_length
 cnt.gamma = 2.5 #coupling factor (eV)
 cnt.num_unitcells = N_unitcells
-cnt.offset = 0 (-(N_unitcells/2.)*3*bond_length - bond_length/2.) (GO_h + CM_h/2.)
+cnt.offset = 0 (-(N_unitcells/2.)*L_unitcell - 3*bond_length/4.) CN_h

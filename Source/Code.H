@@ -125,7 +125,7 @@ public:
     c_Diagnostics& get_Diagnostics () { return *m_pDiagnostics;}
     c_Output& get_Output () { return *m_pOutput;}
     
-    const amrex::Real get_time() { return m_time_instant;}
+    amrex::Real get_time() { return m_time_instant;}
  
 private:
     const amrex::Real set_time(int n) 

@@ -130,16 +130,16 @@ c_Nanostructure<NSType>::ReadAtomLocations()
                                               int(p.pos(1)/dx[1]), 
                                               int(p.pos(2)/dx[2])) };
 //
-                int cell_id = Compute_Cell_ID<int>(index_arr, *_n_cell); 
-                if(p.id() < 20) {  
-                    amrex::Print() << "index_arr: " << index_arr[0] << "  " 
-                                                    << index_arr[1] << "  " 
-                                                    << index_arr[2] << "  "
-                                   << "cell_id: "   << cell_id << "\n";
-                } 
+//                int cell_id = Compute_Cell_ID<int>(index_arr, *_n_cell); 
+//                if(p.id() < 20) {  
+//                    amrex::Print() << "index_arr: " << index_arr[0] << "  " 
+//                                                    << index_arr[1] << "  " 
+//                                                    << index_arr[2] << "  "
+//                                   << "cell_id: "   << cell_id << "\n";
+//                } 
 
                 std::array<int,intPA::NUM> int_attribs;
-                int_attribs[intPA::cid]  = cell_id;
+                int_attribs[intPA::cid]  = 0;
 
                 std::array<ParticleReal,realPA::NUM> real_attribs;
                 real_attribs[realPA::phi]  = 0.0;
@@ -168,7 +168,7 @@ c_Nanostructure<NSType>::ReadAtomLocations()
         } 
     }
     Redistribute();
-
+    MarkCellsWithAtoms();
 }
 
 
@@ -183,18 +183,12 @@ c_Nanostructure<NSType>::MarkCellsWithAtoms()
     const auto& plo = _geom->ProbLoArray();
     const auto dx =_geom->CellSizeArray();
 
-    amrex::Print() << "plo array: " << plo[0] << "  " 
-                                    << plo[1] << "  " 
-                                    << plo[2] << "\n";
-
     auto& mf = rMprop.get_mf("atom_locations");  
     
     int lev = 0;
     for (MyParIter pti(*this, lev); pti.isValid(); ++pti) 
     { 
         auto np = pti.numParticles();
-        const auto& par_cid = pti.get_intPA_comp(intPA::cid);
-        const auto p_par_cid = par_cid.data();
 
         const auto& particles = pti.GetArrayOfStructs();
         const auto p_par = particles().data();
@@ -202,10 +196,15 @@ c_Nanostructure<NSType>::MarkCellsWithAtoms()
         auto mf_arr = mf.array(pti);
         amrex::ParallelFor(np, [=] AMREX_GPU_DEVICE (int p) noexcept 
         {
+            amrex::GpuArray<amrex::Real,AMREX_SPACEDIM> 
+                   l = { AMREX_D_DECL((p_par[p].pos(0) - plo[0])/dx[0], 
+                                      (p_par[p].pos(1) - plo[1])/dx[1], 
+                                      (p_par[p].pos(2) - plo[2])/dx[2]) };
+
             amrex::GpuArray<int,AMREX_SPACEDIM> 
-               index = { AMREX_D_DECL(int((p_par[p].pos(0) - plo[0])/dx[0]), 
-                                      int((p_par[p].pos(1) - plo[1])/dx[1]), 
-                                      int((p_par[p].pos(2) - plo[2])/dx[2])) };
+               index = { AMREX_D_DECL(static_cast<int>(amrex::Math::floor(l[0])), 
+                                      static_cast<int>(amrex::Math::floor(l[1])), 
+                                      static_cast<int>(amrex::Math::floor(l[2]))) };
 
             mf_arr(index[0],index[1],index[2]) = -1;                            
         });
@@ -213,6 +212,51 @@ c_Nanostructure<NSType>::MarkCellsWithAtoms()
     mf.FillBoundary(_geom->periodicity());
    
 }
+
+
+template<typename NSType>
+void 
+c_Nanostructure<NSType>::ObtainFieldAtAtomLocations() 
+{
+    auto& rCode = c_Code::GetInstance();
+    auto& rPost = rCode.get_PostProcessor();
+    auto& rMprop = rCode.get_MacroscopicProperties();
+    
+    const auto& plo = _geom->ProbLoArray();
+    const auto dx =_geom->CellSizeArray();
+
+    auto& phi = rMprop.get_mf("phi");  
+    
+    int lev = 0;
+    for (MyParIter pti(*this, lev); pti.isValid(); ++pti) 
+    { 
+        auto np = pti.numParticles();
+
+        const auto& particles = pti.GetArrayOfStructs();
+        const auto p_par = particles().data();
+
+        const auto& par_phi = pti.get_realPA_comp(realPA::phi);
+        const auto p_par_phi = par_phi.data();
+
+        auto phi_arr = phi.array(pti);
+
+        amrex::ParallelFor(np, [=] AMREX_GPU_DEVICE (int p) noexcept 
+        {
+            amrex::GpuArray<amrex::Real,AMREX_SPACEDIM> 
+                   l = { AMREX_D_DECL((p_par[p].pos(0) - plo[0])/dx[0], 
+                                      (p_par[p].pos(1) - plo[1])/dx[1], 
+                                      (p_par[p].pos(2) - plo[2])/dx[2]) };
+
+            amrex::GpuArray<int,AMREX_SPACEDIM> 
+               index = { AMREX_D_DECL(static_cast<int>(amrex::Math::floor(l[0])), 
+                                      static_cast<int>(amrex::Math::floor(l[1])), 
+                                      static_cast<int>(amrex::Math::floor(l[2]))) };
+
+            par_phi[p] = phi_arr(index[0],index[1],index[2]);
+        });
+    }
+}
+
 
 //template<typename NSType>
 //void 

@@ -121,13 +121,15 @@ public:
 
     virtual void ReadNanostructureProperties () override;
 
+    void MarkCellsWithAtoms(); 
+    void ObtainFieldAtAtomLocations();
+
 private:
     const amrex::GpuArray<int, AMREX_SPACEDIM>* _n_cell; 
     const amrex::Geometry * _geom;
 
     void ReadAtomLocations ();
     std::string read_filename;
-    void MarkCellsWithAtoms();
     //void FieldGather();
     //amrex::Vector<s_CNT_Atoms> p_atom_data;
 
