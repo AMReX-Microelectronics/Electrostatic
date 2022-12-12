@@ -2,7 +2,8 @@
 
 //#include "../../Utils/SelectWarpXUtils/WarpXUtil.H"
 //#include "../../Utils/SelectWarpXUtils/TextMsg.H"
-//#include "../../Utils/CodeUtils/CodeUtil.H"
+#include "../../Utils/SelectWarpXUtils/WarpXConst.H"
+#include "../../Utils/CodeUtils/CodeUtil.H"
 #include "../../Code.H"
 #include "../../Input/GeometryProperties/GeometryProperties.H"
 //#include "Input/MacroscopicProperties/MacroscopicProperties.H"
@@ -60,6 +61,7 @@ c_NEGFSolver::ReadData()
 
     amrex::Vector<std::string> temp_vec;
     bool NS_pecified = pp_negf.queryarr("NS_names", temp_vec);
+
     int c=0;
     for (auto it: temp_vec)
     {
@@ -74,8 +76,9 @@ c_NEGFSolver::ReadData()
     amrex::Print() << "##### negf.NS_names: ";
     for (auto it: vec_NS_names) amrex::Print() << it << "  ";
     amrex::Print() << "\n";
-    
+
 }
+
 
 void 
 c_NEGFSolver::InitData() 
@@ -86,18 +89,45 @@ c_NEGFSolver::InitData()
     _geom = &rGprop.geom;
     _dm   = &rGprop.dm;
     _ba   = &rGprop.ba;
-    //_n_cell = &rGprop.n_cell;
+
+
+    amrex::Print() << "\n##### NEGF NANOSTRUCTURE PROPERTIES #####\n\n";
+
+    amrex::ParmParse pp_negf("negf");
+
+    std::string NS_gather_field_str;
+    std::string NS_deposit_field_str;
+
+    pp_negf.get("NS_gather_field", NS_gather_field_str);
+    amrex::Print() << "##### negf.NS_gather_field: " << NS_gather_field_str << "\n";
+    if ( Evaluate_TypeOf_MacroStr(NS_gather_field_str) != 0 )/*mf not defined in MacroscopicProperties*/
+    {
+        amrex::Abort("NS_gather_field " + NS_gather_field_str + " not defined in Mprop.");
+    } 
+
+    pp_negf.get("NS_deposit_field", NS_deposit_field_str);
+    amrex::Print() << "##### negf.NS_deposit_field: " << NS_deposit_field_str << "\n";
+    if ( Evaluate_TypeOf_MacroStr(NS_deposit_field_str) != 0 )/*mf not defined in MacroscopicProperties*/
+    {
+        amrex::Abort("NS_deposit_field " + NS_deposit_field_str + " not defined in Mprop.");
+    } 
+
+    auto dxi = _geom->InvCellSizeArray();
+     amrex::Real inv_vol = AMREX_D_TERM(dxi[0], *dxi[1], *dxi[2]);
+
+    amrex::Real NS_initial_deposit_value = PhysConst::q_e*inv_vol;
+
+    queryWithParser(pp_negf,"NS_initial_deposit_value", NS_initial_deposit_value);
+    amrex::Print() << "##### negf.NS_initial_deposit_value: " << NS_initial_deposit_value << "\n";
 
     std::string type;
     int c=0;
     for (auto name: vec_NS_names)
     {
-        
-        amrex::Print() << "\n##### NANOSTRUCTURE PROPERTIES #####\n\n";
-     
+
         amrex::ParmParse pp_ns(name);
         pp_ns.get("type", type);
-        amrex::Print() << "##### name: " << name << "\n";
+        amrex::Print() << "\n##### name: " << name << "\n";
         amrex::Print() << "##### type: " << type << "\n";
 
         switch (map_NSType_enum[type])
@@ -105,7 +135,10 @@ c_NEGFSolver::InitData()
             case s_NS::Type::CNT:
             {
                 using T = c_CNT;
-                vp_CNT.push_back(std::make_unique<c_Nanostructure<T>>(*_geom, *_dm, *_ba, name));
+                vp_CNT.push_back(std::make_unique<c_Nanostructure<T>>(*_geom, *_dm, *_ba, name, 
+                                                                      NS_gather_field_str, 
+                                                                      NS_deposit_field_str, 
+                                                                      NS_initial_deposit_value));
                 break;
             }
             case s_NS::Type::Graphene:

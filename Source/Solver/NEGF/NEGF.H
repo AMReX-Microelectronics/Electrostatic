@@ -49,6 +49,10 @@ private:
            {"Silicon"         , s_NS::Type::Silicon}
         };
 
+    std::string NS_gather_field_str;
+    std::string NS_deposit_field_str;
+    amrex::Real NS_initial_deposit_value;
+
 };
 
 #endif

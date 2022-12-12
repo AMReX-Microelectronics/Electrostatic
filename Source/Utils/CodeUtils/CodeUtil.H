@@ -194,31 +194,31 @@ amrex::Array<ARR_TYPE, ARR_SIZE> vecToArr_Templated(amrex::Vector<ARR_TYPE>& vec
     return array;
 }
 
-template<typename T>
-T Compute_Cell_ID(const amrex::GpuArray<int,AMREX_SPACEDIM>& index, const amrex::GpuArray<int, AMREX_SPACEDIM>& n_cell) {
-
-    T cell_id;
-
-    switch(AMREX_SPACEDIM-1)     
-    {
-        case 0:
-        {
-            cell_id = index[0];
-            break;
-        }
-        case 1:
-        {
-            cell_id =   index[0]
-                      + index[1] * n_cell[0];
-            break;
-        }
-        case 2:
-        {
-            cell_id =   index[0]
-                      + index[1] * n_cell[0]
-                      + index[2] * n_cell[0] * n_cell[1];
-            break;
-        }
-    }
-    return cell_id;
-}
+//template<typename T>
+//T Compute_Cell_ID(const amrex::GpuArray<int,AMREX_SPACEDIM>& index, const amrex::GpuArray<int, AMREX_SPACEDIM>& n_cell) {
+//
+//    T cell_id;
+//
+//    switch(AMREX_SPACEDIM-1)     
+//    {
+//        case 0:
+//        {
+//            cell_id = index[0];
+//            break;
+//        }
+//        case 1:
+//        {
+//            cell_id =   index[0]
+//                      + index[1] * n_cell[0];
+//            break;
+//        }
+//        case 2:
+//        {
+//            cell_id =   index[0]
+//                      + index[1] * n_cell[0]
+//                      + index[2] * n_cell[0] * n_cell[1];
+//            break;
+//        }
+//    }
+//    return cell_id;
+//}

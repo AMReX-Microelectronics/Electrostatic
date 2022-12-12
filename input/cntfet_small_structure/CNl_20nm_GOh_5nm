@@ -31,13 +31,15 @@ my_constants.CM_h = 15e-9
 
 my_constants.epsilon_CM = 1.7*epsilon_0 #Palladium
 my_constants.SV =  0  #100e-3      #source voltage [V]
-my_constants.DV = 0.1 #-100e-3 #drain voltage [V]
+my_constants.DV = 0 #-100e-3 #drain voltage [V]
 
 
 my_constants.CM_lo_z =  GO_h 
 my_constants.CM_hi_z =  GO_h + CM_h 
 
+my_constants.dx = Lx/nx
 my_constants.dy = Ly/ny
+my_constants.dz = Lz/nz
 my_constants.tiny_eb = dy/2
 
 my_constants.source_lo_y = -Ly/2 + bond_length + tiny_eb
@@ -57,11 +59,6 @@ my_constants.CN_h = GO_h + CM_h/2. #CNT center is at 12.5 nm
 
 my_constants.epsilon_CN = epsilon_0 #vacuum
 
-my_constants.charge_CN = 0.
-my_constants.charge_density_CN_drainside = charge_CN/(CN_cl*El_h)
-my_constants.charge_density_CN_sourceside = 0.
-
-
 #total domain dimensions
 my_constants.Lx = 30.104e-9  
 #(30.672nm-15nm)/2=7.836 nm free on each x side past contacts
@@ -71,9 +68,12 @@ my_constants.Ly = CN_l + 2*bond_length
 
 my_constants.Lz = 30.104e-9 #30.672-(5 (GO_h) +15) = 5.336 nm free in z above the contacts
 
-my_constants.nx = 424  #dx= 0.071 nm
-my_constants.ny = 424  #dy= 0.071 nm
-my_constants.nz = 424  #dz= 0.071 nm
+#my_constants.nx = 424  #dx= 0.071 nm
+#my_constants.ny = 424  #dy= 0.071 nm
+#my_constants.nz = 424  #dz= 0.071 nm
+my_constants.nx = 212  #dx= 0.071 nm
+my_constants.ny = 212  #dy= 0.071 nm
+my_constants.nz = 212  #dz= 0.071 nm
 
 #my_constants.nx = 1500  #Lx=45e-9, so that 15 nm left on each side after contact
 ##5x channel length 5*(19.596e-9/0.426e-9)*6(cells_per_unitcell) + 2*contact_lengths + 4 dy
@@ -133,7 +133,8 @@ Drain.surf_soln = DV #V
 boundary.hi = neu(0) neu(0) neu(0)
 boundary.lo = neu(0) neu(0) dir(GV)
 
-boundary.GV_function = "GV_min + (GV_max-GV_min) * t" #V
+#boundary.GV_function = "GV_min + (GV_max-GV_min) * t" #V
+boundary.GV_function = "1." #V
 
 ####################################
 ###### MACROSCOPIC PROPERTIES ######
@@ -199,7 +200,7 @@ plot.rawfield_write_interval = 1
 ########################
 ###### DIAGNOSTICS #####
 ########################
-diagnostics = 0
+diagnostics = 1
 
 diag.specify_using_eb = 1
 diag.objects = Surf1
@@ -209,7 +210,7 @@ Surf1.radius = R_CN
 Surf1.axial_direction = 1
 Surf1.theta_reference_direction = 0
 Surf1.has_fluid_inside = 0
-Surf1.fields_to_plot = phi
+Surf1.fields_to_plot = phi charge_density
 
 #################
 ###### NEGF #####
@@ -217,6 +218,11 @@ Surf1.fields_to_plot = phi
 
 use_negf = 0
 negf.NS_names = cnt #nanostructure names
+negf.NS_gather_field = phi            
+negf.NS_deposit_field  = charge_density 
+negf.NS_initial_deposit_value  = 1e-3*q/(dx*dy*dz)
+#negf.NS_initial_deposit_value  = 0
+
 cnt.type = CNT
 cnt.read_filename = ../input/cntfet_small_structure/cnt_zigzag_17_0_20nm.txt
 cnt.type_id = 17 0 #m n

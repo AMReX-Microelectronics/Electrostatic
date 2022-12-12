@@ -26,8 +26,8 @@
 struct realPA //real Particle Attribute
 {
     enum { 
-          phi,
-          charge,
+          gather,
+          deposit,
           NUM 
     };
 };
@@ -111,18 +111,26 @@ c_Nanostructure
                                                  realPA::NUM, 
                                                  intPA::NUM>, public NSType
 {
+
 public:
+
    ~c_Nanostructure();
     c_Nanostructure (const amrex::Geometry            & geom,
                      const amrex::DistributionMapping & dm,
                      const amrex::BoxArray            & ba,
-                     const std::string ns_name);
+                     const std::string ns_name,
+                     const std::string NS_gather_str,
+                     const std::string NS_deposit_str,
+                     const amrex::Real NS_initial_deposit_value    );
 
 
     virtual void ReadNanostructureProperties () override;
 
     void MarkCellsWithAtoms(); 
-    void ObtainFieldAtAtomLocations();
+    void InitializeAttributeToDeposit();
+
+    void GatherFromMesh();
+    void DepositToMesh();
 
 private:
     const amrex::GpuArray<int, AMREX_SPACEDIM>* _n_cell; 
@@ -130,20 +138,10 @@ private:
 
     void ReadAtomLocations ();
     std::string read_filename;
-    //void FieldGather();
-    //amrex::Vector<s_CNT_Atoms> p_atom_data;
 
-    //void pushX (const amrex::Real& dt);
-
-    //void DepositCharge (const amrex::Vector<amrex::MultiFab*>& rho);
-
-    //void FieldGather (const amrex::Vector<std::array<const amrex::MultiFab*, AMREX_SPACEDIM> >& E,
-    //                  const amrex::Vector<const amrex::iMultiFab*>& masks);
-
-    //void Evolve (const amrex::Vector<std::array<const amrex::MultiFab*, AMREX_SPACEDIM> >& E,
-    //             const amrex::Vector<const amrex::MultiFab*>& rho, const amrex::Real& dt);
-
-    //void writeParticles (int n);
+    amrex::MultiFab* p_mf_gather=nullptr;
+    amrex::MultiFab* p_mf_deposit=nullptr;
+    amrex::Real _initial_deposit_value;
 
 };
 
