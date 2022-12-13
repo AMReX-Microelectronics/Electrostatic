@@ -2,5 +2,8 @@ CEXE_sources += Output.cpp
 CEXE_headers += Output.H
 CEXE_headers += Output_fwd.H
 
+CEXE_sources += Field_Plot_Essentials.cpp
+CEXE_headers += Field_Plot_Essentials.H
+
 VPATH_LOCATIONS += $(CODE_HOME)/Source/Output
 INCLUDE_LOCATIONS += $(CODE_HOME)/Source/Output

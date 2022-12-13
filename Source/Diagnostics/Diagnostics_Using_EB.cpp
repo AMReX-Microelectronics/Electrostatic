@@ -118,9 +118,20 @@ c_Diagnostics_Using_EB::ReadEBObjectInfo(std::string object_name, std::string ob
             pp_object.get("has_fluid_inside", cyl.has_fluid_inside);
             amrex::Print() << "##### cylinder has_fluid_inside: " << cyl.has_fluid_inside << "\n";
 
-            bool varnames_specified = pp_object.queryarr("fields_to_plot", cyl.fields_to_plot);
-            amrex::Print() << "##### cylinder fields_to_plot: ";
-            for (auto field: cyl.fields_to_plot) amrex::Print() << field << "  ";
+            amrex::Vector< std::string > fields_to_plot;
+            bool varnames_specified = pp_object.queryarr("fields_to_plot", fields_to_plot);
+
+            cyl.num_params_plot_single_level= SpecifyOutputOption(fields_to_plot,
+                                                                  cyl.map_param_all);             
+
+            amrex::Print() << "##### cylinder num_params_plot_single_level: "<<
+                                     cyl.num_params_plot_single_level << "\n";
+
+            amrex::Print() << "##### cylinder map_param_all: \n";
+            for(auto it: cyl.map_param_all) 
+            {
+                 amrex::Print() << it.first << "  " << it.second << "\n";
+            }
             amrex::Print() << "\n";
            
             map_object_info[object_name] = cyl;  
@@ -143,7 +154,8 @@ c_Diagnostics_Using_EB::ReadEBObjectInfo(std::string object_name, std::string ob
 void
 c_Diagnostics_Using_EB::SetGeometry(const amrex::Geometry* GEOM, 
                                     const amrex::BoxArray* BA, 
-                                    const amrex::DistributionMapping* DM)
+                                    const amrex::DistributionMapping* DM,
+                                    int specify_using_eb)
 {
 #ifdef PRINT_NAME
     amrex::Print() << "\n\n\t\t\t\t\t\t{************************c_Diagnostics_Using_EB()::SetGeometry()************************\n";
@@ -153,6 +165,8 @@ c_Diagnostics_Using_EB::SetGeometry(const amrex::Geometry* GEOM,
     geom = GEOM;
     ba = BA;
     dm = DM;
+
+    Init_Plot_Field_Essentials(*geom, specify_using_eb);
 
 #ifdef PRINT_NAME
     amrex::Print() << "\t\t\t\t\t\t}************************c_Diagnostics_Using_EB()::SetGeometry()************************\n";
@@ -227,78 +241,97 @@ c_Diagnostics_Using_EB::ObtainSingleObjectFactory(std::string name, IFType objec
 
 
 void
-c_Diagnostics_Using_EB::ComputeAndWriteEBDiagnostics(int step, amrex::Real time, std::string folder_diag_str)
+c_Diagnostics_Using_EB::ComputeAndWriteEBDiagnostics(int step, amrex::Real time)
 {
 #ifdef PRINT_NAME
     amrex::Print() << "\n\n\t\t\t\t\t\t{************************c_Diagnostics_Using_EB()::ComputeAndWriteEBDiagnostics()************************\n";
     amrex::Print() << "\t\t\t\t\t\tin file: " << __FILE__ << " at line: " << __LINE__ << "\n";
 #endif
 
-       auto& rCode = c_Code::GetInstance();
-       auto& rMprop = rCode.get_MacroscopicProperties();
-       auto& rGprop = rCode.get_GeometryProperties();
-       auto& n_cell = rGprop.n_cell;
+    auto& rCode = c_Code::GetInstance();
+    auto& rMprop = rCode.get_MacroscopicProperties();
+    auto& rGprop = rCode.get_GeometryProperties();
+    auto& n_cell = rGprop.n_cell;
+    auto& rOutput = rCode.get_Output();
+    _foldername_str = rOutput.get_folder_name() + "_diag/";
 
-       for(auto name: vec_object_names)
+    for(auto name: vec_object_names)
+    {
+       _filename_prefix_str = _foldername_str + name + _plt_str;
+       _plot_file_name = amrex::Concatenate(_filename_prefix_str, step, _plt_name_digits);
+
+       amrex::Vector<amrex::MultiFab*> vec_pFieldMF;
+       amrex::Vector<amrex::MultiFab*> vec_pFactoryMF;
+       amrex::Vector<std::unique_ptr<amrex::MultiFab>> vec_unique_pFactoryMF;
+       std::unique_ptr<amrex::MultiFab> pFactoryMF_All;
+
+       auto object_type = map_object_type[name];
+
+       switch (map_object_type_enum[object_type])
        {
-          std::string filename_prefix_str = folder_diag_str + name + m_plt_str;
+           case s_ObjectType::object::cylinder:
+           {
+               auto info = std::any_cast<s_Cylinder>(map_object_info[name]);
+               auto p_factory = map_object_pfactory[name].get();
 
-          std::string plot_file_name = amrex::Concatenate(filename_prefix_str, step, m_plt_name_digits);
+               vec_pFieldMF.resize(info.num_params_plot_single_level);
+               vec_pFactoryMF.resize(info.num_params_plot_single_level);
+               vec_unique_pFactoryMF.resize(info.num_params_plot_single_level);
 
-          auto object_type = map_object_type[name];
+               int NComp1=1, NGhost0=0;
+               for(auto it : info.map_param_all)
+               {   
+                   std::string field_name = it.first;
+                   int c = it.second;
+                   vec_pFieldMF[c] = rMprop.get_p_mf(field_name);
+                   vec_unique_pFactoryMF[c] 
+                   = std::make_unique<amrex::MultiFab>(*ba, *dm, NComp1, NGhost0, MFInfo(), *p_factory);
+               } 
 
-          switch (map_object_type_enum[object_type])
-          {
-              case s_ObjectType::object::cylinder:
-              {
-                  auto info = std::any_cast<s_Cylinder>(map_object_info[name]);
-                  auto p_factory = map_object_pfactory[name].get();
+               pFactoryMF_All = std::make_unique<amrex::MultiFab>
+                                (*ba, *dm, info.num_params_plot_single_level, 
+                                 NGhost0, MFInfo(), *p_factory);
 
-                  std::unique_ptr<amrex::MultiFab> pFactoryMF 
-                           = std::make_unique<amrex::MultiFab>(*ba, *dm, 1, 0, MFInfo(), *p_factory);
-
-                  for(auto field_name: info.fields_to_plot)
-                  {
-                      pFactoryMF->setVal(0.);
-
-                      amrex::MultiFab* pFieldMF = NULL; 
-                      if ( Evaluate_TypeOf_MacroStr(field_name) == 0 )/*field belongs to MacroscopicProperties*/
-                      {
-                          pFieldMF = rMprop.get_p_mf(field_name);
-                      }
-
-                      Multifab_Manipulation::CopyValuesIntoAMultiFabOnCutcells(*pFactoryMF, *pFieldMF);        
-
-                      //int total_cutcells = Multifab_Manipulation::GetTotalNumberOfCutcells(*pFactoryMF);
-                      //amrex::Print() << "total_cutcells: " << total_cutcells << "\n";
-
-                      //const int cyl_ncell_axis = n_cell[info.axial_direction];
-                      //const int cyl_ncell_ring = int (total_cutcells/(cyl_ncell_axis));
-                      //amrex::Print() << "cyl_ncell_axis "<< cyl_ncell_axis << ", cyl_ncell_ring: " << cyl_ncell_ring << "\n";
-
-                      //Multifab_Manipulation::
-                      // Copy_3DCartesian_To_2DAzimuthalLongitudinal(*geom,
-                      //                                             *pFactoryMF, 
-                      //                                             &cyl_surf_grid, 
-                      //                                             cyl_ncell_ring, 
-                      //                                             cyl_ncell_axis,
-                      //                                             info.center,
-                      //                                             info.axial_direction,
-                      //                                             info.theta_reference_direction);
-                      //
-                      ////cyl_surf_grid(1,1)=1;
-                      //amrex::Print() << "cyl_surf_grid value: (1,1) : " << cyl_surf_grid(1,1) << " (1+cyl_ncell_ring, 1): " << cyl_surf_grid(1+cyl_ncell_ring, 1) << "\n";
-                      amrex::EB_WriteSingleLevelPlotfile( plot_file_name,
-                                                      *pFactoryMF, {field_name},
-                                                       *geom,
-                                                       time, step,
-                                                       "HyperCLaw-V1.1", m_default_level_prefix, "Cell");
-                  }
-                  break;
-              }
-          }
+               for(auto it: info.map_param_all)
+               {
+                   std::string field_name = it.first;
+                   int c = it.second;
+                   vec_unique_pFactoryMF[c]->setVal(0.);
+                   vec_pFieldMF[c] = rMprop.get_p_mf(field_name);
+                   Multifab_Manipulation::CopyValuesIntoAMultiFabOnCutcells(*vec_unique_pFactoryMF[c], *vec_pFieldMF[c]);        
+                   vec_pFactoryMF[c] = vec_unique_pFactoryMF[c].get(); 
+               }
+               WriteSingleLevelPlotFile(step, time, vec_pFactoryMF, pFactoryMF_All, info.map_param_all);   
+               vec_pFieldMF.clear();
+               vec_pFactoryMF.clear();
+               vec_unique_pFactoryMF.clear();
+               pFactoryMF_All.reset();
+               break;
+           }
        }
+    }
 #ifdef PRINT_NAME
     amrex::Print() << "\t\t\t\t\t\t}************************c_Diagnostics_Using_EB()::ComputeAndWriteEBDiagnostics()************************\n";
 #endif
 }
+
+
+                   //int total_cutcells = Multifab_Manipulation::GetTotalNumberOfCutcells(*pFactoryMF);
+                   //amrex::Print() << "total_cutcells: " << total_cutcells << "\n";
+
+                   //const int cyl_ncell_axis = n_cell[info.axial_direction];
+                   //const int cyl_ncell_ring = int (total_cutcells/(cyl_ncell_axis));
+                   //amrex::Print() << "cyl_ncell_axis "<< cyl_ncell_axis << ", cyl_ncell_ring: " << cyl_ncell_ring << "\n";
+
+                   //Multifab_Manipulation::
+                   // Copy_3DCartesian_To_2DAzimuthalLongitudinal(*geom,
+                   //                                             *pFactoryMF, 
+                   //                                             &cyl_surf_grid, 
+                   //                                             cyl_ncell_ring, 
+                   //                                             cyl_ncell_axis,
+                   //                                             info.center,
+                   //                                             info.axial_direction,
+                   //                                             info.theta_reference_direction);
+                   //
+                   ////cyl_surf_grid(1,1)=1;
+                   //amrex::Print() << "cyl_surf_grid value: (1,1) : " << cyl_surf_grid(1,1) << " (1+cyl_ncell_ring, 1): " << cyl_surf_grid(1+cyl_ncell_ring, 1) << "\n";

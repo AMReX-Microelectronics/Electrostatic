@@ -90,11 +90,12 @@ c_Diagnostics::InitData()
 
     auto& rCode = c_Code::GetInstance();
     auto& rGprop = rCode.get_GeometryProperties();
+    int Nghost0=0;
 
     #if AMREX_USE_EB
-    if(specify_using_eb==1) 
+    if(specify_using_eb) 
     {
-       SetGeometry(&rGprop.geom, &rGprop.ba, &rGprop.dm); 
+       SetGeometry(&rGprop.geom, &rGprop.ba, &rGprop.dm,specify_using_eb); 
        CreateFactory();  
     }
     #endif 
@@ -113,13 +114,8 @@ c_Diagnostics::ComputeAndWriteDiagnostics(int step, amrex::Real time)
     amrex::Print() << "\t\t\t\t\t\tin file: " << __FILE__ << " at line: " << __LINE__ << "\n";
 #endif
 
-    auto& rCode = c_Code::GetInstance();
-    auto& rOutput = rCode.get_Output();
-    m_foldername_str = rOutput.foldername_str;
-    std::string folder_diag_str = m_foldername_str + m_diagnostics_str + "/";
-
     #ifdef AMREX_USE_EB
-    if(specify_using_eb) ComputeAndWriteEBDiagnostics(step, time,folder_diag_str);
+    if(specify_using_eb) ComputeAndWriteEBDiagnostics(step, time);
     #endif
 
 #ifdef PRINT_NAME

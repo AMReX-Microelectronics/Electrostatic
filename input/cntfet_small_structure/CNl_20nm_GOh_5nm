@@ -210,7 +210,7 @@ Surf1.radius = R_CN
 Surf1.axial_direction = 1
 Surf1.theta_reference_direction = 0
 Surf1.has_fluid_inside = 0
-Surf1.fields_to_plot = phi charge_density
+Surf1.fields_to_plot = phi charge_density atom_locations
 
 #################
 ###### NEGF #####

@@ -4,6 +4,7 @@
 #include "Diagnostics_Using_EB_fwd.H"
 #include "../Input/GeometryProperties/EmbeddedBoundaries.H"
 #include "../Code_Definitions.H"
+#include "../Output/Field_Plot_Essentials.H"
 
 #include <AMReX_REAL.H>
 #include <AMReX_GpuContainers.H>
@@ -31,11 +32,14 @@ struct s_Cylinder
     int theta_reference_direction;
     amrex::Real height=-1;
     int has_fluid_inside=0;
-    amrex::Vector< std::string > fields_to_plot;
+    int num_params_plot_single_level;
+    std::map<std::string,int> map_param_all;
+
 };
 
 class
-c_Diagnostics_Using_EB 
+c_Diagnostics_Using_EB
+                      :private c_Field_Plot_Essentials
 {
 
 protected:
@@ -45,7 +49,8 @@ protected:
     const amrex::DistributionMapping* dm; 
     void SetGeometry(const amrex::Geometry* GEOM, 
                      const amrex::BoxArray* BA, 
-                     const amrex::DistributionMapping* DM);
+                     const amrex::DistributionMapping* DM,
+                     int specify_using_eb);
     amrex::EBSupport support;
     int required_coarsening_level;
     int max_coarsening_level;
@@ -99,11 +104,8 @@ protected:
     void ObtainSingleObjectFactory(std::string name, IFType object_IF);
 
     void CreateFactory();
-
-    const int m_plt_name_digits=4;
-    std::string m_plt_str = "/plt";
-    const std::string m_default_level_prefix {"Level_"};
-    void ComputeAndWriteEBDiagnostics(int step, amrex::Real time, std::string folder_diag_str);
+     
+    void ComputeAndWriteEBDiagnostics(int step, amrex::Real time);
 
 };
 #endif
