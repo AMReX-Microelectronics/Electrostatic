@@ -45,14 +45,14 @@ c_Nanostructure<NSType>::c_Nanostructure (const amrex::Geometry            & geo
     p_mf_gather = rMprop.get_p_mf(NS_gather_str);  
     p_mf_deposit = rMprop.get_p_mf(NS_deposit_str);  
 
-    _initial_deposit_value = NS_initial_deposit_value;
+    //_initial_deposit_value = NS_initial_deposit_value;
 
     ReadNanostructureProperties();
     ReadAtomLocations();
     Redistribute(); //from amrex::ParticleContainer
 
     MarkCellsWithAtoms();
-    InitializeAttributeToDeposit();
+    InitializeAttributeToDeposit(NS_initial_deposit_value);
     DepositToMesh();
 
 #ifdef PRINT_NAME
@@ -273,7 +273,7 @@ c_Nanostructure<NSType>::DepositToMesh()
 
 template<typename NSType>
 void 
-c_Nanostructure<NSType>::InitializeAttributeToDeposit() 
+c_Nanostructure<NSType>::InitializeAttributeToDeposit(const amrex::Real value) 
 {
     const auto& plo = _geom->ProbLoArray();
     const auto dx =_geom->CellSizeArray();
@@ -288,7 +288,7 @@ c_Nanostructure<NSType>::InitializeAttributeToDeposit()
 
         amrex::ParallelFor(np, [=] AMREX_GPU_DEVICE (int p) noexcept 
         {
-            p_par_deposit[p] = _initial_deposit_value;
+            p_par_deposit[p] = value;
         });
     }
 }

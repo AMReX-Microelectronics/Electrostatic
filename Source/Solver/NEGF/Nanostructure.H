@@ -127,7 +127,7 @@ public:
     virtual void ReadNanostructureProperties () override;
 
     void MarkCellsWithAtoms(); 
-    void InitializeAttributeToDeposit();
+    void InitializeAttributeToDeposit(const amrex::Real value);
 
     void GatherFromMesh();
     void DepositToMesh();
@@ -141,7 +141,7 @@ private:
 
     amrex::MultiFab* p_mf_gather=nullptr;
     amrex::MultiFab* p_mf_deposit=nullptr;
-    amrex::Real _initial_deposit_value;
+    //static amrex::Real _initial_deposit_value;
 
 };
 
