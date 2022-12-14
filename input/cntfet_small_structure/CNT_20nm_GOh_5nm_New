@@ -75,10 +75,6 @@ my_constants.nx = 360  #dx= 0.0355 nm
 my_constants.ny = 424  #dy= 0.071 nm
 my_constants.nz = 520  #dz= 0.0355 nm
 
-#my_constants.nx = 90  #dx= 0.071 nm
-#my_constants.ny = 212  #dy= 0.071 nm
-#my_constants.nz = 130  #dz= 0.071 nm
-
 #my_constants.nx = 1500  #Lx=45e-9, so that 15 nm left on each side after contact
 #my_constants.ny = 1528  #5x channel length 5*(19.596e-9/0.426e-9)*6(cells_per_unitcell) + 2*contact_lengths + 4 dy
 #my_constants.nz = 1500  #Lz=45 nm so that 20 nm is left above the contact
@@ -224,7 +220,6 @@ negf.NS_names = cnt #nanostructure names
 negf.NS_gather_field = phi            
 negf.NS_deposit_field  = charge_density 
 negf.NS_initial_deposit_value  = 1e-4*q/(dx*dy*dz)
-#negf.NS_initial_deposit_value  = 0
 
 cnt.type = CNT
 cnt.read_filename = ../input/cntfet_small_structure/cnt_zigzag_17_0_20nm.txt

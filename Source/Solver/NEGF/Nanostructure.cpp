@@ -140,7 +140,7 @@ c_Nanostructure<NSType>::ReadAtomLocations()
                 std::pair<int,int> key {0,0}; //{grid_index, tile index}
                 int lev=0;
                 auto& particle_tile = GetParticles(lev)[key];
-
+              
                 particle_tile.push_back(p);
                 particle_tile.push_back_int(int_attribs);
                 particle_tile.push_back_real(real_attribs);
@@ -290,5 +290,53 @@ c_Nanostructure<NSType>::InitializeAttributeToDeposit(const amrex::Real value)
         {
             p_par_deposit[p] = value;
         });
+    }
+}
+
+
+template<typename NSType>
+void 
+c_Nanostructure<NSType>::AverageGatheredField() 
+{
+    
+    const auto& plo = _geom->ProbLoArray();
+    const auto dx =_geom->CellSizeArray();
+
+    int lev = 0;
+    for (MyParIter pti(*this, lev); pti.isValid(); ++pti) 
+    { 
+        auto np = pti.numParticles();
+
+        const auto& particles = pti.GetArrayOfStructs();
+        const auto p_par = particles().data();
+
+        auto& par_gather  = pti.get_realPA_comp(realPA::gather);
+        auto p_par_gather = par_gather.data();
+         
+	int N = 17;
+
+	//amrex::GPUArray<amrex::Real,avg_over_number> avg_gather_attrib;
+        //amrex::ParallelFor(np, [=] AMREX_GPU_DEVICE (int p) noexcept 
+        //{
+	//    int id = p_par[p].id();
+	//    int rid = static_cast<int>(amrex::Math::floor(id/N));
+
+        //    atomicAdd(avg_gather_attrib[rid], p_par_gather[p]);
+        //});
+
+        ReduceOps<ReduceOpSum> reduce_op;
+        ReduceData<amrex::Real> reduce_data(reduce_op);
+        using ReduceTuple = typename decltype(reduce_data)::Type;
+
+        reduce_op.eval(np, reduce_data,
+        [=] AMREX_GPU_DEVICE (int p) -> ReduceTuple
+        {
+	   int id = p_par[p].id();
+	   int rid = static_cast<int>(amrex::Math::floor(id/N));
+           int weight = (rid == 0) ? 1 : 0;
+           return weight*p_par_gather[p];
+        });
+        amrex::Real sum = amrex::get<0>(reduce_data.value());
+        ParallelDescriptor::ReduceRealSum(sum);
     }
 }
