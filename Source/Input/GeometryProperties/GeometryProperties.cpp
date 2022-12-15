@@ -123,6 +123,7 @@ c_GeometryProperties::ParseBasicDomainInput()
         max_grid_size[i] = mg[i];
         blocking_factor[i] = bf[i]; 
         is_periodic[i] = periodicity[i]; 
+	dx[i] = (prob_hi[i]-prob_lo[i])/n_cell[i];
     }
     if(coord_sys_str == "cartesian") 
     {
@@ -143,6 +144,9 @@ c_GeometryProperties::ParseBasicDomainInput()
     amrex::Print() << "##### prob_hi: ";
     for (int i=0; i<AMREX_SPACEDIM; ++i) amrex::Print() << prob_hi[i] << "  ";
     amrex::Print() << "\n";
+    amrex::Print() << "##### dx,dy,dz: ";
+    for (int i=0; i<AMREX_SPACEDIM; ++i) amrex::Print() << dx[i] << "  ";
+    amrex::Print() << "\n";
     amrex::Print() << "##### max_grid_size: ";
     for (int i=0; i<AMREX_SPACEDIM; ++i) amrex::Print() << max_grid_size[i] << "  ";
     amrex::Print() << "\n";
@@ -155,7 +159,7 @@ c_GeometryProperties::ParseBasicDomainInput()
     amrex::Print() << "##### coord_sys: " << coord_sys << "\n";
     amrex::Print() << "##### embedded_boundary_flag: " << embedded_boundary_flag << "\n";
 
-    if(embedded_boundary_flag) pEB = std::make_unique<c_EmbeddedBoundaries>();
+    if(embedded_boundary_flag) pEB = std::make_unique<c_EmbeddedBoundaries>(&dx);
 
 #ifdef PRINT_NAME
     amrex::Print() << "\t\t\t\t}************************c_GeometryProperties::ParseBasicDomainInput()************************\n";

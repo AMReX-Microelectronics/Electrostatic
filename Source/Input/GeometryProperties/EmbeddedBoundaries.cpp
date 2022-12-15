@@ -2,6 +2,7 @@
 
 #include "../../Utils/SelectWarpXUtils/WarpXUtil.H"
 #include "../../Utils/CodeUtils/CodeUtil.H"
+#include "../../Code.H"
 
 #include <AMReX.H>
 #include <AMReX_ParmParse.H>
@@ -18,12 +19,14 @@ using namespace amrex;
 //template<typename T>
 //class TD;
 
-c_EmbeddedBoundaries::c_EmbeddedBoundaries()
+c_EmbeddedBoundaries::c_EmbeddedBoundaries(const amrex::Array<amrex::Real, AMREX_SPACEDIM>* dx)
 {
 #ifdef PRINT_NAME
     amrex::Print() << "\n\n\t\t\t{************************c_EmbeddedBoundaries() Constructor************************\n";
     amrex::Print() << "\t\t\tin file: " << __FILE__ << " at line: " << __LINE__ << "\n";
 #endif
+
+    _dx = dx;
 
     ReadGeometry();
 
@@ -339,6 +342,9 @@ c_EmbeddedBoundaries::ReadObjectInfo(std::string object_name, std::string object
             amrex::Print() << "##### box_lo: ";
             for (int i=0; i<AMREX_SPACEDIM; ++i) amrex::Print() << lo[i] << "  ";
             amrex::Print() << "\n";
+            amrex::Print() << "##### box_lo/cell_size: ";
+            for (int i=0; i<AMREX_SPACEDIM; ++i) amrex::Print() << lo[i]/(*_dx)[i] << "  ";
+            amrex::Print() << "\n";
 
 
             amrex::Vector<amrex::Real> hi;
@@ -346,6 +352,9 @@ c_EmbeddedBoundaries::ReadObjectInfo(std::string object_name, std::string object
 
             amrex::Print() << "##### box_hi: ";
             for (int i=0; i<AMREX_SPACEDIM; ++i) amrex::Print() << hi[i] << "  ";
+            amrex::Print() << "\n";
+            amrex::Print() << "##### box_hi/cell_size: ";
+            for (int i=0; i<AMREX_SPACEDIM; ++i) amrex::Print() << hi[i]/(*_dx)[i] << "  ";
             amrex::Print() << "\n";
 
 
@@ -360,12 +369,16 @@ c_EmbeddedBoundaries::ReadObjectInfo(std::string object_name, std::string object
             amrex::Print() << "##### cyl_cavity_center: ";
             for (int i=0; i<AMREX_SPACEDIM; ++i) amrex::Print() << center[i] << "  ";
             amrex::Print() << "\n";
+            amrex::Print() << "##### cyl_cavity_center/cell_size: ";
+            for (int i=0; i<AMREX_SPACEDIM; ++i) amrex::Print() << center[i]/(*_dx)[i] << "  ";
+            amrex::Print() << "\n";
 
 
             amrex::Real radius;
             getWithParser(pp_object,"cyl_cavity_radius", radius);
 
             amrex::Print() << "##### cyl_cavity_radius: " << radius << "\n";
+            amrex::Print() << "##### cyl_cavity_radius/cell_size_y: " << radius/(*_dx)[1] << "\n";
 
 
             int direction;

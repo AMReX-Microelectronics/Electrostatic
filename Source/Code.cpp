@@ -9,6 +9,7 @@
 #include "Input/GeometryProperties/GeometryProperties.H"
 #include "Input/BoundaryConditions/BoundaryConditions.H"
 #include "Input/MacroscopicProperties/MacroscopicProperties.H"
+#include "Solver/NEGF/NEGF.H"
 #include "Solver/Electrostatics/MLMG.H"
 #include "PostProcessor/PostProcessor.H"
 #include "Diagnostics/Diagnostics.H"
@@ -144,16 +145,21 @@ c_Code::ReadData ()
     m_pBoundaryConditions = std::make_unique<c_BoundaryConditions>();
     
     m_pMacroscopicProperties = std::make_unique<c_MacroscopicProperties>();
+
+    use_negf = 0;
+    pp.query("use_negf", use_negf);
+    amrex::Print() << "##### use_negf: " << use_diagnostics << "\n";
+    if(use_negf) m_pNEGFSolver = std::make_unique<c_NEGFSolver>();
     
     m_pMLMGSolver = std::make_unique<c_MLMGSolver>();
     
     m_pPostProcessor = std::make_unique<c_PostProcessor>();
 
-    diagnostics_flag = 0;
-    pp.query("diagnostics", diagnostics_flag);
-    amrex::Print() << "##### diagnostics: " << diagnostics_flag << "\n";
+    use_diagnostics = 0;
+    pp.query("use_diagnostics", use_diagnostics);
+    amrex::Print() << "##### use_diagnostics: " << use_diagnostics << "\n";
 
-    if(diagnostics_flag) m_pDiagnostics = std::make_unique<c_Diagnostics>();
+    if(use_diagnostics) m_pDiagnostics = std::make_unique<c_Diagnostics>();
 
     m_pOutput = std::make_unique<c_Output>();
 
@@ -173,9 +179,11 @@ c_Code::InitData ()
  
     m_pGeometryProperties->InitData();
 
-    if(diagnostics_flag==1) m_pDiagnostics->InitData();
+    if(use_diagnostics==1) m_pDiagnostics->InitData();
 
     m_pMacroscopicProperties->InitData();
+
+    if(use_negf) m_pNEGFSolver->InitData();
 
     m_pMLMGSolver->InitData();
 
@@ -310,10 +318,13 @@ c_Code::Solve_PostProcess_Output()
 
         m_pPostProcessor->Compute(); 
 
-        if(diagnostics_flag==1) m_pDiagnostics->ComputeAndWriteDiagnostics(step,time);
+        if(use_negf) m_pNEGFSolver->Solve();
+
+        if(use_diagnostics) m_pDiagnostics->ComputeAndWriteDiagnostics(step,time);
 
         m_pOutput->WriteOutput(step, time);
     }
+
     avg_mlmg_solve_time = avg_mlmg_solve_time / m_total_steps;
     amrex::Print() << "avg_mlmg_solve_time: "   
                    << avg_mlmg_solve_time       

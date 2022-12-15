@@ -214,7 +214,7 @@ Multifab_Manipulation::CopyValuesIntoAMultiFabOnCutcells(amrex::MultiFab& target
 
     for ( amrex::MFIter mfi(flags, amrex::TilingIfNotGPU()); mfi.isValid(); ++mfi ) 
     {
-        const auto& box = mfi.tilebox( iv, target_mf.nGrowVect() ); 
+        const auto& box = mfi.tilebox(iv); 
 
         auto const& target_mf_array =  target_mf.array(mfi); 
         auto const& source_mf_array =  source_mf.array(mfi); 
@@ -434,6 +434,12 @@ amrex::RealArray vecToArr(amrex::Vector<amrex::Real>& vec)
     return array;
 }
 
+amrex::IntArray vecToArr(amrex::Vector<int>& vec)
+{   
+    amrex::IntArray array;
+    for (int i=0; i<AMREX_SPACEDIM; ++i) array[i] = vec[i];
+    return array;
+}
 
 int Evaluate_TypeOf_MacroStr(std::string macro_str)
 {

@@ -1,0 +1,12 @@
+CEXE_sources += Common_Properties.cpp
+CEXE_headers += Common_Properties.H
+
+CEXE_sources += CNT.cpp
+CEXE_headers += CNT.H
+
+CEXE_headers += Graphene.H
+
+CEXE_headers += Silicon.H
+
+VPATH_LOCATIONS += $(CODE_HOME)/Source/Solver/NEGF/Materials
+INCLUDE_LOCATIONS += $(CODE_HOME)/Source/Solver/NEGF/Materials

@@ -46,9 +46,8 @@ class
 c_EmbeddedBoundaries
 {
 public:
-    c_EmbeddedBoundaries();
+    c_EmbeddedBoundaries(const amrex::Array<amrex::Real, AMREX_SPACEDIM>* dx);
     ~c_EmbeddedBoundaries();
-
 
     int required_coarsening_level;
     int max_coarsening_level;
@@ -82,6 +81,7 @@ private:
     std::map<std::string,std::any> map_basic_objects_info;
     std::map<std::string,amrex::Real> map_basic_objects_soln;
     std::map<std::string,amrex::Real> map_basic_objects_beta;
+    const amrex::Array<amrex::Real, AMREX_SPACEDIM>* _dx;
 
     std::map<std::string, s_ObjectType::object>
     map_object_type_enum = {

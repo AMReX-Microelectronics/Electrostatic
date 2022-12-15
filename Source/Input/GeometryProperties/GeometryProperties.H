@@ -29,6 +29,7 @@ public:
     amrex::GpuArray<int, AMREX_SPACEDIM>  n_cell;     // number of cells in each dimension
     amrex::GpuArray<amrex::Real, AMREX_SPACEDIM>  prob_lo; // physical lo coordinate
     amrex::GpuArray<amrex::Real, AMREX_SPACEDIM>  prob_hi; // physical hi coordinate
+    amrex::Array<amrex::Real, AMREX_SPACEDIM>  dx; 
     amrex::IntVect max_grid_size;
     amrex::IntVect blocking_factor;
     std::array<int, AMREX_SPACEDIM> is_periodic;

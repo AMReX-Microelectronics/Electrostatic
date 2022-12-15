@@ -32,8 +32,8 @@ my_constants.epsilon_0 = 8.8541878128e-12
 ###### GEOMETRY PROPERTIES ######
 #################################
 domain.n_cell = nx ny nz
-domain.max_grid_size = nx ny nz
-domain.blocking_factor = nx ny nz
+domain.max_grid_size = nx/2 ny/2 nz/2
+domain.blocking_factor = nx/2 ny/2 nz/2
 
 domain.prob_lo = -Lx/2. -Ly/2. -Lz/2.
 domain.prob_hi = Lx/2. Ly/2. Lz/2.
@@ -137,14 +137,14 @@ post_process.fields_to_process = vecField vecFlux
 ###### OUTPUT ######
 ####################
 
-plot.folder_name = two_bodies
+plot.folder_name = diagnostics_test
 plot.fields_to_plot = Field_x Field_y Field_z vecFlux epsilon charge_density phi 
 plot.write_after_init = 0
 
 ########################
 ###### DIAGNOSTICS #####
 ########################
-diagnostics = 1
+use_diagnostics = 1
 
 diag.specify_using_eb = 1
 diag.objects = Surf1 

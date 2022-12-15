@@ -9,7 +9,18 @@ Code_dirs = Utils Input Solver PostProcessor Diagnostics Output
 Code_pack   += $(foreach dir, $(Code_dirs), $(CODE_HOME)/Source/$(dir)/Make.package)
 include $(Code_pack)
 
-AMREX_dirs = Base Boundary LinearSolvers/MLMG AmrCore EB
+AMREX_dirs = Base Boundary LinearSolvers/MLMG AmrCore 
+
+ifeq ($(USE_EB),TRUE)
+  AMREX_dirs += EB
+  USERSuffix := $(USERSuffix).EB
+endif
+
+ifeq ($(USE_PARTICLES),TRUE)
+  AMREX_dirs += Particle
+  USERSuffix := $(USERSuffix).PAR
+endif
+
 AMREX_pack   += $(foreach dir, $(AMREX_dirs), $(AMREX_HOME)/Src/$(dir)/Make.package)
 include $(AMREX_pack)
 
