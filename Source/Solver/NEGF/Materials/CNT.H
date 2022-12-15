@@ -27,12 +27,12 @@ public:
 
     const int get_1Dlayer_id(int global_par_id) 
     {
-         return static_cast<int>(amrex::Math::floor(global_par_id/type_id[0]));
+         return static_cast<int>(amrex::Math::floor((global_par_id-1)/type_id[0]));
     };
 
     const int get_atom_in_1Dlayer_id(int global_par_id) 
     {
-         return global_par_id % type_id[0];
+         return (global_par_id-1) % type_id[0];
     };
 
     const int get_num_layers()

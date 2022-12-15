@@ -91,11 +91,10 @@ steps = Nsteps
 #################################
 ###### GEOMETRY PROPERTIES ######
 #################################
-domain.n_cell = nx ny nz
+domain.n_cell = nx/2 ny nz
 #domain.max_grid_size = nx ny nz
 #domain.blocking_factor = nx ny nz
-domain.max_grid_size = nx ny/2 nz
-#domain.blocking_factor = nx/2 ny/2 nz/2
+domain.max_grid_size = nx/2 ny nz
 
 domain.prob_lo = -Lx/2. -Ly/2.  0.
 domain.prob_hi =  Lx/2.  Ly/2.  Lz
@@ -131,11 +130,12 @@ Drain.surf_soln = DV #V
 #################################
 ###### BOUNDARY CONDITIONS ######
 #################################
-boundary.hi = neu(0) neu(0) neu(0)
-boundary.lo = neu(0) neu(0) dir(GV)
+#boundary.hi = neu(0) neu(0) neu(0)
+#boundary.lo = neu(0) neu(0) dir(0.5)
+boundary.hi = dir(0.5) neu(0) dir(0.5)
+boundary.lo = dir(0.5) neu(0) dir(0.5)
 
-#boundary.GV_function = "GV_min + (GV_max-GV_min) * t" #V
-boundary.GV_function = "5" #V
+boundary.GV_function = "GV_min + (GV_max-GV_min) * t" #V
 
 ####################################
 ###### MACROSCOPIC PROPERTIES ######
@@ -201,7 +201,7 @@ plot.rawfield_write_interval = 1
 ########################
 ###### DIAGNOSTICS #####
 ########################
-use_diagnostics = 0
+use_diagnostics = 1
 
 diag.specify_using_eb = 1
 diag.objects = Surf1
@@ -231,5 +231,5 @@ cnt.acc = bond_length
 cnt.gamma = 2.5 #coupling factor (eV)
 cnt.num_unitcells = N_unitcells
 cnt.offset = 0 (-(N_unitcells/2.)*L_unitcell - 3*bond_length/4.) CN_h
-cnt.field_averaging_type = specific
-cnt.atom_indices_for_averaging = 8 
+cnt.field_averaging_type = all
+cnt.atom_indices_for_averaging = 8

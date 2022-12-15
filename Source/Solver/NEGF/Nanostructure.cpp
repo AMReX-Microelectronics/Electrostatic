@@ -130,6 +130,13 @@ c_Nanostructure<NSType>::ReadAtomLocations()
                 p.cpu() = ParallelDescriptor::MyProc();
                 
                 infile >> id[0] >> id[1];
+
+                int layer = NSType::get_1Dlayer_id(p.id());
+                int atom_id_in_layer = NSType::get_atom_in_1Dlayer_id(p.id());
+
+                amrex::Print() << "id, layer, atom_id: " << p.id() 
+                               << "  " << layer 
+                               << "  " << atom_id_in_layer << "\n"; 
                   
                 for(int j=0; j < AMREX_SPACEDIM; ++j) {
                     infile >> p.pos(j);
@@ -315,11 +322,14 @@ c_Nanostructure<NSType>::AverageFieldGatheredFromMesh()
     }
 
     amrex::Gpu::DeviceVector<amrex::Real> vec_sum_gatherField(num_layers);
+    //amrex::Gpu::DeviceVector<amrex::Real> vec_axial_loc(num_layers);
     for (int l=0; l<num_layers; ++l) 
     {
         vec_sum_gatherField[l] = 0.;
+        //vec_axial_loc[l] = 0.;
     }
-    amrex::Real* p_sum = vec_sum_gatherField.dataPtr();  // pointer to data
+    amrex::Real* p_sum = vec_sum_gatherField.dataPtr();  
+    //amrex::Real* p_axial_loc = vec_sum_axial_loc.dataPtr();  
 
     int lev = 0;
     for (MyParIter pti(*this, lev); pti.isValid(); ++pti)
@@ -340,6 +350,7 @@ c_Nanostructure<NSType>::AverageFieldGatheredFromMesh()
                 int layer = NSType::get_1Dlayer_id(id); 
 
                 amrex::HostDevice::Atomic::Add(&(p_sum[layer]), p_par_gather[p]);
+                //amrex::HostDevice::Atomic::Add(&(p_axial_loc[layer]), p_par[p].pos(1));
             });
         }
         else if(NSType::avg_type == s_AVG_TYPE::SPECIFIC) 
@@ -355,6 +366,7 @@ c_Nanostructure<NSType>::AverageFieldGatheredFromMesh()
                 for(auto index: NSType::vec_avg_indices) {
                     if(remainder == index) {
                         amrex::HostDevice::Atomic::Add(&(p_sum[layer]), p_par_gather[p]);
+                        //amrex::HostDevice::Atomic::Add(&(p_axial_loc[layer]), p_par[p].pos(1));
                     }
                 } 
 
@@ -365,11 +377,13 @@ c_Nanostructure<NSType>::AverageFieldGatheredFromMesh()
     for (int l=0; l<num_layers; ++l) 
     {
         ParallelDescriptor::ReduceRealSum(p_sum[l]);
+        //ParallelDescriptor::ReduceRealSum(p_axial_loc[l]);
     }
 
     for (int l=0; l<num_layers; ++l) 
     {
         avg_gatherField[l] = p_sum[l]/atoms_to_avg_over;
+        //avg_axial_loc[l] = p_axial_loc[l]/atoms_to_avg_over;
     }
 
 }

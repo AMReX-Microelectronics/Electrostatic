@@ -297,6 +297,8 @@ c_Diagnostics_Using_EB::ComputeAndWriteEBDiagnostics(int step, amrex::Real time)
                    std::string field_name = it.first;
                    int c = it.second;
                    vec_unique_pFactoryMF[c]->setVal(0.);
+//                   vec_unique_pFactoryMF[c]->FillBoundary(geom->periodicity());
+
                    vec_pFieldMF[c] = rMprop.get_p_mf(field_name);
                    Multifab_Manipulation::CopyValuesIntoAMultiFabOnCutcells(*vec_unique_pFactoryMF[c], *vec_pFieldMF[c]);        
                    vec_pFactoryMF[c] = vec_unique_pFactoryMF[c].get(); 
