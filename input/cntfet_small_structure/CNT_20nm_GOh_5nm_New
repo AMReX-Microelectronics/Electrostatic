@@ -71,9 +71,9 @@ my_constants.Ly = CN_l + 2*bond_length
 
 my_constants.Lz = 18.46e-9 #18.46-(10(=GO_h) + 3) = 5.46 nm free in z above the contacts
 
-my_constants.nx = 360  #dx= 0.0355 nm
+my_constants.nx = 180  #dx= 0.0355 nm
 my_constants.ny = 424  #dy= 0.071 nm
-my_constants.nz = 520  #dz= 0.0355 nm
+my_constants.nz = 260  #dz= 0.0355 nm
 
 #my_constants.nx = 1500  #Lx=45e-9, so that 15 nm left on each side after contact
 #my_constants.ny = 1528  #5x channel length 5*(19.596e-9/0.426e-9)*6(cells_per_unitcell) + 2*contact_lengths + 4 dy
@@ -92,8 +92,10 @@ steps = Nsteps
 ###### GEOMETRY PROPERTIES ######
 #################################
 domain.n_cell = nx ny nz
-domain.max_grid_size = nx ny nz
-domain.blocking_factor = nx ny nz
+#domain.max_grid_size = nx ny nz
+#domain.blocking_factor = nx ny nz
+domain.max_grid_size = nx ny/2 nz
+#domain.blocking_factor = nx/2 ny/2 nz/2
 
 domain.prob_lo = -Lx/2. -Ly/2.  0.
 domain.prob_hi =  Lx/2.  Ly/2.  Lz
@@ -133,7 +135,7 @@ boundary.hi = neu(0) neu(0) neu(0)
 boundary.lo = neu(0) neu(0) dir(GV)
 
 #boundary.GV_function = "GV_min + (GV_max-GV_min) * t" #V
-boundary.GV_function = "0.5" #V
+boundary.GV_function = "5" #V
 
 ####################################
 ###### MACROSCOPIC PROPERTIES ######
@@ -199,7 +201,7 @@ plot.rawfield_write_interval = 1
 ########################
 ###### DIAGNOSTICS #####
 ########################
-diagnostics = 1
+use_diagnostics = 0
 
 diag.specify_using_eb = 1
 diag.objects = Surf1
@@ -215,11 +217,12 @@ Surf1.fields_to_plot = phi charge_density atom_locations
 ###### NEGF #####
 #################
 
-use_negf = 0
+use_negf = 1
 negf.NS_names = cnt #nanostructure names
 negf.NS_gather_field = phi            
 negf.NS_deposit_field  = charge_density 
-negf.NS_initial_deposit_value  = 1e-4*q/(dx*dy*dz)
+#negf.NS_initial_deposit_value  = 1e-4*q/(dx*dy*dz)
+negf.NS_initial_deposit_value  = 0.
 
 cnt.type = CNT
 cnt.read_filename = ../input/cntfet_small_structure/cnt_zigzag_17_0_20nm.txt
@@ -228,3 +231,5 @@ cnt.acc = bond_length
 cnt.gamma = 2.5 #coupling factor (eV)
 cnt.num_unitcells = N_unitcells
 cnt.offset = 0 (-(N_unitcells/2.)*L_unitcell - 3*bond_length/4.) CN_h
+cnt.field_averaging_type = specific
+cnt.atom_indices_for_averaging = 8 

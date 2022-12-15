@@ -9,6 +9,14 @@
 
 #include <string>
 
+struct s_AVG_TYPE 
+{
+    enum { 
+          ALL,
+          SPECIFIC
+    };
+};
+
 class c_Common_Properties
 {
 
@@ -18,7 +26,8 @@ public:
     int num_atoms;
     int num_unitcells;
     amrex::RealArray offset;
-
+    int avg_type;
+    amrex::Vector<int> vec_avg_indices;
     virtual void ReadNanostructureProperties ();
 
 };

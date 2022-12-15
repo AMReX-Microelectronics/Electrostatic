@@ -131,6 +131,10 @@ public:
 
     void GatherFromMesh();
     void DepositToMesh();
+    void AverageFieldGatheredFromMesh();
+    void Write_AveragedGatherField();
+
+//    const amrex::Vector<amrex::Real>* get_avg_gatherField() { &avg_gatherField };
 
 private:
     const amrex::GpuArray<int, AMREX_SPACEDIM>* _n_cell; 
@@ -141,7 +145,8 @@ private:
 
     amrex::MultiFab* p_mf_gather=nullptr;
     amrex::MultiFab* p_mf_deposit=nullptr;
-    //static amrex::Real _initial_deposit_value;
+
+    amrex::Vector<amrex::Real> avg_gatherField;
 
 };
 

@@ -145,7 +145,8 @@ private:
     std::unique_ptr<c_Output> m_pOutput;
     std::unique_ptr<c_NEGFSolver> m_pNEGFSolver;
 
-    int diagnostics_flag;
+    int use_diagnostics;
+    int use_negf;
     std::unique_ptr<c_Diagnostics> m_pDiagnostics;
 
 };

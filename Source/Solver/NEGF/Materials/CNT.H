@@ -25,6 +25,26 @@ public:
          return id;  
     };
 
+    const int get_1Dlayer_id(int global_par_id) 
+    {
+         return static_cast<int>(amrex::Math::floor(global_par_id/type_id[0]));
+    };
+
+    const int get_atom_in_1Dlayer_id(int global_par_id) 
+    {
+         return global_par_id % type_id[0];
+    };
+
+    const int get_num_layers()
+    {
+         return rings_per_unitcell*num_unitcells;  
+    };
+
+    const int get_num_atoms_per_layer() 
+    {
+         return atoms_per_ring;
+    };
+
     void Print_IDs(int cell_id) 
     {
          std::array<int,2> id;
@@ -41,6 +61,7 @@ public:
     amrex::Real gamma;
 
     virtual void ReadNanostructureProperties () override;
+
 };
 
 #endif

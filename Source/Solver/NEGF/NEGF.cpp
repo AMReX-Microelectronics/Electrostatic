@@ -171,3 +171,18 @@ c_NEGFSolver::InitData()
 //    amrex::Print() << "\t\t\t}************************c_Nanostructure_Atom_Container() Constructor************************\n";
 //#endif
 //}
+
+
+void 
+c_NEGFSolver::Solve() 
+{
+//    amrex::Vector<amrex::Real>* potential;
+
+    for (int c=0; c < vp_CNT.size(); ++c)
+    {
+        vp_CNT[c]->GatherFromMesh();
+        vp_CNT[c]->AverageFieldGatheredFromMesh();
+        vp_CNT[c]->Write_AveragedGatherField();
+    }
+
+}

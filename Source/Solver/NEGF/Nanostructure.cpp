@@ -48,6 +48,10 @@ c_Nanostructure<NSType>::c_Nanostructure (const amrex::Geometry            & geo
     //_initial_deposit_value = NS_initial_deposit_value;
 
     ReadNanostructureProperties();
+
+    amrex::Print() << "Number of layers: " << NSType::get_num_layers() << "\n";
+    avg_gatherField.resize(NSType::get_num_layers());
+
     ReadAtomLocations();
     Redistribute(); //from amrex::ParticleContainer
 
@@ -67,6 +71,8 @@ c_Nanostructure<NSType>::~c_Nanostructure ()
     amrex::Print() << "\n\n\t\t\t{************************c_Nanostructure() Destructor************************\n";
     amrex::Print() << "\t\t\tin file: " << __FILE__ << " at line: " << __LINE__ << "\n";
 #endif
+
+    avg_gatherField.clear();
 
 #ifdef PRINT_NAME
     amrex::Print() << "\t\t\t}************************c_Nanostructure() Destructor************************\n";
@@ -296,15 +302,28 @@ c_Nanostructure<NSType>::InitializeAttributeToDeposit(const amrex::Real value)
 
 template<typename NSType>
 void 
-c_Nanostructure<NSType>::AverageGatheredField() 
+c_Nanostructure<NSType>::AverageFieldGatheredFromMesh() 
 {
-    
-    const auto& plo = _geom->ProbLoArray();
-    const auto dx =_geom->CellSizeArray();
+
+    const int num_layers = NSType::get_num_layers();
+    const int atoms_per_layer = NSType::get_num_atoms_per_layer();
+    int atoms_to_avg_over = atoms_per_layer;
+
+    if(NSType::avg_type == s_AVG_TYPE::SPECIFIC) 
+    {
+        atoms_to_avg_over = NSType::vec_avg_indices.size();
+    }
+
+    amrex::Gpu::DeviceVector<amrex::Real> vec_sum_gatherField(num_layers);
+    for (int l=0; l<num_layers; ++l) 
+    {
+        vec_sum_gatherField[l] = 0.;
+    }
+    amrex::Real* p_sum = vec_sum_gatherField.dataPtr();  // pointer to data
 
     int lev = 0;
-    for (MyParIter pti(*this, lev); pti.isValid(); ++pti) 
-    { 
+    for (MyParIter pti(*this, lev); pti.isValid(); ++pti)
+    {
         auto np = pti.numParticles();
 
         const auto& particles = pti.GetArrayOfStructs();
@@ -312,31 +331,63 @@ c_Nanostructure<NSType>::AverageGatheredField()
 
         auto& par_gather  = pti.get_realPA_comp(realPA::gather);
         auto p_par_gather = par_gather.data();
-         
-	int N = 17;
 
-	//amrex::GPUArray<amrex::Real,avg_over_number> avg_gather_attrib;
-        //amrex::ParallelFor(np, [=] AMREX_GPU_DEVICE (int p) noexcept 
-        //{
-	//    int id = p_par[p].id();
-	//    int rid = static_cast<int>(amrex::Math::floor(id/N));
-
-        //    atomicAdd(avg_gather_attrib[rid], p_par_gather[p]);
-        //});
-
-        ReduceOps<ReduceOpSum> reduce_op;
-        ReduceData<amrex::Real> reduce_data(reduce_op);
-        using ReduceTuple = typename decltype(reduce_data)::Type;
-
-        reduce_op.eval(np, reduce_data,
-        [=] AMREX_GPU_DEVICE (int p) -> ReduceTuple
+        if(NSType::avg_type == s_AVG_TYPE::ALL) 
         {
-	   int id = p_par[p].id();
-	   int rid = static_cast<int>(amrex::Math::floor(id/N));
-           int weight = (rid == 0) ? 1 : 0;
-           return weight*p_par_gather[p];
-        });
-        amrex::Real sum = amrex::get<0>(reduce_data.value());
-        ParallelDescriptor::ReduceRealSum(sum);
+            amrex::ParallelFor(np, [=] AMREX_GPU_DEVICE (int p) noexcept 
+            {
+                int id = p_par[p].id();
+                int layer = NSType::get_1Dlayer_id(id); 
+
+                amrex::HostDevice::Atomic::Add(&(p_sum[layer]), p_par_gather[p]);
+            });
+        }
+        else if(NSType::avg_type == s_AVG_TYPE::SPECIFIC) 
+        {
+            amrex::ParallelFor(np, [=] AMREX_GPU_DEVICE (int p) noexcept 
+            {
+                int id = p_par[p].id();
+                int layer = NSType::get_1Dlayer_id(id); 
+                int atom_id_in_layer = NSType::get_atom_in_1Dlayer_id(id); 
+                
+                int remainder = atom_id_in_layer%atoms_per_layer;
+
+                for(auto index: NSType::vec_avg_indices) {
+                    if(remainder == index) {
+                        amrex::HostDevice::Atomic::Add(&(p_sum[layer]), p_par_gather[p]);
+                    }
+                } 
+
+            });
+        }
+    }
+
+    for (int l=0; l<num_layers; ++l) 
+    {
+        ParallelDescriptor::ReduceRealSum(p_sum[l]);
+    }
+
+    for (int l=0; l<num_layers; ++l) 
+    {
+        avg_gatherField[l] = p_sum[l]/atoms_to_avg_over;
+    }
+
+}
+
+
+template<typename NSType>
+void 
+c_Nanostructure<NSType>::Write_AveragedGatherField() 
+{
+    if (ParallelDescriptor::IOProcessor()) 
+    {
+        std::ofstream outfile;
+        outfile.open("avg_gatherField.dat");
+        
+        for (int l=0; l<avg_gatherField.size(); ++l)
+        {
+            outfile << l << std::setw(15) << avg_gatherField[l] << "\n";
+        }  
+        outfile.close();
     }
 }

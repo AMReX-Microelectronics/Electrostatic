@@ -26,6 +26,7 @@ public:
     ~c_NEGFSolver();
 
     void InitData();
+    void Solve();
 
 private:
     int num_NS=0;
