@@ -1,7 +1,10 @@
 AMREX_HOME ?= ../../amrex
-include $(AMREX_HOME)/Tools/GNUMake/Make.defs
 
-CXXSTD        = c++17
+ifeq ($(USE_NEGF),TRUE)
+  USE_PARTICLES = TRUE
+endif
+
+include $(AMREX_HOME)/Tools/GNUMake/Make.defs
 
 include $(CODE_HOME)/Source/Make.package
 
@@ -16,9 +19,15 @@ ifeq ($(USE_EB),TRUE)
   USERSuffix := $(USERSuffix).EB
 endif
 
-ifeq ($(USE_PARTICLES),TRUE)
+ifeq ($(TIME_DEPENDENT),TRUE)
+  USERSuffix := $(USERSuffix).TD
+  DEFINES += -DTIME_DEPENDENT
+endif
+
+ifeq ($(USE_NEGF),TRUE)
   AMREX_dirs += Particle
-  USERSuffix := $(USERSuffix).PAR
+  USERSuffix := $(USERSuffix).NEGF
+  DEFINES += -DUSE_NEGF
 endif
 
 AMREX_pack   += $(foreach dir, $(AMREX_dirs), $(AMREX_HOME)/Src/$(dir)/Make.package)
@@ -28,11 +37,7 @@ include $(AMREX_HOME)/Tools/GNUMake/Make.rules
 
 
 ifeq ($(PRINT_HIGH),TRUE)
-  DEFINES += -DPRINT_HIGH -DPRINT_MEDIUM -DPRINT_LOW -DPRINT_NAME
-endif
-
-ifeq ($(PRINT_MEDIUM),TRUE)
-  DEFINES += -DPRINT_MEDIUM -DPRINT_LOW -DPRINT_NAME
+  DEFINES += -DPRINT_HIGH -DPRINT_LOW -DPRINT_NAME
 endif
 
 ifeq ($(PRINT_LOW),TRUE)
@@ -41,8 +46,4 @@ endif
 
 ifeq ($(PRINT_NAME),TRUE)
   DEFINES += -DPRINT_NAME
-endif
-
-ifeq ($(TIME_DEPENDENT), TRUE)
-  DEFINES += -DTIME_DEPENDENT
 endif

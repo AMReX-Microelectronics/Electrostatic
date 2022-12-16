@@ -98,8 +98,8 @@ macroscopic.ghostcells_for_fields = alpha.0 epsilon.1 charge_density.0 phi.1
 # - In the following example, epsilon and charge_density are given a different value below radius R_sph, defined above.
 #
 macroscopic.alpha = 0.0
-macroscopic.epsilon_function(x,y,z) = "epsilon_0 + (epsilon_r_sph-1)*epsilon_0 * ( sqrt(x**2 + y**2 + z**2) <= R_sph )"
-macroscopic.charge_density_function(x,y,z) = "charge_density_surr + charge_density_sph * ( sqrt(x**2 + y**2 + z**2) <= R_sph )"
+macroscopic.epsilon_function = "epsilon_0 + (epsilon_r_sph-1)*epsilon_0 * ( sqrt(x**2 + y**2 + z**2) <= R_sph )"
+macroscopic.charge_density_function = "charge_density_surr + charge_density_sph * ( sqrt(x**2 + y**2 + z**2) <= R_sph )"
 macroscopic.phi = 0.0
 #
 #

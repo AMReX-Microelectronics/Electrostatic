@@ -198,7 +198,7 @@ plot.rawfield_write_interval = 1
 ########################
 ###### DIAGNOSTICS #####
 ########################
-diagnostics = 1
+use_diagnostics = 1
 
 diag.specify_using_eb = 1
 diag.objects = Surf1

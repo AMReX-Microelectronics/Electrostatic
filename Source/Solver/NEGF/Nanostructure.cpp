@@ -134,10 +134,6 @@ c_Nanostructure<NSType>::ReadAtomLocations()
                 int layer = NSType::get_1Dlayer_id(p.id());
                 int atom_id_in_layer = NSType::get_atom_in_1Dlayer_id(p.id());
 
-                amrex::Print() << "id, layer, atom_id: " << p.id() 
-                               << "  " << layer 
-                               << "  " << atom_id_in_layer << "\n"; 
-                  
                 for(int j=0; j < AMREX_SPACEDIM; ++j) {
                     infile >> p.pos(j);
                     p.pos(j) += NSType::offset[j];

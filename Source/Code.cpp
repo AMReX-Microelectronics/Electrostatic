@@ -9,12 +9,13 @@
 #include "Input/GeometryProperties/GeometryProperties.H"
 #include "Input/BoundaryConditions/BoundaryConditions.H"
 #include "Input/MacroscopicProperties/MacroscopicProperties.H"
-#include "Solver/NEGF/NEGF.H"
 #include "Solver/Electrostatics/MLMG.H"
 #include "PostProcessor/PostProcessor.H"
 #include "Diagnostics/Diagnostics.H"
 #include "Output/Output.H"
-
+#ifdef USE_NEGF
+#include "Solver/NEGF/NEGF.H"
+#endif
 
 
 c_Code* c_Code::m_instance = nullptr;
@@ -149,7 +150,10 @@ c_Code::ReadData ()
     use_negf = 0;
     pp.query("use_negf", use_negf);
     amrex::Print() << "##### use_negf: " << use_diagnostics << "\n";
+    
+    #ifdef USE_NEGF
     if(use_negf) m_pNEGFSolver = std::make_unique<c_NEGFSolver>();
+    #endif
     
     m_pMLMGSolver = std::make_unique<c_MLMGSolver>();
     
@@ -183,7 +187,9 @@ c_Code::InitData ()
 
     m_pMacroscopicProperties->InitData();
 
+    #ifdef USE_NEGF
     if(use_negf) m_pNEGFSolver->InitData();
+    #endif
 
     m_pMLMGSolver->InitData();
 
@@ -318,7 +324,9 @@ c_Code::Solve_PostProcess_Output()
 
         m_pPostProcessor->Compute(); 
 
+        #ifdef USE_NEGF
         if(use_negf) m_pNEGFSolver->Solve();
+        #endif
 
         if(use_diagnostics) m_pDiagnostics->ComputeAndWriteDiagnostics(step,time);
 
