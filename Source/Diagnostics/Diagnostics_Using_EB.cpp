@@ -318,6 +318,8 @@ c_Diagnostics_Using_EB::ComputeAndWriteEBDiagnostics(int step, amrex::Real time)
 }
 
 
+                   //     amrex::Array2D<amrex::Real,1,Max_Ncell_Azim,1,Max_Ncell_Long,amrex::Order::C> cyl_surf_grid;
+
                    //int total_cutcells = Multifab_Manipulation::GetTotalNumberOfCutcells(*pFactoryMF);
                    //amrex::Print() << "total_cutcells: " << total_cutcells << "\n";
 

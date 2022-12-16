@@ -57,8 +57,6 @@ protected:
     int num_objects;
     amrex::Vector< std::string > vec_object_names;
 
-    amrex::Array2D<amrex::Real,1,Max_Ncell_Azim,1,Max_Ncell_Long,amrex::Order::C> cyl_surf_grid;
-
     std::map<std::string,std::string> map_object_type;
     std::map<std::string,std::any> map_object_info;
     std::map<std::string, std::unique_ptr<amrex::EBFArrayBoxFactory> > map_object_pfactory;
