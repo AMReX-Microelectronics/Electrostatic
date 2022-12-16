@@ -12,10 +12,13 @@
 #include <AMReX_ParmParse.H>
 #include <AMReX_Parser.H>
 #include <AMReX_RealBox.H>
+
+#ifdef AMREX_USE_EB
 #include <AMReX_EB2.H>
 #include <AMReX_EB2_IF.H>
 #include <AMReX_EBSupport.H>
 #include <AMReX_EB2_IndexSpace_STL.H>
+#endif
 
 
 using namespace amrex;

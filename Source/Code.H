@@ -4,7 +4,10 @@
 #include "Input/GeometryProperties/GeometryProperties_fwd.H"
 #include "Input/BoundaryConditions/BoundaryConditions_fwd.H"
 #include "Input/MacroscopicProperties/MacroscopicProperties_fwd.H"
+#ifdef USE_NEGF
 #include "Solver/NEGF/NEGF_fwd.H"
+#endif
+
 #include "Solver/Electrostatics/MLMG_fwd.H"
 #include "PostProcessor/PostProcessor_fwd.H"
 #include "Diagnostics/Diagnostics_fwd.H"
@@ -119,7 +122,9 @@ public:
     c_GeometryProperties& get_GeometryProperties () { return *m_pGeometryProperties;}
     c_BoundaryConditions& get_BoundaryConditions () { return *m_pBoundaryConditions;}
     c_MacroscopicProperties& get_MacroscopicProperties () { return *m_pMacroscopicProperties;}
+    #ifdef USE_NEGF
     c_NEGFSolver& get_NEGFSolver () { return *m_pNEGFSolver;}
+    #endif
     c_MLMGSolver& get_MLMGSolver () { return *m_pMLMGSolver;}
     c_PostProcessor& get_PostProcessor () { return *m_pPostProcessor;}
     c_Diagnostics& get_Diagnostics () { return *m_pDiagnostics;}
@@ -143,7 +148,9 @@ private:
     std::unique_ptr<c_MLMGSolver> m_pMLMGSolver;
     std::unique_ptr<c_PostProcessor> m_pPostProcessor;
     std::unique_ptr<c_Output> m_pOutput;
+    #ifdef USE_NEGF
     std::unique_ptr<c_NEGFSolver> m_pNEGFSolver;
+    #endif
 
     int use_diagnostics;
     int use_negf;

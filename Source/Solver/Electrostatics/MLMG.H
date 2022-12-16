@@ -11,13 +11,12 @@
 #include <AMReX_BoxArray.H>
 #include <AMReX_Geometry.H>
 #include <AMReX_MLLinOp.H>
-#include <AMReX_MLABecLaplacian.H>
-#include <AMReX_MLEBABecLap.H>
 #include <AMReX_MLMG.H>
+#include <AMReX_MLABecLaplacian.H>
 
-//#include <AMReX_BaseFwd.H>
-
-
+#ifdef AMREX_USE_EB
+#include <AMReX_MLEBABecLap.H>
+#endif
 
 #include <string>
 

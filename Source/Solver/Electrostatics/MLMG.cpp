@@ -416,6 +416,8 @@ c_MLMGSolver:: Setup_MLEBABecLaplacian_ForPoissonEqn()
                  beta_fc[1].define(convert(ba,IntVect(AMREX_D_DECL(0,1,0))), dm, 1, 0);,
                  beta_fc[2].define(convert(ba,IntVect(AMREX_D_DECL(0,0,1))), dm, 1, 0););
 
+    beta->FillBoundary();
+
     //converts from cell-centered permittivity to face-center and store in beta_fc
     Multifab_Manipulation::AverageCellCenteredMultiFabToCellFaces(*beta, beta_fc); 
 
@@ -507,9 +509,13 @@ c_MLMGSolver:: Setup_MLABecLaplacian_ForPoissonEqn()
 
     // beta_fc =  std::make_unique<amrex::FArrayBox,AMREX_SPACEDIM>; 
     // beta_fc is a face-centered multifab
+
+
     AMREX_D_TERM(beta_fc[0].define(convert(ba,IntVect(AMREX_D_DECL(1,0,0))), dm, 1, 0);,
                  beta_fc[1].define(convert(ba,IntVect(AMREX_D_DECL(0,1,0))), dm, 1, 0);,
                  beta_fc[2].define(convert(ba,IntVect(AMREX_D_DECL(0,0,1))), dm, 1, 0););
+
+    beta->FillBoundary(geom.periodicity());
 
     Multifab_Manipulation::AverageCellCenteredMultiFabToCellFaces(*beta, beta_fc); //converts from cell-centered permittivity to face-center and store in beta_fc
 

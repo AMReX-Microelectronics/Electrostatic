@@ -33,9 +33,9 @@ my_constants.epsilon_r = 3.8
 #domain.blocking_factor = 160 160 40
 
 ##for multiple processors
-domain.n_cell = 160 160 160
-domain.max_grid_size = 40 160 1600
-domain.blocking_factor = 40 160 160
+domain.n_cell = 160 160 80
+domain.max_grid_size = 80 80 80
+domain.blocking_factor = 80 80 80
 
 domain.prob_lo = -Lx/2. -Ly/2. -Lz/2.
 domain.prob_hi = Lx/2. Ly/2. Lz/2.

@@ -2,10 +2,20 @@
 #define DIAGNOSTICS_H_
 
 #include "Diagnostics_fwd.H"
+
+#ifdef AMREX_USE_EB
 #include "Diagnostics_Using_EB.H"
+#else
+#include <AMReX_REAL.H>
+
+#include <string>
+#endif
 
 class
-c_Diagnostics: private c_Diagnostics_Using_EB
+c_Diagnostics
+#ifdef AMREX_USE_EB
+            : private c_Diagnostics_Using_EB
+#endif
 {
 public:
     c_Diagnostics();
