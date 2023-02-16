@@ -11,6 +11,7 @@
 #include <string>
 #include <array>
 
+
 class c_Silicon
            :public c_Common_Properties
 {
@@ -24,10 +25,17 @@ public:
          return id;
     };
 
-    const int get_1Dlayer_id(int global_par_id)
-    {
-          return 0; 
+    struct Get1DLayerID {
+       AMREX_GPU_HOST_DEVICE int operator() (int global_par_id) const
+       {
+           return static_cast<int>(amrex::Math::floor((global_par_id-1)/type_id[0]));    
+       }
+       amrex::Array<int,2> type_id;
     };
+
+    static Get1DLayerID get_1Dlayer_id() {
+         return Get1DLayerID{type_id};
+    }
 
     const int get_atom_in_1Dlayer_id(int global_par_id)
     {
@@ -49,6 +57,9 @@ public:
     void Print_IDs(int cell_id)
     { //
     };
+
+    static amrex::Array<int,2> type_id;
+
 //    virtual void ReadNanostructureProperties () override;
 };
 
