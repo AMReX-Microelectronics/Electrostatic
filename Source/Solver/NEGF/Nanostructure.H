@@ -147,6 +147,7 @@ private:
     amrex::MultiFab* p_mf_deposit=nullptr;
 
     amrex::Vector<amrex::Real> avg_gatherField;
+    amrex::Gpu::DeviceVector<int> gpuvec_avg_indices;
 
 };
 

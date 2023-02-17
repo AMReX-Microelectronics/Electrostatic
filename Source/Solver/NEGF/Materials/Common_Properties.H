@@ -6,9 +6,10 @@
 #include <AMReX_REAL.H>
 #include <AMReX_BoxArray.H>
 #include <AMReX_REAL.H>
+#include <AMReX.H>
+//#include <AMReX_GpuContainers.H>
 
-#include <string>
-
+using namespace amrex;
 struct s_AVG_TYPE 
 {
     enum { 
@@ -27,7 +28,8 @@ public:
     int num_unitcells;
     amrex::RealArray offset;
     int avg_type;
-    static amrex::Vector<int> vec_avg_indices;
+    amrex::Vector<int> vec_avg_indices;
+
     virtual void ReadNanostructureProperties ();
 
 };
