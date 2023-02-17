@@ -5,6 +5,7 @@
 #include "../../Utils/SelectWarpXUtils/TextMsg.H"
 #include "../../Utils/CodeUtils/CodeUtil.H"
 
+amrex::Vector<int> vec_avg_indices;
 
 void
 c_Common_Properties:: ReadNanostructureProperties ()

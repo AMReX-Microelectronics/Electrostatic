@@ -6,6 +6,8 @@
 #include "../../Utils/CodeUtils/CodeUtil.H"
 
 
+amrex::Array<int,2> c_CNT::type_id;
+
 void
 c_CNT:: ReadNanostructureProperties ()
 {

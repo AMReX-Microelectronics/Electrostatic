@@ -27,7 +27,7 @@ public:
     int num_unitcells;
     amrex::RealArray offset;
     int avg_type;
-    amrex::Vector<int> vec_avg_indices;
+    static amrex::Vector<int> vec_avg_indices;
     virtual void ReadNanostructureProperties ();
 
 };

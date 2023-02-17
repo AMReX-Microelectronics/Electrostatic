@@ -2,6 +2,9 @@ CEXE_sources += Common_Properties.cpp
 CEXE_headers += Common_Properties.H
 
 CEXE_sources += CNT.cpp
+CEXE_sources += Graphene.cpp
+CEXE_sources += Silicon.cpp
+
 CEXE_headers += CNT.H
 CEXE_headers += Graphene.H
 CEXE_headers += Silicon.H
