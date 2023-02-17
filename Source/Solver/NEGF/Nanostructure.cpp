@@ -10,6 +10,9 @@
 
 #include "../../Code_Definitions.H"
 
+#include <AMReX.H>
+#include <AMReX_GpuContainers.H>
+//
 #include <iostream>
 
 template class c_Nanostructure<c_CNT>; 
@@ -48,6 +51,9 @@ c_Nanostructure<NSType>::c_Nanostructure (const amrex::Geometry            & geo
     //_initial_deposit_value = NS_initial_deposit_value;
 
     ReadNanostructureProperties();
+
+    gpuvec_avg_indices.resize(NSType::vec_avg_indices.size());
+    amrex::Gpu::copy(amrex::Gpu::hostToDevice, NSType::vec_avg_indices.begin(), NSType::vec_avg_indices.end(), gpuvec_avg_indices.begin());
 
     amrex::Print() << "Number of layers: " << NSType::get_num_layers() << "\n";
     avg_gatherField.resize(NSType::get_num_layers());
@@ -131,8 +137,11 @@ c_Nanostructure<NSType>::ReadAtomLocations()
                 
                 infile >> id[0] >> id[1];
 
-                int layer = NSType::get_1Dlayer_id(p.id());
-                int atom_id_in_layer = NSType::get_atom_in_1Dlayer_id(p.id());
+		auto get_1Dlayer_id = NSType::get_1Dlayer_id();
+                int layer = get_1Dlayer_id(p.id());
+
+		auto get_atom_in_1Dlayer_id = NSType::get_atom_in_1Dlayer_id();
+                int atom_id_in_layer = get_atom_in_1Dlayer_id(p.id());
 
                 for(int j=0; j < AMREX_SPACEDIM; ++j) {
                     infile >> p.pos(j);
@@ -326,7 +335,7 @@ c_Nanostructure<NSType>::AverageFieldGatheredFromMesh()
     }
     amrex::Real* p_sum = vec_sum_gatherField.dataPtr();  
     //amrex::Real* p_axial_loc = vec_sum_axial_loc.dataPtr();  
-
+    
     int lev = 0;
     for (MyParIter pti(*this, lev); pti.isValid(); ++pti)
     {
@@ -337,35 +346,42 @@ c_Nanostructure<NSType>::AverageFieldGatheredFromMesh()
 
         auto& par_gather  = pti.get_realPA_comp(realPA::gather);
         auto p_par_gather = par_gather.data();
+        auto get_1Dlayer_id = NSType::get_1Dlayer_id();
 
         if(NSType::avg_type == s_AVG_TYPE::ALL) 
         {
             amrex::ParallelFor(np, [=] AMREX_GPU_DEVICE (int p) noexcept 
             {
-                int id = p_par[p].id();
-                int layer = NSType::get_1Dlayer_id(id); 
+                int global_id = p_par[p].id();
+                int layer_id = get_1Dlayer_id(global_id); 
+                amrex::HostDevice::Atomic::Add(&(p_sum[layer_id]), p_par_gather[p]);
+                //amrex::HostDevice::Atomic::Add(&(p_axial_loc[layer_id]), p_par[p].pos(1));
 
-                amrex::HostDevice::Atomic::Add(&(p_sum[layer]), p_par_gather[p]);
-                //amrex::HostDevice::Atomic::Add(&(p_axial_loc[layer]), p_par[p].pos(1));
             });
         }
         else if(NSType::avg_type == s_AVG_TYPE::SPECIFIC) 
         {
+            auto get_atom_in_1Dlayer_id = NSType::get_atom_in_1Dlayer_id();
+	    auto avg_indices_ptr = gpuvec_avg_indices.dataPtr();
+            int size = NSType::vec_avg_indices.size(); //size of index to average
+
             amrex::ParallelFor(np, [=] AMREX_GPU_DEVICE (int p) noexcept 
             {
-                int id = p_par[p].id();
-                int layer = NSType::get_1Dlayer_id(id); 
-                int atom_id_in_layer = NSType::get_atom_in_1Dlayer_id(id); 
+                int global_id = p_par[p].id();
+                int layer_id = get_1Dlayer_id(global_id); 
+                int atom_id_in_layer = get_atom_in_1Dlayer_id(global_id); 
                 
                 int remainder = atom_id_in_layer%atoms_per_layer;
 
-                for(auto index: NSType::vec_avg_indices) {
-                    if(remainder == index) {
-                        amrex::HostDevice::Atomic::Add(&(p_sum[layer]), p_par_gather[p]);
+                //for(auto index: gpuvec_avg_indices) 
+		for(int m=0; m < size; ++m)
+		{
+                    if(remainder == avg_indices_ptr[m]) 
+		    {
+                        amrex::HostDevice::Atomic::Add(&(p_sum[layer_id]), p_par_gather[p]);
                         //amrex::HostDevice::Atomic::Add(&(p_axial_loc[layer]), p_par[p].pos(1));
                     }
                 } 
-
             });
         }
     }

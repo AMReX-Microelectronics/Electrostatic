@@ -11,6 +11,7 @@
 #include <string>
 #include <array>
 
+
 class c_CNT
            :public c_Common_Properties
 {
@@ -25,15 +26,34 @@ public:
          return id;  
     };
 
-    const int get_1Dlayer_id(int global_par_id) 
-    {
-         return static_cast<int>(amrex::Math::floor((global_par_id-1)/type_id[0]));
+    //AMREX_GPU_HOST_DEVICE static const int get_1Dlayer_id(int global_par_id) 
+    //{
+    //     return static_cast<int>(amrex::Math::floor((global_par_id-1)/type_id[0]));
+    //};
+
+    struct Get1DLayerID {
+       AMREX_GPU_HOST_DEVICE int operator() (int global_par_id) const 
+       { 
+	   return static_cast<int>(amrex::Math::floor((global_par_id-1)/type_id[0])); 
+       }
+       amrex::Array<int,2> type_id;
     };
 
-    const int get_atom_in_1Dlayer_id(int global_par_id) 
-    {
-         return (global_par_id-1) % type_id[0];
+    static Get1DLayerID get_1Dlayer_id() {
+         return Get1DLayerID{type_id}; 
+    }
+
+    struct GetAtomIn1DLayerID {
+       AMREX_GPU_HOST_DEVICE int operator() (int global_par_id) const 
+       { 
+	   return static_cast<int>((global_par_id-1) % type_id[0]); 
+       }
+       amrex::Array<int,2> type_id;
     };
+
+    static GetAtomIn1DLayerID get_atom_in_1Dlayer_id() {
+         return GetAtomIn1DLayerID{type_id}; 
+    }
 
     const int get_num_layers()
     {
@@ -54,7 +74,7 @@ public:
 
     };
 
-    amrex::Array<int,2> type_id; //type_id[0]: m, type_id[1]: n for (m,n) tube
+    static amrex::Array<int,2> type_id; //type_id[0]: m, type_id[1]: n for (m,n) tube
     amrex::Real acc;
     int rings_per_unitcell;
     int atoms_per_ring;
@@ -63,5 +83,4 @@ public:
     virtual void ReadNanostructureProperties () override;
 
 };
-
 #endif

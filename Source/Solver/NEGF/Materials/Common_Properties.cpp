@@ -5,7 +5,6 @@
 #include "../../Utils/SelectWarpXUtils/TextMsg.H"
 #include "../../Utils/CodeUtils/CodeUtil.H"
 
-
 void
 c_Common_Properties:: ReadNanostructureProperties ()
 {
