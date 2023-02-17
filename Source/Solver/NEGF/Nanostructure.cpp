@@ -352,31 +352,36 @@ c_Nanostructure<NSType>::AverageFieldGatheredFromMesh()
         {
             amrex::ParallelFor(np, [=] AMREX_GPU_DEVICE (int p) noexcept 
             {
-                int id = p_par[p].id();
-                int layer_id = get_1Dlayer_id(id); 
+                int global_id = p_par[p].id();
+                int layer_id = get_1Dlayer_id(global_id); 
                 amrex::HostDevice::Atomic::Add(&(p_sum[layer_id]), p_par_gather[p]);
+                //amrex::HostDevice::Atomic::Add(&(p_axial_loc[layer_id]), p_par[p].pos(1));
+
             });
         }
         else if(NSType::avg_type == s_AVG_TYPE::SPECIFIC) 
         {
             auto get_atom_in_1Dlayer_id = NSType::get_atom_in_1Dlayer_id();
-	    auto avg_indices = gpuvec_avg_indices.data();
-            
+	    auto avg_indices_ptr = gpuvec_avg_indices.dataPtr();
+            int size = NSType::vec_avg_indices.size(); //size of index to average
+
             amrex::ParallelFor(np, [=] AMREX_GPU_DEVICE (int p) noexcept 
             {
-                int id = p_par[p].id();
-                int layer = get_1Dlayer_id(id); 
-                int atom_id_in_layer = get_atom_in_1Dlayer_id(id); 
+                int global_id = p_par[p].id();
+                int layer_id = get_1Dlayer_id(global_id); 
+                int atom_id_in_layer = get_atom_in_1Dlayer_id(global_id); 
                 
                 int remainder = atom_id_in_layer%atoms_per_layer;
 
-                //for(auto index: gpuvec_avg_indices) {
-                //    if(remainder == index) {
-                //        amrex::HostDevice::Atomic::Add(&(p_sum[layer]), p_par_gather[p]);
-                //        //amrex::HostDevice::Atomic::Add(&(p_axial_loc[layer]), p_par[p].pos(1));
-                //    }
-                //} 
-
+                //for(auto index: gpuvec_avg_indices) 
+		for(int m=0; m < size; ++m)
+		{
+                    if(remainder == avg_indices_ptr[m]) 
+		    {
+                        amrex::HostDevice::Atomic::Add(&(p_sum[layer_id]), p_par_gather[p]);
+                        //amrex::HostDevice::Atomic::Add(&(p_axial_loc[layer]), p_par[p].pos(1));
+                    }
+                } 
             });
         }
     }

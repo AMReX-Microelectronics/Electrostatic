@@ -1,0 +1,230 @@
+##################################
+##### USER DEFINED CONSTANTS #####
+##################################
+#
+### Physical and Other Constants 
+my_constants.q = 1.602e-19
+my_constants.epsilon_0 = 8.8541878128e-12
+my_constants.tiny = 1e-12
+my_constants.GV_min = -0.3
+my_constants.GV_max =  0.3
+my_constants.Nsteps =  10
+my_constants.dt = 1./(Nsteps-1)
+#my_constants.dt = 1.
+
+my_constants.bond_length = 0.142e-9
+my_constants.N_unitcells = 70
+my_constants.L_unitcell = 3*bond_length #0.426e-9
+### GEOMETRY and MACROSCOPIC PARAMETER PROPERTIES 
+
+#gate oxide
+my_constants.GO_w = Lx
+my_constants.GO_l = Ly
+my_constants.GO_h = 10e-9      #smallest dimension that limits n_cell in z.
+
+my_constants.epsilon_GO = 3.8*epsilon_0
+ 
+#contact metal
+my_constants.CM_w = 3.e-9
+my_constants.CM_l = CN_co_l
+my_constants.CM_h = 3.e-9
+
+
+my_constants.epsilon_CM = 1.7*epsilon_0 #Palladium
+my_constants.SV =  0  #100e-3      #source voltage [V]
+my_constants.DV = 0.1 #-100e-3 #drain voltage [V]
+
+
+my_constants.CM_lo_z =  GO_h 
+my_constants.CM_hi_z =  GO_h + CM_h 
+
+my_constants.dx = Lx/nx
+my_constants.dy = Ly/ny
+my_constants.dz = Lz/nz
+my_constants.tiny_ebx = dx/4
+my_constants.tiny_eby = dy/4
+my_constants.tiny_ebz = dz/4
+
+my_constants.source_lo_y = -Ly/2 + bond_length + tiny_eby
+my_constants.source_hi_y = source_lo_y + CM_l + 2*tiny_eby
+
+my_constants.drain_hi_y = Ly/2 - bond_length - tiny_eby
+my_constants.drain_lo_y = drain_hi_y - CM_l - 2*tiny_eby
+
+
+#carbon nanotube 
+my_constants.CN_co_l = 5.112e-9  #contact length 12 unit cells
+my_constants.CN_ch_l = 19.596e-9 #channel length 46 unit cells
+my_constants.R_CN = 0.6654e-9    #radius
+my_constants.small_gap = 0.3e-9 #5*bond_length #0.355e-9, gap between nanotube and the contacts
+my_constants.CN_l = CN_ch_l + 2*CN_co_l  # 29.82nm = 70 unit cells 
+my_constants.CN_h = GO_h + CM_h/2. #CNT center is at 6.5 nm
+
+my_constants.epsilon_CN = epsilon_0 #vacuum
+
+#total domain dimensions
+my_constants.Lx = 12.78e-9  #180 cells for 0.071nm
+#(12.78 nm-3 nm)/2=4.89 nm free on each x side past contacts
+
+my_constants.Ly = CN_l + 2*bond_length
+#72 unit cells = 30.672 nm total length
+
+my_constants.Lz = 18.46e-9 #18.46-(10(=GO_h) + 3) = 5.46 nm free in z above the contacts
+
+my_constants.nx = 360  #dx= 0.0355 nm
+my_constants.ny = 424  #dy= 0.071 nm
+my_constants.nz = 520  #dz= 0.0355 nm
+
+#my_constants.nx = 1500  #Lx=45e-9, so that 15 nm left on each side after contact
+#my_constants.ny = 1528  #5x channel length 5*(19.596e-9/0.426e-9)*6(cells_per_unitcell) + 2*contact_lengths + 4 dy
+#my_constants.nz = 1500  #Lz=45 nm so that 20 nm is left above the contact
+
+my_constants.epsilon_domain = epsilon_0 #air
+#####################################
+##################################################
+###### TIME DEPENDENT SIMULATION PROPERTIES ######
+##################################################
+
+timestep = dt
+steps = Nsteps
+
+#################################
+###### GEOMETRY PROPERTIES ######
+#################################
+domain.n_cell = nx ny nz
+domain.max_grid_size = nx ny nz
+domain.blocking_factor = nx ny nz
+
+domain.prob_lo = -Lx/2. -Ly/2.  0.
+domain.prob_hi =  Lx/2.  Ly/2.  Lz
+
+domain.is_periodic = 0 0 0
+
+domain.coord_sys = cartesian 
+
+####################################
+###### EMBEDDED BOUNDARIES ######
+####################################
+
+domain.embedded_boundary = 1  #options: 1=true, 0=false (default)
+domain.specify_using_eb2 = 0  #options: 1=true, 0=false (default)
+
+ebgeom.objects = Source Drain
+ebgeom.specify_inhomo_dir = 1
+
+Source.geom_type = cntfet_contact
+Source.box_lo = (-CM_w/2.+ tiny_ebx)  source_lo_y (CM_lo_z-tiny_ebz)
+Source.box_hi = (CM_w/2. - tiny_ebx)  source_hi_y (CM_hi_z-tiny_ebz)
+Source.cyl_cavity_radius = R_CN + small_gap
+Source.cyl_cavity_direction = 1
+Source.surf_soln = SV #V
+
+Drain.geom_type = cntfet_contact
+Drain.box_lo = (-CM_w/2.+ tiny_ebx) drain_lo_y (CM_lo_z-tiny_ebz)
+Drain.box_hi = (CM_w/2. - tiny_ebx) drain_hi_y (CM_hi_z-tiny_ebz)
+Drain.cyl_cavity_radius = R_CN + small_gap
+Drain.cyl_cavity_direction = 1
+Drain.surf_soln = DV #V
+
+#################################
+###### BOUNDARY CONDITIONS ######
+#################################
+boundary.hi = neu(0) neu(0) neu(0)
+boundary.lo = neu(0) neu(0) dir(GV)
+
+boundary.GV_function = "GV_min + (GV_max-GV_min) * t" #V
+#boundary.GV_function = "0.5" #V
+
+####################################
+###### MACROSCOPIC PROPERTIES ######
+####################################
+macroscopic.fields_to_define = alpha epsilon charge_density phi atom_locations
+macroscopic.ghostcells_for_fields = alpha.0 epsilon.1 charge_density.0 phi.1  atom_locations.0
+
+macroscopic.alpha = 0.
+macroscopic.charge_density = 0.
+
+#epsilon function is defined in the following order:
+#domain +
+#gate metal +
+#gate oxide +
+#cavity between source and drain of radius R_CN+small_gap +
+#carbon nanotube that is placed in the cavity
+
+#macroscopic.epsilon_function = "1*epsilon_0"
+macroscopic.epsilon_function = "epsilon_0 + (epsilon_GO - epsilon_0)    *(z >= 0.)   *(z < GO_h)"
+#+ (epsilon_CN - epsilon_domain) * ( sqrt(x**2 + (z - CN_h)**2) <= R_CN )"
+
+# gate_metal + source + drain
+#+ (epsilon_GM - epsilon_domain) *(y < GM_l/2.)         *(y > -GM_l/2.)        *(x < GM_w/2.)           *(x >  -GM_w/2.)          *(z >= 0)           *(z < GM_h)                    
+#+ if( (sqrt(x**2 + (z - CN_h)**2) < R_CN +small_gap), 0.  , (epsilon_CM - epsilon_domain) ) *(x < CM_w/2.)           *(x >  -CM_w/2.)          *(z >= GM_h + GO_h) *(z < GM_h + GO_h + CM_h) * (y < -Ly/2. + CM_l)   *(y >= -Ly/2.)
+#+ if( (sqrt(x**2 + (z - CN_h)**2) < R_CN +small_gap), 0.  , (epsilon_CM - epsilon_domain) ) *(x < CM_w/2.)           *(x >  -CM_w/2.)          *(z >= GM_h + GO_h) *(z < GM_h + GO_h + CM_h)* (y <= Ly/2.)          *(y > Ly/2. - CM_l)
+
+macroscopic.phi = 0.
+macroscopic.atom_locations = 0.
+
+####################################
+###### MLMG SOLVER PROPERTIES ######
+####################################
+
+mlmg.ascalar=0
+mlmg.bscalar=1
+
+mlmg.soln   = phi
+mlmg.rhs    = charge_density
+mlmg.alpha  = alpha
+mlmg.beta   = epsilon
+
+mlmg.set_verbose=0
+mlmg.max_order=2
+mlmg.absolute_tolerance=0
+mlmg.relative_tolerance=1e-10
+
+#############################
+###### POST PROCESSING ######
+#############################
+
+post_process.fields_to_process = vecField 
+
+####################
+###### OUTPUT ######
+####################
+
+plot.folder_name = cntSm3d
+plot.fields_to_plot = epsilon.1 charge_density.1 phi.1 vecField atom_locations
+plot.write_after_init = 0
+plot.write_interval = 1 
+plot.rawfield_write_interval = 1
+
+########################
+###### DIAGNOSTICS #####
+########################
+diagnostics = 1
+
+diag.specify_using_eb = 1
+diag.objects = Surf1
+Surf1.geom_type = cylinder
+Surf1.center = 0 0 CN_h
+Surf1.radius = R_CN
+Surf1.axial_direction = 1
+Surf1.theta_reference_direction = 0
+Surf1.has_fluid_inside = 0
+Surf1.fields_to_plot = phi charge_density atom_locations
+
+#################
+###### NEGF #####
+#################
+
+use_negf = 0
+negf.NS_names = cnt #nanostructure names
+negf.NS_gather_field = phi            
+negf.NS_deposit_field  = charge_density 
+negf.NS_initial_deposit_value  = 1e-4*q/(dx*dy*dz)
+
+cnt.type = CNT
+cnt.read_filename = ../input/cntfet_small_structure/cnt_zigzag_17_0_20nm.txt
+cnt.type_id = 17 0 #m n
+cnt.acc = bond_length
+cnt.gamma = 2.5 #coupling factor (eV)
+cnt.num_unitcells = N_unitcells
+cnt.offset = 0 (-(N_unitcells/2.)*L_unitcell - 3*bond_length/4.) CN_h
