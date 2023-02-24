@@ -9,6 +9,7 @@
 #include<AMReX_Print.H>
 #include<AMReX_TableData.H>
 #include <AMReX_TinyProfiler.H>
+#include <AMReX_GpuUtility.H>
 
 #include <cmath>
 #include <iomanip>
@@ -121,6 +122,7 @@ void MatInv_BlockTriDiagonal(amrex::GpuArray<amrex::GpuComplex<amrex::Real>, N> 
             table(m+1,n) = -X_tilde[m]*table(m,n);
         }
     });
+    amrex::Gpu::streamSynchronize();
 
 }
 
@@ -206,11 +208,8 @@ int main (int argc, char* argv[])
     amrex::Real mat_inv_time = amrex::second() - mat_inv_beg_time;
     amrex::Print() << "Matrix inversion time: " << std::setw(15) << mat_inv_time << "\n";
 
-    TableData<MatrixDType,2> h_G(tlo, thi, The_Pinned_Arena());
-    h_G.copy(G);
-
     amrex::Print() << "G:\n";
-    PrintTable(h_G);
+    PrintTable(G);
  
     amrex::Finalize();
 
