@@ -108,7 +108,7 @@ void MatInv_BlockTriDiagonal(amrex::GpuArray<amrex::GpuComplex<amrex::Real>, N> 
     //}
 
     auto const& table = G.table();
-    amrex::ParallelFor(N, [=] AMREX_GPU_DEVICE (int n) noexcept
+    amrex::ParallelFor(N, [table=table,A=A, X=X, Y=Y,Y_tilde=Y_tilde,X_tilde=X_tilde] AMREX_GPU_DEVICE (int n) noexcept
     {
         table(n,n) =  1./(A[n] - X[n] - Y[n]); 
 
