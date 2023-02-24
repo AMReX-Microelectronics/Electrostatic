@@ -4,6 +4,7 @@
 #include <AMReX_Vector.H>
 #include <AMReX_Array.H>
 #include <AMReX_MFParallelForC.H>
+#include <AMReX_MultiFab.H>
 #include <AMReX_GpuComplex.H>
 #include<AMReX_Print.H>
 #include<AMReX_TableData.H>
@@ -42,14 +43,13 @@ amrex::GpuComplex<amrex::Real> conjugate(amrex::GpuComplex<amrex::Real> a)
    return a_conj;
 }
 
-//void PrintTable(const amrex::Table2D<MatrixDType>& h_table, Array<int,2> tlo, Array<int,2> thi) {
 void PrintTable(const TableData<MatrixDType, 2>& G)
 {
     auto const& h_table = G.table();
     auto tlo = G.lo();
     auto thi = G.hi();
-    for (int i = tlo[0]; i <= thi[0]; ++i) {
-        for (int j = tlo[1]; j <= thi[1]; ++j) {
+    for (int i = tlo[0]; i <= thi[0]; ++i) { 
+        for (int j = tlo[1]; j <= thi[1]; ++j) { //slow moving index. printing slow
             amrex::Print() <<std::setw(12) << std::setprecision(2) << h_table(i,j);
         }
         amrex::Print() << "\n";
@@ -110,8 +110,7 @@ void MatInv_BlockTriDiagonal(amrex::GpuArray<amrex::GpuComplex<amrex::Real>, N> 
     auto const& table = G.table();
     amrex::ParallelFor(N, [=] AMREX_GPU_DEVICE (int n) noexcept
     {
-        amrex::GpuComplex one(1.,0.);
-        table(n,n) =  one/(A[n] - X[n] - Y[n]); 
+        table(n,n) =  1./(A[n] - X[n] - Y[n]); 
 
         for (int m = n; m > 0; m--)
         {   
@@ -133,7 +132,7 @@ int main (int argc, char* argv[])
     //Construct Tridiagonal Dummy Hamiltonian
     std::array<amrex::Real,3> point_charge_loc {0., 0., 1e-9};
 
-    const int N = 30000;
+    const int N = 5;
     amrex::GpuArray<amrex::GpuComplex<amrex::Real>, N  > A; //diagonal
     amrex::GpuArray<amrex::GpuComplex<amrex::Real>, N-1> B; //+1 diagonal
     amrex::GpuArray<amrex::GpuComplex<amrex::Real>, N-1> C; //-1 diagonal
@@ -199,17 +198,6 @@ int main (int argc, char* argv[])
 
 
     TableData<MatrixDType, 2> G(tlo,thi);
-    //#ifdef AMREX_USE_GPU
-    //    TableData<MatrixDType,2> h_G(tlo, thi, The_Pinned_Arena());
-    //    auto const& h_table = h_G.table();
-    //#else
-    auto const& h_table = G.table();
-    //#endif
-
-    for (int j = tlo[1]; j <= thi[1]; ++j) { 
-    for (int i = tlo[0]; i <= thi[0]; ++i) { 
-        h_table(i,j) = 0.;
-    }}
 
     amrex::Real mat_inv_beg_time = amrex::second();
 
@@ -218,8 +206,11 @@ int main (int argc, char* argv[])
     amrex::Real mat_inv_time = amrex::second() - mat_inv_beg_time;
     amrex::Print() << "Matrix inversion time: " << std::setw(15) << mat_inv_time << "\n";
 
-    //amrex::Print() << "G:\n";
-    //PrintTable(G);
+    TableData<MatrixDType,2> h_G(tlo, thi, The_Pinned_Arena());
+    h_G.copy(G);
+
+    amrex::Print() << "G:\n";
+    PrintTable(h_G);
  
     amrex::Finalize();
 
