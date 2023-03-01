@@ -29,7 +29,7 @@ namespace PhysConst
 {
     static constexpr auto q_e   = static_cast<amrex::Real>( 1.602176634e-19 );
     static constexpr auto ep0   = static_cast<amrex::Real>( 8.8541878128e-12 );
-    static constexpr auto hbar  = static_cast<amrex::Real>( 1.054571817e-34 );
+//    static constexpr auto hbar  = static_cast<amrex::Real>( 1.054571817e-34 );
 }
 
 amrex::GpuComplex<amrex::Real> get_beta(amrex::Real gamma, int M, int J) 
@@ -83,11 +83,6 @@ void MatInv_BlockTriDiagonal(TableData<MatrixDType, 1>& A_data,
         Y_tilde(n) = C(p) / ( A(n-1) - Y(n-1) );
         Y(n) = B(p) * Y_tilde(n);
     }
-    //amrex::Print() << "\nY: \n";
-    //for (std::size_t n = 1; n < N; ++n)
-    //{   
-    //    amrex::Print() << Y_tilde(n) << "\n";
-    //}
 
     X(N-1) = 0;
     for (int n = N-2; n > -1; n--)
@@ -96,10 +91,16 @@ void MatInv_BlockTriDiagonal(TableData<MatrixDType, 1>& A_data,
         X_tilde(n) = B(p)/(A(n+1) - X(n+1));
         X(n) = C(p)*X_tilde(n);
     }
-    //amrex::Print() << "\nX: \n";
-    //for (int n = N-2; n > -1; n--)
+
+    //amrex::Print() << "\nYtil & Y: \n";
+    //for (std::size_t n = 0; n < N; ++n)
     //{   
-    //    amrex::Print() << X_tilde(n) << "\n";
+    //    amrex::Print() << std::setw(25)<< Y_tilde(n) << std::setw(25) << Y(n)<< "\n";
+    //}
+    //amrex::Print() << "\nXtil & X: \n";
+    //for (int n = N-1; n > -1; n--)
+    //{   
+    //    amrex::Print() << std::setw(25)<< X_tilde(n) << std::setw(25) << X(n)<< "\n";
     //}
 
     auto const& G = G_data.table();
@@ -128,14 +129,14 @@ int main (int argc, char* argv[])
     //Construct Tridiagonal Dummy Hamiltonian
     std::array<amrex::Real,3> point_charge_loc {0., 0., 1e-9};
 
-    const int N = 30000;
-    const int P = 2;
+    const int N = 46000;
+    const int R = 2;
     amrex::Real gamma = 2.5; //eV
     int M=17;
 
     TableData<MatrixDType, 1> A_data({0},{N});
-    TableData<MatrixDType, 1> B_data({0},{P});
-    TableData<MatrixDType, 1> C_data({0},{P});
+    TableData<MatrixDType, 1> B_data({0},{R});
+    TableData<MatrixDType, 1> C_data({0},{R});
     auto const& A = A_data.table();
     auto const& B = B_data.table();
     auto const& C = C_data.table();
@@ -153,7 +154,7 @@ int main (int argc, char* argv[])
 
     amrex::GpuComplex<amrex::Real> beta = get_beta(gamma,M,6);
 
-    for (std::size_t i = 0; i < P; ++i)
+    for (std::size_t i = 0; i < R; ++i)
     {
        if(i%2 == 0) {
           B(i) = conjugate(beta);
