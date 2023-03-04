@@ -125,7 +125,7 @@ void MatInv_BlockTriDiagonal(int N_total,
     //std::unique_ptr<int>recv_count;
     //std::unique_ptr<int>disp;
 
-    //if(my_rank == ParallelDescriptor::IOProcessorNumber()) {
+    if(my_rank == ParallelDescriptor::IOProcessorNumber()) {
         A_glo_data.resize({0},{N_total});
         A_glo = A_glo_data.table();
 
@@ -144,15 +144,16 @@ void MatInv_BlockTriDiagonal(int N_total,
               disp[p] = 0;
            }
         }
-    //}
+    }
 
-    MPI_Allgatherv(&A_loc(0),
+    MPI_Gatherv(&A_loc(0),
                 num_cols_loc,
                 MPI_DOUBLE_COMPLEX,
                 &A_glo(0),
                 recv_count,
                 disp,
                 MPI_DOUBLE_COMPLEX,
+                ParallelDescriptor::IOProcessorNumber(),
                 ParallelDescriptor::Communicator());
 
     //if(my_rank == 0) {
@@ -177,8 +178,8 @@ void MatInv_BlockTriDiagonal(int N_total,
     Matrix1D X_glo_data, Y_glo_data;
     Table1D<MatrixDType> X_glo, Y_glo;
 
-    //if(my_rank == ParallelDescriptor::IOProcessorNumber()) 
-    //{ 
+    if(my_rank == ParallelDescriptor::IOProcessorNumber()) 
+    { 
         amrex::Real recursion_time_beg = amrex::second();
 
         X_glo_data.resize({0},{N_total});
@@ -216,16 +217,51 @@ void MatInv_BlockTriDiagonal(int N_total,
         amrex::Print() << "\nRecursion time (cpu): " << std::setw(15) << recursion_time << "\n";
 
         A_glo_data.clear();
+    }
 
-        for (int e = 0; e < num_cols_loc; ++e) /*loop over elements of a block*/
-        {
-            int n = e + cumu_blk_size[my_rank]; 
-            Y_loc(e) = Y_glo(n);
-            X_loc(e) = X_glo(n);
-        } 
+    ParallelDescriptor::Bcast(&Xtil_glo(0), N_total, ParallelDescriptor::IOProcessorNumber());
+    ParallelDescriptor::Bcast(&Ytil_glo(0), N_total, ParallelDescriptor::IOProcessorNumber());
+    //if(my_rank == 1) 
+    //{
+    //    std::cout << "\n(proc 1) Ytil: \n";
+    //    for (std::size_t n = 0; n < N_total; ++n)
+    //    {   
+    //        std::cout << std::setw(25)<< Ytil_glo(n) << "\n";
+    //    }
+    //    std::cout << "\n(proc 1) Xtil: \n";
+    //    for (int n = N_total-1; n > -1; n--)
+    //    {   
+    //        std::cout << std::setw(25)<< Xtil_glo(n) << "\n";
+    //    }
+    //}
 
-        X_glo_data.clear();
-        Y_glo_data.clear();
+    MPI_Scatterv(&X_glo(0),
+                 recv_count,
+                 disp,
+                 MPI_DOUBLE_COMPLEX,
+                 &X_loc(0),
+                 num_cols_loc,
+                 MPI_DOUBLE_COMPLEX,
+                 ParallelDescriptor::IOProcessorNumber(),
+                 ParallelDescriptor::Communicator());
+
+    MPI_Scatterv(&Y_glo(0),
+                 recv_count,
+                 disp,
+                 MPI_DOUBLE_COMPLEX,
+                 &Y_loc(0),
+                 num_cols_loc,
+                 MPI_DOUBLE_COMPLEX,
+                 ParallelDescriptor::IOProcessorNumber(),
+                 ParallelDescriptor::Communicator());
+
+    if(my_rank == ParallelDescriptor::IOProcessorNumber()) 
+    { 
+        delete [] recv_count;
+        delete [] disp;
+    } 
+    ParallelDescriptor::Barrier();  
+
     //if(my_rank == 1) 
     //{
     //    std::cout << "num_cols_loc: " << num_cols_loc << "\n";
@@ -246,32 +282,32 @@ void MatInv_BlockTriDiagonal(int N_total,
     amrex::Print() << "\nMatrix inversion time (overall cpu part): " << std::setw(15) << mat_inv_time_cpu << "\n";
     amrex::Real mat_inv_beg_time_gpu = amrex::second();
 
-    //if(num_cols_loc > 0) {
-    //    auto const& A    =    A_loc_data.const_table();
-    //    auto const& X    =    X_loc_data.const_table();
-    //    auto const& Y    =    Y_loc_data.const_table();
+    if(num_cols_loc > 0) {
+        auto const& A    =    A_loc_data.const_table();
+        auto const& X    =    X_loc_data.const_table();
+        auto const& Y    =    Y_loc_data.const_table();
 
-    //    auto const& G_loc = G_loc_data.table();
+        auto const& G_loc = G_loc_data.table();
 
-    //        int cumulative_columns = cumu_blk_size[my_rank]; 
+	    int cumulative_columns = cumu_blk_size[my_rank]; 
 
-    //    amrex::ParallelFor(num_cols_loc, [=] AMREX_GPU_DEVICE (int n) noexcept
-    //    {
-    //        int n_glo = n + cumulative_columns; /*global column number*/
+        amrex::ParallelFor(num_cols_loc, [=] AMREX_GPU_DEVICE (int n) noexcept
+        {
+	    int n_glo = n + cumulative_columns; /*global column number*/
 
-    //        G_loc(n_glo,n) =  1./(A(n) - X(n) - Y(n)); 
+            G_loc(n_glo,n) =  1./(A(n) - X(n) - Y(n)); 
 
-    //        for (int m = n_glo; m > 0; m--)
-    //        {   
-    //            G_loc(m-1,n) =  -Ytil_glo(m)*G_loc(m,n);
-    //        }
-    //        for (int m = n_glo; m < N_total-1; ++m)
-    //        {   
-    //            G_loc(m+1,n) = -Xtil_glo(m)*G_loc(m,n);
-    //        }
-    //    });
-    //}
-    //amrex::Gpu::streamSynchronize();
+            for (int m = n_glo; m > 0; m--)
+            {   
+                G_loc(m-1,n) =  -Ytil_glo(m)*G_loc(m,n);
+            }
+            for (int m = n_glo; m < N_total-1; ++m)
+            {   
+                G_loc(m+1,n) = -Xtil_glo(m)*G_loc(m,n);
+            }
+        });
+    }
+    amrex::Gpu::streamSynchronize();
 
     amrex::Real mat_inv_time_gpu = amrex::second() - mat_inv_beg_time_gpu;
     amrex::Print() << "\nMatrix inversion time (gpu part): " << std::setw(15) << mat_inv_time_gpu << "\n";
