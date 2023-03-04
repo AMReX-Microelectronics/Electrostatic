@@ -1,0 +1,23 @@
+#!/bin/bash
+#SBATCH -N 1
+#SBATCH -C gpu
+#SBATCH -G 4
+#SBATCH -J 4gpu
+#SBATCH -q regular
+#SBATCH --mail-user=saurabhsawant@lbl.gov
+#SBATCH --mail-type=ALL
+#SBATCH -t 00:02:00
+#SBATCH -A m3766_g
+#SBATCH -o test4gpu.o%j
+#SBATCH -e test4gpu.e%j
+### SBATCH --reservation=weak_scaling_saurabh
+
+
+#OpenMP settings:
+export OMP_NUM_THREADS=1
+export OMP_PLACES=threads
+export OMP_PROC_BIND=true
+
+#run the application:
+#applications may performance better with --gpu-bind=none instead of --gpu-bind=single:1 
+srun -n 4 -c 32 --cpu_bind=cores -G 4 --gpu-bind=single:1  ./../Exec/main3d.gnu.MPI.CUDA.ex input

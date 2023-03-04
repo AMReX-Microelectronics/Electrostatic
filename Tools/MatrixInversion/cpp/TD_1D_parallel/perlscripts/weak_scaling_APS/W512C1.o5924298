@@ -1,0 +1,31 @@
+MPI initialized with 512 MPI processes
+MPI initialized with thread support level 0
+Initializing CUDA...
+CUDA initialized with 512 devices.
+AMReX (22.01-465-g42acecf9c7f7) initialized
+total number of procs: 512
+total matrix size: 512000
+max_blk_size is computed at run-time
+maximum block size (in number of columns): 1000
+global number of blocks: 512
+
+Recursion time (cpu):     0.011991184
+Matrix inversion overall cpu time:     0.071366172
+Fraction of recursion/overall_cpu times: 0.1680233599
+
+Matrix inversion gpu parallelFor time:       7.374e-06
+Matrix inversion overall gpu time:       0.4125223
+Fraction of gpu_pFor/overall_gpu times: 1.787539728e-05
+
+Total cpu gpu time: 0.483888472
+
+Recursion/total, (overall_cpu-recursion)/total, gpu_pFor/total, (overall_gpu-gpu_pFor)/total time:        0.02478088381        0.1227038697     1.523904872e-05        0.8525000075
+Total GPU global memory (MB) spread across MPI: [40396 ... 40396]
+Free  GPU global memory (MB) spread across MPI: [31995 ... 31995]
+[The         Arena] space (MB) allocated spread across MPI: [30297 ... 30297]
+[The         Arena] space (MB) used      spread across MPI: [0 ... 0]
+[The  Device Arena] space (MB) allocated spread across MPI: [7836 ... 7836]
+[The  Device Arena] space (MB) used      spread across MPI: [0 ... 0]
+[The  Pinned Arena] space (MB) allocated spread across MPI: [7860 ... 7860]
+[The  Pinned Arena] space (MB) used      spread across MPI: [7820 ... 7820]
+AMReX (22.01-465-g42acecf9c7f7) finalized
