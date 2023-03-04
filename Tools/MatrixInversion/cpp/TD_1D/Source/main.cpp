@@ -92,16 +92,16 @@ void MatInv_BlockTriDiagonal(TableData<MatrixDType, 1>& A_data,
         X(n) = C(p)*X_tilde(n);
     }
 
-    //amrex::Print() << "\nYtil & Y: \n";
-    //for (std::size_t n = 0; n < N; ++n)
-    //{   
-    //    amrex::Print() << std::setw(25)<< Y_tilde(n) << std::setw(25) << Y(n)<< "\n";
-    //}
-    //amrex::Print() << "\nXtil & X: \n";
-    //for (int n = N-1; n > -1; n--)
-    //{   
-    //    amrex::Print() << std::setw(25)<< X_tilde(n) << std::setw(25) << X(n)<< "\n";
-    //}
+    amrex::Print() << "\nYtil & Y: \n";
+    for (std::size_t n = 0; n < N; ++n)
+    {   
+        amrex::Print() << std::setw(25)<< Y_tilde(n) << std::setw(25) << Y(n)<< "\n";
+    }
+    amrex::Print() << "\nXtil & X: \n";
+    for (int n = N-1; n > -1; n--)
+    {   
+        amrex::Print() << std::setw(25)<< X_tilde(n) << std::setw(25) << X(n)<< "\n";
+    }
 
     auto const& G = G_data.table();
     amrex::ParallelFor(N, [=] AMREX_GPU_DEVICE (int n) noexcept
@@ -129,7 +129,7 @@ int main (int argc, char* argv[])
     //Construct Tridiagonal Dummy Hamiltonian
     std::array<amrex::Real,3> point_charge_loc {0., 0., 1e-9};
 
-    const int N = 46000;
+    const int N = 5;
     const int R = 2;
     amrex::Real gamma = 2.5; //eV
     int M=17;
@@ -178,8 +178,8 @@ int main (int argc, char* argv[])
     amrex::Real mat_inv_time = amrex::second() - mat_inv_beg_time;
     amrex::Print() << "Matrix inversion time: " << std::setw(15) << mat_inv_time << "\n";
 
-    //amrex::Print() << "G:\n";
-    //PrintTable(G_data);
+    amrex::Print() << "G:\n";
+    PrintTable(G_data);
  
     amrex::Finalize();
 

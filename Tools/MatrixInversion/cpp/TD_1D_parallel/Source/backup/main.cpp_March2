@@ -278,7 +278,7 @@ int main (int argc, char* argv[])
 
     bool flag_fixed_blk_size = false;
 
-    int max_blk_size = 5;   /*max block size, may change depending on flag_fixed_blk_size*/
+    int max_blk_size = 2;   /*max block size, may change depending on flag_fixed_blk_size*/
 
     if(flag_fixed_blk_size) amrex::Print() << "max_blk_size is fixed by user\n";
     else {
@@ -303,15 +303,18 @@ int main (int argc, char* argv[])
     
 
     amrex::Vector<int> cumu_blk_size(max_blk_size + 1);
+    amrex::Vector<int> all_blk_size(max_blk_size);
 
     cumu_blk_size[0] = 0;
     for(int b=1; b < num_blk_glo; ++b)
     {
         cumu_blk_size[b] = cumu_blk_size[b-1] + max_blk_size;
+        all_blk_size[b-1] = max_blk_size; 
         /*note that all proc except the last proc in "all procs with blocks" have N_blk number of columns. The last proc in "all procs with blocks" may have number of columns smaller than N_blk.
         */
     }
-    cumu_blk_size[num_blk_glo] = N_total - (num_blk_glo-1)*max_blk_size;
+    cumu_blk_size[num_blk_glo] = cumu_blk_size[num_blk_glo-1] + N_total - (num_blk_glo-1)*max_blk_size;
+    all_blk_size[num_blk_glo-1] = N_total - (num_blk_glo-1)*max_blk_size;
 
     int my_rank = ParallelDescriptor::MyProc();
     int num_blk_loc = 0;
@@ -331,41 +334,43 @@ int main (int argc, char* argv[])
             int blk_gid = b + max_blk_per_proc*my_rank;
               
             int blk_size = cumu_blk_size[blk_gid+1] - cumu_blk_size[blk_gid];
-
             for (int c=0; c < blk_size; ++c) 
             {
                 int col_gid = cumu_blk_size[blk_gid] + c;
                 map_blk_to_col_gids[blk_gid].push_back(col_gid);
             } 
         }
+        if(my_rank == 1) {
+            std::cout      << "(proc) My rank: " << my_rank << "\n"
+                           << "(proc) local number of blocks: " << num_blk_loc << "\n";
+            std::cout      << "(proc) map_blk_to_col_gids: \n";
+            for(auto& it: map_blk_to_col_gids) {
+               int blk_gid = it.first;
+               std::cout << "blk_gid: " << std::setw(5) << blk_gid 
+                         << " blk_size: " << it.second.size() << "\n";
+               std::cout << "  col_gids: ";
+               auto vec_col_gid = it.second;
 
-        amrex::Print() << "(proc) My rank: " << my_rank << "\n"
-                       << "(proc) local number of blocks: " << num_blk_loc << "\n";
-        amrex::Print() << "(proc) map_blk_to_col_gids: \n";
-        for(auto& it: map_blk_to_col_gids) {
-           int blk_gid = it.first;
-           amrex::Print() << "\nblk_gid: " << std::setw(5) << blk_gid;
-           amrex::Print() << " blk_size: " << it.second.size() << "\n";
-           amrex::Print() << "  col_gids: ";
-           auto vec_col_gid = it.second;
-
-           for(auto& col_gid: vec_col_gid) {
-               amrex::Print() << std::setw(5) << col_gid;
-           } 
-           amrex::Print() << "\n";
-        } 
+               for(auto& col_gid: vec_col_gid) {
+                   std::cout << std::setw(5) << col_gid;
+               } 
+               std::cout << "\n";
+            } 
+        }
     }
 
 
     /*setting A, the diagonal 1D vector, which is partitioned in the form of some blocks*/
     /*in general A can be 2D*/
     amrex::Vector< Matrix1D > A_blk_loc(num_blk_loc);
-    int b=0; 
+    int b=0;
+    int num_columns_loc=0;
     for(auto& it: map_blk_to_col_gids) 
     {
         int blk_size = it.second.size(); 
         A_blk_loc[b].resize({0},{blk_size}); 
         ++b; 
+        num_columns_loc += blk_size;
     }  
 
     /*R this is the size of repeated B and C vectors in Hamiltonian in the mode-space approximation for CNT*/
@@ -395,7 +400,7 @@ int main (int argc, char* argv[])
                                   + pow((0.          - point_charge_loc[2]),2) ), 0.5);
 
             A(c) = -(PhysConst::q_e)/(4. * MathConst::pi * PhysConst::ep0 * r);
-            amrex::Print() << "(proc 0) column, A: " << col_gid << " "<< A(c) << "\n";
+            if(my_rank==1) std::cout << "(proc 0) column, A: " << col_gid << " "<< A(c) << "\n";
             ++c;  
         } 
         ++b;
@@ -405,10 +410,60 @@ int main (int argc, char* argv[])
     int ioproc = ParallelDescriptor::IOProcessorNumber();  
 
     //Gather A_blk_loc into A_blk_glo. Both are 1D tables. Need to use derived datatype.
-    //amrex::Vector< Matrix1D > A_blk_glo(num_blk_glo);
      
-	//ParallelDescriptor::Gather(A_blk_loc, num_blk_loc, A_blk_glo, ioproc);
+    Matrix1D A_blk_glo;
+    Table1D<MatrixDType> A_glo;
 
+    A_blk_glo.resize({0},{N_total});
+    A_glo = A_blk_glo.table();
+    
+    auto const& A_loc = A_blk_loc[0].table(); 
+
+    int recv_count[num_proc];   
+    amrex::Print()<<"blklens, disp \n";
+    for(int p=0; p < num_proc; ++p) {
+       if(p < num_proc_with_blk) {
+          recv_count[p] = num_columns_loc;
+          disp[p] = cumu_blk_size[p];
+       }
+       else {
+          blklens[p] = 0;
+          disp[p] = 0;
+       }
+       amrex::Print() << p << " " << blklens[p] << " " << disp[p] << "\n";
+    }
+
+    MPI_Gatherv(&A_loc(0),
+                num_columns_loc,
+                MPI_DOUBLE_COMPLEX,
+                &A_glo(0),
+                recv_counts,
+                disp,
+                MPI_DOUBLE_COMPLEX,
+                ParallelDescriptor::IOProcessorNumber(),
+                ParallelDescriptor::Communicator());
+
+    //MPI_Datatype send_type;
+    //MPI_Datatype recv_type;
+ 
+    //int blklens[num_proc];   
+    //int disp[num_proc];   
+    //MPI_Type_indexed(num_proc, blklens, disp, MPI_DOUBLE_COMPLEX, &send_type);
+    //MPI_Type_contiguous(N_total, MPI_DOUBLE_COMPLEX, &recv_type);
+
+    //MPI_Type_commit(&send_type);
+    //MPI_Type_commit(&recv_type);
+
+
+    //MPI_Type_free(&send_type);
+    //MPI_Type_free(&recv_type);
+
+    if(my_rank == 0) {
+       for (int i=0; i <N_total; ++i) {
+           amrex::Print() << i << "  " <<  A_glo(i) << "\n";
+       }
+    }
+     
 
     /*below are some parameters for (17,0) carbon nanotube*/
     amrex::Real gamma = 2.5; //eV
