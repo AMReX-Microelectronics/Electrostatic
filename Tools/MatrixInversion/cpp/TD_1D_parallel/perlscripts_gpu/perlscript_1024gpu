@@ -20,4 +20,4 @@ export OMP_PROC_BIND=true
 
 #run the application:
 #applications may performance better with --gpu-bind=none instead of --gpu-bind=single:1 
-srun -n 1024 -c 32 --cpu_bind=cores -G 1024 --gpu-bind=single:1  ./../Exec/main3d.gnu.MPI.CUDA.ex input_1024gpu
+srun -n 1024 -c 32 --cpu_bind=cores -G 1024 --gpu-bind=single:1  ./../Exec/main3d.gnu.MPI.CUDA.ex input_1024

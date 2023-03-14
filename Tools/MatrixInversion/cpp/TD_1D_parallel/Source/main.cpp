@@ -100,25 +100,28 @@ void MatInv_BlockTriDiagonal(int N_total,
                              const amrex::Vector<int>& vec_col_gids,
                              const int num_proc_with_blk)
 {
-/* Gatherv local A 1D table, A_loc_data, from all procs into global 1D table, A_glo_data, at the root.
- * Root processes Xtil, Ytil, X, Y 1Dtables.
- * Root deletes A_glo_data. 
- * Root broadcasts Xtil and Ytil to all procs.
- * Root Scatterv X and Y to other procs.
- * Each processor launches a GPU kernel where each thread works on each local column of G (the inverse we compute).
- * stream or device synchronise.
+/* Six step procedure:
+ * 1) MPI_Allgatherv local Hamiltonian diagonal elements in A_loc_data into A_glo_data, both allocated on the PinnedArena.
+ * 2) Compute on all processes, 1DTable arrays Xtil, Ytil, X, Y recursively, on the PinnedArena and then delete A_glo_data. 
+ * These arrays have a size equal to the column (or row) size of the full (or global) matrix to be inverted.
+ * 3) All processes copy the respective portion of X and Y needed later into arrays allocated on managed memory. 
+ * These portions have a size equal to the number of columns in the local matrix block. 
+ * 4) Copy needed arrays on to the device. These include Xtil, Ytil, X_local, Y_local, A_loc. 
+ * 5) Launce parallelFor, assign each gpu-thread to compute a column of the inverted matrix. 
+ * Each GPU is responsible for computing it's own block.
+ * 6) Do a stream synchronise and copy the inverted matrix block on to the CPU.
  */ 
-
-    amrex::Real mat_inv_beg_time_cpu = amrex::second();
-
+    amrex::Real allgatherv_beg_time_cpu = amrex::second();
 
     int num_proc = ParallelDescriptor::NProcs(); 
     int my_rank = ParallelDescriptor::MyProc();
     int num_cols_loc = vec_col_gids.size();
-
-    auto const& h_A_loc = h_A_loc_data.table();
-
     int ioproc = ParallelDescriptor::IOProcessorNumber();  
+    auto const& h_A_loc = h_A_loc_data.table();
+    auto const& h_B = h_B_data.const_table();
+    auto const& h_C = h_C_data.const_table();
+
+
     Matrix1D h_A_glo_data({0},{N_total}, The_Pinned_Arena());
     Table1D<MatrixDType> h_A_glo = h_A_glo_data.table();
     int recv_count[num_proc];
@@ -145,15 +148,9 @@ void MatInv_BlockTriDiagonal(int N_total,
                     MPI_DOUBLE_COMPLEX,
                     ParallelDescriptor::Communicator());
 
-    //if(my_rank == 0) {
-    //   for (int i=0; i <N_total; ++i) {
-    //       amrex::Print() << i << "  " <<  A_glo(i) << "\n";
-    //   }
-    //}
-     
-    auto const& h_B = h_B_data.const_table();
-    auto const& h_C = h_C_data.const_table();
+    amrex::Real allgatherv_time_cpu = amrex::second() - allgatherv_beg_time_cpu;
 
+    amrex::Real recursion_time_beg = amrex::second();
 
     Matrix1D h_Xtil_glo_data({0},{N_total},The_Pinned_Arena());
     Matrix1D h_Ytil_glo_data({0},{N_total},The_Pinned_Arena());
@@ -164,83 +161,50 @@ void MatInv_BlockTriDiagonal(int N_total,
     auto const& h_Y_glo = h_Y_glo_data.table();
     auto const& h_X_glo = h_X_glo_data.table();
 
-    //if(my_rank == ParallelDescriptor::IOProcessorNumber()) 
-    //{ 
-        amrex::Real recursion_time_beg = amrex::second();
+    h_Y_glo(0) = 0;
+    for (int n = 1; n < N_total; ++n)
+    {
+    int p = (n-1)%2;
+        h_Ytil_glo(n) = h_C(p) / ( h_A_glo(n-1) - h_Y_glo(n-1) );
+        h_Y_glo(n) = h_B(p) * h_Ytil_glo(n);
+    }
 
-        h_Y_glo(0) = 0;
-        for (int n = 1; n < N_total; ++n)
-        {
-        int p = (n-1)%2;
-            h_Ytil_glo(n) = h_C(p) / ( h_A_glo(n-1) - h_Y_glo(n-1) );
-            h_Y_glo(n) = h_B(p) * h_Ytil_glo(n);
-        }
+    h_X_glo(N_total-1) = 0;
+    for (int n = N_total-2; n > -1; n--)
+    {
+    int p = n%2;
+        h_Xtil_glo(n) = h_B(p)/(h_A_glo(n+1) - h_X_glo(n+1));
+        h_X_glo(n) = h_C(p)*h_Xtil_glo(n);
+    }
+    h_A_glo_data.clear();
 
-        h_X_glo(N_total-1) = 0;
-        for (int n = N_total-2; n > -1; n--)
-        {
-        int p = n%2;
-            h_Xtil_glo(n) = h_B(p)/(h_A_glo(n+1) - h_X_glo(n+1));
-            h_X_glo(n) = h_C(p)*h_Xtil_glo(n);
-        }
-        //amrex::Print() << "\nYtil & Y: \n";
-        //for (std::size_t n = 0; n < N_total; ++n)
-        //{   
-        //    amrex::Print() << std::setw(25)<< Ytil_glo(n) << std::setw(25) << Y_glo(n)<< "\n";
-        //}
-        //amrex::Print() << "\nXtil & X: \n";
-        //for (int n = N_total-1; n > -1; n--)
-        //{   
-        //    amrex::Print() << std::setw(25)<< Xtil_glo(n) << std::setw(25) << X_glo(n)<< "\n";
-        //}
+    amrex::Real recursion_time = amrex::second() - recursion_time_beg;
 
-        amrex::Real recursion_time = amrex::second() - recursion_time_beg;
+    amrex::Real copy_XY_beg_time = amrex::second();
 
-        h_A_glo_data.clear();
+    Matrix1D h_X_loc_data({0},{num_cols_loc}); //located on GPU and CPU
+    Matrix1D h_Y_loc_data({0},{num_cols_loc}); //located on GPU and CPU
+    auto const& h_Y_loc = h_Y_loc_data.table();
+    auto const& h_X_loc = h_X_loc_data.table();
 
+    for (int e = 0; e < num_cols_loc; ++e) /*loop over elements of a block*/
+    {
+        int n = e + cumu_blk_size[my_rank]; 
+        h_Y_loc(e) = h_Y_glo(n);
+        h_X_loc(e) = h_X_glo(n);
+    } 
 
-        Matrix1D h_X_loc_data({0},{num_cols_loc}); //located on GPU 
-        Matrix1D h_Y_loc_data({0},{num_cols_loc}); //located on GPU 
-        auto const& h_Y_loc = h_Y_loc_data.table();
-        auto const& h_X_loc = h_X_loc_data.table();
+    h_X_glo_data.clear();
+    h_Y_glo_data.clear();
 
-        for (int e = 0; e < num_cols_loc; ++e) /*loop over elements of a block*/
-        {
-            int n = e + cumu_blk_size[my_rank]; 
-            h_Y_loc(e) = h_Y_glo(n);
-            h_X_loc(e) = h_X_glo(n);
-        } 
+    amrex::Real copy_XY_time = amrex::second() - copy_XY_beg_time;
 
-        h_X_glo_data.clear();
-        h_Y_glo_data.clear();
-
-    //if(my_rank == 1) 
-    //{
-    //    std::cout << "num_cols_loc: " << num_cols_loc << "\n";
-    //    std::cout << "\n(proc 1) Y: \n";
-    //    for (int e = 0; e < num_cols_loc; ++e) /*loop over elements of a block*/
-    //    {
-    //        int n = e + cumu_blk_size[my_rank]; 
-    //        std::cout  << "e, n, Yloc: " << e << " " << n << std::setw(25) << Y_loc(e)<< "\n";
-    //    } 
-    //    std::cout << "\n(proc 1) X: \n";
-    //    for (int e = num_cols_loc-1; e > -1; --e) /*loop over elements of a block*/
-    //    {
-    //        int n = e + cumu_blk_size[my_rank]; 
-    //        std::cout << "e, n, Yloc: " << e << " " << n << std::setw(25) << X_loc(e)<< "\n";
-    //    } 
-    //}
-    amrex::Real mat_inv_time_cpu = amrex::second() - mat_inv_beg_time_cpu;
-
-    amrex::Print() << "\nRecursion time (cpu): " << std::setw(15) << recursion_time << "\n";
-    amrex::Print() << "Matrix inversion overall cpu time: " << std::setw(15) << mat_inv_time_cpu << "\n";
-    amrex::Print() << "Fraction of recursion/overall_cpu times: " << recursion_time/mat_inv_time_cpu << "\n";
-
-
-    amrex::Real gpu_overall_beg_time = amrex::second();
+    amrex::Real cpu_to_gpu_copy_time = 0;
     amrex::Real gpu_parallelFor_time = 0;
+    amrex::Real gpu_to_cpu_copy_time = 0;
 
     if(num_cols_loc > 0) {
+        amrex::Real cpu_to_gpu_copy_beg_time = amrex::second();
 
         Matrix2D d_G_loc_data({0,0},{N_total, num_cols_loc}, The_Device_Arena());
         Matrix1D d_A_loc_data({0},{num_cols_loc}, The_Device_Arena()); 
@@ -256,19 +220,21 @@ void MatInv_BlockTriDiagonal(int N_total,
         Matrix1D d_Y_loc_data({0},{num_cols_loc}, The_Device_Arena()); 
 	d_X_loc_data.copy(h_X_loc_data); 
 	d_Y_loc_data.copy(h_Y_loc_data); 
+
         amrex::Gpu::streamSynchronize();
+
+        cpu_to_gpu_copy_time = amrex::second() - cpu_to_gpu_copy_beg_time;
+
+        amrex::Real gpu_parallelFor_beg_time = amrex::second();
 
         auto const& A        =    d_A_loc_data.const_table();
         auto const& Xtil_glo =    d_Xtil_glo_data.const_table();
         auto const& Ytil_glo =    d_Ytil_glo_data.const_table();
         auto const& X        =    d_X_loc_data.const_table();
         auto const& Y        =    d_Y_loc_data.const_table();
-
         auto const& G_loc = d_G_loc_data.table();
 
         int cumulative_columns = cumu_blk_size[my_rank]; 
-
-        amrex::Real gpu_parallelFor_beg_time = amrex::second();
 
         amrex::ParallelFor(num_cols_loc, [=] AMREX_GPU_DEVICE (int n) noexcept
         {
@@ -288,27 +254,33 @@ void MatInv_BlockTriDiagonal(int N_total,
 
         gpu_parallelFor_time = amrex::second() - gpu_parallelFor_beg_time;
 
+        amrex::Real gpu_to_cpu_copy_beg_time = amrex::second();
+
         amrex::Gpu::streamSynchronize();
         h_G_loc_data.copy(d_G_loc_data); //copy from gpu to cpu
+        gpu_to_cpu_copy_time = amrex::second() - gpu_to_cpu_copy_beg_time;
     }
 
-    amrex::Real gpu_overall_time = amrex::second() - gpu_overall_beg_time;
+    amrex::Real total_time_exclude_gpu2cpu_copy =   allgatherv_time_cpu + 
+	                                                 recursion_time + 
+			                                   copy_XY_time + 
+	                                           cpu_to_gpu_copy_time + 
+			                           gpu_parallelFor_time;  
 
-    amrex::Print() << "\nMatrix inversion gpu parallelFor time: " 
-		       << std::setw(15) << gpu_parallelFor_time << "\n";
-    amrex::Print() << "Matrix inversion overall gpu time: " << std::setw(15) << gpu_overall_time << "\n";
-    amrex::Print() << "Fraction of gpu_pFor/overall_gpu times: " 
-	           << gpu_parallelFor_time/gpu_overall_time << "\n";
+    amrex::Real total_time_include_gpu2cpu_copy =  total_time_exclude_gpu2cpu_copy + gpu_to_cpu_copy_time;
 
-    amrex::Real total_cpu_gpu_time = mat_inv_time_cpu + gpu_overall_time;
-    amrex::Print() << "\nTotal cpu gpu time: " 
-	           << total_cpu_gpu_time << "\n";
+    amrex::Print() << "\nTimes: allgatherv, recursion, copy_XY_local, copy_cpu2gpu, gpu_pFor, copy_gpu2cpu: \n" 
+	    << std::setw(20) << allgatherv_time_cpu       
+	    << std::setw(20) << recursion_time  
+  	    << std::setw(20) << copy_XY_time
+	    << std::setw(20) << cpu_to_gpu_copy_time 
+       	    << std::setw(20) << gpu_parallelFor_time  
+	    << std::setw(20) << gpu_to_cpu_copy_time << "\n";
 
-    amrex::Print() << "\nRecursion/total, (overall_cpu-recursion)/total, gpu_pFor/total, (overall_gpu-gpu_pFor)/total time: " << std::setw(20) 
-	           << recursion_time/total_cpu_gpu_time << std::setw(20) 
-	           << (mat_inv_time_cpu-recursion_time)/total_cpu_gpu_time << std::setw(20) 
-	           << gpu_parallelFor_time/total_cpu_gpu_time << std::setw(20) 
-		   << (gpu_overall_time - gpu_parallelFor_time)/total_cpu_gpu_time << "\n";
+    amrex::Print() << "\ntotal_time: exclude_gpu2cpu_copy, include_gpu2cpu_copy: " 
+	           << std::setw(20) << total_time_exclude_gpu2cpu_copy 
+		   << std::setw(20) << total_time_include_gpu2cpu_copy << "\n";
+
 }
 
 int main (int argc, char* argv[])

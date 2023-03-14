@@ -1,8 +1,0 @@
-srun: error: nid003492: task 2: Segmentation fault
-srun: launch/slurm: _step_signal: Terminating StepId=5924251.0
-slurmstepd: error: *** STEP 5924251.0 ON nid003492 CANCELLED AT 2023-03-04T21:51:56 ***
-srun: error: nid003493: task 7: Segmentation fault
-srun: error: nid003492: tasks 0-1: Segmentation fault
-srun: error: nid003493: task 6: Segmentation fault
-srun: error: nid003492: task 3: Segmentation fault
-srun: error: nid003493: tasks 4-5: Segmentation fault
