@@ -1,6 +1,5 @@
 AMREX_HOME  ?= ../../../../../../amrex
 
-amrex.the_arena_is_managed=0
 DEBUG        = FALSE
 USE_MPI      = TRUE
 USE_OMP      = FALSE
