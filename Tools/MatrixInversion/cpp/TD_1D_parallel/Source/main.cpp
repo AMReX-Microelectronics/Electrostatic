@@ -191,9 +191,10 @@ void MatInv_BlockTriDiagonal(int N_total,
  * 6) Do a stream synchronise and copy the inverted matrix block on to the CPU.
  */ 
 
-    /*Step 1*/	
-    amrex::Real allgatherv_beg_time_cpu = amrex::second();
 
+    BL_PROFILE_VAR("steps_1_2_3", steps_1_2_3);
+
+    /*Step 1*/	
     int num_proc = ParallelDescriptor::NProcs(); 
     int my_rank = ParallelDescriptor::MyProc();
     int num_cols_loc = vec_col_gids.size();
@@ -229,12 +230,8 @@ void MatInv_BlockTriDiagonal(int N_total,
                     MPI_DOUBLE_COMPLEX,
                     ParallelDescriptor::Communicator());
 
-    amrex::Real allgatherv_time_cpu = amrex::second() - allgatherv_beg_time_cpu;
-
 
     /*Step 2*/	
-    amrex::Real recursion_time_beg = amrex::second();
-
     Matrix1D h_Xtil_glo_data({0},{N_total},The_Pinned_Arena());
     Matrix1D h_Ytil_glo_data({0},{N_total},The_Pinned_Arena());
     Matrix1D h_X_glo_data({0},{N_total},The_Pinned_Arena());
@@ -262,12 +259,8 @@ void MatInv_BlockTriDiagonal(int N_total,
     /**deallocate A_global on the host*/
     h_A_glo_data.clear();
 
-    amrex::Real recursion_time = amrex::second() - recursion_time_beg;
-
 
     /*Step 3*/	
-    amrex::Real copy_XY_beg_time = amrex::second();
-
     Matrix1D h_X_loc_data({0},{num_cols_loc},The_Pinned_Arena()); 
     Matrix1D h_Y_loc_data({0},{num_cols_loc},The_Pinned_Arena()); 
     auto const& h_Y_loc = h_Y_loc_data.table();
@@ -284,35 +277,36 @@ void MatInv_BlockTriDiagonal(int N_total,
     h_X_glo_data.clear();
     h_Y_glo_data.clear();
 
-    amrex::Real copy_XY_time = amrex::second() - copy_XY_beg_time;
+    BL_PROFILE_VAR_STOP(steps_1_2_3);
+
 
     /*Step 4*/	
-    amrex::Real cpu_to_gpu_copy_time = 0.;
-    #if (defined AMREX_USE_GPU && GPU_MATRIX_OP)
-    amrex::Real cpu_to_gpu_copy_beg_time = amrex::second();
 
-    Matrix1D d_A_loc_data({0},{num_cols_loc}, The_Device_Arena()); 
+    #if (defined AMREX_USE_GPU && GPU_MATRIX_OP)
+    BL_PROFILE_VAR("step4_CpuToGpuCopy_time", step4_CpuToGpuCopy_time);
+
+    Matrix1D d_A_loc_data({0},{num_cols_loc}, The_Arena()); 
     d_A_loc_data.copy(h_A_loc_data); 
 
-    Matrix1D  d_Xtil_glo_data({0},{N_total}, The_Device_Arena()); 
-    Matrix1D  d_Ytil_glo_data({0},{N_total}, The_Device_Arena()); 
+    Matrix1D  d_Xtil_glo_data({0},{N_total}, The_Arena()); 
+    Matrix1D  d_Ytil_glo_data({0},{N_total}, The_Arena()); 
 
     d_Xtil_glo_data.copy(h_Xtil_glo_data); 
     d_Ytil_glo_data.copy(h_Ytil_glo_data); 
 
-    Matrix1D d_X_loc_data({0},{num_cols_loc}, The_Device_Arena()); 
-    Matrix1D d_Y_loc_data({0},{num_cols_loc}, The_Device_Arena()); 
+    Matrix1D d_X_loc_data({0},{num_cols_loc}, The_Arena()); 
+    Matrix1D d_Y_loc_data({0},{num_cols_loc}, The_Arena()); 
     d_X_loc_data.copy(h_X_loc_data); 
     d_Y_loc_data.copy(h_Y_loc_data); 
     
     amrex::Gpu::streamSynchronize();
 
-    cpu_to_gpu_copy_time = amrex::second() - cpu_to_gpu_copy_beg_time;
+    BL_PROFILE_VAR_STOP(step4_CpuToGpuCopy_time);
     #endif
 
 
     /*Step 5*/	
-    amrex::Real parallelFor_beg_time = amrex::second();
+    BL_PROFILE_VAR("step5_pFor_time", step5_pFor_time);
 
     #if(defined AMREX_USE_GPU && GPU_MATRIX_OP)
     auto const& A        =    d_A_loc_data.const_table();
@@ -364,23 +358,9 @@ void MatInv_BlockTriDiagonal(int N_total,
     }
     #endif 
 
-    amrex::Real parallelFor_time = amrex::second() - parallelFor_beg_time;
+    BL_PROFILE_VAR_STOP(step5_pFor_time);
    
-    amrex::Real total_time =   allgatherv_time_cpu + 
-	                            recursion_time + 
-			              copy_XY_time + 
-	                      cpu_to_gpu_copy_time + 
-			      parallelFor_time;  
-
-    amrex::Print() << "\nTimes: allgatherv, recursion, copy_XY_local, copy_cpu2gpu, gpu_pFor, total: \n" 
-	    << std::setw(15) << allgatherv_time_cpu       
-	    << std::setw(15) << recursion_time  
-  	    << std::setw(15) << copy_XY_time
-	    << std::setw(15) << cpu_to_gpu_copy_time 
-       	    << std::setw(15) << parallelFor_time  
-	    << std::setw(15) << total_time << "\n";
- 
-    /**deallocate device memory*/
+    /*deallocate memory*/
     #if(defined AMREX_USE_GPU && GPU_MATRIX_OP)
     d_A_loc_data.clear();
     d_X_loc_data.clear();
@@ -388,8 +368,6 @@ void MatInv_BlockTriDiagonal(int N_total,
     d_Xtil_glo_data.clear();
     d_Ytil_glo_data.clear();
     #endif 
-
-    hd_G_loc_data.clear();
     h_X_loc_data.clear();
     h_Y_loc_data.clear();
 
@@ -539,49 +517,56 @@ int main (int argc, char* argv[])
   
     /*allocate local G*/
     #if(defined AMREX_USE_GPU && GPU_MATRIX_OP)
-    Matrix2D hd_G_loc_data({0,0},{N_total, num_cols_loc}, The_Device_Arena());
-    #else 
-    Matrix2D hd_G_loc_data({0,0},{N_total, num_cols_loc}, The_Pinned_Arena());
-    #endif
-
-    MatInv_BlockTriDiagonal(N_total, h_A_loc_data, h_B_data, h_C_data, hd_G_loc_data, 
+    Matrix2D d_G_loc_data({0,0},{N_total, num_cols_loc}, The_Arena());
+    
+    MatInv_BlockTriDiagonal(N_total, h_A_loc_data, h_B_data, h_C_data, d_G_loc_data, 
                             cumu_blk_size, vec_col_gids, num_proc_with_blk);   
-
-
-
-
-
-    #ifdef PRINT_MATRIX
-    /**copy G_loc from device to host*/
-    amrex::Real gpu_to_cpu_copy_beg_time = amrex::second();
-    
-    amrex::Gpu::streamSynchronize();
-    #if (defined AMREX_USE_GPU && GPU_MATRIX_OP)
+    #else 
     Matrix2D h_G_loc_data({0,0},{N_total, num_cols_loc}, The_Pinned_Arena());
-    #endif
-    h_G_loc_data.copy(hd_G_loc_data); //copy from gpu to cpu
-        			     //
-    amrex::Real gpu_to_cpu_copy_time = amrex::second() - gpu_to_cpu_copy_beg_time;
-    
-    amrex::Print() << "\ntime to copy G_loc from device to host: " 
-    << std::setw(20) << gpu_to_cpu_copy_time << "\n";
 
-    PrintTable(h_G_loc_data,N_total,cumu_blk_size, vec_col_gids, num_proc_with_blk);
-    //if(my_rank == 1) 
-    //{
-    //    amrex::Print() << "(rank 1) G_loc:\n";
-    //    PrintTable_loc(h_G_blk_loc);
-    //}
-    #if (defined AMREX_USE_GPU && GPU_MATRIX_OP)
-    h_G_loc_data.clear();
+    MatInv_BlockTriDiagonal(N_total, h_A_loc_data, h_B_data, h_C_data, h_G_loc_data, 
+                            cumu_blk_size, vec_col_gids, num_proc_with_blk);   
     #endif
+
+
+
+    int print_matrix_flag = false;
+    pp.query("print_matrix", print_matrix_flag);
+
+    if(print_matrix_flag) {
+        /**copy G_loc from device to host*/
+        
+        #if (defined AMREX_USE_GPU && GPU_MATRIX_OP)
+        BL_PROFILE_VAR("step6_CopyGpuToCpu", step6_copyGpuToCpu);
+        
+	amrex::Gpu::streamSynchronize();
+        Matrix2D h_G_loc_data({0,0},{N_total, num_cols_loc}, The_Pinned_Arena());
+        h_G_loc_data.copy(d_G_loc_data); //copy from gpu to cpu
+
+        BL_PROFILE_VAR_STOP(step6_copyGpuToCpu);
+        #endif
+        
+        PrintTable(h_G_loc_data,N_total,cumu_blk_size, vec_col_gids, num_proc_with_blk);
+        //if(my_rank == 1) 
+        //{
+        //    amrex::Print() << "(rank 1) G_loc:\n";
+        //    PrintTable_loc(h_G_blk_loc);
+        //}
+        #if (defined AMREX_USE_GPU && GPU_MATRIX_OP)
+        h_G_loc_data.clear();
+        #endif
+    }
     
-    #endif
- 
+
+    /*deallocate memory*/
     h_A_loc_data.clear();
     h_B_data.clear();
     h_C_data.clear();
-    hd_G_loc_data.clear();
+    #if (defined AMREX_USE_GPU && GPU_MATRIX_OP)
+    d_G_loc_data.clear();
+    #else 
+    h_G_loc_data.clear();
+    #endif
 
 
     amrex::Finalize();

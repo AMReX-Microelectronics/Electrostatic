@@ -1,5 +1,6 @@
 AMREX_HOME  ?= ../../../../../../amrex
 
+amrex.the_arena_is_managed=0
 DEBUG        = FALSE
 USE_MPI      = TRUE
 USE_OMP      = FALSE
@@ -7,8 +8,8 @@ USE_CUDA     = TRUE
 COMP         = gnu
 DIM          = 3
 CXXSTD       = c++17
-GPU_MATRIX_OP = TRUE
-PRINT_MATRIX = FALSE
+GPU_MATRIX_OP = FALSE
+TINY_PROFILE   = TRUE
 
 PRINT_NAME   = FALSE
 PRINT_LOW   = FALSE
