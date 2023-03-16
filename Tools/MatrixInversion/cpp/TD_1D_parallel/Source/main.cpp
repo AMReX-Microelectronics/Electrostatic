@@ -333,9 +333,6 @@ void MatInv_BlockTriDiagonal(int N_total,
 
     #if(defined AMREX_USE_GPU && GPU_MATRIX_OP)
     amrex::ParallelFor(num_cols_loc, [=] AMREX_GPU_DEVICE (int n) noexcept
-    #else 
-    amrex::LoopOnCpu(num_cols_loc, [=] (int n) noexcept
-    #endif 
     {
         int n_glo = n + cumulative_columns; /*global column number*/
 
@@ -350,6 +347,22 @@ void MatInv_BlockTriDiagonal(int N_total,
             G_loc(m+1,n) = -Xtil_glo(m)*G_loc(m,n);
         }
     });
+    #else 
+    for (int n=0; n < num_cols_loc; ++n) {
+        int n_glo = n + cumulative_columns; /*global column number*/
+
+        G_loc(n_glo,n) =  1./(A(n) - X(n) - Y(n)); 
+
+        for (int m = n_glo; m > 0; m--)
+        {   
+            G_loc(m-1,n) =  -Ytil_glo(m)*G_loc(m,n);
+        }
+        for (int m = n_glo; m < N_total-1; ++m)
+        {   
+            G_loc(m+1,n) = -Xtil_glo(m)*G_loc(m,n);
+        }
+    }
+    #endif 
 
     amrex::Real parallelFor_time = amrex::second() - parallelFor_beg_time;
    
