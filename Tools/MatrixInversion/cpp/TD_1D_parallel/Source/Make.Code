@@ -4,6 +4,12 @@ include $(AMREX_HOME)/Tools/GNUMake/Make.defs
 
 include $(CODE_HOME)/Source/Make.package
 
+ifeq ($(GPU_MATRIX_OP),TRUE)
+  USERSuffix := $(USERSuffix).GPUMatOp
+  DEFINES += -DGPU_MATRIX_OP
+endif
+
+
 Code_dirs = 
 Code_pack   += $(foreach dir, $(Code_dirs), $(CODE_HOME)/Source/$(dir)/Make.package)
 include $(Code_pack)
@@ -15,6 +21,9 @@ include $(AMREX_pack)
 
 include $(AMREX_HOME)/Tools/GNUMake/Make.rules
 
+ifeq ($(PRINT_MATRIX),TRUE)
+  DEFINES += -DPRINT_MATRIX
+endif
 
 ifeq ($(PRINT_HIGH),TRUE)
   DEFINES += -DPRINT_HIGH -DPRINT_LOW -DPRINT_NAME

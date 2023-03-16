@@ -11,8 +11,6 @@
 #include<AMReX_TableData.H>
 #include <AMReX_TinyProfiler.H>
 #include <AMReX_GpuUtility.H>
-#include <AMReX_Config.H>
-#include <AMReX_Loop.H>
 
 #include <cmath>
 #include <iomanip>
@@ -174,7 +172,7 @@ void MatInv_BlockTriDiagonal(int N_total,
 		             const Matrix1D& h_A_loc_data, 
                              const Matrix1D& h_B_data, 
                              const Matrix1D& h_C_data,
-                             Matrix2D& hd_G_loc_data, 
+                             Matrix2D& d_G_loc_data, 
                              const amrex::Vector<int>& cumu_blk_size,
                              const amrex::Vector<int>& vec_col_gids,
                              const int num_proc_with_blk)
@@ -286,9 +284,8 @@ void MatInv_BlockTriDiagonal(int N_total,
 
     amrex::Real copy_XY_time = amrex::second() - copy_XY_beg_time;
 
+
     /*Step 4*/	
-    amrex::Real cpu_to_gpu_copy_time = 0.;
-    #if (defined AMREX_USE_GPU && GPU_MATRIX_OP)
     amrex::Real cpu_to_gpu_copy_beg_time = amrex::second();
 
     Matrix1D d_A_loc_data({0},{num_cols_loc}, The_Device_Arena()); 
@@ -304,38 +301,25 @@ void MatInv_BlockTriDiagonal(int N_total,
     Matrix1D d_Y_loc_data({0},{num_cols_loc}, The_Device_Arena()); 
     d_X_loc_data.copy(h_X_loc_data); 
     d_Y_loc_data.copy(h_Y_loc_data); 
-    
+
     amrex::Gpu::streamSynchronize();
 
-    cpu_to_gpu_copy_time = amrex::second() - cpu_to_gpu_copy_beg_time;
-    #endif
+    amrex::Real cpu_to_gpu_copy_time = amrex::second() - cpu_to_gpu_copy_beg_time;
 
 
     /*Step 5*/	
-    amrex::Real parallelFor_beg_time = amrex::second();
+    amrex::Real gpu_parallelFor_beg_time = amrex::second();
 
-    #if(defined AMREX_USE_GPU && GPU_MATRIX_OP)
     auto const& A        =    d_A_loc_data.const_table();
     auto const& Xtil_glo =    d_Xtil_glo_data.const_table();
     auto const& Ytil_glo =    d_Ytil_glo_data.const_table();
     auto const& X        =    d_X_loc_data.const_table();
     auto const& Y        =    d_Y_loc_data.const_table();
-    #else 
-    auto const& A        =    h_A_loc_data.const_table();
-    auto const& Xtil_glo =    h_Xtil_glo_data.const_table();
-    auto const& Ytil_glo =    h_Ytil_glo_data.const_table();
-    auto const& X        =    h_X_loc_data.const_table();
-    auto const& Y        =    h_Y_loc_data.const_table();
-    #endif
-    auto const& G_loc    =    hd_G_loc_data.table();
+    auto const& G_loc    =    d_G_loc_data.table();
 
     int cumulative_columns = cumu_blk_size[my_rank]; 
 
-    #if(defined AMREX_USE_GPU && GPU_MATRIX_OP)
     amrex::ParallelFor(num_cols_loc, [=] AMREX_GPU_DEVICE (int n) noexcept
-    #else 
-    amrex::LoopOnCpu(num_cols_loc, [=] (int n) noexcept
-    #endif 
     {
         int n_glo = n + cumulative_columns; /*global column number*/
 
@@ -351,32 +335,33 @@ void MatInv_BlockTriDiagonal(int N_total,
         }
     });
 
-    amrex::Real parallelFor_time = amrex::second() - parallelFor_beg_time;
-   
+    amrex::Real gpu_parallelFor_time = amrex::second() - gpu_parallelFor_beg_time;
+
+
+
     amrex::Real total_time =   allgatherv_time_cpu + 
 	                            recursion_time + 
 			              copy_XY_time + 
 	                      cpu_to_gpu_copy_time + 
-			      parallelFor_time;  
+			      gpu_parallelFor_time;  
 
     amrex::Print() << "\nTimes: allgatherv, recursion, copy_XY_local, copy_cpu2gpu, gpu_pFor, total: \n" 
 	    << std::setw(15) << allgatherv_time_cpu       
 	    << std::setw(15) << recursion_time  
   	    << std::setw(15) << copy_XY_time
 	    << std::setw(15) << cpu_to_gpu_copy_time 
-       	    << std::setw(15) << parallelFor_time  
+       	    << std::setw(15) << gpu_parallelFor_time  
 	    << std::setw(15) << total_time << "\n";
- 
+
     /**deallocate device memory*/
-    #if(defined AMREX_USE_GPU && GPU_MATRIX_OP)
     d_A_loc_data.clear();
     d_X_loc_data.clear();
     d_Y_loc_data.clear();
     d_Xtil_glo_data.clear();
     d_Ytil_glo_data.clear();
-    #endif 
+    d_G_loc_data.clear();
 
-    hd_G_loc_data.clear();
+    /**deallocate host memory*/
     h_X_loc_data.clear();
     h_Y_loc_data.clear();
 
@@ -525,51 +510,41 @@ int main (int argc, char* argv[])
     }
   
     /*allocate local G*/
-    #if(defined AMREX_USE_GPU && GPU_MATRIX_OP)
-    Matrix2D hd_G_loc_data({0,0},{N_total, num_cols_loc}, The_Device_Arena());
-    #else 
-    Matrix2D hd_G_loc_data({0,0},{N_total, num_cols_loc}, The_Pinned_Arena());
-    #endif
+    Matrix2D d_G_loc_data({0,0},{N_total, num_cols_loc}, The_Device_Arena());
 
-    MatInv_BlockTriDiagonal(N_total, h_A_loc_data, h_B_data, h_C_data, hd_G_loc_data, 
+    MatInv_BlockTriDiagonal(N_total, h_A_loc_data, h_B_data, h_C_data, d_G_loc_data, 
                             cumu_blk_size, vec_col_gids, num_proc_with_blk);   
 
 
-
-
-
-    #ifdef PRINT_MATRIX
-    /**copy G_loc from device to host*/
-    amrex::Real gpu_to_cpu_copy_beg_time = amrex::second();
+    /*copy G_loc from device to host*/
     
-    amrex::Gpu::streamSynchronize();
-    #if (defined AMREX_USE_GPU && GPU_MATRIX_OP)
-    Matrix2D h_G_loc_data({0,0},{N_total, num_cols_loc}, The_Pinned_Arena());
-    #endif
-    h_G_loc_data.copy(hd_G_loc_data); //copy from gpu to cpu
-        			     //
-    amrex::Real gpu_to_cpu_copy_time = amrex::second() - gpu_to_cpu_copy_beg_time;
-    
-    amrex::Print() << "\ntime to copy G_loc from device to host: " 
-    << std::setw(20) << gpu_to_cpu_copy_time << "\n";
+    //amrex::Real gpu_to_cpu_copy_beg_time = amrex::second();
+    //
+    //amrex::Gpu::streamSynchronize();
+    //Matrix2D h_G_loc_data({0,0},{N_total, num_cols_loc}, The_Pinned_Arena());
+    //h_G_loc_data.copy(d_G_loc_data); //copy from gpu to cpu
+    //    			     //
+    //amrex::Real gpu_to_cpu_copy_time = amrex::second() - gpu_to_cpu_copy_beg_time;
+    //
+    //amrex::Print() << "\ntime to copy G_loc from device to host: " 
+    //<< std::setw(20) << gpu_to_cpu_copy_time << "\n";
 
-    PrintTable(h_G_loc_data,N_total,cumu_blk_size, vec_col_gids, num_proc_with_blk);
+
+    /**Print Table*/
+
+    //PrintTable(h_G_loc_data,N_total,cumu_blk_size, vec_col_gids, num_proc_with_blk);
+    //h_G_loc_data.clear();
+    //
     //if(my_rank == 1) 
     //{
     //    amrex::Print() << "(rank 1) G_loc:\n";
     //    PrintTable_loc(h_G_blk_loc);
     //}
-    #if (defined AMREX_USE_GPU && GPU_MATRIX_OP)
-    h_G_loc_data.clear();
-    #endif
-    
-    #endif
  
     h_A_loc_data.clear();
     h_B_data.clear();
     h_C_data.clear();
-    hd_G_loc_data.clear();
-
+    d_G_loc_data.clear();
 
     amrex::Finalize();
 
