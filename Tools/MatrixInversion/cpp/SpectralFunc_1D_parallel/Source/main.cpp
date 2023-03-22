@@ -56,7 +56,7 @@ MatrixDType get_Gamma(MatrixDType Sigma)
 AMREX_GPU_HOST_DEVICE 
 MatrixDType get_Sigma(int contact, int energy) 
 {
-   amrex::GpuComplex val(640.5, -3.1977e-9);
+   amrex::GpuComplex val(640.5, -3.1977);
    return val;
 }
 
@@ -357,11 +357,11 @@ void Obtain_GreensAndSpectralFunctions(int N_total,
     d_Sigma_glo_data.copy(h_Sigma_glo_data); 
 
     amrex::Gpu::streamSynchronize();
+    //Matrix2D d_G_contact_data({0,0},{N_total,num_contacts}, The_Arena()); 
 
     BL_PROFILE_VAR_STOP(step4_CpuToGpuCopy_time);
     #endif
 
-    Matrix2D d_G_contact_data({0,0},{N_total,num_contacts}, The_Arena()); 
  
     /*Step 5*/	
     BL_PROFILE_VAR("step5_pFor_time", step5_pFor_time);
@@ -376,6 +376,8 @@ void Obtain_GreensAndSpectralFunctions(int N_total,
     auto const& X_contact     = d_X_contact_data.const_table();
     auto const& Y_contact     = d_Y_contact_data.const_table();
     auto const& Sigma         = d_Sigma_glo_data.const_table();
+
+    //auto const& G_contact     = d_G_contact_data.table();
     #else 
     auto const& Alpha         = h_Alpha_loc_data.const_table();
     auto const& Xtil_glo      = h_Xtil_glo_data.const_table();
@@ -390,7 +392,6 @@ void Obtain_GreensAndSpectralFunctions(int N_total,
     #endif
     auto const& G_loc    =    hd_G_loc_data.table(); //Green's function
     auto const& A_loc    =    hd_A_loc_data.table(); //Spectral function
-    auto const& G_contact =   d_G_contact_data.table();
 
     int cumulative_columns = cumu_blk_size[my_rank]; 
 
@@ -410,38 +411,132 @@ void Obtain_GreensAndSpectralFunctions(int N_total,
             G_loc(m+1,n) = -Xtil_glo(m)*G_loc(m,n);
         }
 
+        /*worked1 begin*/  
+        //for (int k=0; k < num_contacts; ++k) 
+        //{
+        //    int k_glo = global_contact_index[k];
+        //    G_contact(k_glo,k) =  1./(Alpha_contact(k) - X_contact(k) - Y_contact(k)); 
+
+        //    for (int m = k_glo; m >= n_glo; m--)
+        //    {   
+        //        G_contact(m-1,k) = -Ytil_glo(m)*G_contact(m,k);
+        //    }
+        //    for (int m = k_glo; m <= n_glo; ++m)
+        //    {   
+        //        G_contact(m+1,k) = -Xtil_glo(m)*G_contact(m,k);
+        //    }
+        //}  
+
+
+	//int k_first = 0;
+	//int k_first_glo = global_contact_index[k_first];
+        //MatrixDType A_k1n = G_contact(k_first_glo, k_first) * get_Gamma(Sigma(k_first,0)) * 
+        //                    conjugate( G_contact(n_glo, k_first) );
+
+        //A_loc(k_first_glo, n) = A_k1n;
+        //for (int m = k_first_glo+1; m < N_total; ++m)
+        //{   
+	//    A_k1n = -Xtil_glo(m-1)*A_k1n;	
+        //    A_loc(m,n) +=  A_k1n;
+        //}
+
+	//int k_last = num_contacts - 1;
+	//int k_last_glo = global_contact_index[k_last];
+        //MatrixDType A_kn = G_contact(k_last_glo, k_last) * get_Gamma(Sigma(k_last,0)) * 
+        //                   conjugate( G_contact(n_glo, k_last) );
+
+        //A_loc(k_last_glo, n) += A_kn;
+        //for (int m = k_last_glo-1; m >= 0; m--)
+        //{   
+	//    A_kn = -Ytil_glo(m+1)*A_kn;	
+        //    A_loc(m,n) +=  A_kn;
+        //}
+        /*worked1*/  
+
+        /*worked2 begin*/  
+        //MatrixDType G_contact_kk[NUM_CONTACTS]; //G_contact_kk[k] contains G_glo(k_glo,k_glo) element
+        //MatrixDType G_contact_nk[NUM_CONTACTS]; //G_contact_nk[k] contains G_glo(n_glo,k_glo) element
+        //for (int k=0; k < num_contacts; ++k) 
+        //{
+        //    int k_glo = global_contact_index[k];
+	//    G_contact_kk[k] =  1./(Alpha_contact(k) - X_contact(k) - Y_contact(k)); 
+	//    
+	//    MatrixDType temp = G_contact_kk[k];
+        //    for (int m = k_glo; m < n_glo; ++m)
+        //    {   
+        //        temp = -Xtil_glo(m)*temp;
+        //    }
+        //    for (int m = k_glo; m > n_glo; m--)
+        //    {   
+        //        temp = -Ytil_glo(m)*temp;
+        //    }
+	//    G_contact_nk[k] = temp;
+        //}  
+
+	//int k_first = 0;
+	//int k_first_glo = global_contact_index[k_first];
+        //MatrixDType A_k1n = G_contact_kk[k_first] * get_Gamma(Sigma(k_first,0)) * 
+        //                    conjugate( G_contact_nk[k_first] );
+
+        //A_loc(k_first_glo, n) = A_k1n;
+        //for (int m = k_first_glo+1; m < N_total; ++m)
+        //{   
+	//    A_k1n = -Xtil_glo(m-1)*A_k1n;	
+        //    A_loc(m,n) +=  A_k1n;
+        //}
+
+	//int k_last = num_contacts - 1;
+	//int k_last_glo = global_contact_index[k_last];
+        //MatrixDType A_kn = G_contact_kk[k_last] * get_Gamma(Sigma(k_last,0)) * 
+        //                   conjugate( G_contact_nk[k_last] );
+
+        //A_loc(k_last_glo, n) += A_kn;
+        //for (int m = k_last_glo-1; m >= 0; m--)
+        //{   
+	//    A_kn = -Ytil_glo(m+1)*A_kn;	
+        //    A_loc(m,n) +=  A_kn;
+        //}
+        /*worked2 end*/
+
+        /*worked3 begin*/  
+        //MatrixDType G_contact_kk[NUM_CONTACTS]; //G_contact_kk[k] contains G_glo(k_glo,k_glo) element
+        //MatrixDType G_contact_nk[NUM_CONTACTS]; //G_contact_nk[k] contains G_glo(n_glo,k_glo) element
         for (int k=0; k < num_contacts; ++k) 
         {
             int k_glo = global_contact_index[k];
-            G_contact(k_glo,k) =  1./(Alpha_contact(k) - X_contact(k) - Y_contact(k)); 
-
-            for (int m = k_glo; m >= n_glo; m--)
+	    MatrixDType G_contact_kk =  1./(Alpha_contact(k) - X_contact(k) - Y_contact(k)); 
+	    
+	    MatrixDType temp = G_contact_kk;
+            for (int m = k_glo; m < n_glo; ++m)
             {   
-                G_contact(m-1,k) = -Ytil_glo(m)*G_contact(m,k);
+                temp = -Xtil_glo(m)*temp;
             }
-            for (int m = k_glo; m <= n_glo; ++m)
+            for (int m = k_glo; m > n_glo; m--)
             {   
-                G_contact(m+1,k) = -Xtil_glo(m)*G_contact(m,k);
+                temp = -Ytil_glo(m)*temp;
+            }
+	    MatrixDType G_contact_nk = temp;
+
+            MatrixDType A_kn  = G_contact_kk * get_Gamma(Sigma(k,0)) * 
+                                conjugate( G_contact_nk );
+
+            A_loc(k_glo, n) += A_kn;
+            for (int m = k_glo+1; m < N_total; ++m)
+            {   
+	        A_kn = -Xtil_glo(m-1)*A_kn;	
+                A_loc(m,n) +=  A_kn;
+            }
+            for (int m = k_glo-1; m >= 0; m--)
+            {   
+	        A_kn = -Ytil_glo(m+1)*A_kn;	
+                A_loc(m,n) +=  A_kn;
             }
         }  
+        /*worked3 end*/
 
-        A_loc(n_glo,n) = 0.; 
-        for (int k=0; k < num_contacts; ++k) 
-        {
-            A_loc(n_glo,n) += G_contact(n_glo,k) * get_Gamma(Sigma(k,0)) * conjugate( G_contact(n_glo,k) );
-        }
-  
-        for (int m = n_glo; m > 0; m--)
-        {   
-            A_loc(m-1,n) =  -Ytil_glo(m)*A_loc(m,n);
-        }
-
-        for (int m = n_glo; m < N_total-1; ++m)
-        {   
-            A_loc(m+1,n) = -Xtil_glo(m)*A_loc(m,n);
-        }
 
     });
+
     #else 
     for (int n=0; n < num_cols_loc; ++n) {
         int n_glo = n + cumulative_columns; /*global column number*/
@@ -483,7 +578,7 @@ void Obtain_GreensAndSpectralFunctions(int N_total,
     d_Alpha_contact_data.clear();
     d_X_contact_data.clear();
     d_Y_contact_data.clear();
-    d_G_contact_data.clear();
+    //d_G_contact_data.clear();
     #endif 
     h_X_loc_data.clear();
     h_Y_loc_data.clear();
