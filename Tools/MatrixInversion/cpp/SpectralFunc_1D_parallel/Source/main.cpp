@@ -290,8 +290,9 @@ void Obtain_GreensAndSpectralFunctions(int N_total,
     Matrix1D h_Y_loc_data({0},{num_cols_loc},The_Pinned_Arena()); 
     Matrix1D h_X_contact_data({0},{num_contacts},The_Pinned_Arena()); 
     Matrix1D h_Y_contact_data({0},{num_contacts},The_Pinned_Arena()); 
+    Matrix1D h_Adiag_loc_data({0}, {num_cols_loc}, The_Pinned_Arena());
 
-    #if (defined AMREX_USE_GPU && GPU_MATRIX_OP)
+    #ifdef AMREX_USE_GPU
     Matrix1D d_Alpha_loc_data({0},{num_cols_loc}, The_Arena()); 
     Matrix1D  d_Xtil_glo_data({0},{N_total}, The_Arena()); 
     Matrix1D  d_Ytil_glo_data({0},{N_total}, The_Arena()); 
@@ -327,7 +328,7 @@ void Obtain_GreensAndSpectralFunctions(int N_total,
     auto const& h_X_contact = h_X_contact_data.table();
     auto const& h_T_loc = h_T_loc_data.table();
 
-    #if(defined AMREX_USE_GPU && GPU_MATRIX_OP)
+    #ifdef AMREX_USE_GPU
     auto const& Alpha         = d_Alpha_loc_data.const_table();
     auto const& Xtil_glo      = d_Xtil_glo_data.const_table();
     auto const& Ytil_glo      = d_Ytil_glo_data.const_table();
@@ -355,6 +356,7 @@ void Obtain_GreensAndSpectralFunctions(int N_total,
     auto const& Y_contact     = h_Y_contact_data.const_table();
     auto const& Sigma         = h_Sigma_glo_data.const_table();
     auto const& T_loc         = h_T_loc_data.table();
+    auto const& Adiag_loc     = h_Adiag_loc_data.table(); //Spectral function
 
     amrex::Real* trace_r      = h_Trace_r.dataPtr();
     amrex::Real* trace_i      = h_Trace_i.dataPtr();
@@ -428,7 +430,7 @@ void Obtain_GreensAndSpectralFunctions(int N_total,
         }
 
         /*Step 4*/	
-        #if (defined AMREX_USE_GPU && GPU_MATRIX_OP)
+        #ifdef AMREX_USE_GPU
         //BL_PROFILE_VAR("step4_CpuToGpuCopy_time", step4_CpuToGpuCopy_time);
 	
         d_Alpha_loc_data.copy(h_Alpha_loc_data); 
@@ -535,14 +537,16 @@ void Obtain_GreensAndSpectralFunctions(int N_total,
 
     }
 
+    #ifdef AMREX_USE_GPU
     h_T_loc_data.copy(d_T_loc_data); 
     for (int e=0; e< num_EnPts; ++e)
     {
         amrex::Print() << e << " " << h_T_loc(e) << "\n";
     }
+    #endif
 
     /*deallocate memory*/
-    #if(defined AMREX_USE_GPU && GPU_MATRIX_OP)
+    #ifdef AMREX_USE_GPU
     d_Alpha_loc_data.clear();
     d_Xtil_glo_data.clear();
     d_Ytil_glo_data.clear();
@@ -749,7 +753,7 @@ int main (int argc, char* argv[])
     //PrintTable_loc(h_Sigma_glo_data);
 
     /*allocate local G*/
-    #if(defined AMREX_USE_GPU && GPU_MATRIX_OP)
+    #ifdef AMREX_USE_GPU
     Matrix2D d_G_loc_data({0,0},{N_total, num_cols_loc}, The_Arena());
     Matrix2D d_A_loc_data({0,0},{N_total, num_cols_loc}, The_Arena());
     
@@ -773,7 +777,7 @@ int main (int argc, char* argv[])
     if(print_matrix_flag) {
         /**copy G_loc from device to host*/
         
-        #if (defined AMREX_USE_GPU && GPU_MATRIX_OP)
+        #ifdef AMREX_USE_GPU
         BL_PROFILE_VAR("step6_CopyGpuToCpu", step6_copyGpuToCpu);
         
 	amrex::Gpu::streamSynchronize();
@@ -790,7 +794,7 @@ int main (int argc, char* argv[])
 	amrex::Print() << "A_glo: \n";
         PrintTable(h_A_loc_data,N_total,cumu_blk_size, vec_col_gids, num_proc_with_blk);
 
-        #if (defined AMREX_USE_GPU && GPU_MATRIX_OP)
+        #ifdef AMREX_USE_GPU
         h_G_loc_data.clear();
         h_A_loc_data.clear();
         #endif
@@ -801,7 +805,7 @@ int main (int argc, char* argv[])
     h_Alpha_loc_data.clear();
     h_B_data.clear();
     h_C_data.clear();
-    #if (defined AMREX_USE_GPU && GPU_MATRIX_OP)
+    #ifdef AMREX_USE_GPU
     d_G_loc_data.clear();
     d_A_loc_data.clear();
     #else 
