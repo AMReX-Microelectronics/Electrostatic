@@ -1,4 +1,4 @@
 N_total=4
-num_EnPts = 10
-print_matrix=1
+num_EnPts = 1000
+print_matrix=0
 amrex.the_arena_is_managed=0

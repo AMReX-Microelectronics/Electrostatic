@@ -19,6 +19,7 @@
 #include <math.h> 
 #include<stdlib.h>
 #define NUM_CONTACTS 2
+#define ZPLUS 1e-8
 using namespace amrex;
 using MatrixDType = amrex::GpuComplex<amrex::Real>;
 using Matrix1D = TableData<MatrixDType, 1>;
@@ -88,8 +89,8 @@ MatrixDType get_Sigma(MatrixDType E,
 
    MatrixDType Sigma = pow(gamma,2.)*gr;
 
-   amrex::GpuComplex val(640.5, -3.1977);
-   return val;
+   //amrex::GpuComplex val(640.5, -3.1977);
+   return Sigma;
 
 }
 
@@ -101,8 +102,6 @@ MatrixDType get_Gamma(MatrixDType Sigma)
 }
 
 
-
-
 AMREX_GPU_HOST_DEVICE 
 MatrixDType conjugate(MatrixDType a) 
 {
@@ -110,6 +109,54 @@ MatrixDType conjugate(MatrixDType a)
    return a_conj;
 }
 
+
+void Write1DArrayVsE(const Matrix1D& E_data, Matrix1D& Arr_data, std::string Str)
+{
+    if (amrex::ParallelDescriptor::IOProcessor())
+    {
+        amrex::Print() << "\n Root Writing " << Str << "\n";
+        std::ofstream outfile;
+        outfile.open(Str.c_str());
+
+        auto const& E = E_data.const_table();   
+        auto thi = E_data.hi();
+        auto const& Arr = Arr_data.const_table();   
+
+        for (int e=0; e< thi[0]; ++e)
+        {
+            outfile << std::setw(10) << E(e).real() 
+                    << std::setw(15) << Arr(e).real() 
+                    << std::setw(15) << Arr(e).imag() << "\n";
+        }
+
+        outfile.close();
+    }
+}
+
+void Write2DArrayVsE(const Matrix1D& E_data, Matrix2D& Arr_data, std::string Str)
+{
+    if (amrex::ParallelDescriptor::IOProcessor())
+    {
+        amrex::Print() << "\n Root Writing " << Str << "\n";
+        std::ofstream outfile;
+        outfile.open(Str.c_str());
+
+        auto const& E = E_data.const_table();   
+        auto thi = E_data.hi();
+        auto const& Arr = Arr_data.const_table();   
+
+        for (int e=0; e< thi[0]; ++e)
+        {
+            outfile << std::setw(10) << E(e).real() 
+                    << std::setw(15) << Arr(0,e).real() 
+                    << std::setw(15) << Arr(0,e).imag() 
+                    << std::setw(15) << Arr(1,e).real() 
+                    << std::setw(15) << Arr(1,e).imag()<< "\n";
+        }
+
+        outfile.close();
+    }
+}
 
 void PrintTable_loc(Matrix2D& G_blk)
 {
@@ -228,19 +275,48 @@ void PrintTable(Matrix2D& h_G_loc_data,
 }
 
 
-//template<std::size_t N_total>
+void Print_GreensAndSpectralFunction(Matrix2D& hd_G_loc_data, Matrix2D& hd_A_loc_data,
+                                     int N_total, const amrex::Vector<int>& cumu_blk_size, 
+                                     const amrex::Vector<int>& vec_col_gids, 
+                                     const int num_proc_with_blk) 
+{ 
+
+    #ifdef AMREX_USE_GPU
+        /**copy G_loc from device to host*/
+        Matrix2D h_G_loc_data({0,0},{N_total, num_cols_loc}, The_Pinned_Arena());
+        Matrix2D h_A_loc_data({0,0},{N_total, num_cols_loc}, The_Pinned_Arena());
+        h_G_loc_data.copy(hd_G_loc_data); //copy from gpu to cpu
+        h_A_loc_data.copy(hd_A_loc_data); //copy from gpu to cpu
+        amrex::Print() << "G_glo: \n";
+        PrintTable(h_G_loc_data,N_total,cumu_blk_size, vec_col_gids, num_proc_with_blk);
+        amrex::Print() << "A_glo: \n";
+        PrintTable(h_A_loc_data,N_total,cumu_blk_size, vec_col_gids, num_proc_with_blk);
+        h_G_loc_data.clear();
+        h_A_loc_data.clear();
+    #else 
+        amrex::Print() << "G_glo: \n";
+        PrintTable(hd_G_loc_data,N_total,cumu_blk_size, vec_col_gids, num_proc_with_blk);
+        amrex::Print() << "A_glo: \n";
+        PrintTable(hd_A_loc_data,N_total,cumu_blk_size, vec_col_gids, num_proc_with_blk);
+    #endif
+
+}  
+
+
 void Obtain_GreensAndSpectralFunctions(int N_total,
-		             const Matrix1D& h_Alpha_loc_data, 
+        		             const Matrix1D& h_U_loc_data, 
                              const Matrix1D& h_B_data, 
                              const Matrix1D& h_C_data,
-                             const Matrix1D& h_E_data,
+                             const Matrix1D& h_E_glo_data,
                              Matrix2D& h_Sigma_glo_data, 
                              Matrix2D& hd_G_loc_data, 
                              Matrix2D& hd_A_loc_data, 
                              const amrex::Vector<int>& cumu_blk_size,
                              const amrex::Vector<int>& vec_col_gids,
                              const int num_proc_with_blk,
-			     const amrex::GpuArray<int, NUM_CONTACTS>& global_contact_index)
+                 		     const amrex::GpuArray<int, NUM_CONTACTS>& global_contact_index,
+                 		     const amrex::GpuArray<int, NUM_CONTACTS>& contact_transmission_index,
+                             int print_matrix_flag)
 {
 /* Six step procedure:
  * 1) MPI_Allgatherv local Hamiltonian diagonal elements in Alpha_loc_data into Alpha_glo_data, both allocated on the PinnedArena.
@@ -257,7 +333,7 @@ void Obtain_GreensAndSpectralFunctions(int N_total,
     int my_rank = ParallelDescriptor::MyProc();
     int num_cols_loc = vec_col_gids.size();
     int ioproc = ParallelDescriptor::IOProcessorNumber();  
-    int num_traces=1;
+    int num_traces=2;
 
 
     auto thi_Sigma_glo = h_Sigma_glo_data.hi();
@@ -265,7 +341,6 @@ void Obtain_GreensAndSpectralFunctions(int N_total,
     int num_EnPts    = thi_Sigma_glo[1];
     amrex::Print() << "num_contacts/num_EnPts: " << num_contacts << " " << num_EnPts << "\n";
 
-    Matrix1D h_Alpha_glo_data({0},{N_total}, The_Pinned_Arena());
     int recv_count[num_proc];
     int disp[num_proc];
 
@@ -280,6 +355,8 @@ void Obtain_GreensAndSpectralFunctions(int N_total,
           disp[p] = 0;
        }
     }
+    /*allocating local arrays on the host*/
+    Matrix1D h_Alpha_loc_data({0},{num_cols_loc}, The_Pinned_Arena());
     Matrix1D h_Xtil_glo_data({0},{N_total},The_Pinned_Arena());
     Matrix1D h_Ytil_glo_data({0},{N_total},The_Pinned_Arena());
     Matrix1D h_X_glo_data({0},{N_total},The_Pinned_Arena());
@@ -293,9 +370,10 @@ void Obtain_GreensAndSpectralFunctions(int N_total,
     Matrix1D h_Adiag_loc_data({0}, {num_cols_loc}, The_Pinned_Arena());
 
     #ifdef AMREX_USE_GPU
+    /*allocating local arrays on the device*/
     Matrix1D d_Alpha_loc_data({0},{num_cols_loc}, The_Arena()); 
-    Matrix1D  d_Xtil_glo_data({0},{N_total}, The_Arena()); 
-    Matrix1D  d_Ytil_glo_data({0},{N_total}, The_Arena()); 
+    Matrix1D d_Xtil_glo_data({0},{N_total}, The_Arena()); 
+    Matrix1D d_Ytil_glo_data({0},{N_total}, The_Arena()); 
     Matrix1D d_X_loc_data({0},{num_cols_loc}, The_Arena()); 
     Matrix1D d_Y_loc_data({0},{num_cols_loc}, The_Arena()); 
     Matrix1D d_Alpha_contact_data({0},{num_contacts}, The_Arena()); 
@@ -303,20 +381,23 @@ void Obtain_GreensAndSpectralFunctions(int N_total,
     Matrix1D d_Y_contact_data({0},{num_contacts}, The_Arena()); 
     Matrix2D d_Sigma_glo_data({0,0},{num_contacts,num_EnPts}, The_Arena()); 
     Matrix1D d_Adiag_loc_data({0}, {num_cols_loc}, The_Arena());
-    Matrix1D d_T_loc_data({0}, {num_EnPts}, The_Arena());
     amrex::Gpu::DeviceVector<amrex::Real> d_Trace_r(num_traces, amrex::Real(0.0));
     amrex::Gpu::DeviceVector<amrex::Real> d_Trace_i(num_traces, amrex::Real(0.0));
     #endif
     amrex::Gpu::HostVector<amrex::Real> h_Trace_r(num_traces);
     amrex::Gpu::HostVector<amrex::Real> h_Trace_i(num_traces);
+
     Matrix1D h_T_loc_data({0}, {num_EnPts}, The_Arena());
+    Matrix1D h_DOS_loc_data({0}, {num_EnPts}, The_Arena());
 
 
-    Table1D<MatrixDType> h_Alpha_glo = h_Alpha_glo_data.table();
-    auto const& h_Alpha_loc = h_Alpha_loc_data.table();
-    auto const& h_B = h_B_data.const_table();
-    auto const& h_C = h_C_data.const_table();
-    auto const& h_E = h_E_data.const_table();
+    /*get the reference of tables on the host*/
+    Table1D<MatrixDType> h_Alpha_loc = h_Alpha_loc_data.table();
+
+    auto const& h_U_loc = h_U_loc_data.const_table();
+    auto const& h_B     = h_B_data.const_table();
+    auto const& h_C     = h_C_data.const_table();
+    auto const& h_E_glo = h_E_glo_data.const_table();
     auto const& h_Ytil_glo = h_Ytil_glo_data.table();
     auto const& h_Xtil_glo = h_Xtil_glo_data.table();
     auto const& h_Y_glo = h_Y_glo_data.table();
@@ -326,9 +407,12 @@ void Obtain_GreensAndSpectralFunctions(int N_total,
     auto const& h_X_loc = h_X_loc_data.table();
     auto const& h_Y_contact = h_Y_contact_data.table();
     auto const& h_X_contact = h_X_contact_data.table();
-    auto const& h_T_loc = h_T_loc_data.table();
+    auto const& h_T_loc     = h_T_loc_data.table();
+    auto const& h_DOS_loc     = h_DOS_loc_data.table();
+    auto const& h_Sigma_glo = h_Sigma_glo_data.const_table();
 
     #ifdef AMREX_USE_GPU
+    /*get the reference of tables on the host*/
     auto const& Alpha         = d_Alpha_loc_data.const_table();
     auto const& Xtil_glo      = d_Xtil_glo_data.const_table();
     auto const& Ytil_glo      = d_Ytil_glo_data.const_table();
@@ -337,9 +421,8 @@ void Obtain_GreensAndSpectralFunctions(int N_total,
     auto const& Alpha_contact = d_Alpha_contact_data.const_table();
     auto const& X_contact     = d_X_contact_data.const_table();
     auto const& Y_contact     = d_Y_contact_data.const_table();
-    auto const& Sigma         = d_Sigma_glo_data.const_table();
+    auto const& Sigma_glo     = d_Sigma_glo_data.const_table();
     auto const& Adiag_loc     = d_Adiag_loc_data.table(); //Spectral function
-    auto const& T_loc         = d_T_loc_data.table(); //Spectral function
 
     amrex::Real* trace_r      = d_Trace_r.dataPtr();
     amrex::Real* trace_i      = d_Trace_i.dataPtr();
@@ -354,8 +437,7 @@ void Obtain_GreensAndSpectralFunctions(int N_total,
     auto const& Alpha_contact = h_Alpha_contact_data.const_table();
     auto const& X_contact     = h_X_contact_data.const_table();
     auto const& Y_contact     = h_Y_contact_data.const_table();
-    auto const& Sigma         = h_Sigma_glo_data.const_table();
-    auto const& T_loc         = h_T_loc_data.table();
+    auto const& Sigma_glo     = h_Sigma_glo_data.const_table();
     auto const& Adiag_loc     = h_Adiag_loc_data.table(); //Spectral function
 
     amrex::Real* trace_r      = h_Trace_r.dataPtr();
@@ -371,6 +453,23 @@ void Obtain_GreensAndSpectralFunctions(int N_total,
 
         /*Step 1*/	
 
+        for(int n=0; n<num_cols_loc; ++n) 
+        {
+            h_Alpha_loc(n) = h_E_glo(e);// - h_U_loc(n);
+        }
+        for (int c=0; c<num_contacts; ++c) 
+        {
+            int n_glo = global_contact_index[c];
+            if(n_glo >= cumu_blk_size[my_rank] && n_glo < cumu_blk_size[my_rank+1]) 
+            {
+                int n = n_glo - cumu_blk_size[my_rank];
+                h_Alpha_loc(n) -= h_Sigma_glo(c,e);
+            };  
+        }  
+        
+        Matrix1D h_Alpha_glo_data({0},{N_total}, The_Pinned_Arena());
+        Table1D<MatrixDType> h_Alpha_glo = h_Alpha_glo_data.table();
+
         MPI_Allgatherv(&h_Alpha_loc(0),
                         num_cols_loc,
                         MPI_DOUBLE_COMPLEX,
@@ -380,6 +479,16 @@ void Obtain_GreensAndSpectralFunctions(int N_total,
                         MPI_DOUBLE_COMPLEX,
                         ParallelDescriptor::Communicator());
 
+        for (int c=0; c<num_contacts; ++c) 
+        { 
+            int n_glo = global_contact_index[c];
+            h_Alpha_contact(c) = h_Alpha_glo(n_glo);
+        } 
+        //amrex::Print() << "n & Alpha_glo: " << "\n";
+        //for(int n=0; n<N_total; ++n) 
+        //{
+        //    amrex::Print() << n << " "<< h_Alpha_glo(n) << "\n";
+        //}
 
         /*Step 2*/	
 
@@ -399,11 +508,7 @@ void Obtain_GreensAndSpectralFunctions(int N_total,
             h_X_glo(n) = h_C(p)*h_Xtil_glo(n);
         }
 
-        for (int c = 0; c < num_contacts; ++c) 
-        {
-            int n = global_contact_index[c];
-            h_Alpha_contact(c) = h_Alpha_glo(n);
-        } 
+        h_Alpha_glo_data.clear();
 
         /*Step 3*/	
 
@@ -454,8 +559,9 @@ void Obtain_GreensAndSpectralFunctions(int N_total,
         //BL_PROFILE_VAR("step5_pFor_time", step5_pFor_time);
 
         int cumulative_columns = cumu_blk_size[my_rank]; 
-	int e_id = e;
-	MatrixDType E = h_E(e_id);
+        int e_id = e;
+        MatrixDType E = h_E_glo(e_id);
+
         amrex::ParallelFor(num_cols_loc, [=] AMREX_GPU_DEVICE (int n) noexcept
         {
 
@@ -474,7 +580,7 @@ void Obtain_GreensAndSpectralFunctions(int N_total,
 
             //MatrixDType G_contact_kk contains G_glo(k_glo,k_glo) element
             //MatrixDType G_contact_nk contains G_glo(n_glo,k_glo) element
-            MatrixDType A_kn_arr[NUM_CONTACTS];
+            MatrixDType A_tk[NUM_CONTACTS];
             for (int m=0; m < N_total; ++m) 
             {
                 A_loc(m, n) = 0.;
@@ -495,7 +601,7 @@ void Obtain_GreensAndSpectralFunctions(int N_total,
                 }
                 MatrixDType G_contact_nk = temp;
 
-                MatrixDType A_kn  = G_contact_kk * get_Gamma(Sigma(k,e_id)) * 
+                MatrixDType A_kn  = G_contact_kk * get_Gamma(Sigma_glo(k,e_id)) * 
                                     conjugate( G_contact_nk );
 
                 A_loc(k_glo, n) += A_kn;
@@ -509,15 +615,23 @@ void Obtain_GreensAndSpectralFunctions(int N_total,
                     A_kn = -Ytil_glo(m+1)*A_kn;	
                     A_loc(m,n) +=  A_kn;
                 }
-                A_kn_arr[k] = A_kn;
+                A_tk[k] = 0.;
+                if(n_glo == contact_transmission_index[k]) 
+                {
+                    A_tk[k] = A_kn; 
+                } 
             }  
             
-            T_loc(e_id) = get_Gamma(Sigma(0,e_id)) * A_kn_arr[1];
+            MatrixDType T12 = get_Gamma(Sigma_glo(0,e_id))* A_tk[1];
 
             Adiag_loc(n) = A_loc(n_glo,n);
 
             amrex::HostDevice::Atomic::Add(&(trace_r[0]), Adiag_loc(n).real());
             amrex::HostDevice::Atomic::Add(&(trace_i[0]), Adiag_loc(n).imag());
+
+            amrex::HostDevice::Atomic::Add(&(trace_r[1]), T12.real());
+            amrex::HostDevice::Atomic::Add(&(trace_i[1]), T12.imag());
+
         });
 
         //BL_PROFILE_VAR_STOP(step5_pFor_time);
@@ -532,18 +646,31 @@ void Obtain_GreensAndSpectralFunctions(int N_total,
         {
             amrex::ParallelDescriptor::ReduceRealSum(h_Trace_r[t]);
             amrex::ParallelDescriptor::ReduceRealSum(h_Trace_i[t]);
-            amrex::Print() << "Trace: "<< t << " " << h_Trace_r[t] << " "<< h_Trace_i[t]<< "\n";
+            //amrex::Print() << "Trace: "<< t << " " << h_Trace_r[t] << " "<< h_Trace_i[t]<< "\n";
         }
+
+        MatrixDType DOS_temp (h_Trace_r[0], h_Trace_i[0]);
+        h_DOS_loc(e_id) = DOS_temp/(2.*MathConst::pi);
+
+        MatrixDType T12_temp (h_Trace_r[1], h_Trace_i[1]);
+        h_T_loc(e_id) = T12_temp;
+
+        if(print_matrix_flag) {  
+            if(e==0) 
+            {
+                amrex::Print() << "Printing G_R and A at E(e)=" << h_E_glo(e) << "\n";
+                Print_GreensAndSpectralFunction(hd_G_loc_data, hd_A_loc_data,
+                                                N_total,cumu_blk_size, vec_col_gids, num_proc_with_blk); 
+            }
+        } 
 
     }
 
     #ifdef AMREX_USE_GPU
     h_T_loc_data.copy(d_T_loc_data); 
-    for (int e=0; e< num_EnPts; ++e)
-    {
-        amrex::Print() << e << " " << h_T_loc(e) << "\n";
-    }
     #endif
+    Write1DArrayVsE(h_E_glo_data, h_T_loc_data, "Transmission");
+    Write1DArrayVsE(h_E_glo_data, h_DOS_loc_data, "DOS");
 
     /*deallocate memory*/
     #ifdef AMREX_USE_GPU
@@ -556,11 +683,10 @@ void Obtain_GreensAndSpectralFunctions(int N_total,
     d_X_contact_data.clear();
     d_Y_contact_data.clear();
     d_Adiag_loc_data.clear();
-    d_T_loc_data.clear();
     d_Trace_r.clear();
     d_Trace_i.clear();
     #endif 
-    h_Alpha_glo_data.clear();
+    h_Alpha_loc_data.clear();
     h_Xtil_glo_data.clear();
     h_Ytil_glo_data.clear();
     h_X_glo_data.clear();
@@ -571,6 +697,7 @@ void Obtain_GreensAndSpectralFunctions(int N_total,
     h_X_contact_data.clear();
     h_Y_contact_data.clear();
     h_T_loc_data.clear();
+    h_DOS_loc_data.clear();
     h_Trace_r.clear();
     h_Trace_i.clear();
 
@@ -668,7 +795,7 @@ int main (int argc, char* argv[])
     /*setting A, the diagonal 1D vector, which is partitioned in the form of some blocks*/
     /*in general A can be 2D*/
     int num_cols_loc = vec_col_gids.size();
-    Matrix1D h_Alpha_loc_data({0},{num_cols_loc}, The_Pinned_Arena());
+    Matrix1D h_U_loc_data({0},{num_cols_loc}, The_Pinned_Arena());
 
     /*R this is the size of repeated B and C vectors in Hamiltonian in the mode-space approximation for CNT*/
     const int R = 2; 
@@ -683,7 +810,7 @@ int main (int argc, char* argv[])
 
     auto blk_size = vec_col_gids.size();
     int c=0;
-    auto const& h_Alpha_loc = h_Alpha_loc_data.table();
+    auto const& h_U_loc = h_U_loc_data.table();
 
     for(auto& col_gid: vec_col_gids) 
     {
@@ -694,7 +821,7 @@ int main (int argc, char* argv[])
                               + pow((layer_loc_y - point_charge_loc[1]),2)
                               + pow((0.          - point_charge_loc[2]),2) ), 0.5);
 
-        h_Alpha_loc(c) = -(PhysConst::q_e)/(4. * MathConst::pi * PhysConst::ep0 * r);
+        h_U_loc(c) = -(PhysConst::q_e)/(4. * MathConst::pi * PhysConst::ep0 * r);
 
         //amrex::Print() << "(proc 0) column, A: " << col_gid << " "<< A_loc(c) << "\n";
         ++c;  
@@ -711,29 +838,33 @@ int main (int argc, char* argv[])
     for (std::size_t i = 0; i < R; ++i)
     {
        if(i%2 == 0) {
-          h_B(i) = conjugate(beta);
-          h_C(i) = beta;
+          h_B(i) = -beta; /*negative sign because (E[I] - [H]) will have negative B and C*/
+          h_C(i) = -beta;
        }
        else {
-          h_B(i) = gamma;
-          h_C(i) = gamma;
+          h_B(i) = -gamma;
+          h_C(i) = -gamma;
        } 
+       //amrex::Print() << "i,B,C: " << i << " "<< h_B(i) << " " << h_C(i) << "\n";
     }
     
     /*define energy grid and sigma*/
     int num_contacts = NUM_CONTACTS;
     amrex::GpuArray<int,NUM_CONTACTS> global_contact_index = {0, N_total-1};
+    amrex::GpuArray<int,NUM_CONTACTS> contact_transmission_index = {N_total-1, 0};
     int num_EnPts = 10;
     pp.query("num_EnPts", num_EnPts);
 
     amrex::Real EnRange[2] = {-1., 1.}; //eV
-    Matrix1D h_E_data({0},{num_EnPts},The_Pinned_Arena());
-    auto const& h_E = h_E_data.table();
+    Matrix1D h_E_glo_data({0},{num_EnPts},The_Pinned_Arena());
+    auto const& h_E_glo = h_E_glo_data.table();
+
     amrex::Real deltaE = (EnRange[1]-EnRange[0])/(num_EnPts-1);
+
     for (std::size_t e = 0; e < num_EnPts; ++e)
     {
-        amrex::GpuComplex E(EnRange[0] + e*deltaE, 1e-14);
-	h_E(e) = E;
+        amrex::GpuComplex E(EnRange[0] + e*deltaE, ZPLUS);
+        h_E_glo(e) = E;
     }
 
 
@@ -745,64 +876,70 @@ int main (int argc, char* argv[])
         amrex::Print() << "contact: " << c << "\n";    
         for (std::size_t e = 0; e < num_EnPts; ++e)
         {
-            h_Sigma(c,e) = get_Sigma(h_E(e), U_contact[c], beta, gamma);
-	    //amrex::Print() << "e: " << e <<  " " << h_E(e) << "  "<< h_Sigma(c,e) << "\n";
+            h_Sigma(c,e) = get_Sigma(h_E_glo(e), U_contact[c], beta, gamma);
         }
     }
+    Write2DArrayVsE(h_E_glo_data, h_Sigma_glo_data, "Sigma");
 
     //PrintTable_loc(h_Sigma_glo_data);
-
-    /*allocate local G*/
-    #ifdef AMREX_USE_GPU
-    Matrix2D d_G_loc_data({0,0},{N_total, num_cols_loc}, The_Arena());
-    Matrix2D d_A_loc_data({0,0},{N_total, num_cols_loc}, The_Arena());
-    
-    Obtain_GreensAndSpectralFunctions(N_total, h_Alpha_loc_data, h_B_data, h_C_data, h_E_data,h_Sigma_glo_data,
-		                               d_G_loc_data, d_A_loc_data,   
-					       cumu_blk_size, vec_col_gids, num_proc_with_blk, global_contact_index);   
-    #else 
-    Matrix2D h_G_loc_data({0,0},{N_total, num_cols_loc}, The_Pinned_Arena());
-    Matrix2D h_A_loc_data({0,0},{N_total, num_cols_loc}, The_Pinned_Arena());
-
-    Obtain_GreensAndSpectralFunctions(N_total, h_Alpha_loc_data, h_B_data, h_C_data, h_E_data,h_Sigma_glo_data,
-		            h_G_loc_data, h_A_loc_data,
-                            cumu_blk_size, vec_col_gids, num_proc_with_blk, global_contact_index);   
-    #endif
-
-
 
     int print_matrix_flag = false;
     pp.query("print_matrix", print_matrix_flag);
 
-    if(print_matrix_flag) {
-        /**copy G_loc from device to host*/
-        
-        #ifdef AMREX_USE_GPU
-        BL_PROFILE_VAR("step6_CopyGpuToCpu", step6_copyGpuToCpu);
-        
-	amrex::Gpu::streamSynchronize();
-        Matrix2D h_G_loc_data({0,0},{N_total, num_cols_loc}, The_Pinned_Arena());
-        Matrix2D h_A_loc_data({0,0},{N_total, num_cols_loc}, The_Pinned_Arena());
-        h_G_loc_data.copy(d_G_loc_data); //copy from gpu to cpu
-        h_A_loc_data.copy(d_A_loc_data); //copy from gpu to cpu
+    /*allocate local G*/
+    #ifdef AMREX_USE_GPU
+    Matrix2D d_G_loc_data({0,0}, {N_total, num_cols_loc}, The_Arena());
+    Matrix2D d_A_loc_data({0,0}, {N_total, num_cols_loc}, The_Arena());
+    
+    Obtain_GreensAndSpectralFunctions(N_total, h_U_loc_data, h_B_data, h_C_data, h_E_glo_data,h_Sigma_glo_data,
+		                              d_G_loc_data, d_A_loc_data,   
+					                  cumu_blk_size, vec_col_gids, num_proc_with_blk, 
+                                      global_contact_index, 
+                                      contact_transmission_index,
+                                      print_matrix_flag);   
+    #else 
+    Matrix2D h_G_loc_data({0,0},{N_total, num_cols_loc}, The_Pinned_Arena());
+    Matrix2D h_A_loc_data({0,0},{N_total, num_cols_loc}, The_Pinned_Arena());
 
-        BL_PROFILE_VAR_STOP(step6_copyGpuToCpu);
-        #endif
-        
-	amrex::Print() << "G_glo: \n";
-        PrintTable(h_G_loc_data,N_total,cumu_blk_size, vec_col_gids, num_proc_with_blk);
-	amrex::Print() << "A_glo: \n";
-        PrintTable(h_A_loc_data,N_total,cumu_blk_size, vec_col_gids, num_proc_with_blk);
+    Obtain_GreensAndSpectralFunctions(N_total, h_U_loc_data, h_B_data, h_C_data, h_E_glo_data,h_Sigma_glo_data,
+		                              h_G_loc_data, h_A_loc_data,
+                                      cumu_blk_size, vec_col_gids, num_proc_with_blk, 
+                                      global_contact_index,
+                                      contact_transmission_index,
+                                      print_matrix_flag);   
+    #endif
 
-        #ifdef AMREX_USE_GPU
-        h_G_loc_data.clear();
-        h_A_loc_data.clear();
-        #endif
-    }
+
+
+
+    //if(print_matrix_flag) {
+    //    /**copy G_loc from device to host*/
+    //    
+    //    #ifdef AMREX_USE_GPU
+    //    BL_PROFILE_VAR("step6_CopyGpuToCpu", step6_copyGpuToCpu);
+    //    
+    //    Matrix2D h_G_loc_data({0,0},{N_total, num_cols_loc}, The_Pinned_Arena());
+    //    Matrix2D h_A_loc_data({0,0},{N_total, num_cols_loc}, The_Pinned_Arena());
+    //    h_G_loc_data.copy(d_G_loc_data); //copy from gpu to cpu
+    //    h_A_loc_data.copy(d_A_loc_data); //copy from gpu to cpu
+
+    //    BL_PROFILE_VAR_STOP(step6_copyGpuToCpu);
+    //    #endif
+    //    
+	//amrex::Print() << "G_glo: \n";
+    //    PrintTable(h_G_loc_data,N_total,cumu_blk_size, vec_col_gids, num_proc_with_blk);
+	//amrex::Print() << "A_glo: \n";
+    //    PrintTable(h_A_loc_data,N_total,cumu_blk_size, vec_col_gids, num_proc_with_blk);
+
+    //    #ifdef AMREX_USE_GPU
+    //    h_G_loc_data.clear();
+    //    h_A_loc_data.clear();
+    //    #endif
+    //}
     
 
     /*deallocate memory*/
-    h_Alpha_loc_data.clear();
+    h_U_loc_data.clear();
     h_B_data.clear();
     h_C_data.clear();
     #ifdef AMREX_USE_GPU
@@ -813,7 +950,7 @@ int main (int argc, char* argv[])
     h_A_loc_data.clear();
     #endif
     h_Sigma_glo_data.clear();
-    h_E_data.clear();
+    h_E_glo_data.clear();
 
 
     amrex::Finalize();
