@@ -284,6 +284,7 @@ void Print_GreensAndSpectralFunction(Matrix2D& hd_G_loc_data, Matrix2D& hd_A_loc
 { 
 
     #ifdef AMREX_USE_GPU
+        int num_cols_loc = vec_col_gids.size();
         /**copy G_loc from device to host*/
         Matrix2D h_G_loc_data({0,0},{N_total, num_cols_loc}, The_Pinned_Arena());
         Matrix2D h_A_loc_data({0,0},{N_total, num_cols_loc}, The_Pinned_Arena());
@@ -389,8 +390,8 @@ void Obtain_GreensAndSpectralFunctions(int N_total,
     amrex::Gpu::HostVector<amrex::Real> h_Trace_r(num_traces);
     amrex::Gpu::HostVector<amrex::Real> h_Trace_i(num_traces);
 
-    Matrix1D h_T_loc_data({0}, {num_EnPts}, The_Arena());
-    Matrix1D h_DOS_loc_data({0}, {num_EnPts}, The_Arena());
+    Matrix1D h_T_loc_data({0}, {num_EnPts}, The_Pinned_Arena());
+    Matrix1D h_DOS_loc_data({0}, {num_EnPts}, The_Pinned_Arena());
 
 
     /*get the reference of tables on the host*/
@@ -410,7 +411,7 @@ void Obtain_GreensAndSpectralFunctions(int N_total,
     auto const& h_Y_contact = h_Y_contact_data.table();
     auto const& h_X_contact = h_X_contact_data.table();
     auto const& h_T_loc     = h_T_loc_data.table();
-    auto const& h_DOS_loc     = h_DOS_loc_data.table();
+    auto const& h_DOS_loc   = h_DOS_loc_data.table();
     auto const& h_Sigma_glo = h_Sigma_glo_data.const_table();
 
     #ifdef AMREX_USE_GPU
@@ -668,9 +669,6 @@ void Obtain_GreensAndSpectralFunctions(int N_total,
 
     }
 
-    #ifdef AMREX_USE_GPU
-    h_T_loc_data.copy(d_T_loc_data); 
-    #endif
     Write1DArrayVsE(h_E_glo_data, h_T_loc_data, "Transmission", "E   T_r   T_i");
     Write1DArrayVsE(h_E_glo_data, h_DOS_loc_data, "DOS", "E  DOS_r  DOS_i");
 
@@ -894,8 +892,8 @@ int main (int argc, char* argv[])
     Matrix2D d_A_loc_data({0,0}, {N_total, num_cols_loc}, The_Arena());
     
     Obtain_GreensAndSpectralFunctions(N_total, h_U_loc_data, h_B_data, h_C_data, h_E_glo_data,h_Sigma_glo_data,
-		                              d_G_loc_data, d_A_loc_data,   
-					                  cumu_blk_size, vec_col_gids, num_proc_with_blk, 
+        	                              d_G_loc_data, d_A_loc_data,   
+        				                  cumu_blk_size, vec_col_gids, num_proc_with_blk, 
                                       global_contact_index, 
                                       contact_transmission_index,
                                       print_matrix_flag);   
