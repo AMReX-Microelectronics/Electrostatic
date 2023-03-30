@@ -110,18 +110,19 @@ MatrixDType conjugate(MatrixDType a)
 }
 
 
-void Write1DArrayVsE(const Matrix1D& E_data, Matrix1D& Arr_data, std::string Str)
+void Write1DArrayVsE(const Matrix1D& E_data, Matrix1D& Arr_data, std::string filename, std::string header)
 {
     if (amrex::ParallelDescriptor::IOProcessor())
     {
-        amrex::Print() << "\n Root Writing " << Str << "\n";
+        amrex::Print() << "\n Root Writing " << filename << "\n";
         std::ofstream outfile;
-        outfile.open(Str.c_str());
+        outfile.open(filename.c_str());
 
         auto const& E = E_data.const_table();   
         auto thi = E_data.hi();
         auto const& Arr = Arr_data.const_table();   
 
+        outfile << header  << "\n";
         for (int e=0; e< thi[0]; ++e)
         {
             outfile << std::setw(10) << E(e).real() 
@@ -133,18 +134,19 @@ void Write1DArrayVsE(const Matrix1D& E_data, Matrix1D& Arr_data, std::string Str
     }
 }
 
-void Write2DArrayVsE(const Matrix1D& E_data, Matrix2D& Arr_data, std::string Str)
+void Write2DArrayVsE(const Matrix1D& E_data, Matrix2D& Arr_data, std::string filename, std::string header)
 {
     if (amrex::ParallelDescriptor::IOProcessor())
     {
-        amrex::Print() << "\n Root Writing " << Str << "\n";
+        amrex::Print() << "\n Root Writing " << filename << "\n";
         std::ofstream outfile;
-        outfile.open(Str.c_str());
+        outfile.open(filename.c_str());
 
         auto const& E = E_data.const_table();   
         auto thi = E_data.hi();
         auto const& Arr = Arr_data.const_table();   
 
+        outfile << header << "\n";
         for (int e=0; e< thi[0]; ++e)
         {
             outfile << std::setw(10) << E(e).real() 
@@ -669,8 +671,8 @@ void Obtain_GreensAndSpectralFunctions(int N_total,
     #ifdef AMREX_USE_GPU
     h_T_loc_data.copy(d_T_loc_data); 
     #endif
-    Write1DArrayVsE(h_E_glo_data, h_T_loc_data, "Transmission");
-    Write1DArrayVsE(h_E_glo_data, h_DOS_loc_data, "DOS");
+    Write1DArrayVsE(h_E_glo_data, h_T_loc_data, "Transmission", "E   T_r   T_i");
+    Write1DArrayVsE(h_E_glo_data, h_DOS_loc_data, "DOS", "E  DOS_r  DOS_i");
 
     /*deallocate memory*/
     #ifdef AMREX_USE_GPU
@@ -879,7 +881,7 @@ int main (int argc, char* argv[])
             h_Sigma(c,e) = get_Sigma(h_E_glo(e), U_contact[c], beta, gamma);
         }
     }
-    Write2DArrayVsE(h_E_glo_data, h_Sigma_glo_data, "Sigma");
+    Write2DArrayVsE(h_E_glo_data, h_Sigma_glo_data, "Sigma", "E Sigma_s_r Sigma_s_i Sigma_d_r Sigma_d_i");
 
     //PrintTable_loc(h_Sigma_glo_data);
 
