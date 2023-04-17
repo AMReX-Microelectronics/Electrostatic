@@ -1,0 +1,4 @@
+CEXE_sources += main.cpp
+
+VPATH_LOCATIONS   += $(CODE_HOME)/Source
+INCLUDE_LOCATIONS += $(CODE_HOME)/Source
