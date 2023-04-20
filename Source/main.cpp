@@ -28,10 +28,11 @@ int main (int argc, char* argv[])
         WARPX_PROFILE_VAR("main()", pmain);
 
         c_Code pCode; 
+        amrex::ParmParse pp;
 
         pCode.InitData();
 
-        pCode.EstimateOfRequiredMemory();
+        //pCode.EstimateOfRequiredMemory();
 
         pCode.PrintGlobalWarnings("the initialization step"); //Print warning at this stage
 

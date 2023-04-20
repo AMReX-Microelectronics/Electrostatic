@@ -4,7 +4,6 @@
 #include "Nanostructure_fwd.H"
 #include "Materials/CNT.H"
 #include "Materials/Graphene.H"
-#include "Materials/Silicon.H"
 
 #include <AMReX_REAL.H>
 #include <AMReX_BoxArray.H>
@@ -121,8 +120,8 @@ public:
                      const std::string ns_name,
                      const std::string NS_gather_str,
                      const std::string NS_deposit_str,
-                     const amrex::Real NS_initial_deposit_value    );
-
+                     const amrex::Real NS_initial_deposit_value,
+                     const int use_selfconsistent_potential    );
 
     virtual void ReadNanostructureProperties () override;
 
@@ -134,6 +133,7 @@ public:
     void AverageFieldGatheredFromMesh();
     void Write_AveragedGatherField();
 
+    //virtual void ComputeChargeDensity() override;
 //    const amrex::Vector<amrex::Real>* get_avg_gatherField() { &avg_gatherField };
 
 private:
@@ -146,8 +146,18 @@ private:
     amrex::MultiFab* p_mf_gather=nullptr;
     amrex::MultiFab* p_mf_deposit=nullptr;
 
-    amrex::Vector<amrex::Real> avg_gatherField;
+    //amrex::Vector<amrex::Real> avg_gatherField;
     amrex::Gpu::DeviceVector<int> gpuvec_avg_indices;
+
+    int _use_electrostatic=0;
+    int _num_proc;
+    int _my_rank;
+
+    virtual void DefineMatrixPartition (int num_proc) override;
+    virtual void AllocateArrays() override;
+    virtual void ConstructHamiltonian () override;
+
+    ComplexTable1D h_E_RealPath_data;
 
 };
 

@@ -20,7 +20,7 @@ c_NEGFSolver
 public:
     amrex::Vector<std::unique_ptr<c_Nanostructure<c_CNT>>> vp_CNT;
     amrex::Vector<std::unique_ptr<c_Nanostructure<c_Graphene>>> vp_Graphene;
-    amrex::Vector<std::unique_ptr<c_Nanostructure<c_Silicon>>> vp_Silicon;
+    //amrex::Vector<std::unique_ptr<c_Nanostructure<c_Silicon>>> vp_Silicon;
 
     c_NEGFSolver();
     ~c_NEGFSolver();
@@ -30,9 +30,13 @@ public:
 
 private:
     int num_NS=0;
-    const amrex::Geometry * _geom;
-    const amrex::BoxArray * _ba;
-    const amrex::DistributionMapping * _dm;
+    amrex::Geometry  dummy_geom;
+    amrex::BoxArray  dummy_ba;
+    amrex::DistributionMapping  dummy_dm;
+
+    amrex::Geometry const * _geom = &dummy_geom;
+    amrex::BoxArray const * _ba = &dummy_ba;
+    amrex::DistributionMapping const * _dm = &dummy_dm;
     //const amrex::GpuArray<int, AMREX_SPACEDIM> * _n_cell;
     amrex::Vector< std::string > vec_NS_names;
 
@@ -53,6 +57,8 @@ private:
     std::string NS_gather_field_str;
     std::string NS_deposit_field_str;
     amrex::Real NS_initial_deposit_value;
+
+    int use_selfconsistent_potential;
 
 };
 

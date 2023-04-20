@@ -17,7 +17,7 @@
 
 template class c_Nanostructure<c_CNT>; 
 template class c_Nanostructure<c_Graphene>; 
-template class c_Nanostructure<c_Silicon>; 
+//template class c_Nanostructure<c_Silicon>; 
 
 template<typename NSType>
 c_Nanostructure<NSType>::c_Nanostructure (const amrex::Geometry            & geom,
@@ -26,7 +26,8 @@ c_Nanostructure<NSType>::c_Nanostructure (const amrex::Geometry            & geo
                                   const std::string NS_name_str,
                                   const std::string NS_gather_str,
                                   const std::string NS_deposit_str,
-                                  const amrex::Real NS_initial_deposit_value)
+                                  const amrex::Real NS_initial_deposit_value,
+                                  const int use_selfconsistent_potential)
                  : amrex::ParticleContainer<realPD::NUM, intPD::NUM, 
                                             realPA::NUM, intPA::NUM> (geom, dm, ba)
 {
@@ -36,34 +37,46 @@ c_Nanostructure<NSType>::c_Nanostructure (const amrex::Geometry            & geo
 #endif
 
     NSType::name = NS_name_str;
-
-    auto& rCode = c_Code::GetInstance();
-    auto& rGprop = rCode.get_GeometryProperties();
-
-    _n_cell = &rGprop.n_cell;
-    _geom = &geom;
-
-    auto& rMprop = rCode.get_MacroscopicProperties();
-
-    p_mf_gather = rMprop.get_p_mf(NS_gather_str);  
-    p_mf_deposit = rMprop.get_p_mf(NS_deposit_str);  
-
-    //_initial_deposit_value = NS_initial_deposit_value;
-
+    amrex::Print() << "Nanostructure: " << NS_name_str << "\n";
     ReadNanostructureProperties();
+     
+    auto& rCode = c_Code::GetInstance();
+    _use_electrostatic = rCode.use_electrostatic;
+    if(use_selfconsistent_potential) 
+    {
+        auto& rGprop = rCode.get_GeometryProperties();
 
-    gpuvec_avg_indices.resize(NSType::vec_avg_indices.size());
-    amrex::Gpu::copy(amrex::Gpu::hostToDevice, NSType::vec_avg_indices.begin(), NSType::vec_avg_indices.end(), gpuvec_avg_indices.begin());
+        _n_cell = &rGprop.n_cell;
+        _geom = &geom;
 
-    amrex::Print() << "Number of layers: " << NSType::get_num_layers() << "\n";
-    avg_gatherField.resize(NSType::get_num_layers());
+        auto& rMprop = rCode.get_MacroscopicProperties();
 
-    ReadAtomLocations();
-    Redistribute(); //from amrex::ParticleContainer
+        p_mf_gather = rMprop.get_p_mf(NS_gather_str);  
+        p_mf_deposit = rMprop.get_p_mf(NS_deposit_str);  
 
-    MarkCellsWithAtoms();
-    InitializeAttributeToDeposit(NS_initial_deposit_value);
-    DepositToMesh();
+        gpuvec_avg_indices.resize(NSType::vec_avg_indices.size());
+        amrex::Gpu::copy(amrex::Gpu::hostToDevice, NSType::vec_avg_indices.begin(), NSType::vec_avg_indices.end(), gpuvec_avg_indices.begin());
+
+        amrex::Print() << "Number of layers: " << NSType::get_num_layers() << "\n";
+        NSType::avg_gatherField.resize(NSType::get_num_layers());
+
+        ReadAtomLocations();
+        Redistribute(); //This function is in amrex::ParticleContainer
+
+        MarkCellsWithAtoms();
+        InitializeAttributeToDeposit(NS_initial_deposit_value);
+        DepositToMesh();
+    }
+
+    _num_proc = amrex::ParallelDescriptor::NProcs();
+    _my_rank = amrex::ParallelDescriptor::MyProc();
+
+    //DefineMatrixPartition(_num_proc);
+    //AllocateArrays();
+    //ConstructHamiltonian();
+
+    //NSType::DefineIntegrationPaths();
+    //NSType::DefineSelfEnergy();
 
 #ifdef PRINT_NAME
     amrex::Print() << "\t\t\t}************************c_Nanostructure() Constructor************************\n";
@@ -78,7 +91,7 @@ c_Nanostructure<NSType>::~c_Nanostructure ()
     amrex::Print() << "\t\t\tin file: " << __FILE__ << " at line: " << __LINE__ << "\n";
 #endif
 
-    avg_gatherField.clear();
+    NSType::avg_gatherField.clear();
 
 #ifdef PRINT_NAME
     amrex::Print() << "\t\t\t}************************c_Nanostructure() Destructor************************\n";
@@ -394,7 +407,7 @@ c_Nanostructure<NSType>::AverageFieldGatheredFromMesh()
 
     for (int l=0; l<num_layers; ++l) 
     {
-        avg_gatherField[l] = p_sum[l]/atoms_to_avg_over;
+        NSType::avg_gatherField[l] = p_sum[l]/atoms_to_avg_over;
         //avg_axial_loc[l] = p_axial_loc[l]/atoms_to_avg_over;
     }
 
@@ -410,10 +423,82 @@ c_Nanostructure<NSType>::Write_AveragedGatherField()
         std::ofstream outfile;
         outfile.open("avg_gatherField.dat");
         
-        for (int l=0; l<avg_gatherField.size(); ++l)
+        for (int l=0; l<NSType::avg_gatherField.size(); ++l)
         {
-            outfile << l << std::setw(15) << avg_gatherField[l] << "\n";
+            outfile << l << std::setw(15) << NSType::avg_gatherField[l] << "\n";
         }  
         outfile.close();
     }
+}
+
+
+//template<typename NSType>
+//void 
+//c_Nanostructure<NSType>::ComputeChargeDensity() 
+//{
+//    NSType::ComputeChargeDensity();
+//}
+//
+//
+template<typename NSType>
+void
+c_Nanostructure<NSType>::DefineMatrixPartition (int _num_proc)
+{
+
+    NSType::DefineMatrixPartition(_num_proc); /*material specific*/
+    amrex::Print() << "size of the Hamiltonian matrix: " << NSType::Hsize_glo << "\n";
+    amrex::Print() << "max block columns per proc: " << NSType::max_blkCol_perProc << "\n";
+
+
+    NSType::num_proc_with_blkCol = ceil(static_cast<amrex::Real>(NSType::Hsize_glo)/NSType::max_blkCol_perProc);
+    amrex::Print() << "number of procs with block columns: " << NSType::num_proc_with_blkCol<< "\n";
+    /*if num_proc_with_blk >= num_proc, assert.*/
+
+
+    NSType::vec_cumu_blkCol_size.resize(NSType::num_proc_with_blkCol + 1);
+    NSType::vec_cumu_blkCol_size[0] = 0;
+    for(int p=1; p < NSType::num_proc_with_blkCol; ++p)
+    {
+        NSType::vec_cumu_blkCol_size[p] = NSType::vec_cumu_blkCol_size[p-1] + NSType::max_blkCol_perProc;
+        /*All proc except the last one contains max_blkCol_perProc number of column blks.*/
+    }
+    NSType::vec_cumu_blkCol_size[NSType::num_proc_with_blkCol] = NSType::Hsize_glo;
+
+
+    NSType::blkCol_size_loc = 0;
+    if(_my_rank < NSType::num_proc_with_blkCol)
+    {
+        int blk_gid = _my_rank;
+        NSType::blkCol_size_loc = NSType::vec_cumu_blkCol_size[blk_gid+1] - NSType::vec_cumu_blkCol_size[blk_gid];
+
+        /*check later:setting vec_blkCol_gids may not be necessary*/
+        for (int c=0; c < NSType::blkCol_size_loc; ++c)
+        {
+            int col_gid = NSType::vec_cumu_blkCol_size[blk_gid] + c;
+            NSType::vec_blkCol_gids.push_back(col_gid);
+        }
+    }
+
+}
+
+
+template<typename NSType>
+void
+c_Nanostructure<NSType>::AllocateArrays () 
+{
+    NSType::AllocateArrays();
+    h_E_RealPath_data.resize({0},{NUM_ENERGY_PTS_REAL},The_Pinned_Arena());
+
+
+}
+
+
+template<typename NSType>
+void
+c_Nanostructure<NSType>::ConstructHamiltonian () 
+{
+
+    NSType::ConstructHamiltonian();
+    if(_use_electrostatic) NSType::AddPotentialToHamiltonian();
+
 }

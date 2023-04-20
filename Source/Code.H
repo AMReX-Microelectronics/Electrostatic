@@ -112,9 +112,7 @@ public:
     void ReadData ();
     void InitData ();
     void Solve_PostProcess_Output ();
-    //void Solve();
-    //void PostProcess();
-    //void Output();
+
     void EstimateOfRequiredMemory();
 
     static bool do_device_synchronize;
@@ -131,6 +129,9 @@ public:
     c_Output& get_Output () { return *m_pOutput;}
     
     amrex::Real get_time() { return m_time_instant;}
+    int use_diagnostics;
+    int use_negf;
+    int use_electrostatic;
  
 private:
     const amrex::Real set_time(int n) 
@@ -152,8 +153,6 @@ private:
     std::unique_ptr<c_NEGFSolver> m_pNEGFSolver;
     #endif
 
-    int use_diagnostics;
-    int use_negf;
     std::unique_ptr<c_Diagnostics> m_pDiagnostics;
 
 };

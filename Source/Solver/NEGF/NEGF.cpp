@@ -43,7 +43,7 @@ c_NEGFSolver::~c_NEGFSolver()
 
     vp_CNT.clear();
     vp_Graphene.clear();
-    vp_Silicon.clear();
+    //vp_Silicon.clear();
   
 #ifdef PRINT_NAME
     amrex::Print() << "\t\t\t}************************c_NEGFSolver() Destructor************************\n";
@@ -83,42 +83,51 @@ c_NEGFSolver::ReadData()
 void 
 c_NEGFSolver::InitData() 
 {
-    auto& rCode = c_Code::GetInstance();
-    auto& rGprop = rCode.get_GeometryProperties();
-
-    _geom = &rGprop.geom;
-    _dm   = &rGprop.dm;
-    _ba   = &rGprop.ba;
-
-
     amrex::Print() << "\n##### NEGF NANOSTRUCTURE PROPERTIES #####\n\n";
 
     amrex::ParmParse pp_negf("negf");
+    
+    use_selfconsistent_potential = 0;
+    pp_negf.query("use_electrostatic", use_selfconsistent_potential);
+    amrex::Print() << "##### negf.use_selfconsistent_potential: " 
+                   << use_selfconsistent_potential << "\n";
 
-    std::string NS_gather_field_str;
-    std::string NS_deposit_field_str;
+    std::string NS_gather_field_str = "phi";
+    std::string NS_deposit_field_str = "charge_density";
+    amrex::Real NS_initial_deposit_value = 0.;
 
-    pp_negf.get("NS_gather_field", NS_gather_field_str);
-    amrex::Print() << "##### negf.NS_gather_field: " << NS_gather_field_str << "\n";
-    if ( Evaluate_TypeOf_MacroStr(NS_gather_field_str) != 0 )/*mf not defined in MacroscopicProperties*/
+    if(use_selfconsistent_potential) 
     {
-        amrex::Abort("NS_gather_field " + NS_gather_field_str + " not defined in Mprop.");
-    } 
+        auto& rCode = c_Code::GetInstance();
+        auto& rGprop = rCode.get_GeometryProperties();
 
-    pp_negf.get("NS_deposit_field", NS_deposit_field_str);
-    amrex::Print() << "##### negf.NS_deposit_field: " << NS_deposit_field_str << "\n";
-    if ( Evaluate_TypeOf_MacroStr(NS_deposit_field_str) != 0 )/*mf not defined in MacroscopicProperties*/
-    {
-        amrex::Abort("NS_deposit_field " + NS_deposit_field_str + " not defined in Mprop.");
-    } 
+        _geom = &rGprop.geom;
+        _dm   = &rGprop.dm;
+        _ba   = &rGprop.ba;
 
-    auto dxi = _geom->InvCellSizeArray();
-     amrex::Real inv_vol = AMREX_D_TERM(dxi[0], *dxi[1], *dxi[2]);
+        pp_negf.get("NS_gather_field", NS_gather_field_str);
+        amrex::Print() << "##### negf.NS_gather_field: " << NS_gather_field_str << "\n";
+        if ( Evaluate_TypeOf_MacroStr(NS_gather_field_str) != 0 )
+        {
+            /*mf not defined in MacroscopicProperties*/
+            amrex::Abort("NS_gather_field " + NS_gather_field_str + " not defined in Mprop.");
+        } 
 
-    amrex::Real NS_initial_deposit_value = PhysConst::q_e*inv_vol;
+        pp_negf.get("NS_deposit_field", NS_deposit_field_str);
+        amrex::Print() << "##### negf.NS_deposit_field: " << NS_deposit_field_str << "\n";
+        if ( Evaluate_TypeOf_MacroStr(NS_deposit_field_str) != 0 )
+        {
+            /*mf not defined in MacroscopicProperties*/
+            amrex::Abort("NS_deposit_field " + NS_deposit_field_str + " not defined in Mprop.");
+        } 
 
-    queryWithParser(pp_negf,"NS_initial_deposit_value", NS_initial_deposit_value);
-    amrex::Print() << "##### negf.NS_initial_deposit_value: " << NS_initial_deposit_value << "\n";
+        auto dxi = _geom->InvCellSizeArray();
+        amrex::Real inv_vol = AMREX_D_TERM(dxi[0], *dxi[1], *dxi[2]);
+        NS_initial_deposit_value = PhysConst::q_e*inv_vol;
+
+        queryWithParser(pp_negf,"NS_initial_deposit_value", NS_initial_deposit_value);
+        amrex::Print() << "##### negf.NS_initial_deposit_value: " << NS_initial_deposit_value << "\n";
+    }
 
     std::string type;
     int c=0;
@@ -135,15 +144,29 @@ c_NEGFSolver::InitData()
             case s_NS::Type::CNT:
             {
                 using T = c_CNT;
-                vp_CNT.push_back(std::make_unique<c_Nanostructure<T>>(*_geom, *_dm, *_ba, name, 
-                                                                      NS_gather_field_str, 
-                                                                      NS_deposit_field_str, 
-                                                                      NS_initial_deposit_value));
+ 
+                vp_CNT.push_back(std::make_unique<c_Nanostructure<T>>(*_geom, *_dm, *_ba,
+                                                                       name, 
+                                                                       NS_gather_field_str, 
+                                                                       NS_deposit_field_str, 
+                                                                       NS_initial_deposit_value,
+                                                                       use_selfconsistent_potential
+                                                                      ));
                 break;
             }
             case s_NS::Type::Graphene:
             {
+                using T = c_Graphene;
+ 
+                vp_Graphene.push_back(std::make_unique<c_Nanostructure<T>>(*_geom, *_dm, *_ba,
+                                                                            name, 
+                                                                            NS_gather_field_str, 
+                                                                            NS_deposit_field_str, 
+                                                                            NS_initial_deposit_value,
+                                                                            use_selfconsistent_potential
+                                                                           ));
                 amrex::Abort("NS_type " + type + " is not yet defined.");
+                break; 
             }
             case s_NS::Type::Silicon:
             {
@@ -158,6 +181,7 @@ c_NEGFSolver::InitData()
     }
 
 }
+
 //c_Nanostructure_Atom_Container::~c_Nanostructure_Atom_Container()
 //    : amrex::ParticleContainer<realPD::NUM, intPD::NUM,
 //                               realPA::NUM, intPA::NUM> ~()
@@ -176,13 +200,19 @@ c_NEGFSolver::InitData()
 void 
 c_NEGFSolver::Solve() 
 {
-//    amrex::Vector<amrex::Real>* potential;
 
-    for (int c=0; c < vp_CNT.size(); ++c)
-    {
-        vp_CNT[c]->GatherFromMesh();
-        vp_CNT[c]->AverageFieldGatheredFromMesh();
-        vp_CNT[c]->Write_AveragedGatherField();
-    }
+   for (int c=0; c < vp_CNT.size(); ++c)
+   {
+       if(use_selfconsistent_potential) 
+       {
+          vp_CNT[c]->GatherFromMesh();
+          vp_CNT[c]->AverageFieldGatheredFromMesh();
+          vp_CNT[c]->Write_AveragedGatherField();
+       }
+
+//       vp_CNT[c]->ComputeChargeDensity();
+
+   }
+   //amrex::Vector<amrex::Real>* potential;
 
 }

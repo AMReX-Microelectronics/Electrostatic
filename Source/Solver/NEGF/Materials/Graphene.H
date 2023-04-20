@@ -13,10 +13,14 @@
 
 
 class c_Graphene
-           :public c_Common_Properties
+           :public c_Common_Properties<ComplexType[NUM_MODES][NUM_MODES]>
+//           :public c_Common_Properties
 {
 
 public:
+    using BlkType = ComplexType[NUM_MODES][NUM_MODES];
+    using VectorBlk = BlkTable1D<BlkType>;
+    using MatrixBlk = BlkTable2D<BlkType>;
 
     amrex::Real blah;
 
@@ -73,7 +77,33 @@ public:
 
     static amrex::Array<int,2> type_id;
 
-//    virtual void ReadNanostructureProperties ();
+    //virtual void DefineSelfEnergy() override;
+
+    //template
+    virtual void ReadNanostructureProperties () override;
+    virtual void DefineMatrixPartition(int num_proc) override;
+    virtual void AllocateArrays() override;
+    virtual void ConstructHamiltonian () override;
+    virtual void AddPotentialToHamiltonian() override;
+    //std::ostream&
+    //operator<<(std::ostream& stream, const MatrixBlock<BlkType>& rhs)
+    //{
+    //    stream << "[";
+    //    for (int i = 0; i < NUM_MODES; ++i)
+    //    {
+    //        for (int j = 0; j < NUM_MODES; ++j)
+    //        {
+    //            if (i != NUM_MODES - 1 && j != NUM_MODES - 1) {
+    //                stream << rhs.block[i][j] << ", ";
+    //            } else {
+    //                stream << rhs.block[i][j];
+    //            }
+    //        } 
+    //    }
+    //    stream << "]";
+    //    return stream;
+    //}
 };
+
 
 #endif
