@@ -16,12 +16,6 @@ class c_CNT
 
 public:
     using BlkType = ComplexType[NUM_MODES];
-    using VectorBlk = BlkTable1D<BlkType>;
-    using MatrixBlk = BlkTable2D<BlkType>;
-    /*VectorBlk is 1D Table of elements, where each element is a 1D or 2D array*/
-    /*MatrixBlk is 2D Table of elements, where each element is a 1D or 2D array*/
-    //for real-space: using VectorBlk = BlkTable1D<ComplexType[4][4]>;
-    //for real-space: using MatrixBlk = BlkTable2D<ComplexType[4][4]>;
 
     std::array<int,2> Get_Ring_Atom_IDs(int cell_id) 
     {
@@ -87,20 +81,22 @@ public:
     amrex::Real gamma;
     amrex::Array<const int, NUM_MODES> mode_arr = {6,11};
     amrex::Array<const int, NUM_MODES> mode_degen_arr = {2,2};
+    MatrixBlock<BlkType> beta;
+
+    virtual int get_Hsize() override { return rings_per_unitcell*num_unitcells; }
+    virtual int get_offDiag_repeatBlkSize() override { return 2; }
 
     virtual void ReadNanostructureProperties () override;
-    virtual void DefineMatrixPartition (int num_proc) override;
     virtual void AllocateArrays() override;
     virtual void ConstructHamiltonian () override;
-    virtual void AddPotentialToHamiltonian () override;
-
     //virtual void DefineIntegrationPaths () override;
-    //virtual void DefineSelfEnergy() override;
+
+    virtual void Define_tau() override;
+    virtual void Compute_SurfaceGreensFunction (MatrixBlock<BlkType> gr, const ComplexType EmU) override;
+
+    virtual void Define_SelfEnergy() override;
     //virtual void DeallocateArrays() override;
-
     //virtual void ComputeChargeDensity() override;
-
-    MatrixBlock<BlkType> beta;
 
 
     AMREX_GPU_HOST_DEVICE

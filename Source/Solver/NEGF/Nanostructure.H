@@ -150,15 +150,8 @@ private:
     amrex::Gpu::DeviceVector<int> gpuvec_avg_indices;
 
     int _use_electrostatic=0;
-    int _num_proc;
-    int _my_rank;
 
-    virtual void DefineMatrixPartition (int num_proc) override;
-    virtual void AllocateArrays() override;
-    virtual void ConstructHamiltonian () override;
-
-    ComplexTable1D h_E_RealPath_data;
-
+    void InitializeNEGF();
 };
 
 #endif

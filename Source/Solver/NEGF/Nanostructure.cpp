@@ -68,16 +68,7 @@ c_Nanostructure<NSType>::c_Nanostructure (const amrex::Geometry            & geo
         DepositToMesh();
     }
 
-    _num_proc = amrex::ParallelDescriptor::NProcs();
-    _my_rank = amrex::ParallelDescriptor::MyProc();
-
-    //DefineMatrixPartition(_num_proc);
-    //AllocateArrays();
-    //ConstructHamiltonian();
-
-    //NSType::DefineIntegrationPaths();
-    //NSType::DefineSelfEnergy();
-
+    InitializeNEGF();
 #ifdef PRINT_NAME
     amrex::Print() << "\t\t\t}************************c_Nanostructure() Constructor************************\n";
 #endif
@@ -97,6 +88,7 @@ c_Nanostructure<NSType>::~c_Nanostructure ()
     amrex::Print() << "\t\t\t}************************c_Nanostructure() Destructor************************\n";
 #endif
 }
+
 
 template<typename NSType>
 void
@@ -432,6 +424,31 @@ c_Nanostructure<NSType>::Write_AveragedGatherField()
 }
 
 
+template<typename NSType>
+void
+c_Nanostructure<NSType>:: InitializeNEGF ()
+{
+
+    NSType::num_proc = amrex::ParallelDescriptor::NProcs();
+    NSType::my_rank = amrex::ParallelDescriptor::MyProc();
+
+    NSType::DefineMatrixPartition();
+    NSType::AllocateArrays();
+    NSType::ConstructHamiltonian();
+
+    if(_use_electrostatic) 
+    {
+        NSType::AddPotentialToHamiltonian();
+        NSType::Update_ContactPotential(); 
+    }
+
+    NSType::Define_SelfEnergy();
+    //NSType::DefineIntegrationPaths();
+
+}
+
+
+
 //template<typename NSType>
 //void 
 //c_Nanostructure<NSType>::ComputeChargeDensity() 
@@ -440,65 +457,3 @@ c_Nanostructure<NSType>::Write_AveragedGatherField()
 //}
 //
 //
-template<typename NSType>
-void
-c_Nanostructure<NSType>::DefineMatrixPartition (int _num_proc)
-{
-
-    NSType::DefineMatrixPartition(_num_proc); /*material specific*/
-    amrex::Print() << "size of the Hamiltonian matrix: " << NSType::Hsize_glo << "\n";
-    amrex::Print() << "max block columns per proc: " << NSType::max_blkCol_perProc << "\n";
-
-
-    NSType::num_proc_with_blkCol = ceil(static_cast<amrex::Real>(NSType::Hsize_glo)/NSType::max_blkCol_perProc);
-    amrex::Print() << "number of procs with block columns: " << NSType::num_proc_with_blkCol<< "\n";
-    /*if num_proc_with_blk >= num_proc, assert.*/
-
-
-    NSType::vec_cumu_blkCol_size.resize(NSType::num_proc_with_blkCol + 1);
-    NSType::vec_cumu_blkCol_size[0] = 0;
-    for(int p=1; p < NSType::num_proc_with_blkCol; ++p)
-    {
-        NSType::vec_cumu_blkCol_size[p] = NSType::vec_cumu_blkCol_size[p-1] + NSType::max_blkCol_perProc;
-        /*All proc except the last one contains max_blkCol_perProc number of column blks.*/
-    }
-    NSType::vec_cumu_blkCol_size[NSType::num_proc_with_blkCol] = NSType::Hsize_glo;
-
-
-    NSType::blkCol_size_loc = 0;
-    if(_my_rank < NSType::num_proc_with_blkCol)
-    {
-        int blk_gid = _my_rank;
-        NSType::blkCol_size_loc = NSType::vec_cumu_blkCol_size[blk_gid+1] - NSType::vec_cumu_blkCol_size[blk_gid];
-
-        /*check later:setting vec_blkCol_gids may not be necessary*/
-        for (int c=0; c < NSType::blkCol_size_loc; ++c)
-        {
-            int col_gid = NSType::vec_cumu_blkCol_size[blk_gid] + c;
-            NSType::vec_blkCol_gids.push_back(col_gid);
-        }
-    }
-
-}
-
-
-template<typename NSType>
-void
-c_Nanostructure<NSType>::AllocateArrays () 
-{
-    NSType::AllocateArrays();
-    h_E_RealPath_data.resize({0},{NUM_ENERGY_PTS_REAL},The_Pinned_Arena());
-
-
-}
-
-
-template<typename NSType>
-void
-c_Nanostructure<NSType>::ConstructHamiltonian () 
-{
-
-    NSType::ConstructHamiltonian();
-    if(_use_electrostatic) NSType::AddPotentialToHamiltonian();
-
-}

@@ -1,3 +1,6 @@
+CEXE_sources += Matrix_Block.cpp
+CEXE_headers += Matrix_Block.H
+
 CEXE_sources += Common_Properties.cpp
 CEXE_headers += Common_Properties.H
 
