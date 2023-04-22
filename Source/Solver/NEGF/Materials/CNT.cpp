@@ -69,6 +69,15 @@ c_CNT::get_beta(int J)
    return 2. * gamma * cos(-1*arg.imag());// * exp(arg); 
 }
 
+void
+c_CNT::Define_MPI_BlkType ()           
+{
+
+    MPI_Type_vector(1, NUM_MODES, NUM_MODES, MPI_DOUBLE_COMPLEX, &MPI_BlkType);
+    MPI_Type_commit(&MPI_BlkType);
+
+}
+
 
 //AMREX_GPU_HOST_DEVICE 
 //void
@@ -138,8 +147,16 @@ c_CNT::ConstructHamiltonian()
 }
 
 void
-c_CNT:: Define_tau ()
+c_CNT:: Define_ContactInfo ()
 {
+
+    /*define arrays depending on Hsize_glo*/
+    global_contact_index[0] = 0;
+    global_contact_index[1] = Hsize_glo-1;
+    contact_transmission_index[0] = Hsize_glo-1;
+    contact_transmission_index[1] = 0;
+
+    /*define tau*/
     auto const& h_tau = h_tau_glo_data.table();
     for (std::size_t c = 0; c < NUM_CONTACTS; ++c)
     {
@@ -149,7 +166,7 @@ c_CNT:: Define_tau ()
 
 AMREX_GPU_HOST_DEVICE
 void
-c_CNT:: Compute_SurfaceGreensFunction(MatrixBlock<BlkType> gr, const ComplexType EmU)
+c_CNT:: Compute_SurfaceGreensFunction(MatrixBlock<BlkType>& gr, const ComplexType EmU)
 {
 
    auto EmU_sq = pow(EmU,2.);
@@ -185,21 +202,33 @@ c_CNT::Define_SelfEnergy ()
 {
 
     c_Common_Properties<BlkType>:: Define_SelfEnergy (); 
-    auto const& h_Sigma = h_Sigma_glo_data.table();
-    ////MatrixBlock<BlkType> test_sigma;
-    ////ComplexType EmU(1, 0.);
-    ////get_Sigma(test_sigma, EmU);
-    amrex::Print() << "Printing Sigma: \n";
-    std::cout<< h_Sigma(0,0) << "\n";
+//    auto const& h_Sigma = h_Sigma_glo_data.table();
+//
+//    amrex::Print() << "Printing Sigma: \n";
+//    std::cout<< h_Sigma(0,0) << "\n";
 
 }
 
-//void 
-//c_CNT::DefineIntegrationPaths ()
-//{
-//
-//
-//}
+void 
+c_CNT::Define_EnergyLimits ()
+{
+
+    /*set in the input*/
+    E_f = -1.2; 
+    E_valence_min = -10.; 
+    E_pole_max = 3; 
+    c_Common_Properties<BlkType>:: Define_EnergyLimits ();
+
+}
+
+
+void 
+c_CNT::Define_IntegrationPaths ()
+{
+    c_Common_Properties<BlkType>:: Define_IntegrationPaths ();
+}
+
+
 //
 //
 //

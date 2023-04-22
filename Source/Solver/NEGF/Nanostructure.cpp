@@ -442,8 +442,11 @@ c_Nanostructure<NSType>:: InitializeNEGF ()
         NSType::Update_ContactPotential(); 
     }
 
-    NSType::Define_SelfEnergy();
-    //NSType::DefineIntegrationPaths();
+    NSType::Define_ContactInfo();
+    NSType::Define_EnergyLimits();
+    NSType::Define_IntegrationPaths();
+    //NSType::Define_SelfEnergy();
+    NSType::Compute_DensityOfStates();
 
 }
 

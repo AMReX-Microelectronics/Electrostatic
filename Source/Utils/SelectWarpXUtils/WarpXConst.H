@@ -50,6 +50,7 @@ namespace PhysConst
         static_cast<amrex::Real>(1.005);
 
     static constexpr auto kb   = static_cast<amrex::Real>( 1.380649e-23 );  // Boltzmann's constant, J/K (exact)
+    static constexpr auto kb_eVperK   = static_cast<amrex::Real>( 8.617333262e-5 );  // Boltzmann's constant, J/K (exact)
 }
 
 #endif

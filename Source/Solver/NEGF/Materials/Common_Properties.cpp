@@ -117,8 +117,47 @@ c_Common_Properties<T>::DefineMatrixPartition()
         }
     }
 
+    MPI_recv_count.resize(num_proc);
+    MPI_disp.resize(num_proc);
+
+    for(int p=0; p < num_proc; ++p) {
+
+       if(p < num_proc_with_blkCol) {
+          MPI_recv_count[p] = vec_cumu_blkCol_size[p+1] - vec_cumu_blkCol_size[p];
+          MPI_disp[p] = vec_cumu_blkCol_size[p];
+       }
+       else {
+          MPI_recv_count[p] = 0;
+          MPI_disp[p] = 0;
+       }
+       amrex::Print() << "p,recv, disp: " << p << "  " 
+                      << MPI_recv_count[p] << "  " 
+                      << MPI_disp[p] << "\n";
+    }
+
+    Define_MPI_BlkType();
+
 }
 
+
+template<typename T>
+void 
+c_Common_Properties<T>::Define_MPI_BlkType () 
+{
+    /*define this in overriden class*/
+}
+
+
+template<typename T>
+void 
+c_Common_Properties<T>::Define_ContactInfo () 
+{
+    /*define the following in overriden functions:
+     *global_contact_index
+     *contact_transmission_index
+     *h_tau
+     */
+}
 
 template<typename T>
 void 
@@ -126,6 +165,9 @@ c_Common_Properties<T>::AllocateArrays ()
 {
     h_Ha_loc_data.resize({0},{blkCol_size_loc}, The_Pinned_Arena());
     SetZero_BlkTable1D(h_Ha_loc_data);
+
+    h_Alpha_loc_data.resize({0},{blkCol_size_loc}, The_Pinned_Arena());
+    SetZero_BlkTable1D(h_Alpha_loc_data);
 
     offDiag_repeatBlkSize = get_offDiag_repeatBlkSize();
     h_Hb_loc_data.resize({0},{offDiag_repeatBlkSize}, The_Pinned_Arena());
@@ -170,7 +212,7 @@ c_Common_Properties<T>:: AddPotentialToHamiltonian ()
     int c=0;
     for(auto& col_gid: vec_blkCol_gids)
     {
-        h_Ha(c) = h_Ha(c) + avg_gatherField[col_gid];
+        h_Ha(c) = h_Ha(c) - avg_gatherField[col_gid];
         ++c;
     }
 }
@@ -187,50 +229,236 @@ c_Common_Properties<T>:: Update_ContactPotential ()
     }
 }
 
-//template<typename T>
-//void 
-//c_Common_Properties<T>:: DefineIntegrationPaths ()
-//{
-//
-//
-//}
-//
-//
 
 template<typename T>
 void 
-c_Common_Properties<T>:: Compute_SurfaceGreensFunction (MatrixBlock<T> gr, const ComplexType EmU) {}
+c_Common_Properties<T>:: Define_EnergyLimits ()
+{
+    for (int c=0; c<NUM_CONTACTS; ++c)
+    {
+        mu_contact[c] = E_f + U_contact[c];
+        kT_contact[c] = PhysConst::kb_eVperK*298.; /*set in the input*/
+    }
+
+    mu_min = mu_contact[0];
+    mu_max = mu_contact[0];
+    kT_min = kT_contact[0];
+    kT_max = kT_contact[0];
+
+    flag_noneq_exists = false;
+
+    for (int c=1; c<NUM_CONTACTS; ++c)
+    {
+       if(mu_min > mu_contact[c])
+       {
+           mu_min = mu_contact[c];
+           flag_noneq_exists=true;
+       }
+       if(mu_max < mu_contact[c])
+       {
+           mu_max = mu_contact[c];
+           flag_noneq_exists=true;
+       }
+       if(kT_min > kT_contact[c])
+       {
+           kT_min = kT_contact[c];
+           flag_noneq_exists=true;
+       }
+       if(kT_max < kT_contact[c])
+       {
+           kT_max = kT_contact[c];
+           flag_noneq_exists=true;
+       }
+    }
+
+    ComplexType val(0.,1e-8);
+    E_zPlus = val;
+    E_contour_left  = E_valence_min + E_zPlus; /*set in the input*/
+    E_rightmost = mu_max + Fermi_tail_factor*kT_max + E_zPlus;
+
+    if(flag_noneq_exists)
+    {
+        amrex::Print() << "\nnonequilibrium exists between terminals\n";
+        E_contour_right = mu_min - Fermi_tail_factor*kT_max + E_zPlus;
+    }
+    else E_contour_right = E_rightmost;
+
+    num_enclosed_poles = int((E_pole_max-MathConst::pi*kT_max)/(2.*MathConst::pi*kT_max) + 1);
+    ComplexType val2(0.,2*num_enclosed_poles*MathConst::pi*kT_max);
+    E_zeta = val2;
+    E_eta =  E_contour_right.real() - Fermi_tail_factor*kT_max + E_zeta;
+
+    amrex::Print() << "\nE_f: " << E_f << "\n";
+    amrex::Print() << "U_contact: ";
+    for (int c=0; c<NUM_CONTACTS; ++c)
+    {
+        amrex::Print() <<  U_contact[c] << " ";
+    }
+    amrex::Print() << "\n";
+    amrex::Print() << "mu_min/max: " << mu_min << " " << mu_max << "\n";
+    amrex::Print() << "kT_min/max: " << kT_min << " " << kT_max << "\n";
+    amrex::Print() << "E_zPlus: "  << E_zPlus << "\n";
+    amrex::Print() << "E_contour_left/E_contour_right/E_rightmost: " << E_contour_left      <<  "  "
+                                                                 << E_contour_right << "  "
+                                                                 << E_rightmost     << "\n";
+    amrex::Print() << "E_pole_max: " << E_pole_max << ", number of poles: " << num_enclosed_poles << "\n";
+    amrex::Print() << "E_zeta: " << E_zeta << "\n";
+    amrex::Print() << "E_eta: "  << E_eta << "\n";
+
+}
+
 
 
 template<typename T>
 void 
-c_Common_Properties<T>:: Define_tau () {}
+c_Common_Properties<T>:: Define_IntegrationPaths ()
+{
+    /* Define_ContourPath_Rho0 */
+    //ContourPath_Rho0[0].Define_GaussLegendrePoints(E_zPlus, E_zeta, 50, "line"); 
+    //ContourPath_Rho0[1].Define_GaussLegendrePoints(E_zeta,  E_eta, 50, "line"); 
+    //ContourPath_Rho0[2].Define_GaussLegendrePoints(E_eta, E_contour_left, 50, "circle"); 
+
+    ContourPath_RhoEq_Direct.Define_RegularPoints(E_contour_left, E_contour_right, 2);
+
+    //for(int e=0; e < ContourPath_RhoEq_Direct.num_pts; ++e) 
+    //{
+    //   amrex::Print() << e << std::setprecision(4)
+    //                       << "  " << ContourPath_RhoEq_Direct.E_vec[e]
+    //                       << "  " << ContourPath_RhoEq_Direct.weight_vec[e] << "\n" ;
+    //}
+}
+
+template<typename T>
+void 
+c_Common_Properties<T>:: Compute_DensityOfStates ()
+{
+
+    auto const& h_Ha_loc = h_Ha_loc_data.table();
+    auto const& h_Alpha_loc = h_Alpha_loc_data.table();
+    auto const& h_tau   = h_tau_glo_data.table();
+
+    amrex::Print() << "Printing tau\n";
+    amrex::Print() << h_tau(0) << " "<< h_tau(1) << "\n";
+    amrex::GpuArray<MatrixBlock<T>,NUM_CONTACTS> Sigma;
+
+    amrex::Real kT0=0;
+//    for(int e=0; e < ContourPath_RhoEq_Direct.num_pts; ++e) 
+    for(int e=0; e < 1; ++e) 
+    {
+
+        ComplexType E = ContourPath_RhoEq_Direct.E_vec[e];
+
+        for(int n=0; n<blkCol_size_loc; ++n)
+        {
+            h_Alpha_loc(n) = E + h_Ha_loc(n); 
+            /*+ because h_Ha is defined previously as -(H0+U)*/
+        }
+
+        get_Sigma_at_contacts(Sigma, E);
+
+        for (int c=0; c<NUM_CONTACTS; ++c)
+        {
+            //amrex::Print() << "E, contact, Sigma: " <<std::setprecision(4)<< E << "  " << c << "  " << Sigma[c] << "\n";
+            int n_glo = global_contact_index[c];
+            amrex::Print() << "n_glo: " << n_glo << "\n";
+
+            if(n_glo >= vec_cumu_blkCol_size[my_rank] && n_glo < vec_cumu_blkCol_size[my_rank+1])
+            {
+                int n = n_glo - vec_cumu_blkCol_size[my_rank];
+                h_Alpha_loc(n) = h_Alpha_loc(n) - Sigma[c];
+                amrex::Print() << "n_glo, contact, Alpha: " <<std::setprecision(4) << n_glo << "  " << c << "  "<< h_Alpha_loc(n) << "\n";
+            };
+        }
+        amrex::Print() << "Alpha_loc: " << "\n";
+        for(int n=0; n< blkCol_size_loc; ++n) 
+        {
+            amrex::Print() << n << " "<< h_Alpha_loc(n) << "\n";
+        }
+
+        /*MPI_Allgather*/
+        BlkTable1D h_Alpha_glo_data({0},{Hsize_glo}, The_Pinned_Arena());
+        auto const& h_Alpha_glo = h_Alpha_glo_data.table();
+
+        amrex::Print() << "blkCol_size_loc: " << blkCol_size_loc << "\n";
+
+        MPI_Allgatherv(&h_Alpha_loc(0),
+                        blkCol_size_loc,
+                        MPI_BlkType,
+                       &h_Alpha_glo(0),
+                        MPI_recv_count.data(),
+                        MPI_disp.data(),
+                        MPI_BlkType,
+                        ParallelDescriptor::Communicator());
+
+        amrex::Print() << "Alpha_glo: " << "\n";
+        for(int n=0; n< Hsize_glo; ++n) 
+        {
+            amrex::Print() << n << " "<< h_Alpha_glo(n) << "\n";
+        }
+
+     
+  //      /*Compute Xtil_glo, Ytil_glo, X_glo, Y_glo*/
+  //      /*Copy X_loc, Y_loc*/
+  //      //amrex::ParallelFor(blkCol_size_loc, [=] AMREX_GPU_DEVICE (int n) noexcept
+  //      //{
+
+  //      //    int n_glo = n + cumulative_columns; /*global column number*/
+  //      //    G_loc(n_glo,n) =  1./(Alpha(n) - X(n) - Y(n));
+
+  //      //    Rho0_loc(n) += G_loc(n_glo,n);
+  //      //}
+    }
+}
+
+template<typename T>
+void 
+c_Common_Properties<T>:: Compute_SurfaceGreensFunction (MatrixBlock<T>& gr, const ComplexType EmU) {}
+
+
+template<typename T>
+void 
+c_Common_Properties<T>:: get_Sigma_at_contacts 
+                              (amrex::GpuArray<MatrixBlock<T>,NUM_CONTACTS>& Sigma, 
+                               ComplexType E)
+{
+
+    auto const& h_tau   = h_tau_glo_data.table();
+    
+    for (std::size_t c = 0; c < NUM_CONTACTS; ++c)
+    {
+        MatrixBlock<T> gr;
+        Compute_SurfaceGreensFunction(gr, E-U_contact[c]);
+        //amrex::Print() << "c, E, gr: " << c << " " << E << " " << gr << "\n";
+        Sigma[c] = h_tau(c)*gr*h_tau(c);
+    }
+
+}
 
 
 template<typename T>
 void 
 c_Common_Properties<T>:: Define_SelfEnergy ()
 {
-    Define_tau();
-    auto const& h_tau   = h_tau_glo_data.table();
-    auto const& h_Sigma = h_Sigma_glo_data.table();
-    auto const& h_E     = h_E_RealPath_data.table();
-    
-    amrex::Print() << "Printing tau:\n";
-    Print_BlkTable1D_loc(h_tau_glo_data);
-    for (std::size_t c = 0; c < NUM_CONTACTS; ++c)
-    {
-        for (std::size_t e = 0; e < NUM_ENERGY_PTS_REAL; ++e)
-        {
-            MatrixBlock<T> gr;
-            Compute_SurfaceGreensFunction(gr, h_E(e)-U_contact[c]);
-            h_Sigma(c,e) = h_tau(c)*gr*h_tau(c);
-        }
-    }
-    Write_BlkTable2D_asaf_E(h_Sigma_glo_data, "Sigma", "Er Ei Sigma_s_r Sigma_s_i Sigma_d_r Sigma_d_i");
-    //amrex::Print() << "Printing Sigma in common: \n";
-    //amrex::Print() << h_Sigma(0,0).block[0] << "\n";
-
+//    Define_tau();
+//    auto const& h_tau   = h_tau_glo_data.table();
+//    auto const& h_Sigma = h_Sigma_glo_data.table();
+//    auto const& h_E     = h_E_RealPath_data.table();
+//    
+//    amrex::Print() << "Printing tau:\n";
+//    Print_BlkTable1D_loc(h_tau_glo_data);
+//    for (std::size_t c = 0; c < NUM_CONTACTS; ++c)
+//    {
+//        for (std::size_t e = 0; e < NUM_ENERGY_PTS_REAL; ++e)
+//        {
+//            MatrixBlock<T> gr;
+//            Compute_SurfaceGreensFunction(gr, h_E(e)-U_contact[c]);
+//            h_Sigma(c,e) = h_tau(c)*gr*h_tau(c);
+//        }
+//    }
+//    Write_BlkTable2D_asaf_E(h_Sigma_glo_data, "Sigma", "Er Ei Sigma_s_r Sigma_s_i Sigma_d_r Sigma_d_i");
+//    //amrex::Print() << "Printing Sigma in common: \n";
+//    //amrex::Print() << h_Sigma(0,0).block[0] << "\n";
+//
 }
 
 

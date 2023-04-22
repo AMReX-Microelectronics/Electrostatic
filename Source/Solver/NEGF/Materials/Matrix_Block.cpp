@@ -214,6 +214,21 @@ MatrixBlock<ComplexType[NUM_MODES]>::operator+(const MatrixBlock<ComplexType[NUM
 }
 
 
+template<>
+MatrixBlock<ComplexType[NUM_MODES][NUM_MODES]>
+MatrixBlock<ComplexType[NUM_MODES][NUM_MODES]>::operator+(const MatrixBlock<ComplexType[NUM_MODES][NUM_MODES]>& rhs)
+{
+   MatrixBlock<ComplexType[NUM_MODES][NUM_MODES]> result;
+   for(int i=0; i < NUM_MODES; ++i)
+   {
+       for(int j=0; j < NUM_MODES; ++j)
+       {
+           result.block[i][j] = this->block[i][j] + rhs.block[i][j];
+       }  
+   }
+   return result;
+}
+
 
 /* Operation [R] = c_complex + [C] */
 template<typename T>
@@ -236,6 +251,19 @@ MatrixBlock<ComplexType[NUM_MODES]> operator+(const ComplexType c, const MatrixB
 }
 
 
+template<>
+MatrixBlock<ComplexType[NUM_MODES][NUM_MODES]> operator+(const ComplexType c, const MatrixBlock<ComplexType[NUM_MODES][NUM_MODES]>& rhs)
+{
+   MatrixBlock<ComplexType[NUM_MODES][NUM_MODES]> result;
+   for(int i=0; i < NUM_MODES; ++i)
+   {
+       for(int j=0; j < NUM_MODES; ++j)
+       {
+           result.block[i][j] = c + rhs.block[i][j];
+       }  
+   }
+   return result;
+}
 
 /* Operation [R] = [B] - c_real */
 template<typename T>

@@ -49,6 +49,10 @@ public:
     int blkCol_size_loc=0; /*size of the local block of columns*/
 
     int num_proc_with_blkCol=0;
+
+    amrex::Vector<int> MPI_recv_count;
+    amrex::Vector<int> MPI_disp;
+
     amrex::Vector<int> vec_cumu_blkCol_size; /*vec of cumulative number of blk column sizes*/
     amrex::Vector<int> vec_blkCol_gids; /*vec of block column global ids*/
 
@@ -57,6 +61,7 @@ public:
 
     virtual void ReadNanostructureProperties();
     BlkTable1D h_Ha_loc_data;
+    BlkTable1D h_Alpha_loc_data;
     BlkTable1D h_Hb_loc_data;
     BlkTable1D h_Hc_loc_data;
 
@@ -69,23 +74,104 @@ public:
     BlkTable2D h_GR_loc_data;
     BlkTable2D h_A_loc_data;
     #endif
-    amrex::GpuArray<int,NUM_CONTACTS> global_contact_index = {0, Hsize_glo-1};
-    amrex::GpuArray<int,NUM_CONTACTS> contact_transmission_index = {Hsize_glo-1, 0};
+    amrex::GpuArray<int,NUM_CONTACTS> global_contact_index; 
+    amrex::GpuArray<int,NUM_CONTACTS> contact_transmission_index;
     amrex::Real U_contact[NUM_CONTACTS] = {0.,0.};
+
+    amrex::Real E_U_contact[NUM_CONTACTS] = {0.,0.};
+
+    bool flag_noneq_exists = false;
+    ComplexType E_zPlus = 0.;
+    amrex::Real E_valence_min = -14;
+    amrex::Real E_pole_max = 10.;
+    ComplexType E_contour_left = 0.;
+    ComplexType E_contour_right = 0.;
+    ComplexType E_rightmost = 0.;
+    ComplexType E_zeta = 0.;
+    ComplexType E_eta = 0.;
+    amrex::Real E_f = 0.;
+    amrex::Vector<ComplexType> E_f_vec;
+    int num_enclosed_poles = 0.;
+    amrex::Vector<ComplexType> E_poles_vec;
+    amrex::Real Fermi_tail_factor = 14.;
+
+    amrex::Real kT_contact[NUM_CONTACTS] = {PhysConst::kb_eVperK*298.,PhysConst::kb_eVperK*298.};
+    amrex::Real kT_min=PhysConst::kb_eVperK*298.;
+    amrex::Real kT_max=PhysConst::kb_eVperK*298.;
+
+    amrex::Real mu_contact[NUM_CONTACTS] = {0.,0.};
+    amrex::Real mu_min=0.;
+    amrex::Real mu_max=0.;
+
+    void GaussLegendre(int degree, amrex::Vector<amrex::Real>& x, 
+                                   amrex::Vector<amrex::Real>& weight);
+
+    class c_IntegrationPath
+    {
+        private:
+        ComplexType E_min  = 0.;
+        ComplexType E_max  = 0.;
+        int type_id     = 0; /*0=line, 1=circle*/
+        //ComplexType E_center  = 0.; 
+        //amrex::Real E_radius  = 0.;
+        
+        public:
+        int num_pts = 0;
+        amrex::Vector<ComplexType> weight_vec;
+        amrex::Vector<ComplexType> mul_factor_vec;
+        amrex::Vector<ComplexType> E_vec;
+
+        //void Define_GaussLegendrePoints();
+        void Define_RegularPoints(ComplexType min, ComplexType max, int pts) 
+        { 
+            E_min = min; 
+            E_max = max;
+            num_pts = pts;
+
+            ComplexType dE = (E_max-E_min)/static_cast<amrex::Real>(num_pts-1);
+
+            weight_vec.resize(num_pts);
+            mul_factor_vec.resize(num_pts);   
+            E_vec.resize(num_pts);
+
+            for (int i=0; i<num_pts; ++i) 
+            {
+                E_vec[i] = E_min + static_cast<amrex::Real>(i)*dE;  
+                weight_vec[i] = dE;
+                mul_factor_vec[i] = 1.;
+            }
+        }
+    };
+
+
+
+    amrex::GpuArray<c_IntegrationPath,3> ContourPath_Rho0;  
+    amrex::GpuArray<c_IntegrationPath,3> ContourPath_RhoEq;  
+    c_IntegrationPath ContourPath_RhoEq_Direct;
+    c_IntegrationPath ContourPath_RhoNonEq;
 
     virtual int get_Hsize() {return 0;}
     virtual int get_offDiag_repeatBlkSize() {return 0;}
-    virtual void DefineMatrixPartition();
+    void DefineMatrixPartition();
+
+    MPI_Datatype MPI_BlkType;
+    virtual void Define_MPI_BlkType ();
     virtual void AllocateArrays();
     virtual void ConstructHamiltonian ();
     void AddPotentialToHamiltonian ();
     void Update_ContactPotential ();
-    //virtual void DefineIntegrationPaths ();
-    virtual void Define_tau();
-    virtual void Compute_SurfaceGreensFunction (MatrixBlock<T> gr, const ComplexType EmU);
+    virtual void Define_EnergyLimits ();
+    virtual void Define_IntegrationPaths ();
+    virtual void Define_ContactInfo();
+    virtual void Compute_SurfaceGreensFunction (MatrixBlock<T>& gr, const ComplexType EmU);
     virtual void Define_SelfEnergy();
+    void Compute_DensityOfStates();
     //virtual void DeallocateArrays();
     //virtual void ComputeChargeDensity();
+
+    AMREX_GPU_HOST_DEVICE
+    void get_Sigma_at_contacts(amrex::GpuArray<MatrixBlock<T>,NUM_CONTACTS>& Sigma, 
+                               ComplexType E);
 
     AMREX_GPU_HOST_DEVICE
     ComplexType get_Gamma(ComplexType Sigma);
@@ -109,6 +195,7 @@ public:
     void SetZero_BlkTable2D(BlkTable2D& Tab2D_data);
     //AMREX_GPU_HOST_DEVICE
     //ComplexType Compute_SurfaceGreensFunction();
+
 
     //AMREX_GPU_HOST_DEVICE
     //ComplexType get_Sigma();

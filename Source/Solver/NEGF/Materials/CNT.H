@@ -87,12 +87,14 @@ public:
     virtual int get_offDiag_repeatBlkSize() override { return 2; }
 
     virtual void ReadNanostructureProperties () override;
+    virtual void Define_MPI_BlkType () override;
     virtual void AllocateArrays() override;
     virtual void ConstructHamiltonian () override;
-    //virtual void DefineIntegrationPaths () override;
+    virtual void Define_EnergyLimits () override;
+    virtual void Define_IntegrationPaths () override;
 
-    virtual void Define_tau() override;
-    virtual void Compute_SurfaceGreensFunction (MatrixBlock<BlkType> gr, const ComplexType EmU) override;
+    virtual void Define_ContactInfo() override;
+    virtual void Compute_SurfaceGreensFunction (MatrixBlock<BlkType>& gr, const ComplexType EmU) override;
 
     virtual void Define_SelfEnergy() override;
     //virtual void DeallocateArrays() override;
@@ -101,9 +103,6 @@ public:
 
     AMREX_GPU_HOST_DEVICE
     ComplexType get_beta(int J);
-
-    AMREX_GPU_HOST_DEVICE
-    void Compute_SurfaceGreensFunction(MatrixBlock<BlkType>& gr, const ComplexType EmU);
 
     AMREX_GPU_HOST_DEVICE
     void get_Sigma(MatrixBlock<BlkType>& Sigma, const ComplexType EmU);
