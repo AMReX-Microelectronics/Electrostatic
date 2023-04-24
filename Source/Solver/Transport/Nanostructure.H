@@ -2,8 +2,8 @@
 #define NANOSTRUCTURE_H_
 
 #include "Nanostructure_fwd.H"
-#include "Materials/CNT.H"
-#include "Materials/Graphene.H"
+#include "NEGF/CNT.H"
+#include "NEGF/Graphene.H"
 
 #include <AMReX_REAL.H>
 #include <AMReX_BoxArray.H>

@@ -9,4 +9,4 @@ CEXE_headers += Nanostructure_fwd.H
 VPATH_LOCATIONS += $(CODE_HOME)/Source/Solver/Transport
 INCLUDE_LOCATIONS += $(CODE_HOME)/Source/Solver/Transport
 
-include $(CODE_HOME)/Source/Solver/Transport/Materials/Make.package
+include $(CODE_HOME)/Source/Solver/Transport/NEGF/Make.package
