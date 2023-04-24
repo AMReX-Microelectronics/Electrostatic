@@ -27,7 +27,8 @@ c_Nanostructure<NSType>::c_Nanostructure (const amrex::Geometry            & geo
                                   const std::string NS_gather_str,
                                   const std::string NS_deposit_str,
                                   const amrex::Real NS_initial_deposit_value,
-                                  const int use_selfconsistent_potential)
+                                  const int use_selfconsistent_potential,
+                                  const int use_negf)
                  : amrex::ParticleContainer<realPD::NUM, intPD::NUM, 
                                             realPA::NUM, intPA::NUM> (geom, dm, ba)
 {
@@ -41,8 +42,12 @@ c_Nanostructure<NSType>::c_Nanostructure (const amrex::Geometry            & geo
     ReadNanostructureProperties();
      
     auto& rCode = c_Code::GetInstance();
+
     _use_electrostatic = rCode.use_electrostatic;
-    if(use_selfconsistent_potential) 
+    _use_selfconsistent_potential = use_selfconsistent_potential;
+    _use_negf          = use_negf;
+
+    if(_use_selfconsistent_potential) 
     {
         auto& rGprop = rCode.get_GeometryProperties();
 
@@ -68,7 +73,10 @@ c_Nanostructure<NSType>::c_Nanostructure (const amrex::Geometry            & geo
         DepositToMesh();
     }
 
-    InitializeNEGF();
+    if(_use_negf) 
+    {
+        InitializeNEGF();
+    } 
 #ifdef PRINT_NAME
     amrex::Print() << "\t\t\t}************************c_Nanostructure() Constructor************************\n";
 #endif
@@ -445,18 +453,6 @@ c_Nanostructure<NSType>:: InitializeNEGF ()
     NSType::Define_ContactInfo();
     NSType::Define_EnergyLimits();
     NSType::Define_IntegrationPaths();
-    //NSType::Define_SelfEnergy();
     NSType::Compute_DensityOfStates();
 
 }
-
-
-
-//template<typename NSType>
-//void 
-//c_Nanostructure<NSType>::ComputeChargeDensity() 
-//{
-//    NSType::ComputeChargeDensity();
-//}
-//
-//

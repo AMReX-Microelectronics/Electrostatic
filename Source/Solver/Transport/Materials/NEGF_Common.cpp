@@ -1,4 +1,4 @@
-#include "Common_Properties.H"
+#include "NEGF_Common.H"
 
 #include "../../Utils/SelectWarpXUtils/WarpXUtil.H"
 #include "../../Utils/SelectWarpXUtils/TextMsg.H"

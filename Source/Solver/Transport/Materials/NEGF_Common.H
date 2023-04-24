@@ -1,5 +1,5 @@
-#ifndef COMMON_PROPERTIES_H_
-#define COMMON_PROPERTIES_H_
+#ifndef NEGF_COMMON_H_
+#define NEGF_COMMON_H_
 
 #include "Matrix_Block.H"
 #include "../../../Utils/SelectWarpXUtils/WarpXUtil.H"

@@ -1,7 +1,7 @@
-#ifndef NEGF_H_
-#define NEGF_H_
+#ifndef TRANSPORT_H_
+#define TRANSPORT_H_
 
-#include "NEGF_fwd.H"
+#include "Transport_fwd.H"
 #include "Nanostructure.H"
 
 #include <AMReX_BoxArray.H>
@@ -14,7 +14,7 @@ struct s_NS {
 };
 
 class 
-c_NEGFSolver
+c_TransportSolver
 {
 
 public:
@@ -22,8 +22,8 @@ public:
     amrex::Vector<std::unique_ptr<c_Nanostructure<c_Graphene>>> vp_Graphene;
     //amrex::Vector<std::unique_ptr<c_Nanostructure<c_Silicon>>> vp_Silicon;
 
-    c_NEGFSolver();
-    ~c_NEGFSolver();
+    c_TransportSolver();
+    ~c_TransportSolver();
 
     void InitData();
     void Solve();
@@ -59,6 +59,7 @@ private:
     amrex::Real NS_initial_deposit_value;
 
     int use_selfconsistent_potential;
+    int use_negf;
 
 };
 

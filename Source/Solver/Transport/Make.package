@@ -1,0 +1,12 @@
+CEXE_sources += Transport.cpp
+CEXE_headers += Transport.H
+CEXE_headers += Transport_fwd.H
+
+CEXE_sources += Nanostructure.cpp
+CEXE_headers += Nanostructure.H
+CEXE_headers += Nanostructure_fwd.H
+
+VPATH_LOCATIONS += $(CODE_HOME)/Source/Solver/Transport
+INCLUDE_LOCATIONS += $(CODE_HOME)/Source/Solver/Transport
+
+include $(CODE_HOME)/Source/Solver/Transport/Materials/Make.package

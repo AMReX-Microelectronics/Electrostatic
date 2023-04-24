@@ -1,6 +1,6 @@
 AMREX_HOME ?= ../../amrex
 
-ifeq ($(USE_NEGF),TRUE)
+ifeq ($(USE_TRANSPORT),TRUE)
   USE_PARTICLES = TRUE
 endif
 
@@ -24,10 +24,10 @@ ifeq ($(TIME_DEPENDENT),TRUE)
   DEFINES += -DTIME_DEPENDENT
 endif
 
-ifeq ($(USE_NEGF),TRUE)
+ifeq ($(USE_TRANSPORT),TRUE)
   AMREX_dirs += Particle
-  USERSuffix := $(USERSuffix).NEGF
-  DEFINES += -DUSE_NEGF
+  USERSuffix := $(USERSuffix).TRAN
+  DEFINES += -DUSE_TRANSPORT
 endif
 
 AMREX_pack   += $(foreach dir, $(AMREX_dirs), $(AMREX_HOME)/Src/$(dir)/Make.package)

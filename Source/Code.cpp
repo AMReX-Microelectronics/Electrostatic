@@ -13,8 +13,8 @@
 #include "PostProcessor/PostProcessor.H"
 #include "Diagnostics/Diagnostics.H"
 #include "Output/Output.H"
-#ifdef USE_NEGF
-#include "Solver/NEGF/NEGF.H"
+#ifdef USE_TRANSPORT
+#include "Solver/Transport/Transport.H"
 #endif
 
 
@@ -154,12 +154,12 @@ c_Code::ReadData ()
         m_pMacroscopicProperties = std::make_unique<c_MacroscopicProperties>();
     }
 
-    use_negf = 0;
-    pp.query("use_negf", use_negf);
-    amrex::Print() << "##### use_negf: " << use_negf << "\n";
+    use_transport = 0;
+    pp.query("use_transport", use_transport);
+    amrex::Print() << "##### use_transport: " << use_transport << "\n";
     
-    #ifdef USE_NEGF
-    if(use_negf) m_pNEGFSolver = std::make_unique<c_NEGFSolver>();
+    #ifdef USE_TRANSPORT
+    if(use_transport) m_pTransportSolver = std::make_unique<c_TransportSolver>();
     #endif
 
     use_diagnostics = 0;
@@ -200,8 +200,8 @@ c_Code::InitData ()
         m_pMacroscopicProperties->InitData();
     }  
 
-    #ifdef USE_NEGF
-    if(use_negf) m_pNEGFSolver->InitData();
+    #ifdef USE_TRANSPORT
+    if(use_transport) m_pTransportSolver->InitData();
     #endif
 
     if(use_electrostatic) 
@@ -344,8 +344,8 @@ c_Code::Solve_PostProcess_Output()
             m_pPostProcessor->Compute(); 
         } 
 
-        #ifdef USE_NEGF
-        if(use_negf) m_pNEGFSolver->Solve();
+        #ifdef USE_TRANSPORT
+        if(use_transport) m_pTransportSolver->Solve();
         #endif
 
         amrex::Print() << "use diagnostics: " << use_diagnostics << "\n";

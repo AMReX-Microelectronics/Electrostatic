@@ -1,4 +1,4 @@
-#include "NEGF.H"
+#include "Transport.H"
 
 //#include "../../Utils/SelectWarpXUtils/WarpXUtil.H"
 //#include "../../Utils/SelectWarpXUtils/TextMsg.H"
@@ -19,25 +19,25 @@
 
 using namespace amrex;
 
-c_NEGFSolver::c_NEGFSolver()
+c_TransportSolver::c_TransportSolver()
 {
 #ifdef PRINT_NAME
-    amrex::Print() << "\n\n\t\t\t{************************c_NEGFSolver() Constructor************************\n";
+    amrex::Print() << "\n\n\t\t\t{************************c_TransportSolver() Constructor************************\n";
     amrex::Print() << "\t\t\tin file: " << __FILE__ << " at line: " << __LINE__ << "\n";
 #endif
 
     ReadData();
   
 #ifdef PRINT_NAME
-    amrex::Print() << "\t\t\t}************************c_NEGFSolver() Constructor************************\n";
+    amrex::Print() << "\t\t\t}************************c_TransportSolver() Constructor************************\n";
 #endif
 }
 
 
-c_NEGFSolver::~c_NEGFSolver()
+c_TransportSolver::~c_TransportSolver()
 {
 #ifdef PRINT_NAME
-    amrex::Print() << "\n\n\t\t\t{************************c_NEGFSolver() Destructor************************\n";
+    amrex::Print() << "\n\n\t\t\t{************************c_TransportSolver() Destructor************************\n";
     amrex::Print() << "\t\t\tin file: " << __FILE__ << " at line: " << __LINE__ << "\n";
 #endif
 
@@ -46,21 +46,21 @@ c_NEGFSolver::~c_NEGFSolver()
     //vp_Silicon.clear();
   
 #ifdef PRINT_NAME
-    amrex::Print() << "\t\t\t}************************c_NEGFSolver() Destructor************************\n";
+    amrex::Print() << "\t\t\t}************************c_TransportSolver() Destructor************************\n";
 #endif
 }
 
 void 
-c_NEGFSolver::ReadData() 
+c_TransportSolver::ReadData() 
 {
 
-    amrex::Print() << "\n##### NEGF Solver #####\n\n";
+    amrex::Print() << "\n##### Transport Solver #####\n\n";
 
-    amrex::ParmParse pp_negf("negf");
+    amrex::ParmParse pp_transport("transport");
     num_NS = 0;
 
     amrex::Vector<std::string> temp_vec;
-    bool NS_pecified = pp_negf.queryarr("NS_names", temp_vec);
+    bool NS_pecified = pp_transport.queryarr("NS_names", temp_vec);
 
     int c=0;
     for (auto it: temp_vec)
@@ -73,7 +73,7 @@ c_NEGFSolver::ReadData()
     }
     temp_vec.clear();
 
-    amrex::Print() << "##### negf.NS_names: ";
+    amrex::Print() << "##### transport.NS_names: ";
     for (auto it: vec_NS_names) amrex::Print() << it << "  ";
     amrex::Print() << "\n";
 
@@ -81,16 +81,20 @@ c_NEGFSolver::ReadData()
 
 
 void 
-c_NEGFSolver::InitData() 
+c_TransportSolver::InitData() 
 {
-    amrex::Print() << "\n##### NEGF NANOSTRUCTURE PROPERTIES #####\n\n";
+    amrex::Print() << "\n##### TRANSPORT PROPERTIES #####\n\n";
 
-    amrex::ParmParse pp_negf("negf");
+    amrex::ParmParse pp_transport("transport");
     
     use_selfconsistent_potential = 0;
-    pp_negf.query("use_electrostatic", use_selfconsistent_potential);
-    amrex::Print() << "##### negf.use_selfconsistent_potential: " 
+    use_negf = 0;
+    pp_transport.query("use_selfconsistent_potential", use_selfconsistent_potential);
+    pp_transport.query("use_negf", use_negf);
+    amrex::Print() << "##### transport.use_selfconsistent_potential: " 
                    << use_selfconsistent_potential << "\n";
+    amrex::Print() << "##### transport.use_negf: " 
+                   << use_negf << "\n";
 
     std::string NS_gather_field_str = "phi";
     std::string NS_deposit_field_str = "charge_density";
@@ -105,16 +109,16 @@ c_NEGFSolver::InitData()
         _dm   = &rGprop.dm;
         _ba   = &rGprop.ba;
 
-        pp_negf.get("NS_gather_field", NS_gather_field_str);
-        amrex::Print() << "##### negf.NS_gather_field: " << NS_gather_field_str << "\n";
+        pp_transport.get("NS_gather_field", NS_gather_field_str);
+        amrex::Print() << "##### transport.NS_gather_field: " << NS_gather_field_str << "\n";
         if ( Evaluate_TypeOf_MacroStr(NS_gather_field_str) != 0 )
         {
             /*mf not defined in MacroscopicProperties*/
             amrex::Abort("NS_gather_field " + NS_gather_field_str + " not defined in Mprop.");
         } 
 
-        pp_negf.get("NS_deposit_field", NS_deposit_field_str);
-        amrex::Print() << "##### negf.NS_deposit_field: " << NS_deposit_field_str << "\n";
+        pp_transport.get("NS_deposit_field", NS_deposit_field_str);
+        amrex::Print() << "##### transport.NS_deposit_field: " << NS_deposit_field_str << "\n";
         if ( Evaluate_TypeOf_MacroStr(NS_deposit_field_str) != 0 )
         {
             /*mf not defined in MacroscopicProperties*/
@@ -125,8 +129,8 @@ c_NEGFSolver::InitData()
         amrex::Real inv_vol = AMREX_D_TERM(dxi[0], *dxi[1], *dxi[2]);
         NS_initial_deposit_value = PhysConst::q_e*inv_vol;
 
-        queryWithParser(pp_negf,"NS_initial_deposit_value", NS_initial_deposit_value);
-        amrex::Print() << "##### negf.NS_initial_deposit_value: " << NS_initial_deposit_value << "\n";
+        queryWithParser(pp_transport,"NS_initial_deposit_value", NS_initial_deposit_value);
+        amrex::Print() << "##### transport.NS_initial_deposit_value: " << NS_initial_deposit_value << "\n";
     }
 
     std::string type;
@@ -150,7 +154,8 @@ c_NEGFSolver::InitData()
                                                                        NS_gather_field_str, 
                                                                        NS_deposit_field_str, 
                                                                        NS_initial_deposit_value,
-                                                                       use_selfconsistent_potential
+                                                                       use_selfconsistent_potential,
+                                                                       use_negf
                                                                       ));
                 break;
             }
@@ -163,7 +168,8 @@ c_NEGFSolver::InitData()
                                                                             NS_gather_field_str, 
                                                                             NS_deposit_field_str, 
                                                                             NS_initial_deposit_value,
-                                                                            use_selfconsistent_potential
+                                                                            use_selfconsistent_potential,
+                                                                            use_negf
                                                                            ));
                 amrex::Abort("NS_type " + type + " is not yet defined.");
                 break; 
@@ -182,23 +188,8 @@ c_NEGFSolver::InitData()
 
 }
 
-//c_Nanostructure_Atom_Container::~c_Nanostructure_Atom_Container()
-//    : amrex::ParticleContainer<realPD::NUM, intPD::NUM,
-//                               realPA::NUM, intPA::NUM> ~()
-//{
-//#ifdef PRINT_NAME
-//    amrex::Print() << "\n\n\t\t\t{************************c_Nanostructure_Atom_Container() Constructor************************\n";
-//    amrex::Print() << "\t\t\tin file: " << __FILE__ << " at line: " << __LINE__ << "\n";
-//#endif
-//
-//#ifdef PRINT_NAME
-//    amrex::Print() << "\t\t\t}************************c_Nanostructure_Atom_Container() Constructor************************\n";
-//#endif
-//}
-
-
 void 
-c_NEGFSolver::Solve() 
+c_TransportSolver::Solve() 
 {
 
    for (int c=0; c < vp_CNT.size(); ++c)
@@ -210,9 +201,11 @@ c_NEGFSolver::Solve()
           vp_CNT[c]->Write_AveragedGatherField();
        }
 
-//       vp_CNT[c]->ComputeChargeDensity();
+       //if(use_negf) 
+       //{
+       //    vp_CNT[c]->NEGF_Solve();
+       //} 
 
    }
-   //amrex::Vector<amrex::Real>* potential;
 
 }

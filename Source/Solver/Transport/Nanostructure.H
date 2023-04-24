@@ -121,7 +121,8 @@ public:
                      const std::string NS_gather_str,
                      const std::string NS_deposit_str,
                      const amrex::Real NS_initial_deposit_value,
-                     const int use_selfconsistent_potential    );
+                     const int use_selfconsistent_potential,
+                     const int use_negf    );
 
     virtual void ReadNanostructureProperties () override;
 
@@ -133,7 +134,6 @@ public:
     void AverageFieldGatheredFromMesh();
     void Write_AveragedGatherField();
 
-    //virtual void ComputeChargeDensity() override;
 //    const amrex::Vector<amrex::Real>* get_avg_gatherField() { &avg_gatherField };
 
 private:
@@ -150,6 +150,8 @@ private:
     amrex::Gpu::DeviceVector<int> gpuvec_avg_indices;
 
     int _use_electrostatic=0;
+    int _use_selfconsistent_potential=0;
+    int _use_negf=0;
 
     void InitializeNEGF();
 };

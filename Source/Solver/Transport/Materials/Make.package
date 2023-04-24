@@ -1,0 +1,14 @@
+CEXE_sources += Matrix_Block.cpp
+CEXE_headers += Matrix_Block.H
+
+CEXE_sources += NEGF_Common.cpp
+CEXE_headers += NEGF_Common.H
+
+CEXE_sources += CNT.cpp
+CEXE_sources += Graphene.cpp
+
+CEXE_headers += CNT.H
+CEXE_headers += Graphene.H
+
+VPATH_LOCATIONS += $(CODE_HOME)/Source/Solver/Transport/Materials
+INCLUDE_LOCATIONS += $(CODE_HOME)/Source/Solver/Transport/Materials

@@ -1,7 +1,7 @@
 #ifndef CNT_H_
 #define CNT_H_
 
-#include "Common_Properties.H"
+#include "NEGF_Common.H"
 #include <AMReX_REAL.H>
 #include <AMReX_BoxArray.H>
 #include <AMReX_Array.H>
