@@ -1,4 +1,5 @@
 #include "CNT.H"
+
 #include "../../Utils/CodeUtils/CodeUtil.H"
 
 #include <AMReX_Particles.H>
@@ -16,7 +17,7 @@ c_CNT:: ReadNanostructureProperties ()
 {
     amrex::Print() << "\n##### NANOSTRUCTURE PROPERTIES #####\n\n";
 
-    c_Common_Properties<BlkType>::ReadNanostructureProperties();
+    c_NEGF_Common<BlkType>::ReadNanostructureProperties();
 
     amrex::ParmParse pp_ns(name);
 
@@ -59,8 +60,42 @@ c_CNT:: ReadNanostructureProperties ()
     amrex::Print() << "#####* atoms_per_ring: " << atoms_per_ring << "\n";
     amrex::Print() << "#####* num_atoms: " << num_atoms << "\n";
 
+    Define_SortedModeVector();
 }
 
+
+void 
+c_CNT::Define_SortedModeVector()
+{
+    int num_double_degenerate_modes = int(atoms_per_ring/2);
+    int num_singly_degenerate_modes = atoms_per_ring%2;
+    int total_modes = num_double_degenerate_modes + num_singly_degenerate_modes;
+    mode_vec.resize(total_modes);
+    mode_degen_vec.resize(total_modes);
+
+    for(int m=0; m<total_modes; ++m) 
+    {
+        if(m < num_double_degenerate_modes) 
+        {
+            mode_degen_vec[m] = 2;
+        }
+        else 
+        {
+            mode_degen_vec[m] = 1;
+        }
+    }
+
+    /*Hard-coding modes for 17,0 nanotube*/
+    mode_vec[0] = 6;
+    mode_vec[1] = 5;
+    mode_vec[2] = 7;
+    mode_vec[3] = 4;
+    mode_vec[4] = 8;
+    mode_vec[5] = 3;
+    mode_vec[6] = 2;
+    mode_vec[7] = 1;
+    mode_vec[8] = 17;
+}
 
 AMREX_GPU_HOST_DEVICE ComplexType 
 c_CNT::get_beta(int J)
@@ -97,7 +132,7 @@ c_CNT::Define_MPI_BlkType ()
 void 
 c_CNT::AllocateArrays () 
 {
-    c_Common_Properties<BlkType>:: AllocateArrays (); 
+    c_NEGF_Common<BlkType>:: AllocateArrays (); 
 
 }
 //
@@ -126,7 +161,7 @@ c_CNT::ConstructHamiltonian()
 
     for (int j=0; j<NUM_MODES; ++j) 
     {
-        int J = mode_arr[j];
+        int J = mode_vec[j];
         beta.block[j] = get_beta(J);
     }
     amrex::Print() << "\n Printing beta: "<< "\n";
@@ -201,7 +236,7 @@ void
 c_CNT::Define_SelfEnergy ()
 {
 
-    c_Common_Properties<BlkType>:: Define_SelfEnergy (); 
+    c_NEGF_Common<BlkType>:: Define_SelfEnergy (); 
 //    auto const& h_Sigma = h_Sigma_glo_data.table();
 //
 //    amrex::Print() << "Printing Sigma: \n";
@@ -217,7 +252,7 @@ c_CNT::Define_EnergyLimits ()
     E_f = -1.2; 
     E_valence_min = -10.; 
     E_pole_max = 3; 
-    c_Common_Properties<BlkType>:: Define_EnergyLimits ();
+    c_NEGF_Common<BlkType>:: Define_EnergyLimits ();
 
 }
 
@@ -225,14 +260,9 @@ c_CNT::Define_EnergyLimits ()
 void 
 c_CNT::Define_IntegrationPaths ()
 {
-    c_Common_Properties<BlkType>:: Define_IntegrationPaths ();
+    c_NEGF_Common<BlkType>:: Define_IntegrationPaths ();
 }
 
-
-//
-//
-//
-//
 //void 
 //c_CNT::ComputeChargeDensity () 
 //{

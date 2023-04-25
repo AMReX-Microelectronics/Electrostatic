@@ -12,7 +12,7 @@
 
 
 class c_Graphene
-           :public c_Common_Properties<ComplexType[NUM_MODES][NUM_MODES]>
+           :public c_NEGF_Common<ComplexType[NUM_MODES][NUM_MODES]>
 {
 
 public:

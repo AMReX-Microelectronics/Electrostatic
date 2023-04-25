@@ -9,9 +9,8 @@
 #include <string>
 #include <array>
 
-
 class c_CNT
-           :public c_Common_Properties<ComplexType[NUM_MODES]>
+           :public c_NEGF_Common<ComplexType[NUM_MODES]>
 {
 
 public:
@@ -79,10 +78,14 @@ public:
     int rings_per_unitcell;
     int atoms_per_ring;
     amrex::Real gamma;
-    amrex::Array<const int, NUM_MODES> mode_arr = {6,11};
-    amrex::Array<const int, NUM_MODES> mode_degen_arr = {2,2};
+    //amrex::Array<const int, NUM_MODES> mode_arr = {6,11};
+    //amrex::Array<const int, NUM_MODES> mode_degen_arr = {2,2};
+
+    amrex::Vector<int> mode_vec;
+    amrex::Vector<int> mode_degen_vec;
     MatrixBlock<BlkType> beta;
 
+    void Define_SortedModeVector();
     virtual int get_Hsize() override { return rings_per_unitcell*num_unitcells; }
     virtual int get_offDiag_repeatBlkSize() override { return 2; }
 

@@ -17,10 +17,11 @@ struct s_AVG_TYPE
 
 
 template<typename T>
-class c_Common_Properties: public MatrixBlock<T>
+class c_NEGF_Common: public MatrixBlock<T>
 {
 
 public:
+
 
     using ComplexTable1D = TableData<ComplexType, 1>;
     using ComplexTable2D = TableData<ComplexType, 2>;
@@ -59,13 +60,15 @@ public:
     const int spin_degen = 2;
     amrex::Vector<amrex::Real> avg_gatherField;
 
-    virtual void ReadNanostructureProperties();
+
+    /*Tables required to store Hamiltonian */
     BlkTable1D h_Ha_loc_data;
-    BlkTable1D h_Alpha_loc_data;
     BlkTable1D h_Hb_loc_data;
     BlkTable1D h_Hc_loc_data;
 
     BlkTable1D h_tau_glo_data;
+
+    /*Tables required to store essential quantities and observables */
     BlkTable2D h_Sigma_glo_data;
     #ifdef AMREX_USE_GPU
     BlkTable2D d_GR_loc_data;
@@ -74,6 +77,40 @@ public:
     BlkTable2D h_GR_loc_data;
     BlkTable2D h_A_loc_data;
     #endif
+    BlkTable1D h_Rho0_loc_data;
+
+    /*Tables required to compute Green and Spectral Functions */
+    BlkTable1D h_Alpha_loc_data;
+    BlkTable1D h_Alpha_glo_data;
+    BlkTable1D h_Xtil_glo_data;
+    BlkTable1D h_Ytil_glo_data;
+    BlkTable1D h_X_glo_data;
+    BlkTable1D h_Y_glo_data;
+    BlkTable1D h_X_loc_data;
+    BlkTable1D h_Y_loc_data;
+
+    BlkTable1D h_Alpha_contact_data;
+    BlkTable1D h_X_contact_data;
+    BlkTable1D h_Y_contact_data;
+    //BlkTable1D h_Adiag_loc_data;
+
+    #ifdef AMREX_USE_GPU
+    BlkTable1D d_Alpha_loc_data;
+    BlkTable1D d_X_loc_data;
+    BlkTable1D d_Y_loc_data;
+    BlkTable1D d_Xtil_glo_data;
+    BlkTable1D d_Ytil_glo_data;
+
+    BlkTable1D d_Alpha_contact_data;
+    BlkTable1D d_X_contact_data;
+    BlkTable1D d_Y_contact_data;
+    //BlkTable1D d_Adiag_loc_data;
+    #endif
+
+
+
+
+
     amrex::GpuArray<int,NUM_CONTACTS> global_contact_index; 
     amrex::GpuArray<int,NUM_CONTACTS> contact_transmission_index;
     amrex::Real U_contact[NUM_CONTACTS] = {0.,0.};
@@ -150,6 +187,7 @@ public:
     c_IntegrationPath ContourPath_RhoEq_Direct;
     c_IntegrationPath ContourPath_RhoNonEq;
 
+    virtual void ReadNanostructureProperties();
     virtual int get_Hsize() {return 0;}
     virtual int get_offDiag_repeatBlkSize() {return 0;}
     void DefineMatrixPartition();
@@ -169,12 +207,15 @@ public:
     //virtual void DeallocateArrays();
     //virtual void ComputeChargeDensity();
 
+    void Allocate_TemporaryArraysForGFComputation();
+    void Deallocate_TemporaryArraysForGFComputation();
+
     AMREX_GPU_HOST_DEVICE
     void get_Sigma_at_contacts(amrex::GpuArray<MatrixBlock<T>,NUM_CONTACTS>& Sigma, 
                                ComplexType E);
 
     AMREX_GPU_HOST_DEVICE
-    ComplexType get_Gamma(ComplexType Sigma);
+    MatrixBlock<T> get_Gamma(const MatrixBlock<T>& Sigma);
     
     AMREX_GPU_HOST_DEVICE     
     ComplexType conjugate(ComplexType a);

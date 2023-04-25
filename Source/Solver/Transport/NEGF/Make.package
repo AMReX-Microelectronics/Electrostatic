@@ -1,4 +1,4 @@
-CEXE_sources += Matrix_Block.cpp
+CEXE_headers += Matrix_Block_Util.H
 CEXE_headers += Matrix_Block.H
 
 CEXE_sources += NEGF_Common.cpp
