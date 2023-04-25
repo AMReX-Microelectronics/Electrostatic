@@ -88,6 +88,7 @@ public:
     void Define_SortedModeVector();
     virtual int get_Hsize() override { return rings_per_unitcell*num_unitcells; }
     virtual int get_offDiag_repeatBlkSize() override { return 2; }
+    virtual void set_material_specific_parameters() override;
 
     virtual void ReadNanostructureProperties () override;
     virtual void Define_MPI_BlkType () override;

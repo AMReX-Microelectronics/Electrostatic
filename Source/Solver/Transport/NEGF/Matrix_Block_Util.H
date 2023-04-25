@@ -713,6 +713,49 @@ MatrixBlock<ComplexType[NUM_MODES][NUM_MODES]>::Dagger() const
 }
 
 
+///* Operation AtomicAdd */
+//template <typename T>
+//MatrixBlock<T> 
+//MatrixBlock<T>::AtomicAdd(MatrixBlock<T>& B) const
+//{
+//    return *this;
+//}
+//
+//template <>
+//MatrixBlock<ComplexType[NUM_MODES]>
+//MatrixBlock<ComplexType[NUM_MODES]>::AtomicAdd(MatrixBlock<T>& B) const
+//{
+//    
+//    for (int i = 0; i < NUM_MODES; ++i)
+//    {
+//        amrex::HostDevice::Atomic::Add(&(this->trace_r.block[i]), B.block[i].real());
+//        amrex::HostDevice::Atomic::Add(&(this->trace_i.block[i]), B.block[i].imag());
+//    }
+//    return result;
+//}
+//
+//template <>
+//MatrixBlock<ComplexType[NUM_MODES][NUM_MODES]>
+//MatrixBlock<ComplexType[NUM_MODES][NUM_MODES]>::AtomicAdd(MatrixBlock<T>& B) const
+//{
+//    MatrixBlock<ComplexType[NUM_MODES][NUM_MODES]> result; 
+//    for (int i = 0; i < NUM_MODES; ++i)
+//    {
+//        for (int j = 0; j < NUM_MODES; ++j)
+//        {
+//            if(i==j) 
+//            {
+//                result.block[i][j] = this->block[i][j];
+//            }
+//            else 
+//            {
+//                result.block[i][j] = this->block[j][i];
+//            } 
+//        }
+//    }
+//    return result;
+//}
+
 //template <typename T, std::size_t N>
 //MatrixBlock<amrex::Real[N]> 
 //MatrixBlock<T>::Real() const
@@ -750,3 +793,90 @@ MatrixBlock<ComplexType[NUM_MODES][NUM_MODES]>::Dagger() const
 //    }
 //    return result;
 //}
+
+
+///* Operation DiagSum */
+template <typename T>
+ComplexType
+MatrixBlock<T>::DiagSum() const
+{
+    ComplexType result(0.,0.);
+    return *this;
+}
+
+template <>
+ComplexType
+MatrixBlock<ComplexType[NUM_MODES]>::DiagSum() const
+{
+    
+    ComplexType result(0.,0.);
+    for (int i = 0; i < NUM_MODES; ++i)
+    {
+        result += this->block[i];
+    }
+    return result;
+}
+
+template <>
+ComplexType
+MatrixBlock<ComplexType[NUM_MODES][NUM_MODES]>::DiagSum() const
+{
+    ComplexType result(0.,0.);
+    for (int i = 0; i < NUM_MODES; ++i)
+    {
+        for (int j = 0; j < NUM_MODES; ++j)
+        {
+            if(i==j) 
+            {
+                result += this->block[i][j];
+            }
+        }
+    }
+    return result;
+}
+
+
+///* Operation DiagDotSum */
+template <typename T>
+template <typename U>
+ComplexType
+MatrixBlock<T>::DiagDotSum(U& vec) const
+{
+    ComplexType result(0.,0.);
+    return *this;
+}
+
+template <>
+template <typename U>
+ComplexType
+MatrixBlock<ComplexType[NUM_MODES]>::DiagDotSum(U& vec) const
+{
+    
+    ComplexType result(0.,0.);
+    for (int i = 0; i < NUM_MODES; ++i)
+    {
+        ComplexType factor(vec[i],0.);
+        result += factor*this->block[i];
+    }
+    return result;
+}
+
+template <>
+template <typename U>
+ComplexType
+MatrixBlock<ComplexType[NUM_MODES][NUM_MODES]>::DiagDotSum(U& vec) const
+{
+    ComplexType result(0.,0.);
+    for (int i = 0; i < NUM_MODES; ++i)
+    {
+        for (int j = 0; j < NUM_MODES; ++j)
+        {
+            if(i==j) 
+            {
+                ComplexType factor(vec[i],0.);
+                result += factor*this->block[i][j];
+            }
+        }
+    }
+    return result;
+}

@@ -60,6 +60,10 @@ struct MatrixBlock
    MatrixBlock<T> Conj() const; /*Conjugate*/
    MatrixBlock<T> Tran() const; /*Transpose*/
    MatrixBlock<T> Dagger() const; /*Conjugate-Transpose*/
+   ComplexType DiagSum() const; /*Conjugate-Transpose*/
+   template<typename U>
+   ComplexType DiagDotSum(U& vec) const; /*Conjugate-Transpose*/
+   //MatrixBlock<T> AtomicAdd(MatrixBlock<T>& B) const; /*Atomic add for the block*/
    //template<typename U, std::size_t N>
    //MatrixBlock<amrex::Real> Real() const; 
 };

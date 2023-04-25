@@ -10,16 +10,6 @@
 template class c_NEGF_Common<ComplexType[NUM_MODES]>;            //of c_CNT
 template class c_NEGF_Common<ComplexType[NUM_MODES][NUM_MODES]>; //c_Graphene
 
-
-template<typename T>
-AMREX_GPU_HOST_DEVICE
-ComplexType 
-c_NEGF_Common<T>::conjugate(ComplexType a)
-{
-   ComplexType a_conj(a.real(), -1.*a.imag());
-   return a_conj;
-}
-
 template<typename T>
 void
 c_NEGF_Common<T>:: ReadNanostructureProperties ()
@@ -59,8 +49,24 @@ c_NEGF_Common<T>:: ReadNanostructureProperties ()
        }
     }
     
+    set_material_specific_parameters();
+
+    amrex::Print() << "#####* num_atoms: " << num_atoms << "\n";
+    amrex::Print() << "#####* num_atoms_per_unitcell: " << num_atoms_per_unitcell << "\n";
+
 }
 
+
+template<typename T>
+void 
+c_NEGF_Common<T>::set_material_specific_parameters() 
+{
+    /*set the following in the specialization*/
+    /*num_atoms: number of total atoms*/
+    /*num_atoms_per_unitcell: number of atoms per unitcell*/
+    /*block_degen_vec: this is vector of degeneracy factors of size equal to that of a block element*/ 
+    /*block_degen_gpuvec: device vector copy of block_degen_vec*/
+}
 
 template<typename T>
 void 
@@ -163,40 +169,43 @@ template<typename T>
 void 
 c_NEGF_Common<T>::AllocateArrays () 
 {
+    ComplexType zero(0.,0.);   
     h_Ha_loc_data.resize({0},{blkCol_size_loc}, The_Pinned_Arena());
-    SetZero_BlkTable1D(h_Ha_loc_data);
+    SetVal_Table1D(h_Ha_loc_data,zero);
 
     offDiag_repeatBlkSize = get_offDiag_repeatBlkSize();
     h_Hb_loc_data.resize({0},{offDiag_repeatBlkSize}, The_Pinned_Arena());
-    SetZero_BlkTable1D(h_Hb_loc_data);
+    SetVal_Table1D(h_Hb_loc_data,zero);
 
     h_Hc_loc_data.resize({0},{offDiag_repeatBlkSize}, The_Pinned_Arena());
-    SetZero_BlkTable1D(h_Hc_loc_data);
+    SetVal_Table1D(h_Hc_loc_data,zero);
 
     h_tau_glo_data.resize({0},{NUM_CONTACTS},The_Pinned_Arena());
-    SetZero_BlkTable1D(h_tau_glo_data);
+    SetVal_Table1D(h_tau_glo_data,zero);
 
     h_Sigma_glo_data.resize({0,0},{NUM_CONTACTS,NUM_ENERGY_PTS_REAL},The_Pinned_Arena());
-    SetZero_BlkTable2D(h_Sigma_glo_data);
+    SetVal_Table2D(h_Sigma_glo_data, zero);
 
     #if AMREX_USE_GPU
     d_GR_loc_data.resize({0,0}, {Hsize_glo, blkCol_size_loc}, The_Arena());
     d_A_loc_data.resize({0,0}, {Hsize_glo, blkCol_size_loc}, The_Arena());
     #else
     h_GR_loc_data.resize({0,0}, {Hsize_glo, blkCol_size_loc}, The_Arena());
-    SetZero_BlkTable2D(h_GR_loc_data);
+    SetVal_Table2D(h_GR_loc_data, zero);
 
     h_A_loc_data.resize({0,0}, {Hsize_glo, blkCol_size_loc}, The_Arena());
-    SetZero_BlkTable2D(h_A_loc_data);
+    SetVal_Table2D(h_A_loc_data, zero);
     #endif
 
     h_Rho0_loc_data.resize({0},{blkCol_size_loc}, The_Pinned_Arena());
-    SetZero_BlkTable1D(h_Rho0_loc_data);
+    SetVal_Table1D(h_Rho0_loc_data,zero);
 
+    //h_Adiag_loc_data({0}, {blkCol_size_loc}, The_Pinned_Arena());
+    //SetVal_Table1D(h_Adiag_loc_data);
 
     h_E_RealPath_data.resize({0},{NUM_ENERGY_PTS_REAL},The_Pinned_Arena());
 
-    Print_BlkTable2D_loc(h_A_loc_data);
+    Print_Table2D_loc(h_A_loc_data);
 }
 
 
@@ -323,7 +332,8 @@ c_NEGF_Common<T>:: Define_IntegrationPaths ()
     
     //ContourPath_RhoEq_Direct.Define_RegularPoints(E_contour_left, E_zPlus, 20000);
     ComplexType minus_one(-1.,0.);
-    ContourPath_RhoEq_Direct.Define_RegularPoints(minus_one, E_zPlus, 100);
+    ComplexType one(1.,0.);
+    ContourPath_RhoEq_Direct.Define_RegularPoints(minus_one + E_zPlus, one + E_zPlus, 200);
 
     //for(int e=0; e < ContourPath_RhoEq_Direct.num_pts; ++e) 
     //{
@@ -338,39 +348,42 @@ template<typename T>
 void 
 c_NEGF_Common<T>:: Allocate_TemporaryArraysForGFComputation ()
 {
+    ComplexType zero(0.,0.);   
     h_Alpha_loc_data.resize({0},{blkCol_size_loc}, The_Pinned_Arena());
-    SetZero_BlkTable1D(h_Alpha_loc_data);
+    SetVal_Table1D(h_Alpha_loc_data,zero);
 
     h_Alpha_glo_data.resize({0},{Hsize_glo}, The_Pinned_Arena());
-    SetZero_BlkTable1D(h_Alpha_glo_data);
+    SetVal_Table1D(h_Alpha_glo_data,zero);
 
     h_Xtil_glo_data.resize({0},{Hsize_glo}, The_Pinned_Arena());
-    SetZero_BlkTable1D(h_Xtil_glo_data);
+    SetVal_Table1D(h_Xtil_glo_data,zero);
 
     h_Ytil_glo_data.resize({0},{Hsize_glo}, The_Pinned_Arena());
-    SetZero_BlkTable1D(h_Ytil_glo_data);
+    SetVal_Table1D(h_Ytil_glo_data,zero);
 
     h_X_glo_data.resize({0},{Hsize_glo}, The_Pinned_Arena());
-    SetZero_BlkTable1D(h_X_glo_data);
+    SetVal_Table1D(h_X_glo_data,zero);
 
     h_Y_glo_data.resize({0},{Hsize_glo}, The_Pinned_Arena());
-    SetZero_BlkTable1D(h_Y_glo_data);
+    SetVal_Table1D(h_Y_glo_data,zero);
 
     h_X_loc_data.resize({0},{blkCol_size_loc}, The_Pinned_Arena());
-    SetZero_BlkTable1D(h_X_loc_data);
+    SetVal_Table1D(h_X_loc_data,zero);
 
     h_Y_loc_data.resize({0},{blkCol_size_loc}, The_Pinned_Arena());
-    SetZero_BlkTable1D(h_Y_loc_data);
+    SetVal_Table1D(h_Y_loc_data,zero);
 
     h_Alpha_contact_data.resize({0},{NUM_CONTACTS},The_Pinned_Arena());
-    SetZero_BlkTable1D(h_Alpha_contact_data);
+    SetVal_Table1D(h_Alpha_contact_data,zero);
 
     h_X_contact_data.resize({0},{NUM_CONTACTS},The_Pinned_Arena());
-    SetZero_BlkTable1D(h_X_contact_data);
+    SetVal_Table1D(h_X_contact_data,zero);
 
     h_Y_contact_data.resize({0},{NUM_CONTACTS},The_Pinned_Arena());
-    SetZero_BlkTable1D(h_Y_contact_data);
-    //Matrix1D h_Adiag_loc_data({0}, {num_cols_loc}, The_Pinned_Arena());
+    SetVal_Table1D(h_Y_contact_data,zero);
+
+    h_Trace_r.resize(num_traces);
+    h_Trace_i.resize(num_traces);
 
     #ifdef AMREX_USE_GPU
     Matrix1D d_Alpha_loc_data({0},{blkCol_size_loc}, The_Arena());
@@ -383,7 +396,6 @@ c_NEGF_Common<T>:: Allocate_TemporaryArraysForGFComputation ()
     Matrix1D d_X_contact_data({0},{num_contacts}, The_Arena());
     Matrix1D d_Y_contact_data({0},{num_contacts}, The_Arena());
     //Matrix2D d_Sigma_glo_data({0,0},{num_contacts,num_EnPts}, The_Arena());
-    //Matrix1D d_Adiag_loc_data({0}, {num_cols_loc}, The_Arena());
     #endif 
 }
 
@@ -403,7 +415,8 @@ c_NEGF_Common<T>:: Deallocate_TemporaryArraysForGFComputation ()
     h_Alpha_contact_data.clear();
     h_X_contact_data.clear();
     h_Y_contact_data.clear();
-    //h_Adiag_loc_data.clear();
+    h_Trace_r.clear();
+    h_Trace_i.clear();
     
     #ifdef AMREX_USE_GPU
     d_Alpha_loc_data.clear();
@@ -416,7 +429,6 @@ c_NEGF_Common<T>:: Deallocate_TemporaryArraysForGFComputation ()
     d_X_contact_data.clear();
     d_Y_contact_data.clear();
     //d_Sigma_glo_data.clear();
-    //d_Adiag_loc_data.clear();
     #endif 
 }
 
@@ -426,6 +438,12 @@ void
 c_NEGF_Common<T>:: Compute_DensityOfStates ()
 {
     
+    h_LDOS_loc_data.resize({0}, {ContourPath_RhoEq_Direct.num_pts}, The_Pinned_Arena());
+    SetVal_Table1D(h_LDOS_loc_data,0.);
+
+    h_Transmission_loc_data.resize({0}, {ContourPath_RhoEq_Direct.num_pts}, The_Pinned_Arena());
+    SetVal_Table1D(h_Transmission_loc_data,0.);
+
     //#ifdef AMREX_USE_GPU
     //#else
     auto const& Rho0_loc   = h_Rho0_loc_data.table();
@@ -433,10 +451,12 @@ c_NEGF_Common<T>:: Compute_DensityOfStates ()
     auto const& A_loc   = h_A_loc_data.table();
     //#endif 
 
-    auto const& h_Ha_loc = h_Ha_loc_data.table();
-    auto const& h_Hb_loc = h_Hb_loc_data.table();
-    auto const& h_Hc_loc = h_Hc_loc_data.table();
-    auto const& h_tau   = h_tau_glo_data.table();
+    auto const& h_Ha_loc  = h_Ha_loc_data.table();
+    auto const& h_Hb_loc  = h_Hb_loc_data.table();
+    auto const& h_Hc_loc  = h_Hc_loc_data.table();
+    auto const& h_tau     = h_tau_glo_data.table();
+    auto const& h_LDOS_loc = h_LDOS_loc_data.table();
+    auto const& h_Transmission_loc = h_Transmission_loc_data.table();
 
     Allocate_TemporaryArraysForGFComputation();
 
@@ -450,6 +470,9 @@ c_NEGF_Common<T>:: Compute_DensityOfStates ()
     auto const& h_Y_glo = h_Y_glo_data.table();
     auto const& h_X_loc = h_X_loc_data.table();
     auto const& h_Y_loc = h_Y_loc_data.table();
+    auto const& h_Alpha_contact = h_Alpha_contact_data.table();
+    auto const& h_Y_contact = h_Y_contact_data.table();
+    auto const& h_X_contact = h_X_contact_data.table();
 
     //#ifdef AMREX_USE_GPU
     /*constant references*/
@@ -466,6 +489,7 @@ c_NEGF_Common<T>:: Compute_DensityOfStates ()
 
     //amrex::Real* trace_r      = d_Trace_r.dataPtr();
     //amrex::Real* trace_i      = d_Trace_i.dataPtr();
+    //auto& degen_vec = block_degen_gpuvec;
     //#else
     auto const& Alpha         = h_Alpha_loc_data.const_table();
     auto const& Xtil_glo      = h_Xtil_glo_data.const_table();
@@ -477,12 +501,13 @@ c_NEGF_Common<T>:: Compute_DensityOfStates ()
     auto const& Y_contact     = h_Y_contact_data.const_table();
     //auto const& Sigma_glo     = h_Sigma_glo_data.const_table();
     //auto const& Adiag_loc     = h_Adiag_loc_data.table(); //Spectral function
+    auto* trace_r      = h_Trace_r.dataPtr();
+    auto* trace_i      = h_Trace_i.dataPtr();
+    auto& degen_vec = block_degen_vec;
     //#endif
+  
 
-
-    amrex::Real kT0=0;
-    //for(int e=0; e < ContourPath_RhoEq_Direct.num_pts; ++e) 
-    for(int e=0; e < 1; ++e) 
+    for(int e=0; e < ContourPath_RhoEq_Direct.num_pts; ++e) 
     {
 
         ComplexType E = ContourPath_RhoEq_Direct.E_vec[e];
@@ -498,19 +523,14 @@ c_NEGF_Common<T>:: Compute_DensityOfStates ()
 
         get_Sigma_at_contacts(Sigma, E);
 
-        //amrex::Print() << std::setprecision(4) << "Sigma[0]: "<< Sigma[0] <<  " Gamma[0]: " << get_Gamma(Sigma[0]) << "\n";
-
         for (int c=0; c<NUM_CONTACTS; ++c)
         {
-            //amrex::Print() << "E, contact, Sigma: " <<std::setprecision(4)<< E << "  " << c << "  " << Sigma[c] << "\n";
             int n_glo = global_contact_index[c];
-            //amrex::Print() << "n_glo: " << n_glo << "\n";
 
             if(n_glo >= vec_cumu_blkCol_size[my_rank] && n_glo < vec_cumu_blkCol_size[my_rank+1])
             {
                 int n = n_glo - vec_cumu_blkCol_size[my_rank];
                 h_Alpha_loc(n) = h_Alpha_loc(n) - Sigma[c];
-                //amrex::Print() << "n_glo, contact, Alpha: " <<std::setprecision(4) << n_glo << "  " << c << "  "<< h_Alpha_loc(n) << "\n";
             }
         }
         //for(int n=0; n<blkCol_size_loc; ++n)
@@ -540,16 +560,11 @@ c_NEGF_Common<T>:: Compute_DensityOfStates ()
                         MPI_BlkType,
                         ParallelDescriptor::Communicator());
 
-        //amrex::Print() << "Alpha_glo: " << "\n";
-        //for(int n=0; n< Hsize_glo; ++n) 
-        //{
-        //    amrex::Print() << n << " "<< h_Alpha_glo(n) << "\n";
-        //}
-        //amrex::Print() << "Alpha_glo: " << "\n";
-        //for(int p=0; p< offDiag_repeatBlkSize; ++p) 
-        //{
-        //    amrex::Print() << " "<< h_Hb_loc(p) << " " << h_Hc_loc(p) << "\n";
-        //}
+        for (int c=0; c<NUM_CONTACTS; ++c)
+        {
+            int n_glo = global_contact_index[c];
+            h_Alpha_contact(c) = h_Alpha_glo(n_glo);
+        }
 
         h_Y_glo(0) = 0;
         for (int n = 1; n < Hsize_glo; ++n)
@@ -574,17 +589,19 @@ c_NEGF_Common<T>:: Compute_DensityOfStates ()
             h_X_loc(c) = h_X_glo(n);
         }
  
-        //amrex::Print() << "Ytil, Y: " << "\n";
-        //for(int n=0; n< Hsize_glo; ++n) 
-        //{
-        //    amrex::Print() <<std::setprecision(3) << n << " "<< h_Ytil_glo(n) << " " << h_Y_glo(n)<< "\n";
-        //}
-        //amrex::Print() << "Xtil, X " << "\n";
-        //for (int n = Hsize_glo-1; n > -1; n--)
-        //{
-        //    amrex::Print() <<std::setprecision(3) << n << " "<< h_Xtil_glo(n) << " " << h_X_glo(n) << "\n";
-        //}
-  
+        for (int c = 0; c < NUM_CONTACTS; ++c)
+        {
+            int n = global_contact_index[c];
+            h_Y_contact(c) = h_Y_glo(n);
+            h_X_contact(c) = h_X_glo(n);
+        }
+
+        for (int t=0; t< num_traces; ++t)
+        {
+            h_Trace_r[t] = 0.;
+            h_Trace_i[t] = 0.;
+        }
+
         int cumulative_columns = vec_cumu_blkCol_size[my_rank];
 
         amrex::ParallelFor(blkCol_size_loc, [=] AMREX_GPU_DEVICE (int n) noexcept
@@ -633,50 +650,75 @@ c_NEGF_Common<T>:: Compute_DensityOfStates ()
                                        G_contact_nk.Dagger();
 
                 A_loc(k_glo, n) = A_loc(k_glo, n) + A_kn;
-                //for (int m = k_glo+1; m < Hsize_glo; ++m)
-                //{
-                //    A_kn = -1*Xtil_glo(m-1)*A_kn;
-                //    A_loc(m,n) = A_loc(m,n) + A_kn;
-                //}
-                //for (int m = k_glo-1; m >= 0; m--)
-                //{
-                //    A_kn = -1*Ytil_glo(m+1)*A_kn;
-                //    A_loc(m,n) = A_loc(m,n) + A_kn;
-                //}
-                //A_tk[k] = 0.;
-                //if(n_glo == contact_transmission_index[k])
-                //{
-                //    A_tk[k] = A_kn;
-                //}
+                for (int m = k_glo+1; m < Hsize_glo; ++m)
+                {
+                    A_kn = -1*Xtil_glo(m-1)*A_kn;
+                    A_loc(m,n) = A_loc(m,n) + A_kn;
+                }
+                for (int m = k_glo-1; m >= 0; m--)
+                {
+                    A_kn = -1*Ytil_glo(m+1)*A_kn;
+                    A_loc(m,n) = A_loc(m,n) + A_kn;
+                }
+                A_tk[k] = 0.;
+                if(n_glo == contact_transmission_index[k])
+                {
+                    A_tk[k] = A_kn;
+                }
             }
 
-            //MatrixDType T12 = get_Gamma(Sigma_glo(0,e_id))* A_tk[1];
+            /*LDOS*/ 
+            ComplexType val = A_loc(n_glo,n).DiagDotSum(degen_vec)/(2.*MathConst::pi);
 
-            //Adiag_loc(n) = A_loc(n_glo,n);
+            amrex::HostDevice::Atomic::Add(&(trace_r[0]), val.real());
+            amrex::HostDevice::Atomic::Add(&(trace_i[0]), val.imag());
 
-            //amrex::HostDevice::Atomic::Add(&(trace_r[0]), Adiag_loc(n).real());
-            //amrex::HostDevice::Atomic::Add(&(trace_i[0]), Adiag_loc(n).imag());
+            /*Transmission*/ 
+            auto T12 = get_Gamma(Sigma[0]) * A_tk[1];
 
-            //amrex::HostDevice::Atomic::Add(&(trace_r[1]), T12.real());
-            //amrex::HostDevice::Atomic::Add(&(trace_i[1]), T12.imag());
+            ComplexType T12_blksum = T12.DiagDotSum(degen_vec); 
+
+            amrex::HostDevice::Atomic::Add(&(trace_r[1]), T12_blksum.real());
+            amrex::HostDevice::Atomic::Add(&(trace_i[1]), T12_blksum.imag());
         }); 
-        //amrex::ParallelFor(blkCol_size_loc, [=] AMREX_GPU_DEVICE (int n) noexcept
-        //{
-        //    int n_glo = n + cumulative_columns; /*global column number*/
-        //    G_loc(n_glo,n) =  1./(Alpha(n) - X(n) - Y(n));
-        //    Rho0_loc(n) += G_loc(n_glo,n);
-        //}
+
+        for (int t=0; t< num_traces; ++t)
+        {
+            amrex::ParallelDescriptor::ReduceRealSum(h_Trace_r[t]);
+            amrex::ParallelDescriptor::ReduceRealSum(h_Trace_i[t]);
+        }
+
+        h_LDOS_loc(e) = spin_degen*h_Trace_r[0]/num_atoms_per_unitcell;
+        h_Transmission_loc(e) = h_Trace_r[1];
+
+        if(e==0) {
+            amrex::Print() << "Printing GR_loc: \n";
+            Print_Table2D_loc(h_GR_loc_data);
+
+            amrex::Print() << "Printing A_loc: \n";
+            Print_Table2D_loc(h_A_loc_data);
+
+        }
     }
+
     //amrex::Print() << "Rho0_loc: \n";
     //for (int n=0; n <blkCol_size_loc; ++n) 
     //{
     //    Rho0_loc(n) = Rho0_loc(n)/(2.*MathConst::pi);
     //    amrex::Print() << n << "  " <<std::setprecision(3)<< Rho0_loc(n)  << "\n";
     //}
-    amrex::Print() << "Printing GR_loc: \n";
-    Print_BlkTable2D_loc(h_GR_loc_data);
-    amrex::Print() << "Printing A_loc: \n";
-    Print_BlkTable2D_loc(h_A_loc_data);
+
+    amrex::Print() << "Printing LDOS: \n";
+    Write_Table1D_asaf_E(ContourPath_RhoEq_Direct.E_vec, 
+                         h_LDOS_loc_data, 
+                        "LDOS.dat",  "E_r LDOS_r");
+
+    amrex::Print() << "Printing Transmission: \n";
+    Write_Table1D_asaf_E(ContourPath_RhoEq_Direct.E_vec, 
+                         h_Transmission_loc_data, 
+                        "Transmission.dat",  "E_r T_r");
+
+
     Deallocate_TemporaryArraysForGFComputation();
 
 }
@@ -700,7 +742,7 @@ c_NEGF_Common<T>:: get_Sigma_at_contacts
         MatrixBlock<T> gr;
         Compute_SurfaceGreensFunction(gr, E-U_contact[c]);
         //amrex::Print() << "c, E, gr: " << c << " " << E << " " << gr << "\n";
-        Sigma[c] = h_tau(c)*gr*h_tau(c);
+        Sigma[c] = h_tau(c)*gr*h_tau(c).Dagger();
     }
 
 }
@@ -716,7 +758,7 @@ c_NEGF_Common<T>:: Define_SelfEnergy ()
 //    auto const& h_E     = h_E_RealPath_data.table();
 //    
 //    amrex::Print() << "Printing tau:\n";
-//    Print_BlkTable1D_loc(h_tau_glo_data);
+//    Print_Table1D_loc(h_tau_glo_data);
 //    for (std::size_t c = 0; c < NUM_CONTACTS; ++c)
 //    {
 //        for (std::size_t e = 0; e < NUM_ENERGY_PTS_REAL; ++e)
@@ -754,7 +796,8 @@ c_NEGF_Common<T>::get_Gamma(const MatrixBlock<T>& Sigma)
 
 template<typename T>
 void
-c_NEGF_Common<T>::Write_BlkTable1D_asaf_E(const BlkTable1D& Arr_data, 
+c_NEGF_Common<T>::Write_BlkTable1D_asaf_E(const amrex::Vector<ComplexType>& E_vec,
+                                          const BlkTable1D& Arr_data, 
                                                 std::string filename, 
                                                 std::string header)
 {
@@ -764,17 +807,53 @@ c_NEGF_Common<T>::Write_BlkTable1D_asaf_E(const BlkTable1D& Arr_data,
         std::ofstream outfile;
         outfile.open(filename.c_str());
 
-        auto const& E = h_E_RealPath_data.const_table();
-        auto thi = h_E_RealPath_data.hi();
         auto const& Arr = Arr_data.const_table();
+        auto thi = Arr_data.hi();
 
         outfile << header  << "\n";
-        for (int e=0; e< thi[0]; ++e)
-        {
-            outfile << std::setw(10) << E(e)
-                    << std::setw(15) << Arr(e) << "\n";
+        if(E_vec.size() == thi[0]) {   
+            for (int e=0; e< thi[0]; ++e)
+            {
+                outfile << std::setw(10) << E_vec[e]
+                        << std::setw(15) << Arr(e) << "\n";
+            }
         }
+        else {
+            outfile << "Mismatch in the size of E_vec and Arr_data!"  << "\n";
+        }
+        outfile.close();
+    }
+}
 
+
+template<typename T>
+template<typename U>
+void
+c_NEGF_Common<T>::Write_Table1D_asaf_E(const amrex::Vector<ComplexType>& E_vec,
+                                       const U& Arr_data, 
+                                       std::string filename, 
+                                       std::string header)
+{ 
+    if (amrex::ParallelDescriptor::IOProcessor())
+    {
+        amrex::Print() << "\n Root Writing " << filename << "\n";
+        std::ofstream outfile;
+        outfile.open(filename.c_str());
+
+        auto const& Arr = Arr_data.const_table();
+        auto thi = Arr_data.hi();
+
+        outfile << header  << "\n";
+        if(E_vec.size() == thi[0]) {   
+            for (int e=0; e< thi[0]; ++e)
+            {
+                outfile << std::setw(10) << E_vec[e].real() 
+                        << std::setw(15) << Arr(e) << "\n";
+            }
+        }
+        else {
+            outfile << "Mismatch in the size of E_vec and Arr_data!"  << "\n";
+        }
         outfile.close();
     }
 }
@@ -810,8 +889,9 @@ c_NEGF_Common<T>::Write_BlkTable2D_asaf_E(const BlkTable2D& Arr_data,
 
 
 template<typename T>
+template<typename U>
 void
-c_NEGF_Common<T>::Print_BlkTable1D_loc(const BlkTable1D& Tab1D_data)
+c_NEGF_Common<T>::Print_Table1D_loc(const U& Tab1D_data)
 {
     auto tlo = Tab1D_data.lo();
     auto thi = Tab1D_data.hi();
@@ -829,8 +909,9 @@ c_NEGF_Common<T>::Print_BlkTable1D_loc(const BlkTable1D& Tab1D_data)
 
 
 template<typename T>
+template<typename U>
 void
-c_NEGF_Common<T>::Print_BlkTable2D_loc(const BlkTable2D& Tab2D_data)
+c_NEGF_Common<T>::Print_Table2D_loc(const U& Tab2D_data)
 {
     auto tlo = Tab2D_data.lo();
     auto thi = Tab2D_data.hi();
@@ -849,41 +930,6 @@ c_NEGF_Common<T>::Print_BlkTable2D_loc(const BlkTable2D& Tab2D_data)
     std::cout << "]\n";
 }
 
-
-template<typename T>
-void 
-c_NEGF_Common<T>:: SetZero_BlkTable1D (BlkTable1D& Tab1D_data) 
-{
-    auto tlo = Tab1D_data.lo();
-    auto thi = Tab1D_data.hi();
-
-    auto const& Tab1D = Tab1D_data.table();
-
-    for (int i = tlo[0]; i < thi[0]; ++i)
-    {   
-        ComplexType val(0.,0.);   
-        Tab1D(i) = val; 
-    }
-}
-
-template<typename T>
-void 
-c_NEGF_Common<T>:: SetZero_BlkTable2D (BlkTable2D& Tab2D_data) 
-{
-    auto tlo = Tab2D_data.lo();
-    auto thi = Tab2D_data.hi();
-
-    auto const& Tab2D = Tab2D_data.table();
-
-    for (int i = tlo[0]; i < thi[0]; ++i)
-    {   
-        for (int j = tlo[1]; j < thi[1]; ++j) //slow moving index. printing slow
-        {   
-            ComplexType val(0.,0.);   
-            Tab2D(i,j) = val; 
-        }
-    }
-}
 //template<typename T>
 //void 
 //c_NEGF_Common<T>::DeallocateArrays () 
@@ -899,4 +945,14 @@ c_NEGF_Common<T>:: SetZero_BlkTable2D (BlkTable2D& Tab2D_data)
 //
 //}
 
+
+//
+//template<typename T>
+//AMREX_GPU_HOST_DEVICE
+//ComplexType 
+//c_NEGF_Common<T>::conjugate(ComplexType a)
+//{
+//   ComplexType a_conj(a.real(), -1.*a.imag());
+//   return a_conj;
+//}
 

@@ -17,7 +17,6 @@ c_CNT:: ReadNanostructureProperties ()
 {
     amrex::Print() << "\n##### NANOSTRUCTURE PROPERTIES #####\n\n";
 
-    c_NEGF_Common<BlkType>::ReadNanostructureProperties();
 
     amrex::ParmParse pp_ns(name);
 
@@ -55,12 +54,35 @@ c_CNT:: ReadNanostructureProperties ()
         rings_per_unitcell = 2;
         atoms_per_ring = type_id[0]-1;
     }
-    num_atoms = num_unitcells*rings_per_unitcell*atoms_per_ring;
+    Define_SortedModeVector();
     amrex::Print() << "#####* rings_per_unitcell: " << rings_per_unitcell << "\n";
     amrex::Print() << "#####* atoms_per_ring: " << atoms_per_ring << "\n";
-    amrex::Print() << "#####* num_atoms: " << num_atoms << "\n";
 
-    Define_SortedModeVector();
+    c_NEGF_Common<BlkType>::ReadNanostructureProperties();
+
+}
+
+
+void 
+c_CNT::set_material_specific_parameters()
+{
+    num_atoms = num_unitcells*rings_per_unitcell*atoms_per_ring;
+    num_atoms_per_unitcell = atoms_per_ring*rings_per_unitcell;
+
+    block_degen_vec.resize(NUM_MODES);
+
+    for(int m=0; m<NUM_MODES; ++m) 
+    {
+         block_degen_vec[m] = mode_degen_vec[m];
+    }
+
+    #if AMREX_USE_GPU
+    block_degen_gpuvec.resize(NUM_MODES);
+
+    amrex::Gpu::copy(amrex::Gpu::hostToDevice, 
+                     block_degen_vec.begin(), block_degen_vec.end(), 
+                     block_degen_gpuvec.begin());
+    #endif
 }
 
 

@@ -25,14 +25,14 @@ public:
 
     using ComplexTable1D = TableData<ComplexType, 1>;
     using ComplexTable2D = TableData<ComplexType, 2>;
-
-    //template<typename U>
-    using BlkTable1D = TableData<MatrixBlock<T>, 1>;
-    //template<typename U>
-    using BlkTable2D = TableData<MatrixBlock<T>, 2>;
+    using RealTable1D    = TableData<amrex::Real, 1>;
+    using RealTable2D    = TableData<amrex::Real, 2>;
+    using BlkTable1D     = TableData<MatrixBlock<T>, 1>;
+    using BlkTable2D     = TableData<MatrixBlock<T>, 2>;
 
     std::string name;
     int num_atoms;
+    int num_atoms_per_unitcell;
     int num_unitcells;
     amrex::RealArray offset;
     int avg_type;
@@ -58,6 +58,9 @@ public:
     amrex::Vector<int> vec_blkCol_gids; /*vec of block column global ids*/
 
     const int spin_degen = 2;
+    amrex::Vector<int> block_degen_vec;
+    amrex::Gpu::DeviceVector<int> block_degen_gpuvec;
+
     amrex::Vector<amrex::Real> avg_gatherField;
 
 
@@ -77,7 +80,13 @@ public:
     BlkTable2D h_GR_loc_data;
     BlkTable2D h_A_loc_data;
     #endif
+    RealTable1D h_LDOS_loc_data;
+    RealTable1D h_Transmission_loc_data;
     BlkTable1D h_Rho0_loc_data;
+
+    const int num_traces = 2;
+    amrex::Gpu::HostVector<amrex::Real> h_Trace_r;
+    amrex::Gpu::HostVector<amrex::Real> h_Trace_i;
 
     /*Tables required to compute Green and Spectral Functions */
     BlkTable1D h_Alpha_loc_data;
@@ -92,7 +101,6 @@ public:
     BlkTable1D h_Alpha_contact_data;
     BlkTable1D h_X_contact_data;
     BlkTable1D h_Y_contact_data;
-    //BlkTable1D h_Adiag_loc_data;
 
     #ifdef AMREX_USE_GPU
     BlkTable1D d_Alpha_loc_data;
@@ -104,7 +112,6 @@ public:
     BlkTable1D d_Alpha_contact_data;
     BlkTable1D d_X_contact_data;
     BlkTable1D d_Y_contact_data;
-    //BlkTable1D d_Adiag_loc_data;
     #endif
 
 
@@ -189,6 +196,7 @@ public:
 
     virtual void ReadNanostructureProperties();
     virtual int get_Hsize() {return 0;}
+    virtual void set_material_specific_parameters();
     virtual int get_offDiag_repeatBlkSize() {return 0;}
     void DefineMatrixPartition();
 
@@ -217,12 +225,19 @@ public:
     AMREX_GPU_HOST_DEVICE
     MatrixBlock<T> get_Gamma(const MatrixBlock<T>& Sigma);
     
-    AMREX_GPU_HOST_DEVICE     
-    ComplexType conjugate(ComplexType a);
+    //AMREX_GPU_HOST_DEVICE     
+    //ComplexType conjugate(ComplexType a);
 
     ComplexTable1D h_E_RealPath_data;
 
-    void Write_BlkTable1D_asaf_E(const BlkTable1D& Arr_data,
+    template<typename U> 
+    void Write_Table1D_asaf_E(const amrex::Vector<ComplexType>& E_vec,
+                              const U& Arr_data,
+                              std::string filename,
+                              std::string header);
+
+    void Write_BlkTable1D_asaf_E(const amrex::Vector<ComplexType>& E_vec,
+                                 const BlkTable1D& Arr_data,
                                  std::string filename,
                                  std::string header);
 
@@ -230,10 +245,16 @@ public:
                                  std::string filename,
                                  std::string header);
 
-    void Print_BlkTable1D_loc(const BlkTable1D& Tab1D_data);
-    void Print_BlkTable2D_loc(const BlkTable2D& Tab2D_data);
-    void SetZero_BlkTable1D(BlkTable1D& Tab1D_data);
-    void SetZero_BlkTable2D(BlkTable2D& Tab2D_data);
+    template<typename U> 
+    void Print_Table1D_loc(const U& Tab1D_data);
+    template<typename U> 
+    void Print_Table2D_loc(const U& Tab2D_data);
+
+    template<typename U, typename V> 
+    void SetVal_Table1D (U& Tab1D_data, V val);
+
+    template<typename U, typename V> 
+    void SetVal_Table2D(U& Tab2D_data, V val);
     //AMREX_GPU_HOST_DEVICE
     //ComplexType Compute_SurfaceGreensFunction();
 
@@ -241,5 +262,42 @@ public:
     //AMREX_GPU_HOST_DEVICE
     //ComplexType get_Sigma();
 };
+
+
+template<typename T> 
+template<typename U, typename V> 
+void 
+c_NEGF_Common<T>:: SetVal_Table1D (U& Tab1D_data, V val)
+{
+    auto tlo = Tab1D_data.lo();
+    auto thi = Tab1D_data.hi();
+    
+    auto const& Tab1D = Tab1D_data.table();
+    
+    for (int i = tlo[0]; i < thi[0]; ++i)
+    {
+        Tab1D(i) = val;   
+    }
+}
+
+
+template<typename T> 
+template<typename U, typename V> 
+void 
+c_NEGF_Common<T>:: SetVal_Table2D (U& Tab2D_data, V val)
+{
+    auto tlo = Tab2D_data.lo();
+    auto thi = Tab2D_data.hi();
+
+    auto const& Tab2D = Tab2D_data.table();
+
+    for (int i = tlo[0]; i < thi[0]; ++i)
+    {
+        for (int j = tlo[1]; j < thi[1]; ++j) //slow moving index. printing slow
+        {
+            Tab2D(i,j) = val;
+        }
+    }
+}
 
 #endif
