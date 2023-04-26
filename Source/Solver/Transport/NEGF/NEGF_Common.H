@@ -72,14 +72,9 @@ public:
     BlkTable1D h_tau_glo_data;
 
     /*Tables required to store essential quantities and observables */
-    BlkTable2D h_Sigma_glo_data;
-    #ifdef AMREX_USE_GPU
-    BlkTable2D d_GR_loc_data;
-    BlkTable2D d_A_loc_data;
-    #else
     BlkTable2D h_GR_loc_data;
     BlkTable2D h_A_loc_data;
-    #endif
+
     RealTable1D h_LDOS_loc_data;
     RealTable1D h_Transmission_loc_data;
     BlkTable1D h_Rho0_loc_data;
@@ -101,17 +96,22 @@ public:
     BlkTable1D h_Alpha_contact_data;
     BlkTable1D h_X_contact_data;
     BlkTable1D h_Y_contact_data;
+    BlkTable1D h_Sigma_contact_data;
 
     #ifdef AMREX_USE_GPU
+    BlkTable2D d_GR_loc_data;
+    BlkTable2D d_A_loc_data;
+
     BlkTable1D d_Alpha_loc_data;
-    BlkTable1D d_X_loc_data;
-    BlkTable1D d_Y_loc_data;
     BlkTable1D d_Xtil_glo_data;
     BlkTable1D d_Ytil_glo_data;
+    BlkTable1D d_X_loc_data;
+    BlkTable1D d_Y_loc_data;
 
     BlkTable1D d_Alpha_contact_data;
     BlkTable1D d_X_contact_data;
     BlkTable1D d_Y_contact_data;
+    BlkTable1D d_Sigma_contact_data;
     #endif
 
 
@@ -210,7 +210,6 @@ public:
     virtual void Define_IntegrationPaths ();
     virtual void Define_ContactInfo();
     virtual void Compute_SurfaceGreensFunction (MatrixBlock<T>& gr, const ComplexType EmU);
-    virtual void Define_SelfEnergy();
     void Compute_DensityOfStates();
     //virtual void DeallocateArrays();
     //virtual void ComputeChargeDensity();
@@ -218,16 +217,17 @@ public:
     void Allocate_TemporaryArraysForGFComputation();
     void Deallocate_TemporaryArraysForGFComputation();
 
+    //AMREX_GPU_HOST_DEVICE
+    //void get_Sigma_at_contacts(amrex::GpuArray<MatrixBlock<T>,NUM_CONTACTS>& Sigma, 
+    //                           ComplexType E);
+
     AMREX_GPU_HOST_DEVICE
-    void get_Sigma_at_contacts(amrex::GpuArray<MatrixBlock<T>,NUM_CONTACTS>& Sigma, 
+    void get_Sigma_at_contacts(BlkTable1D& h_Sigma_contact_data, 
                                ComplexType E);
 
     AMREX_GPU_HOST_DEVICE
     MatrixBlock<T> get_Gamma(const MatrixBlock<T>& Sigma);
     
-    //AMREX_GPU_HOST_DEVICE     
-    //ComplexType conjugate(ComplexType a);
-
     ComplexTable1D h_E_RealPath_data;
 
     template<typename U> 

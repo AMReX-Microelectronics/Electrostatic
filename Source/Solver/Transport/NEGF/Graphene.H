@@ -78,7 +78,6 @@ public:
     //virtual void ConstructHamiltonian () override;
     //virtual void AddPotentialToHamiltonian () override;
     //virtual void DefineIntegrationPaths () override;
-    virtual void Define_SelfEnergy() override;
     //virtual void DeallocateArrays() override;
     //virtual void ComputeChargeDensity() override;
 

@@ -252,20 +252,6 @@ c_CNT:: Compute_SurfaceGreensFunction(MatrixBlock<BlkType>& gr, const ComplexTyp
 }
 
 
-
-
-void 
-c_CNT::Define_SelfEnergy ()
-{
-
-    c_NEGF_Common<BlkType>:: Define_SelfEnergy (); 
-//    auto const& h_Sigma = h_Sigma_glo_data.table();
-//
-//    amrex::Print() << "Printing Sigma: \n";
-//    std::cout<< h_Sigma(0,0) << "\n";
-
-}
-
 void 
 c_CNT::Define_EnergyLimits ()
 {

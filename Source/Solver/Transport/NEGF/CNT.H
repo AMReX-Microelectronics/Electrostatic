@@ -100,7 +100,6 @@ public:
     virtual void Define_ContactInfo() override;
     virtual void Compute_SurfaceGreensFunction (MatrixBlock<BlkType>& gr, const ComplexType EmU) override;
 
-    virtual void Define_SelfEnergy() override;
     //virtual void DeallocateArrays() override;
     //virtual void ComputeChargeDensity() override;
 
