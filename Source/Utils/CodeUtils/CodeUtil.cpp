@@ -308,7 +308,6 @@ Multifab_Manipulation::Copy_3DCartesian_To_2DAzimuthalLongitudinal
     auto& real_box = geom.ProbDomain();
     auto iv = mf.ixType().toIntVect();
 
-    const Real pi = 3.1415926535897932;
     int dir_ref1 = Get_Third_Reference_Direction(dir_axial, dir_ref2);
 
     for ( amrex::MFIter mfi(flags, amrex::TilingIfNotGPU()); mfi.isValid(); ++mfi ) 

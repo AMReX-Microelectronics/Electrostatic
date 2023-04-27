@@ -93,7 +93,6 @@ c_Diagnostics::InitData()
 
     auto& rCode = c_Code::GetInstance();
     auto& rGprop = rCode.get_GeometryProperties();
-    int Nghost0=0;
 
     #if AMREX_USE_EB
     if(specify_using_eb) 

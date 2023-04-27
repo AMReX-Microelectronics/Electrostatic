@@ -537,8 +537,6 @@ c_MLMGSolver:: UpdateBoundaryConditions()
     auto& rCode = c_Code::GetInstance();
     auto& rGprop = rCode.get_GeometryProperties();
     auto& rBC = rCode.get_BoundaryConditions();
-    auto& ba = rGprop.ba;
-    auto& dm = rGprop.dm;
     auto& geom = rGprop.geom;
     int amrlev = 0;
 

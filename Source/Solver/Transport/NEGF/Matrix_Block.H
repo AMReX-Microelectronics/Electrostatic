@@ -22,47 +22,47 @@ struct MatrixBlock
    public:
    T block;
 
-   //AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
-   //template<typename U>
-   //friend MatrixBlock<U> real(const MatrixBlock<T>& rhs);
+   AMREX_GPU_HOST_DEVICE MatrixBlock<T> operator=(const amrex::Real c);
+   AMREX_GPU_HOST_DEVICE MatrixBlock<T> operator=(const ComplexType c);
 
-   MatrixBlock<T> operator=(const amrex::Real c);
-   MatrixBlock<T> operator=(const ComplexType c);
+   AMREX_GPU_HOST_DEVICE MatrixBlock<T> operator*(const ComplexType c);
+   AMREX_GPU_HOST_DEVICE MatrixBlock<T> operator*(const MatrixBlock<T>& rhs);
+   template<typename U>
+   friend AMREX_GPU_HOST_DEVICE MatrixBlock<U> operator*(const ComplexType c, const MatrixBlock<U>& rhs);
+   template<typename U>
+   friend AMREX_GPU_HOST_DEVICE MatrixBlock<U> operator*(const amrex::Real c, const MatrixBlock<U>& rhs);
 
-   MatrixBlock<T> operator*(const ComplexType c);
-   MatrixBlock<T> operator*(const MatrixBlock<T>& rhs);
+   AMREX_GPU_HOST_DEVICE MatrixBlock<T> operator+(const ComplexType c);
+   AMREX_GPU_HOST_DEVICE MatrixBlock<T> operator+(const MatrixBlock<T>& rhs);
    template<typename U>
-   friend MatrixBlock<U> operator*(const ComplexType c, const MatrixBlock<U>& rhs);
-   template<typename U>
-   friend MatrixBlock<U> operator*(const amrex::Real c, const MatrixBlock<U>& rhs);
+   friend AMREX_GPU_HOST_DEVICE MatrixBlock<U> operator+(const ComplexType c, const MatrixBlock<U>& rhs);
 
-   MatrixBlock<T> operator+(const ComplexType c);
-   MatrixBlock<T> operator+(const MatrixBlock<T>& rhs);
+   AMREX_GPU_HOST_DEVICE  MatrixBlock<T> operator-(const amrex::Real c);
+   AMREX_GPU_HOST_DEVICE  MatrixBlock<T> operator-(const ComplexType c);
+   AMREX_GPU_HOST_DEVICE  MatrixBlock<T> operator-(const MatrixBlock<T>& rhs);
    template<typename U>
-   friend MatrixBlock<U> operator+(const ComplexType c, const MatrixBlock<U>& rhs);
+   friend AMREX_GPU_HOST_DEVICE MatrixBlock<U> operator-(const ComplexType c, const MatrixBlock<U>& rhs);
+   template<typename U>
+   friend AMREX_GPU_HOST_DEVICE MatrixBlock<U> operator-(const MatrixBlock<U>& B, const MatrixBlock<U>& C);
 
-   MatrixBlock<T> operator-(const amrex::Real c);
-   MatrixBlock<T> operator-(const ComplexType c);
-   MatrixBlock<T> operator-(const MatrixBlock<T>& rhs);
-   template<typename U>
-   friend MatrixBlock<U> operator-(const ComplexType c, const MatrixBlock<U>& rhs);
-   template<typename U>
-   friend MatrixBlock<U> operator-(const MatrixBlock<U>& B, const MatrixBlock<U>& C);
+   AMREX_GPU_HOST_DEVICE MatrixBlock<T> operator/(const ComplexType c);
+   AMREX_GPU_HOST_DEVICE MatrixBlock<T> operator/(const MatrixBlock<T>& rhs);
 
-   MatrixBlock<T> operator/(const ComplexType c);
-   MatrixBlock<T> operator/(const MatrixBlock<T>& rhs);
    template<typename U>
-   friend MatrixBlock<U> operator/(const ComplexType c, const MatrixBlock<U>& C);
+   friend AMREX_GPU_HOST_DEVICE MatrixBlock<U> operator/(const ComplexType c, const MatrixBlock<U>& C);
 
    template<typename U>
    friend std::ostream& operator<<(std::ostream& stream, const MatrixBlock<U>& rhs);
 
-   MatrixBlock<T> Conj() const; /*Conjugate*/
-   MatrixBlock<T> Tran() const; /*Transpose*/
-   MatrixBlock<T> Dagger() const; /*Conjugate-Transpose*/
-   ComplexType DiagSum() const; /*Conjugate-Transpose*/
+   AMREX_GPU_HOST_DEVICE MatrixBlock<T> Conj() const; /*Conjugate*/
+   AMREX_GPU_HOST_DEVICE MatrixBlock<T> Tran() const; /*Transpose*/
+   AMREX_GPU_HOST_DEVICE MatrixBlock<T> Dagger() const; /*Conjugate-Transpose*/
+   AMREX_GPU_HOST_DEVICE ComplexType DiagSum() const; /*Trace*/
+
    template<typename U>
-   ComplexType DiagDotSum(U& vec) const; /*Conjugate-Transpose*/
+   AMREX_GPU_HOST_DEVICE	    
+   ComplexType DiagDotSum(U& vec) const; /*SUM of { BLOCK(n,n)*vec[n] }*/
+
    //MatrixBlock<T> AtomicAdd(MatrixBlock<T>& B) const; /*Atomic add for the block*/
    //template<typename U, std::size_t N>
    //MatrixBlock<amrex::Real> Real() const; 

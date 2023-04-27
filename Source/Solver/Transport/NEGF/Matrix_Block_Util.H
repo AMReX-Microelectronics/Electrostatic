@@ -1,9 +1,6 @@
 #include "Matrix_Block.H"
 
 
-template struct MatrixBlock<ComplexType[NUM_MODES]>;            //of c_CNT
-template struct MatrixBlock<ComplexType[NUM_MODES][NUM_MODES]>; //of c_Graphene
-
 /* Definitions */
 /* Operation [R] = c_complex, i.e. a complex constant */
 template<typename T>
@@ -582,39 +579,6 @@ operator<<(std::ostream& stream, const MatrixBlock<ComplexType[NUM_MODES][NUM_MO
     return stream;
 }
 
-//template <typename T>
-//MatrixBlock<T> Conjugate(const MatrixBlock<T>& X) 
-//{
-//    MatrixBlock<T> result;
-//    return result;
-//}
-//
-//template <>
-//MatrixBlock<ComplexType[NUM_MODES]> Conjugate(const MatrixBlock<ComplexType[NUM_MODES]>& X) 
-//{
-//    MatrixBlock<ComplexType[NUM_MODES]> result; 
-//    for (int i = 0; i < NUM_MODES; ++i)
-//    {
-//        amrex::GpuComplex X_conj(X.block[i].real(), -1.*X.block[i].imag());
-//        result.block[i] = X_conj;
-//    }
-//    return result;
-//}
-//
-//template <>
-//MatrixBlock<ComplexType[NUM_MODES][NUM_MODES]> Conjugate(const MatrixBlock<ComplexType[NUM_MODES][NUM_MODES]>& X) 
-//{
-//    MatrixBlock<ComplexType[NUM_MODES][NUM_MODES]> result; 
-//    for (int i = 0; i < NUM_MODES; ++i)
-//    {
-//        for (int j = 0; j < NUM_MODES; ++j)
-//        {
-//            amrex::GpuComplex X_conj(X.block[i][j].real(), -1.*X.block[i][j].imag());
-//            result.block[i][j] = X_conj;
-//        }
-//    }
-//    return result;
-//}
 
 template <typename T>
 MatrixBlock<T> 
@@ -795,7 +759,7 @@ MatrixBlock<ComplexType[NUM_MODES][NUM_MODES]>::Dagger() const
 //}
 
 
-///* Operation DiagSum */
+/* Operation DiagSum */
 template <typename T>
 ComplexType
 MatrixBlock<T>::DiagSum() const

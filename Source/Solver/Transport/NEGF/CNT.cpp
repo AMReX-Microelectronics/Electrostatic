@@ -119,7 +119,7 @@ c_CNT::Define_SortedModeVector()
     mode_vec[8] = 17;
 }
 
-AMREX_GPU_HOST_DEVICE ComplexType 
+ComplexType 
 c_CNT::get_beta(int J)
 {
    ComplexType arg(0., -MathConst::pi*J/type_id[0]);

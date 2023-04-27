@@ -15,7 +15,6 @@ struct s_AVG_TYPE
     };
 };
 
-
 template<typename T>
 class c_NEGF_Common: public MatrixBlock<T>
 {
@@ -79,10 +78,6 @@ public:
     RealTable1D h_Transmission_loc_data;
     BlkTable1D h_Rho0_loc_data;
 
-    const int num_traces = 2;
-    amrex::Gpu::HostVector<amrex::Real> h_Trace_r;
-    amrex::Gpu::HostVector<amrex::Real> h_Trace_i;
-
     /*Tables required to compute Green and Spectral Functions */
     BlkTable1D h_Alpha_loc_data;
     BlkTable1D h_Alpha_glo_data;
@@ -98,6 +93,10 @@ public:
     BlkTable1D h_Y_contact_data;
     BlkTable1D h_Sigma_contact_data;
 
+    const int num_traces = 2;
+    amrex::Gpu::HostVector<amrex::Real> h_Trace_r;
+    amrex::Gpu::HostVector<amrex::Real> h_Trace_i;
+
     #ifdef AMREX_USE_GPU
     BlkTable2D d_GR_loc_data;
     BlkTable2D d_A_loc_data;
@@ -112,6 +111,9 @@ public:
     BlkTable1D d_X_contact_data;
     BlkTable1D d_Y_contact_data;
     BlkTable1D d_Sigma_contact_data;
+
+    amrex::Gpu::DeviceVector<amrex::Real> d_Trace_r;
+    amrex::Gpu::DeviceVector<amrex::Real> d_Trace_i;
     #endif
 
 
@@ -198,6 +200,8 @@ public:
     virtual int get_Hsize() {return 0;}
     virtual void set_material_specific_parameters();
     virtual int get_offDiag_repeatBlkSize() {return 0;}
+    virtual int get_num_layers() { return 0;}
+    virtual int get_num_atoms_per_layer() { return 0;}
     void DefineMatrixPartition();
 
     MPI_Datatype MPI_BlkType;
@@ -209,7 +213,9 @@ public:
     virtual void Define_EnergyLimits ();
     virtual void Define_IntegrationPaths ();
     virtual void Define_ContactInfo();
-    virtual void Compute_SurfaceGreensFunction (MatrixBlock<T>& gr, const ComplexType EmU);
+    virtual 
+    AMREX_GPU_HOST_DEVICE
+    void Compute_SurfaceGreensFunction (MatrixBlock<T>& gr, const ComplexType EmU);
     void Compute_DensityOfStates();
     //virtual void DeallocateArrays();
     //virtual void ComputeChargeDensity();
@@ -217,17 +223,12 @@ public:
     void Allocate_TemporaryArraysForGFComputation();
     void Deallocate_TemporaryArraysForGFComputation();
 
-    //AMREX_GPU_HOST_DEVICE
-    //void get_Sigma_at_contacts(amrex::GpuArray<MatrixBlock<T>,NUM_CONTACTS>& Sigma, 
-    //                           ComplexType E);
-
-    AMREX_GPU_HOST_DEVICE
     void get_Sigma_at_contacts(BlkTable1D& h_Sigma_contact_data, 
                                ComplexType E);
+   
+    //AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE 
+    //MatrixBlock<T> get_Gamma(const MatrixBlock<T>& Sigma);
 
-    AMREX_GPU_HOST_DEVICE
-    MatrixBlock<T> get_Gamma(const MatrixBlock<T>& Sigma);
-    
     ComplexTable1D h_E_RealPath_data;
 
     template<typename U> 
@@ -255,12 +256,7 @@ public:
 
     template<typename U, typename V> 
     void SetVal_Table2D(U& Tab2D_data, V val);
-    //AMREX_GPU_HOST_DEVICE
-    //ComplexType Compute_SurfaceGreensFunction();
 
-
-    //AMREX_GPU_HOST_DEVICE
-    //ComplexType get_Sigma();
 };
 
 

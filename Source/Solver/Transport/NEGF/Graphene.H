@@ -19,11 +19,11 @@ public:
     using BlkType = ComplexType[NUM_MODES][NUM_MODES];
 
 
-    std::array<int,2> Get_Ring_Atom_IDs(int cell_id)
-    {    
-         std::array<int,2> id;
-         return id;
-    };
+    //std::array<int,2> Get_Ring_Atom_IDs(int cell_id)
+    //{    
+    //     std::array<int,2> id;
+    //     return id;
+    //};
 
     struct Get1DLayerID {
        AMREX_GPU_HOST_DEVICE int operator() (int global_par_id) const
@@ -49,22 +49,10 @@ public:
          return GetAtomIn1DLayerID{type_id};            
     }
 
-    const int get_num_layers() 
-    {
-         int num_layers;
-         return num_layers;
-    };
-
-    const int get_num_atoms_per_layer()
-    {
-         int atoms_per_layer;
-         return atoms_per_layer;
-    };
-
-    void Print_IDs(int cell_id)
-    {
-        //
-    };
+    //void Print_IDs(int cell_id)
+    //{
+    //    //
+    //};
 
     static amrex::Array<int,2> type_id;
 

@@ -134,7 +134,7 @@ public:
     int use_electrostatic;
  
 private:
-    const amrex::Real set_time(int n) 
+    amrex::Real set_time(int n) 
     { m_time_instant = n*m_timestep; return m_time_instant;}
 
     static c_Code* m_instance;
