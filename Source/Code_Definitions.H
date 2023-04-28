@@ -8,6 +8,13 @@
 #define NUM_MODES 2
 #define NUM_CONTACTS 2
 #define NUM_ENERGY_PTS_REAL 10
+
+#include <AMReX_BoxArray.H>
+#include <AMReX_REAL.H>
+#include <AMReX_GpuComplex.H>
+
+using ComplexType = amrex::GpuComplex<amrex::Real>;
+
 template<typename T>
 class TD;
 

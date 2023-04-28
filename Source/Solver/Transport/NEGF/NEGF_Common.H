@@ -2,6 +2,7 @@
 #define NEGF_COMMON_H_
 
 #include "Matrix_Block.H"
+#include "IntegrationPath.H"
 #include "../../../Utils/SelectWarpXUtils/WarpXUtil.H"
 #include "../../../Utils/SelectWarpXUtils/WarpXConst.H"
 
@@ -15,13 +16,14 @@ struct s_AVG_TYPE
     };
 };
 
+
 template<typename T>
-class c_NEGF_Common: public MatrixBlock<T>
+class c_NEGF_Common: public MatrixBlock<T>, 
+                     public c_IntegrationPath
 {
 
 public:
-
-
+    
     using ComplexTable1D = TableData<ComplexType, 1>;
     using ComplexTable2D = TableData<ComplexType, 2>;
     using RealTable1D    = TableData<amrex::Real, 1>;
@@ -36,8 +38,7 @@ public:
     amrex::RealArray offset;
     int avg_type;
     amrex::Vector<int> vec_avg_indices;
-
-
+   
     int num_proc;
     int my_rank;
     int Hsize_glo=0; 
@@ -148,48 +149,6 @@ public:
     amrex::Real mu_contact[NUM_CONTACTS] = {0.,0.};
     amrex::Real mu_min=0.;
     amrex::Real mu_max=0.;
-
-    void GaussLegendre(int degree, amrex::Vector<amrex::Real>& x, 
-                                   amrex::Vector<amrex::Real>& weight);
-
-    class c_IntegrationPath
-    {
-        private:
-        ComplexType E_min  = 0.;
-        ComplexType E_max  = 0.;
-        int type_id     = 0; /*0=line, 1=circle*/
-        //ComplexType E_center  = 0.; 
-        //amrex::Real E_radius  = 0.;
-        
-        public:
-        int num_pts = 0;
-        amrex::Vector<ComplexType> weight_vec;
-        amrex::Vector<ComplexType> mul_factor_vec;
-        amrex::Vector<ComplexType> E_vec;
-
-        //void Define_GaussLegendrePoints();
-        void Define_RegularPoints(ComplexType min, ComplexType max, int pts) 
-        { 
-            E_min = min; 
-            E_max = max;
-            num_pts = pts;
-
-            ComplexType dE = (E_max-E_min)/static_cast<amrex::Real>(num_pts-1);
-
-            weight_vec.resize(num_pts);
-            mul_factor_vec.resize(num_pts);   
-            E_vec.resize(num_pts);
-
-            for (int i=0; i<num_pts; ++i) 
-            {
-                E_vec[i] = E_min + static_cast<amrex::Real>(i)*dE;  
-                weight_vec[i] = dE;
-                mul_factor_vec[i] = 1.;
-            }
-        }
-    };
-
-
 
     amrex::GpuArray<c_IntegrationPath,3> ContourPath_Rho0;  
     amrex::GpuArray<c_IntegrationPath,3> ContourPath_RhoEq;  

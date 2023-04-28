@@ -499,3 +499,49 @@ int Get_Third_Reference_Direction(int dir1, int dir2)
     }
     return dir3;
 }
+
+
+void
+Quadrature::Gauss_Legendre(amrex::Vector<amrex::Real>& x,
+                           amrex::Vector<amrex::Real>& w, const int n)     
+{
+
+    /*given degree n, function returns abscissa x, and weight w, of size n, 
+      over interval -1 to 1*/
+
+    amrex::Real eps = 3.0e-11;
+    int m = (n + 1)/2;
+    /*roots are symmetric in the interval, so we only need to find half of them*/
+    amrex::Real z=0.;
+
+    for (int i = 1; i <= m; ++i) 
+    {
+        z = cos(MathConst::pi*(i-0.25)/(n+0.5));
+        amrex::Real z1 = z;
+        amrex::Real pp = 0.; 
+        /*Starting with the above approximation to the ith root, enter the main loop of refinement by Newton's method*/
+        do {
+            amrex::Real p1 = 1.0; 
+            amrex::Real p2 = 0.0; 
+            for (int j=1; j <= n; ++j)
+            {
+                amrex::Real p3 = p2;
+                p2 = p1;
+                p1 = ( (2.0*j - 1.0)*z*p2 - (j-1.0)*p3 ) / j;
+            }
+            /*p1 is the desired Legendre polynomial. Next, compute pp, it's derivative, 
+              by a standard relation involving p2, the polynomial of one lower order*/
+        
+            pp = n*(z*p1 - p2)/(z*z-1.0);
+            z1 = z;
+            z = z1 - p1/pp;
+
+        } while (std::fabs(z-z1) > eps);
+        
+        x[i-1] = -z;
+        x[n-i] = z;
+        w[i-1] = 2.0/((1.0-z*z)*pp*pp);
+        w[n-i] = w[i-1];
+    }
+
+}

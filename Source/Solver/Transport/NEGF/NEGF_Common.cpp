@@ -317,7 +317,7 @@ void
 c_NEGF_Common<T>:: Define_IntegrationPaths ()
 {
     /* Define_ContourPath_Rho0 */
-    //ContourPath_Rho0[0].Define_GaussLegendrePoints(E_zPlus, E_zeta, 50, "line"); 
+    ContourPath_Rho0[0].Define_GaussLegendrePoints(E_zPlus, E_zeta, 200, 0); 
     //ContourPath_Rho0[1].Define_GaussLegendrePoints(E_zeta,  E_eta, 50, "line"); 
     //ContourPath_Rho0[2].Define_GaussLegendrePoints(E_eta, E_contour_left, 50, "circle"); 
 

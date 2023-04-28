@@ -5,6 +5,7 @@
 #include <AMReX_Parser.H>
 
 #include "../../Code_Definitions.H"
+#include "../SelectWarpXUtils/WarpXConst.H"
 
 #include <ctype.h>
 #include <typeindex>
@@ -14,8 +15,13 @@
 #include <vector>
 #include <any>
 
+#include <cmath>
+#include <math.h>
+#include<stdlib.h>
+
 using namespace amrex;
 
+using ComplexType = amrex::GpuComplex<amrex::Real>;
 
 namespace Multifab_Manipulation
 {
@@ -222,3 +228,9 @@ amrex::Array<ARR_TYPE, ARR_SIZE> vecToArr_Templated(amrex::Vector<ARR_TYPE>& vec
 //    }
 //    return cell_id;
 //}
+
+namespace Quadrature
+{
+   void Gauss_Legendre(amrex::Vector<amrex::Real>& x, 
+                       amrex::Vector<amrex::Real>& w, const int n);
+}

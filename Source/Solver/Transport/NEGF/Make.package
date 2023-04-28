@@ -1,3 +1,6 @@
+CEXE_sources += IntegrationPath.cpp
+CEXE_headers += IntegrationPath.H
+
 CEXE_headers += Matrix_Block_Util.H
 CEXE_headers += Matrix_Block.H
 
