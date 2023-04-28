@@ -66,11 +66,26 @@ c_CNT:: ReadNanostructureProperties ()
 void 
 c_CNT::set_material_specific_parameters()
 {
-    num_atoms = num_unitcells*rings_per_unitcell*atoms_per_ring;
-    num_atoms_per_unitcell = atoms_per_ring*rings_per_unitcell;
+    num_atoms                = num_unitcells*rings_per_unitcell*atoms_per_ring;
+    num_atoms_per_unitcell   = atoms_per_ring*rings_per_unitcell;
+
+    num_field_sites          = num_unitcells*rings_per_unitcell;
+    average_field_flag       = 1;
+    if(average_field_flag) 
+    {
+        num_atoms_per_field_site = atoms_per_ring;
+        if(avg_type == s_AVG_TYPE::ALL) 
+        {
+            num_atoms_to_avg_over    = num_atoms_per_field_site;
+        }
+        else if(avg_type == s_AVG_TYPE::SPECIFIC)
+        {
+            num_atoms_to_avg_over    = vec_avg_indices.size();
+        }
+    }
+    primary_transport_dir    = 1; /*Y*/
 
     block_degen_vec.resize(NUM_MODES);
-
     for(int m=0; m<NUM_MODES; ++m) 
     {
          block_degen_vec[m] = mode_degen_vec[m];
@@ -136,21 +151,6 @@ c_CNT::Define_MPI_BlkType ()
 }
 
 
-//AMREX_GPU_HOST_DEVICE 
-//void
-//c_CNT::get_Sigma(MatrixBlock<BlkType>& Sigma, const ComplexType EmU)
-//{
-//
-//   MatrixBlock<BlkType> gr;
-//   Compute_SurfaceGreensFunction(gr, EmU);
-//
-//   amrex::Print() << "Printing gr: \n";
-//   amrex::Print() << gr << "\n";
-//
-//   Sigma = gr*pow(gamma,2.);
-//}
-//
-//
 void 
 c_CNT::AllocateArrays () 
 {
@@ -171,6 +171,7 @@ c_CNT::AllocateArrays ()
 void 
 c_CNT::ConstructHamiltonian() 
 {
+    /*Here we define -H0 where H0 is Hamiltonian of flat bands*/
 
     auto const& h_Ha = h_Ha_loc_data.table();
     auto const& h_Hb = h_Hb_loc_data.table();
@@ -242,6 +243,7 @@ c_CNT:: Compute_SurfaceGreensFunction(MatrixBlock<BlkType>& gr, const ComplexTyp
 
        if(val1.imag() < 0.) gr.block[i] = val1;
        else if(val2.imag() < 0.) gr.block[i] = val2; 
+
        //amrex::Print() << "EmU: " << EmU << "\n";
        //amrex::Print() << "Factor: " << Factor << "\n";
        //amrex::Print() << "Sqrt: "  << Sqrt << "\n";

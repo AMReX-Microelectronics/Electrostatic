@@ -47,12 +47,35 @@ c_NEGF_Common<T>:: ReadNanostructureProperties ()
        {
            amrex::Print() << vec_avg_indices[i] << "  ";
        }
+
+       #if AMREX_USE_GPU
+       gpuvec_avg_indices.resize(vec_avg_indices.size());
+       amrex::Gpu::copy(amrex::Gpu::hostToDevice, 
+                        vec_avg_indices.begin(), 
+                        vec_avg_indices.end(), 
+                        gpuvec_avg_indices.begin());
+       #endif
     }
     
     set_material_specific_parameters();
 
-    amrex::Print() << "#####* num_atoms: " << num_atoms << "\n";
-    amrex::Print() << "#####* num_atoms_per_unitcell: " << num_atoms_per_unitcell << "\n";
+    amrex::Print() << "#####* num_atoms: "                << num_atoms                  << "\n";
+    amrex::Print() << "#####* num_atoms_per_unitcell: "   << num_atoms_per_unitcell     << "\n";
+    amrex::Print() << "#####* num_unitcells: "            << num_unitcells              << "\n";
+    amrex::Print() << "#####* num_field_sites: "          << num_field_sites            << "\n";
+    amrex::Print() << "#####* average_field_flag: "       << average_field_flag         << "\n";
+    amrex::Print() << "#####* num_atoms_per_field_site: " << num_atoms_per_field_site   << "\n";
+    amrex::Print() << "#####* num_atoms_to_avg_over: "    << num_atoms_to_avg_over      << "\n";
+    amrex::Print() << "#####* primary_transport_dir: "    << primary_transport_dir      << "\n";
+
+    Potential.resize(num_field_sites);
+    PTD.resize(num_field_sites);
+
+    for(int l=0; l < num_field_sites; ++l) 
+    {
+        Potential[l] = 0.;
+        PTD[l]       = 0.;
+    }
 
 }
 
@@ -64,8 +87,15 @@ c_NEGF_Common<T>::set_material_specific_parameters()
     /*set the following in the specialization*/
     /*num_atoms: number of total atoms*/
     /*num_atoms_per_unitcell: number of atoms per unitcell*/
+    /*num_unitcells*/
+    /*num_field_sites*/
+    /*average_field_flag*/
+    /*num_atoms_per_field_site*/
+    /*num_atoms_to_avg_over*/
+    /*primary_transport_dir*/
     /*block_degen_vec: this is vector of degeneracy factors of size equal to that of a block element*/ 
     /*block_degen_gpuvec: device vector copy of block_degen_vec*/
+    /*set the size ofprimary_transport_dir*/
 }
 
 template<typename T>
@@ -215,7 +245,7 @@ c_NEGF_Common<T>:: AddPotentialToHamiltonian ()
     int c=0;
     for(auto& col_gid: vec_blkCol_gids)
     {
-        h_Ha(c) = h_Ha(c) - avg_gatherField[col_gid];
+        h_Ha(c) = h_Ha(c) - Potential[col_gid];
         ++c;
     }
 }
@@ -227,7 +257,7 @@ c_NEGF_Common<T>:: Update_ContactPotential ()
 {
     for(int c=0; c<NUM_CONTACTS; ++c)
     {
-        U_contact[c] = avg_gatherField[global_contact_index[c]];
+        U_contact[c] = Potential[global_contact_index[c]];
         ++c;
     }
 }

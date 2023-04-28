@@ -196,9 +196,9 @@ c_TransportSolver::Solve()
    {
        if(use_selfconsistent_potential) 
        {
-          vp_CNT[c]->GatherFromMesh();
-          vp_CNT[c]->AverageFieldGatheredFromMesh();
-          vp_CNT[c]->Write_AveragedGatherField();
+          vp_CNT[c]->Gather_MeshAttributeAtAtoms();
+          vp_CNT[c]->Obtain_PotentialAtSites();
+          vp_CNT[c]->Write_PotentialAtSites();
        }
 
        //if(use_negf) 

@@ -39,13 +39,18 @@ c_Nanostructure<NSType>::c_Nanostructure (const amrex::Geometry            & geo
 
     NSType::name = NS_name_str;
     amrex::Print() << "Nanostructure: " << NS_name_str << "\n";
-    ReadNanostructureProperties();
      
     auto& rCode = c_Code::GetInstance();
 
-    _use_electrostatic = rCode.use_electrostatic;
+    _use_electrostatic            = rCode.use_electrostatic;
     _use_selfconsistent_potential = use_selfconsistent_potential;
-    _use_negf          = use_negf;
+    _use_negf                     = use_negf;
+
+    if(_use_negf) 
+    {
+        ReadNanostructureProperties();
+        InitializeNEGF();
+    } 
 
     if(_use_selfconsistent_potential) 
     {
@@ -59,24 +64,14 @@ c_Nanostructure<NSType>::c_Nanostructure (const amrex::Geometry            & geo
         p_mf_gather = rMprop.get_p_mf(NS_gather_str);  
         p_mf_deposit = rMprop.get_p_mf(NS_deposit_str);  
 
-        gpuvec_avg_indices.resize(NSType::vec_avg_indices.size());
-        amrex::Gpu::copy(amrex::Gpu::hostToDevice, NSType::vec_avg_indices.begin(), NSType::vec_avg_indices.end(), gpuvec_avg_indices.begin());
-
-        amrex::Print() << "Number of layers: " << NSType::get_num_layers() << "\n";
-        NSType::avg_gatherField.resize(NSType::get_num_layers());
-
         ReadAtomLocations();
         Redistribute(); //This function is in amrex::ParticleContainer
 
         MarkCellsWithAtoms();
-        InitializeAttributeToDeposit(NS_initial_deposit_value);
-        DepositToMesh();
+        Initialize_AttributeToDeposit(NS_initial_deposit_value);
+        Deposit_AtomAttributeToMesh();
     }
 
-    if(_use_negf) 
-    {
-        InitializeNEGF();
-    } 
 #ifdef PRINT_NAME
     amrex::Print() << "\t\t\t}************************c_Nanostructure() Constructor************************\n";
 #endif
@@ -89,8 +84,6 @@ c_Nanostructure<NSType>::~c_Nanostructure ()
     amrex::Print() << "\n\n\t\t\t{************************c_Nanostructure() Destructor************************\n";
     amrex::Print() << "\t\t\tin file: " << __FILE__ << " at line: " << __LINE__ << "\n";
 #endif
-
-    NSType::avg_gatherField.clear();
 
 #ifdef PRINT_NAME
     amrex::Print() << "\t\t\t}************************c_Nanostructure() Destructor************************\n";
@@ -150,11 +143,11 @@ c_Nanostructure<NSType>::ReadAtomLocations()
                 
                 infile >> id[0] >> id[1];
 
-		auto get_1Dlayer_id = NSType::get_1Dlayer_id();
-                int layer = get_1Dlayer_id(p.id());
+        		//auto get_1D_site_id = NSType::get_1D_site_id();
+                //int site_id         = get_1D_site_id(p.id());
 
-		auto get_atom_in_1Dlayer_id = NSType::get_atom_in_1Dlayer_id();
-                int atom_id_in_layer = get_atom_in_1Dlayer_id(p.id());
+	        	//auto get_atom_id_at_site = NSType::get_atom_id_at_site();
+                //int atom_id_at_site      = get_atom_id_at_site(p.id());
 
                 for(int j=0; j < AMREX_SPACEDIM; ++j) {
                     infile >> p.pos(j);
@@ -227,7 +220,7 @@ c_Nanostructure<NSType>::MarkCellsWithAtoms()
 
 template<typename NSType>
 void 
-c_Nanostructure<NSType>::GatherFromMesh() 
+c_Nanostructure<NSType>::Gather_MeshAttributeAtAtoms() 
 {
     
     const auto& plo = _geom->ProbLoArray();
@@ -266,7 +259,7 @@ c_Nanostructure<NSType>::GatherFromMesh()
 
 template<typename NSType>
 void 
-c_Nanostructure<NSType>::DepositToMesh() 
+c_Nanostructure<NSType>::Deposit_AtomAttributeToMesh() 
 {
     const auto& plo = _geom->ProbLoArray();
     const auto dx =_geom->CellSizeArray();
@@ -304,7 +297,7 @@ c_Nanostructure<NSType>::DepositToMesh()
 
 template<typename NSType>
 void 
-c_Nanostructure<NSType>::InitializeAttributeToDeposit(const amrex::Real value) 
+c_Nanostructure<NSType>::Initialize_AttributeToDeposit(const amrex::Real value) 
 {
     const auto& plo = _geom->ProbLoArray();
     const auto dx =_geom->CellSizeArray();
@@ -327,27 +320,25 @@ c_Nanostructure<NSType>::InitializeAttributeToDeposit(const amrex::Real value)
 
 template<typename NSType>
 void 
-c_Nanostructure<NSType>::AverageFieldGatheredFromMesh() 
+c_Nanostructure<NSType>::Obtain_PotentialAtSites() 
 {
+    const int num_field_sites          = NSType::num_field_sites;
+    const int num_atoms_per_field_site = NSType::num_atoms_per_field_site;
+    const int num_atoms_to_avg_over    = NSType::num_atoms_to_avg_over;
+    const int average_field_flag       = NSType::average_field_flag;
+    const int PTD_id                   = NSType::primary_transport_dir;
 
-    const int num_layers = NSType::get_num_layers();
-    const int atoms_per_layer = NSType::get_num_atoms_per_layer();
-    int atoms_to_avg_over = atoms_per_layer;
+    amrex::Gpu::DeviceVector<amrex::Real> vec_U(num_field_sites);
+    amrex::Gpu::DeviceVector<amrex::Real> vec_PTD(num_field_sites);
 
-    if(NSType::avg_type == s_AVG_TYPE::SPECIFIC) 
+    for (int l=0; l < num_field_sites; ++l) 
     {
-        atoms_to_avg_over = NSType::vec_avg_indices.size();
+        vec_U[l]   = 0.;
+        vec_PTD[l] = 0.;
     }
 
-    amrex::Gpu::DeviceVector<amrex::Real> vec_sum_gatherField(num_layers);
-    //amrex::Gpu::DeviceVector<amrex::Real> vec_axial_loc(num_layers);
-    for (int l=0; l<num_layers; ++l) 
-    {
-        vec_sum_gatherField[l] = 0.;
-        //vec_axial_loc[l] = 0.;
-    }
-    amrex::Real* p_sum = vec_sum_gatherField.dataPtr();  
-    //amrex::Real* p_axial_loc = vec_sum_axial_loc.dataPtr();  
+    amrex::Real* p_U   = vec_U.dataPtr();  
+    amrex::Real* p_PTD = vec_PTD.dataPtr();  
     
     int lev = 0;
     for (MyParIter pti(*this, lev); pti.isValid(); ++pti)
@@ -359,56 +350,66 @@ c_Nanostructure<NSType>::AverageFieldGatheredFromMesh()
 
         auto& par_gather  = pti.get_realPA_comp(realPA::gather);
         auto p_par_gather = par_gather.data();
-        auto get_1Dlayer_id = NSType::get_1Dlayer_id();
-
-        if(NSType::avg_type == s_AVG_TYPE::ALL) 
+        auto get_1D_site_id = NSType::get_1D_site_id();
+          
+        if(average_field_flag) 
         {
+            if(NSType::avg_type == s_AVG_TYPE::ALL) 
+            {
+                amrex::ParallelFor(np, [=] AMREX_GPU_DEVICE (int p) noexcept 
+                {
+                    int global_id = p_par[p].id();
+                    int site_id = get_1D_site_id(global_id); 
+                    amrex::HostDevice::Atomic::Add(&(p_U[site_id]), p_par_gather[p]);
+                    amrex::HostDevice::Atomic::Add(&(p_PTD[site_id]), p_par[p].pos(PTD_id));
+                });
+            }
+            else if(NSType::avg_type == s_AVG_TYPE::SPECIFIC) 
+            {
+                auto get_atom_id_at_site = NSType::get_atom_id_at_site();
+    	        auto avg_indices_ptr = gpuvec_avg_indices.dataPtr();
+
+                amrex::ParallelFor(np, [=] AMREX_GPU_DEVICE (int p) noexcept 
+                {
+                    int global_id = p_par[p].id();
+                    int site_id = get_1D_site_id(global_id); 
+
+                    int atom_id_at_site = get_atom_id_at_site(global_id); 
+                    int remainder = atom_id_at_site%num_atoms_per_field_site;
+
+		            for(int m=0; m < num_atoms_to_avg_over; ++m)
+		            {
+                        if(remainder == avg_indices_ptr[m]) 
+		                {
+                            amrex::HostDevice::Atomic::Add(&(p_U[site_id]), p_par_gather[p]);
+                            amrex::HostDevice::Atomic::Add(&(p_PTD[site_id]), p_par[p].pos(PTD_id));
+                        }
+                    } 
+                });
+            }
+        }
+        else 
+        { 
             amrex::ParallelFor(np, [=] AMREX_GPU_DEVICE (int p) noexcept 
             {
-                int global_id = p_par[p].id();
-                int layer_id = get_1Dlayer_id(global_id); 
-                amrex::HostDevice::Atomic::Add(&(p_sum[layer_id]), p_par_gather[p]);
-                //amrex::HostDevice::Atomic::Add(&(p_axial_loc[layer_id]), p_par[p].pos(1));
-
+                int global_id  = p_par[p].id();
+                int site_id    = get_1D_site_id(global_id); 
+                p_U[site_id]   = p_par_gather[p];
+                p_PTD[site_id] = p_par[p].pos(PTD_id);
             });
-        }
-        else if(NSType::avg_type == s_AVG_TYPE::SPECIFIC) 
-        {
-            auto get_atom_in_1Dlayer_id = NSType::get_atom_in_1Dlayer_id();
-	    auto avg_indices_ptr = gpuvec_avg_indices.dataPtr();
-            int size = NSType::vec_avg_indices.size(); //size of index to average
-
-            amrex::ParallelFor(np, [=] AMREX_GPU_DEVICE (int p) noexcept 
-            {
-                int global_id = p_par[p].id();
-                int layer_id = get_1Dlayer_id(global_id); 
-                int atom_id_in_layer = get_atom_in_1Dlayer_id(global_id); 
-                
-                int remainder = atom_id_in_layer%atoms_per_layer;
-
-                //for(auto index: gpuvec_avg_indices) 
-		for(int m=0; m < size; ++m)
-		{
-                    if(remainder == avg_indices_ptr[m]) 
-		    {
-                        amrex::HostDevice::Atomic::Add(&(p_sum[layer_id]), p_par_gather[p]);
-                        //amrex::HostDevice::Atomic::Add(&(p_axial_loc[layer]), p_par[p].pos(1));
-                    }
-                } 
-            });
-        }
+        } 
     }
 
-    for (int l=0; l<num_layers; ++l) 
+    for (int l=0; l<num_field_sites; ++l) 
     {
-        ParallelDescriptor::ReduceRealSum(p_sum[l]);
-        //ParallelDescriptor::ReduceRealSum(p_axial_loc[l]);
+        ParallelDescriptor::ReduceRealSum(p_U[l]);
+        ParallelDescriptor::ReduceRealSum(p_PTD[l]);
     }
 
-    for (int l=0; l<num_layers; ++l) 
+    for (int l=0; l<num_field_sites; ++l) 
     {
-        NSType::avg_gatherField[l] = p_sum[l]/atoms_to_avg_over;
-        //avg_axial_loc[l] = p_axial_loc[l]/atoms_to_avg_over;
+        NSType::Potential[l]   = p_U[l]   / num_atoms_to_avg_over;
+        NSType::PTD[l] = p_PTD[l] / num_atoms_to_avg_over;
     }
 
 }
@@ -416,17 +417,18 @@ c_Nanostructure<NSType>::AverageFieldGatheredFromMesh()
 
 template<typename NSType>
 void 
-c_Nanostructure<NSType>::Write_AveragedGatherField() 
+c_Nanostructure<NSType>::Write_PotentialAtSites() 
 {
     if (ParallelDescriptor::IOProcessor()) 
     {
         std::ofstream outfile;
-        outfile.open("avg_gatherField.dat");
+        outfile.open("Potential.dat");
         
-        for (int l=0; l<NSType::avg_gatherField.size(); ++l)
+        for (int l=0; l<NSType::num_field_sites; ++l)
         {
-            outfile << l << std::setw(15) << NSType::avg_gatherField[l] << "\n";
+            outfile << l << std::setw(15) << NSType::PTD[l] << std::setw(15) << NSType::Potential[l] << "\n";
         }  
+
         outfile.close();
     }
 }

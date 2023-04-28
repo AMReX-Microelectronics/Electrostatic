@@ -32,9 +32,15 @@ public:
     using BlkTable2D     = TableData<MatrixBlock<T>, 2>;
 
     std::string name;
-    int num_atoms;
-    int num_atoms_per_unitcell;
-    int num_unitcells;
+    int num_atoms = 0;
+    int num_atoms_per_unitcell = 0;
+    int num_unitcells = 0;
+    int num_field_sites = 0;
+    int average_field_flag = 1;
+    int num_atoms_per_field_site = 1;
+    int num_atoms_to_avg_over = 1;
+    int primary_transport_dir = 1; /*Y*/
+
     amrex::RealArray offset;
     int avg_type;
     amrex::Vector<int> vec_avg_indices;
@@ -61,8 +67,8 @@ public:
     amrex::Vector<int> block_degen_vec;
     amrex::Gpu::DeviceVector<int> block_degen_gpuvec;
 
-    amrex::Vector<amrex::Real> avg_gatherField;
-
+    amrex::Vector<amrex::Real> Potential;
+    amrex::Vector<amrex::Real> PTD; /*PTD: primary transport dir*/
 
     /*Tables required to store Hamiltonian */
     BlkTable1D h_Ha_loc_data;
@@ -157,10 +163,9 @@ public:
 
     virtual void ReadNanostructureProperties();
     virtual int get_Hsize() {return 0;}
-    virtual void set_material_specific_parameters();
     virtual int get_offDiag_repeatBlkSize() {return 0;}
-    virtual int get_num_layers() { return 0;}
-    virtual int get_num_atoms_per_layer() { return 0;}
+    virtual void set_material_specific_parameters();
+
     void DefineMatrixPartition();
 
     MPI_Datatype MPI_BlkType;

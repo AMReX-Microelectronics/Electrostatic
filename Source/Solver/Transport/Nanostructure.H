@@ -127,12 +127,12 @@ public:
     virtual void ReadNanostructureProperties () override;
 
     void MarkCellsWithAtoms(); 
-    void InitializeAttributeToDeposit(const amrex::Real value);
+    void Initialize_AttributeToDeposit(const amrex::Real value);
 
-    void GatherFromMesh();
-    void DepositToMesh();
-    void AverageFieldGatheredFromMesh();
-    void Write_AveragedGatherField();
+    void Gather_MeshAttributeAtAtoms();
+    void Deposit_AtomAttributeToMesh();
+    void Obtain_PotentialAtSites();
+    void Write_PotentialAtSites();
 
 //    const amrex::Vector<amrex::Real>* get_avg_gatherField() { &avg_gatherField };
 

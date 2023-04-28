@@ -18,14 +18,8 @@ class c_Graphene
 public:
     using BlkType = ComplexType[NUM_MODES][NUM_MODES];
 
-
-    //std::array<int,2> Get_Ring_Atom_IDs(int cell_id)
-    //{    
-    //     std::array<int,2> id;
-    //     return id;
-    //};
-
-    struct Get1DLayerID {
+    struct Get1DSiteID 
+    {
        AMREX_GPU_HOST_DEVICE int operator() (int global_par_id) const
        {
            return static_cast<int>(amrex::Math::floor((global_par_id-1)/type_id[0]));
@@ -33,29 +27,26 @@ public:
        amrex::Array<int,2> type_id;
     };
 
-    static Get1DLayerID get_1Dlayer_id() {
-         return Get1DLayerID{type_id};
+    static Get1DSiteID get_1D_site_id() 
+    {
+       return Get1DSiteID{type_id};       
     }
 
-    struct GetAtomIn1DLayerID {
+    struct GetAtomIDAtSite           
+    {
        AMREX_GPU_HOST_DEVICE int operator() (int global_par_id) const
        {
-           return static_cast<int>((global_par_id-1) % type_id[0]);                                  
+           return static_cast<int>((global_par_id-1) % type_id[0]);
        }
        amrex::Array<int,2> type_id;
     };
 
-    static GetAtomIn1DLayerID get_atom_in_1Dlayer_id() {
-         return GetAtomIn1DLayerID{type_id};            
+    static GetAtomIDAtSite get_atom_id_at_site()                          
+    {
+        return GetAtomIDAtSite{type_id}; 
     }
 
-    //void Print_IDs(int cell_id)
-    //{
-    //    //
-    //};
-
     static amrex::Array<int,2> type_id;
-
 
     //template
     virtual int get_Hsize() override { return 0; }
