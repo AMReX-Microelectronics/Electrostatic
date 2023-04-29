@@ -807,7 +807,7 @@ ComplexType
 MatrixBlock<T>::DiagDotSum(U& vec) const
 {
     ComplexType result(0.,0.);
-    return *this;
+    return result;
 }
 
 template <>
@@ -839,6 +839,51 @@ MatrixBlock<ComplexType[NUM_MODES][NUM_MODES]>::DiagDotSum(U& vec) const
             {
                 ComplexType factor(vec[i],0.);
                 result += factor*this->block[i][j];
+            }
+        }
+    }
+    return result;
+}
+
+
+///* Operation DiagMult */
+template <typename T>
+template <typename U>
+MatrixBlock<T>
+MatrixBlock<T>::DiagMult(U& vec) const
+{
+    return *this;
+}
+
+template <>
+template <typename U>
+MatrixBlock<ComplexType[NUM_MODES]>
+MatrixBlock<ComplexType[NUM_MODES]>::DiagMult(U& vec) const
+{
+    
+    MatrixBlock<ComplexType[NUM_MODES]> result;
+    for (int i = 0; i < NUM_MODES; ++i)
+    {
+        ComplexType factor(vec[i],0.);
+        result.block[i] = factor*this->block[i];
+    }
+    return result;
+}
+
+template <>
+template <typename U>
+MatrixBlock<ComplexType[NUM_MODES][NUM_MODES]>
+MatrixBlock<ComplexType[NUM_MODES][NUM_MODES]>::DiagMult(U& vec) const
+{
+    MatrixBlock<ComplexType[NUM_MODES][NUM_MODES]> result;
+    for (int i = 0; i < NUM_MODES; ++i)
+    {
+        for (int j = 0; j < NUM_MODES; ++j)
+        {
+            if(i==j) 
+            {
+                ComplexType factor(vec[i],0.);
+                result.block[i][j] = factor*this->block[i][j];
             }
         }
     }

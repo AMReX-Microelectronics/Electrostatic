@@ -107,6 +107,7 @@ public:
     #ifdef AMREX_USE_GPU
     BlkTable2D d_GR_loc_data;
     BlkTable2D d_A_loc_data;
+    BlkTable1D d_Rho0_loc_data;
 
     BlkTable1D d_Alpha_loc_data;
     BlkTable1D d_Xtil_glo_data;
@@ -158,8 +159,9 @@ public:
 
     amrex::GpuArray<c_IntegrationPath,3> ContourPath_Rho0;  
     amrex::GpuArray<c_IntegrationPath,3> ContourPath_RhoEq;  
-    c_IntegrationPath ContourPath_RhoEq_Direct;
     c_IntegrationPath ContourPath_RhoNonEq;
+    c_IntegrationPath ContourPath_DOS;
+    c_IntegrationPath ContourPath_RhoEq_Direct;
 
     virtual void ReadNanostructureProperties();
     virtual int get_Hsize() {return 0;}
@@ -181,8 +183,12 @@ public:
     AMREX_GPU_HOST_DEVICE
     void Compute_SurfaceGreensFunction (MatrixBlock<T>& gr, const ComplexType EmU);
     void Compute_DensityOfStates();
-    //virtual void DeallocateArrays();
+    void Compute_Rho0();
     //virtual void ComputeChargeDensity();
+    //virtual void DeallocateArrays();
+
+    AMREX_GPU_HOST_DEVICE
+    ComplexType FermiFunction(ComplexType E_minus_Mu, const amrex::Real kT);
 
     void Allocate_TemporaryArraysForGFComputation();
     void Deallocate_TemporaryArraysForGFComputation();

@@ -456,5 +456,6 @@ c_Nanostructure<NSType>:: InitializeNEGF ()
     NSType::Define_EnergyLimits();
     NSType::Define_IntegrationPaths();
     NSType::Compute_DensityOfStates();
+    NSType::Compute_Rho0();
 
 }

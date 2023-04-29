@@ -63,6 +63,9 @@ struct MatrixBlock
    AMREX_GPU_HOST_DEVICE	    
    ComplexType DiagDotSum(U& vec) const; /*SUM of { BLOCK(n,n)*vec[n] }*/
 
+   template<typename U>
+   AMREX_GPU_HOST_DEVICE	    
+   MatrixBlock<T> DiagMult(U& vec) const; /*{ BLOCK(n,n)*vec[n] }*/
    //MatrixBlock<T> AtomicAdd(MatrixBlock<T>& B) const; /*Atomic add for the block*/
    //template<typename U, std::size_t N>
    //MatrixBlock<amrex::Real> Real() const; 
