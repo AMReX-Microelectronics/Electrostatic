@@ -457,5 +457,7 @@ c_Nanostructure<NSType>:: InitializeNEGF ()
     NSType::Define_IntegrationPaths();
     NSType::Compute_DensityOfStates();
     NSType::Compute_Rho0();
+    NSType::Compute_GR_atPoles();
+    NSType::Compute_InducedChargePerAtom();
 
 }

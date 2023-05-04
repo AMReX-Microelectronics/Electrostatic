@@ -83,7 +83,11 @@ public:
 
     RealTable1D h_LDOS_loc_data;
     RealTable1D h_Transmission_loc_data;
-    BlkTable1D h_Rho0_loc_data;
+    BlkTable1D  h_Rho0_loc_data;
+    BlkTable1D  h_GR_atPoles_loc_data;
+    BlkTable1D  h_RhoEq_loc_data;
+    BlkTable1D  h_RhoNonEq_loc_data;
+    RealTable1D h_RhoInduced_perAtom_loc_data;
 
     /*Tables required to compute Green and Spectral Functions */
     BlkTable1D h_Alpha_loc_data;
@@ -99,6 +103,7 @@ public:
     BlkTable1D h_X_contact_data;
     BlkTable1D h_Y_contact_data;
     BlkTable1D h_Sigma_contact_data;
+    BlkTable1D h_Fermi_contact_data;
 
     const int num_traces = 2;
     amrex::Gpu::HostVector<amrex::Real> h_Trace_r;
@@ -108,6 +113,9 @@ public:
     BlkTable2D d_GR_loc_data;
     BlkTable2D d_A_loc_data;
     BlkTable1D d_Rho0_loc_data;
+    BlkTable1D d_GR_atPoles_loc_data;
+    BlkTable1D d_RhoEq_loc_data;
+    BlkTable1D d_RhoNonEq_loc_data;
 
     BlkTable1D d_Alpha_loc_data;
     BlkTable1D d_Xtil_glo_data;
@@ -119,6 +127,7 @@ public:
     BlkTable1D d_X_contact_data;
     BlkTable1D d_Y_contact_data;
     BlkTable1D d_Sigma_contact_data;
+    BlkTable1D d_Fermi_contact_data;
 
     amrex::Gpu::DeviceVector<amrex::Real> d_Trace_r;
     amrex::Gpu::DeviceVector<amrex::Real> d_Trace_i;
@@ -157,11 +166,10 @@ public:
     amrex::Real mu_min=0.;
     amrex::Real mu_max=0.;
 
-    amrex::GpuArray<c_IntegrationPath,3> ContourPath_Rho0;  
-    amrex::GpuArray<c_IntegrationPath,3> ContourPath_RhoEq;  
-    c_IntegrationPath ContourPath_RhoNonEq;
+    amrex::Vector<c_IntegrationPath> ContourPath_Rho0;  
+    amrex::Vector<c_IntegrationPath> ContourPath_RhoEq;  
+    amrex::Vector<c_IntegrationPath> ContourPath_RhoNonEq;
     c_IntegrationPath ContourPath_DOS;
-    c_IntegrationPath ContourPath_RhoEq_Direct;
 
     virtual void ReadNanostructureProperties();
     virtual int get_Hsize() {return 0;}
@@ -184,6 +192,10 @@ public:
     void Compute_SurfaceGreensFunction (MatrixBlock<T>& gr, const ComplexType EmU);
     void Compute_DensityOfStates();
     void Compute_Rho0();
+    void Compute_GR_atPoles();
+    void Compute_RhoEq();
+    void Compute_RhoNonEq();
+    void Compute_InducedChargePerAtom();
     //virtual void ComputeChargeDensity();
     //virtual void DeallocateArrays();
 
