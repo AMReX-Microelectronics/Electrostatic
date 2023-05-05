@@ -708,7 +708,7 @@ c_NEGF_Common<T>:: Compute_DensityOfStates ()
         int Hsize = Hsize_glo;  
      	auto& GC_ID = global_contact_index;
     	auto& CT_ID = contact_transmission_index;
-        auto degen_vec_ptr = degen_vec.dataPtr();
+        auto* degen_vec_ptr = degen_vec.dataPtr();
 
         amrex::ParallelFor(blkCol_size_loc, [=] AMREX_GPU_DEVICE (int n) noexcept
         {
@@ -889,6 +889,9 @@ c_NEGF_Common<T>:: Compute_RhoNonEq ()
     auto const& h_Fermi_contact = h_Fermi_contact_data.table();
 
     auto const& h_RhoNonEq_loc  = h_RhoNonEq_loc_data.table();
+    ComplexType zero(0.,0.); 
+    SetVal_Table1D(h_RhoNonEq_loc_data,zero);
+
     #ifdef AMREX_USE_GPU
     auto const& RhoNonEq_loc    = d_RhoNonEq_loc_data.table();
     auto const& GR_loc          = d_GR_loc_data.table();
@@ -907,6 +910,9 @@ c_NEGF_Common<T>:: Compute_RhoNonEq ()
     auto const& Fermi_contact   = d_Fermi_contact_data.const_table();
 
     auto& degen_vec             = block_degen_gpuvec;
+
+    d_RhoNonEq_loc_data.copy(h_RhoNonEq_loc_data);
+
     #else
     auto const& RhoNonEq_loc    = h_RhoNonEq_loc_data.table();
     auto const& GR_loc          = h_GR_loc_data.table();
@@ -1024,7 +1030,9 @@ c_NEGF_Common<T>:: Compute_RhoNonEq ()
             int Hsize = Hsize_glo;  
      	    auto& GC_ID = global_contact_index;
     	    auto& CT_ID = contact_transmission_index;
-            auto degen_vec_ptr = degen_vec.dataPtr();
+            auto* degen_vec_ptr = degen_vec.dataPtr();
+
+	    amrex::Real const_multiplier = -1*spin_degen/(2*MathConst::pi);
 
             amrex::ParallelFor(blkCol_size_loc, [=] AMREX_GPU_DEVICE (int n) noexcept
             {
@@ -1091,47 +1099,28 @@ c_NEGF_Common<T>:: Compute_RhoNonEq ()
                         A_tk[k] = A_kn;
                     }
 
-                    //AnF_sum = AnF_sum + A_nn * Fermi_contact(k);
                     AnF_sum = AnF_sum + A_nn*Fermi_contact(k);
                 }
 
                 /*RhoNonEq*/
-                RhoNonEq_loc(n) = RhoNonEq_loc(n) + AnF_sum*weight*mul_factor;
-                //RhoNonEq_loc(n) =  AnF_sum;
+                MatrixBlock<T> RhoNonEq_n = const_multiplier*AnF_sum*weight*mul_factor;
+                RhoNonEq_loc(n) = RhoNonEq_loc(n) + RhoNonEq_n.DiagMult(degen_vec_ptr);
+
             }); 
-            //if(e==0) 
-    	    //{
-            //    #ifdef AMREX_USE_GPU
-            //    h_GR_loc_data.copy(d_GR_loc_data); //copy from cpu to gpu 
-            //    h_A_loc_data.copy(d_A_loc_data); //copy from cpu to gpu
-            //    #endif
-
-            //    amrex::Gpu::streamSynchronize();
-
-            //    amrex::Print() << "Printing GR_loc: \n";
-            //    Print_Table2D_loc(h_GR_loc_data);
-
-            //    amrex::Print() << "Printing A_loc: \n";
-            //    Print_Table2D_loc(h_A_loc_data);
-
-            //}
+            #ifdef AMREX_USE_GPU
+            amrex::Gpu::streamSynchronize();
+            #endif
         } 
     }
 
     #ifdef AMREX_USE_GPU
-    amrex::Gpu::streamSynchronize();
     h_RhoNonEq_loc_data.copy(d_RhoNonEq_loc_data); 
+    amrex::Gpu::streamSynchronize();
     #endif
 
     amrex::Print() << "RhoNonEq_loc: \n";
-    amrex::Print() << "spin_degen: " << spin_degen << "\n";
-
     for (int n=0; n <blkCol_size_loc; ++n) 
     {
-        h_RhoNonEq_loc(n) = -1*h_RhoNonEq_loc(n)*spin_degen/(2*MathConst::pi);
-
-        h_RhoNonEq_loc(n) = h_RhoNonEq_loc(n).DiagMult(degen_vec);
-
         amrex::Print() << n << "  " <<std::setprecision(3)<< h_RhoNonEq_loc(n)  << "\n";
     }
 
@@ -1161,6 +1150,9 @@ c_NEGF_Common<T>:: Compute_RhoEq ()
     auto const& h_Sigma_contact = h_Sigma_contact_data.table();
 
     auto const& h_RhoEq_loc      = h_RhoEq_loc_data.table();
+    ComplexType zero(0.,0.); 
+    SetVal_Table1D(h_RhoEq_loc_data,zero);
+
     #ifdef AMREX_USE_GPU
     auto const& RhoEq_loc        = d_RhoEq_loc_data.table();
     /*constant references*/
@@ -1171,6 +1163,8 @@ c_NEGF_Common<T>:: Compute_RhoEq ()
     auto const& Y               = d_Y_loc_data.const_table();
     auto const& Sigma_contact   = d_Sigma_contact_data.const_table();
     auto& degen_vec             = block_degen_gpuvec;
+
+    d_RhoEq_loc_data.copy(h_RhoEq_loc_data);
 
     #else
     auto const& RhoEq_loc        = h_RhoEq_loc_data.table();
@@ -1253,46 +1247,43 @@ c_NEGF_Common<T>:: Compute_RhoEq ()
             amrex::Gpu::streamSynchronize();
             #endif        
 
-	        /*following is for lambda capture*/
+	    /*following is for lambda capture*/
             int cumulative_columns = vec_cumu_blkCol_size[my_rank];
-            int Hsize = Hsize_glo;  
-            auto degen_vec_ptr = degen_vec.dataPtr();
+            auto* degen_vec_ptr = degen_vec.dataPtr();
             ComplexType nF_eq = FermiFunction(E-mu_min, kT_min);
+	    amrex::Real const_multiplier = -1.*spin_degen/MathConst::pi;
 
             amrex::ParallelFor(blkCol_size_loc, [=] AMREX_GPU_DEVICE (int n) noexcept
             {
-                int n_glo = n + cumulative_columns; /*global column number*/
                 ComplexType one(1., 0.);
                 MatrixBlock<T> G_nn =  one/(Alpha(n) - X(n) - Y(n));
-                RhoEq_loc(n) = RhoEq_loc(n) + G_nn*weight*mul_factor*nF_eq;
+                MatrixBlock<T> RhoEq_n = const_multiplier*G_nn*weight*mul_factor*nF_eq;
+                RhoEq_loc(n) = RhoEq_loc(n) + RhoEq_n.DiagMult(degen_vec_ptr);
 
             }); 
+            #ifdef AMREX_USE_GPU
+            amrex::Gpu::streamSynchronize();
+            #endif
 
         } /*Energy loop*/
     } /*Path loop*/
  
     #ifdef AMREX_USE_GPU
-    amrex::Gpu::streamSynchronize();
     h_RhoEq_loc_data.copy(d_RhoEq_loc_data); 
+    amrex::Gpu::streamSynchronize();
     #endif
 
     amrex::Print() << "RhoEq_loc: \n";
-
-    auto const& h_GR_atPoles_loc = h_GR_atPoles_loc_data.const_table();
-    
-    for (int n=0; n <blkCol_size_loc; ++n) 
+    if(!flag_noneq_exists) 
     {
-        auto rho_integrand = -1*h_RhoEq_loc(n);
+        auto const& h_GR_atPoles_loc = h_GR_atPoles_loc_data.const_table();
 
-        if(!flag_noneq_exists) rho_integrand = rho_integrand + h_GR_atPoles_loc(n);
-
-        h_RhoEq_loc(n) = rho_integrand*spin_degen/MathConst::pi;
-
-        h_RhoEq_loc(n) = h_RhoEq_loc(n).DiagMult(degen_vec);
-
-        amrex::Print() << n << "  " <<std::setprecision(3)<< h_RhoEq_loc(n)  << "\n";
+        for (int n=0; n <blkCol_size_loc; ++n) 
+        {
+            h_RhoEq_loc(n) = h_RhoEq_loc(n) + h_GR_atPoles_loc(n);
+            amrex::Print() << n << "  " <<std::setprecision(3)<< h_RhoEq_loc(n)  << "\n";
+        }
     }
-
     Deallocate_TemporaryArraysForGFComputation();
 
 }
@@ -1321,6 +1312,10 @@ c_NEGF_Common<T>:: Compute_GR_atPoles ()
     auto const& h_Sigma_contact = h_Sigma_contact_data.table();
 
     auto const& h_GR_atPoles_loc      = h_GR_atPoles_loc_data.table();
+
+    ComplexType zero(0.,0.); 
+    SetVal_Table1D(h_GR_atPoles_loc_data,zero);
+
     #ifdef AMREX_USE_GPU
     auto const& GR_atPoles_loc        = d_GR_atPoles_loc_data.table();
     /*constant references*/
@@ -1332,6 +1327,7 @@ c_NEGF_Common<T>:: Compute_GR_atPoles ()
     auto const& Sigma_contact   = d_Sigma_contact_data.const_table();
     auto& degen_vec             = block_degen_gpuvec;
 
+    d_GR_atPoles_loc_data.copy(h_GR_atPoles_loc_data);
     #else
     auto const& GR_atPoles_loc        = h_GR_atPoles_loc_data.table();
     /*constant references*/
@@ -1409,30 +1405,29 @@ c_NEGF_Common<T>:: Compute_GR_atPoles ()
         amrex::Gpu::streamSynchronize();
         #endif        
 
-	    /*following is for lambda capture*/
+	/*following is for lambda capture*/
         int cumulative_columns = vec_cumu_blkCol_size[my_rank];
 
-        ComplexType pole_const(0., -2*MathConst::pi*kT_min);
+        ComplexType pole_const(0., -2*kT_min*spin_degen);
+        auto* degen_vec_ptr = degen_vec.dataPtr();
 
-        //for(int n=0; n < blkCol_size_loc; ++n) 
-        //{ 
-        //    int n_glo = n + cumulative_columns; /*global column number*/
-        //    MatrixBlock<T> G_nn =  one/(Alpha(n) - X(n) - Y(n));
-        //    GR_diag_atPoles_loc(n) = GR_diag_atPoles_loc(n) + pole_const*G_nn;
-        //} 
         amrex::ParallelFor(blkCol_size_loc, [=] AMREX_GPU_DEVICE (int n) noexcept
         {
-            int n_glo = n + cumulative_columns; /*global column number*/
             ComplexType one(1., 0.);
             MatrixBlock<T> G_nn =  one/(Alpha(n) - X(n) - Y(n));
-            GR_atPoles_loc(n) = GR_atPoles_loc(n) + pole_const*G_nn;
+            MatrixBlock<T> GR_atPoles_n  = pole_const*G_nn;
+
+	    GR_atPoles_loc(n) = GR_atPoles_loc(n) + GR_atPoles_n.DiagMult(degen_vec_ptr);
         }); 
+        #ifdef AMREX_USE_GPU
+        amrex::Gpu::streamSynchronize();
+        #endif
 
     } /*Energy loop*/
  
     #ifdef AMREX_USE_GPU
-    amrex::Gpu::streamSynchronize();
     h_GR_atPoles_loc_data.copy(d_GR_atPoles_loc_data); 
+    amrex::Gpu::streamSynchronize();
     #endif
 
     amrex::Print() << "GR_atPoles_loc: \n";
@@ -1467,6 +1462,10 @@ c_NEGF_Common<T>:: Compute_Rho0 ()
     auto const& h_Sigma_contact = h_Sigma_contact_data.table();
 
     auto const& h_Rho0_loc      = h_Rho0_loc_data.table();
+
+    ComplexType zero(0.,0.); 
+    SetVal_Table1D(h_Rho0_loc_data,zero);
+
     #ifdef AMREX_USE_GPU
     auto const& Rho0_loc        = d_Rho0_loc_data.table();
     /*constant references*/
@@ -1477,6 +1476,8 @@ c_NEGF_Common<T>:: Compute_Rho0 ()
     auto const& Y               = d_Y_loc_data.const_table();
     auto const& Sigma_contact   = d_Sigma_contact_data.const_table();
     auto& degen_vec             = block_degen_gpuvec;
+
+    d_Rho0_loc_data.copy(h_Rho0_loc_data);
 
     #else
     auto const& Rho0_loc        = h_Rho0_loc_data.table();
@@ -1555,38 +1556,37 @@ c_NEGF_Common<T>:: Compute_Rho0 ()
             d_Alpha_loc_data.copy(h_Alpha_loc_data);
             d_X_loc_data.copy(h_X_loc_data);
             d_Y_loc_data.copy(h_Y_loc_data);
-
             amrex::Gpu::streamSynchronize();
             #endif        
 
-	        /*following is for lambda capture*/
+	    /*following is for lambda capture*/
             int cumulative_columns = vec_cumu_blkCol_size[my_rank];
-            int Hsize = Hsize_glo;  
-            auto degen_vec_ptr = degen_vec.dataPtr();
+            auto* degen_vec_ptr = degen_vec.dataPtr();
+	    amrex::Real const_multiplier = -1*spin_degen/(MathConst::pi);
 
             amrex::ParallelFor(blkCol_size_loc, [=] AMREX_GPU_DEVICE (int n) noexcept
             {
-                int n_glo = n + cumulative_columns; /*global column number*/
                 ComplexType one(1., 0.);
                 MatrixBlock<T> G_nn =  one/(Alpha(n) - X(n) - Y(n));
-                Rho0_loc(n) = Rho0_loc(n) + G_nn*weight*mul_factor;
+                MatrixBlock<T> Rho0_n = const_multiplier*G_nn*weight*mul_factor;
+                Rho0_loc(n) = Rho0_loc(n) + Rho0_n.DiagMult(degen_vec_ptr);
 
             }); 
-
+            #ifdef AMREX_USE_GPU
+            amrex::Gpu::streamSynchronize();
+	    #endif 
         } /*Energy loop*/
     } /*Path loop*/
  
     #ifdef AMREX_USE_GPU
-    amrex::Gpu::streamSynchronize();
     h_Rho0_loc_data.copy(d_Rho0_loc_data); 
+    amrex::Gpu::streamSynchronize();
     #endif
 
     amrex::Print() << "Rho0_loc: \n";
     for (int n=0; n <blkCol_size_loc; ++n) 
     {
-        h_Rho0_loc(n) = (-1.*h_Rho0_loc(n)/(MathConst::pi))*spin_degen;
-        h_Rho0_loc(n) = h_Rho0_loc(n).DiagMult(degen_vec);
-        amrex::Print() << n << "  " <<std::setprecision(3)<< h_Rho0_loc(n)  << "\n";
+       amrex::Print() << n << "  " <<std::setprecision(4) << h_Rho0_loc(n)  << "\n";
     }
 
     Deallocate_TemporaryArraysForGFComputation();

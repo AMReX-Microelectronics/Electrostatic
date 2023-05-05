@@ -44,6 +44,7 @@ public:
     amrex::RealArray offset;
     int avg_type;
     amrex::Vector<int> vec_avg_indices;
+    amrex::Gpu::DeviceVector<int> gpuvec_avg_indices;
    
     int num_proc;
     int my_rank;
