@@ -502,7 +502,7 @@ c_Nanostructure<NSType>:: Solve_NEGF ()
     {
         Gather_MeshAttributeAtAtoms();
         Obtain_PotentialAtSites();
-        //Write_PotentialAtSites();
+        Write_PotentialAtSites();
     }
     //else 
     //{

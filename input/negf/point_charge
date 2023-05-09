@@ -18,7 +18,7 @@ my_constants.dt = 0.
 ### gate oxide
 my_constants.GO_w = Lx
 my_constants.GO_l = Ly
-my_constants.GO_h = 1.0e-9      #smallest dimension that limits n_cell in z.
+my_constants.GO_h = 3.0e-9      #smallest dimension that limits n_cell in z.
 
 my_constants.epsilon_GO = 1*epsilon_0
 
@@ -112,7 +112,7 @@ domain.coord_sys = cartesian
 ###### BOUNDARY CONDITIONS ######
 #################################
 boundary.hi = neu(0) neu(0) neu(0)
-boundary.lo = neu(0) neu(0) dir(0)
+boundary.lo = neu(0) neu(0) dir(3.1)
 
 #boundary.GV_function = "GV_min + (GV_max-GV_min) * t" #V
 
