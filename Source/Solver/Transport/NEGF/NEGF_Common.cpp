@@ -98,6 +98,31 @@ c_NEGF_Common<T>::set_material_specific_parameters()
     /*set the size ofprimary_transport_dir*/
 }
 
+
+template<typename T>
+void 
+c_NEGF_Common<T>:: Generate_AtomLocations (amrex::Vector<s_Position3D>& pos)
+{
+    /*First code atom locations for particular material in the specialization*/
+    /*Then call this function and apply global offset specified by the user*/
+    /*Also, specify PrimaryTransportDirection PTD array*/
+
+    for(int i = 0; i<num_atoms; ++i)
+    {
+       for(int j = 0; j < AMREX_SPACEDIM; ++j)
+       {
+           pos[i].dir[j] += offset[j];
+       }  
+    }
+
+    //amrex::Print() << "PTD is specified in nm! \n";
+    for(int l=0; l< num_field_sites; ++l) 
+    {
+       PTD[l] = pos[l*num_atoms_per_field_site].dir[primary_transport_dir] / 1.e-9;
+       //amrex::Print() << l << "  " << PTD[l] << "\n";
+    }
+}
+
 template<typename T>
 void 
 c_NEGF_Common<T>::DefineMatrixPartition() 
@@ -261,7 +286,7 @@ c_NEGF_Common<T>:: AddPotentialToHamiltonian ()
     int c=0;
     for(auto& col_gid: vec_blkCol_gids)
     {
-        h_Ha(c) = h_Ha(c) - Potential[col_gid];
+        h_Ha(c) = -1*(h_Ha(c) + Potential[col_gid]); /*Note we define, H = -(H0+U)*/
         ++c;
     }
 }
@@ -271,10 +296,11 @@ template<typename T>
 void 
 c_NEGF_Common<T>:: Update_ContactPotential () 
 {
-    for(int c=0; c<NUM_CONTACTS; ++c)
+    amrex::Print() <<  "Updated contact potential: \n";
+    for(int c=0; c < NUM_CONTACTS; ++c)
     {
         U_contact[c] = Potential[global_contact_index[c]];
-        ++c;
+        amrex::Print() <<  c << " " << U_contact[c] << "\n";
     }
 }
 
@@ -301,24 +327,22 @@ c_NEGF_Common<T>:: Define_EnergyLimits ()
        if(mu_min > mu_contact[c])
        {
            mu_min = mu_contact[c];
-           flag_noneq_exists=true;
        }
        if(mu_max < mu_contact[c])
        {
            mu_max = mu_contact[c];
-           flag_noneq_exists=true;
        }
        if(kT_min > kT_contact[c])
        {
            kT_min = kT_contact[c];
-           flag_noneq_exists=true;
        }
        if(kT_max < kT_contact[c])
        {
            kT_max = kT_contact[c];
-           flag_noneq_exists=true;
        }
     }
+    if(fabs(mu_min - mu_max) > 1e-8) flag_noneq_exists = true;
+    if(fabs(kT_min - kT_max) > 0.01) flag_noneq_exists = true;
 
     ComplexType val(0.,1e-8);
     E_zPlus = val;
@@ -346,7 +370,7 @@ c_NEGF_Common<T>:: Define_EnergyLimits ()
     }
     ComplexType val2(E_contour_right.real(), 2*num_enclosed_poles*MathConst::pi*kT_max);
     E_zeta = val2;
-    E_eta =  E_zeta - Fermi_tail_factor*kT_max;
+    E_eta =  E_zeta - 2*Fermi_tail_factor*kT_max;
 
     amrex::Print() << "\nE_f: " << E_f << "\n";
     amrex::Print() << "U_contact: ";
@@ -359,8 +383,8 @@ c_NEGF_Common<T>:: Define_EnergyLimits ()
     amrex::Print() << "kT_min/max: " << kT_min << " " << kT_max << "\n";
     amrex::Print() << "E_zPlus: "  << E_zPlus << "\n";
     amrex::Print() << "E_contour_left/E_contour_right/E_rightmost: " << E_contour_left      <<  "  "
-                                                                 << E_contour_right << "  "
-                                                                 << E_rightmost     << "\n";
+                                                                     << E_contour_right << "  "
+                                                                     << E_rightmost     << "\n";
     amrex::Print() << "E_pole_max: " << E_pole_max << ", number of poles: " << num_enclosed_poles << "\n";
     amrex::Print() << "E_zeta: " << E_zeta << "\n";
     amrex::Print() << "E_eta: "  << E_eta << "\n";
@@ -387,25 +411,11 @@ c_NEGF_Common<T>:: Define_IntegrationPaths ()
     ContourPath_Rho0[1].Define_GaussLegendrePoints(E_zeta,  E_eta, 100, 0); 
     ContourPath_Rho0[2].Define_GaussLegendrePoints(E_eta, E_contour_left, 100, 1); 
 
-    /* Define_ContourPath_RhoEq */
-    ContourPath_RhoEq.resize(3); 
-    ContourPath_RhoEq[0].Define_GaussLegendrePoints(E_contour_right, E_zeta, 100, 0); 
-    ContourPath_RhoEq[1].Define_GaussLegendrePoints(E_zeta, E_eta, 100, 0); 
-    ContourPath_RhoEq[2].Define_GaussLegendrePoints(E_eta, E_contour_left, 100, 1); 
-
-    /* Define_ContourPath_RhoNonEq */
-    if(flag_noneq_exists) 
-    {
-        ContourPath_RhoNonEq.resize(1); 
-        ContourPath_RhoNonEq[0].Define_GaussLegendrePoints(E_contour_right, E_rightmost, 400, 0);
-    }
-
     /* Define_ContourPath_DOS */
     ComplexType minus_one(-1.,E_zPlus.imag());
     ComplexType one(1.,E_zPlus.imag());
     ContourPath_DOS.Define_GaussLegendrePoints(minus_one, one, 400,0);
     //ContourPath_DOS.Define_GaussLegendrePoints(E_contour_left, -E_contour_left, 400,0);
-
 
     /* Write Fermi function */
     auto* Fermi_path = &ContourPath_DOS;
@@ -426,6 +436,29 @@ c_NEGF_Common<T>:: Define_IntegrationPaths ()
     }
 
     outfile.close();
+}
+
+
+template<typename T>
+void 
+c_NEGF_Common<T>:: Update_IntegrationPaths ()
+{
+    ContourPath_RhoEq.clear();
+    ContourPath_RhoNonEq.clear();
+
+    /* Define_ContourPath_RhoEq */
+    ContourPath_RhoEq.resize(3); 
+    ContourPath_RhoEq[0].Define_GaussLegendrePoints(E_contour_right, E_zeta, 100, 0); 
+    ContourPath_RhoEq[1].Define_GaussLegendrePoints(E_zeta, E_eta, 100, 0); 
+    ContourPath_RhoEq[2].Define_GaussLegendrePoints(E_eta, E_contour_left, 100, 1); 
+
+    /* Define_ContourPath_RhoNonEq */
+    if(flag_noneq_exists) 
+    {
+        ContourPath_RhoNonEq.resize(1); 
+        ContourPath_RhoNonEq[0].Define_GaussLegendrePoints(E_contour_right, E_rightmost, 400, 0);
+    }
+
 }
 
 template<typename T>
@@ -820,15 +853,15 @@ c_NEGF_Common<T>:: Compute_DensityOfStates ()
         //}
     }
 
-    amrex::Print() << "Printing LDOS: \n";
-    Write_Table1D_asaf_E(ContourPath_DOS.E_vec, 
-                         h_LDOS_loc_data, 
-                        "LDOS.dat",  "E_r LDOS_r");
+    //amrex::Print() << "Printing LDOS: \n";
+    //Write_Table1D(ContourPath_DOS.E_vec, 
+    //              h_LDOS_loc_data, 
+    //              "LDOS.dat",  "E_r LDOS_r");
 
-    amrex::Print() << "Printing Transmission: \n";
-    Write_Table1D_asaf_E(ContourPath_DOS.E_vec, 
-                         h_Transmission_loc_data, 
-                        "Transmission.dat",  "E_r T_r");
+    //amrex::Print() << "Printing Transmission: \n";
+    //Write_Table1D(ContourPath_DOS.E_vec, 
+    //              h_Transmission_loc_data, 
+    //              "Transmission.dat",  "E_r T_r");
 
     Deallocate_TemporaryArraysForGFComputation();
 
@@ -857,8 +890,10 @@ c_NEGF_Common<T>:: Compute_InducedChargePerAtom ()
                                     + h_RhoNonEq_loc(n).DiagSum().real() 
                                     - h_Rho0_loc(n).DiagSum().imag() 
                                     ) / num_atoms_per_field_site;
-        amrex::Print() << n << "  " <<std::setprecision(5)<< h_RhoInduced_perAtom_loc(n)  << "\n";
+        //amrex::Print() << n << "  " <<std::setprecision(5)<< h_RhoInduced_perAtom_loc(n)  << "\n";
     }
+    Write_Table1D(PTD, h_RhoInduced_perAtom_loc_data, "Q_ind.dat", 
+                  "'axial location / (nm)', 'Induced charge / (e)");
 }
 
 
@@ -1118,11 +1153,11 @@ c_NEGF_Common<T>:: Compute_RhoNonEq ()
     amrex::Gpu::streamSynchronize();
     #endif
 
-    amrex::Print() << "RhoNonEq_loc: \n";
-    for (int n=0; n <blkCol_size_loc; ++n) 
-    {
-        amrex::Print() << n << "  " <<std::setprecision(3)<< h_RhoNonEq_loc(n)  << "\n";
-    }
+    //amrex::Print() << "RhoNonEq_loc: \n";
+    //for (int n=0; n <blkCol_size_loc; ++n) 
+    //{
+    //    amrex::Print() << n << "  " <<std::setprecision(3)<< h_RhoNonEq_loc(n)  << "\n";
+    //}
 
     Deallocate_TemporaryArraysForGFComputation();
 
@@ -1273,18 +1308,20 @@ c_NEGF_Common<T>:: Compute_RhoEq ()
     amrex::Gpu::streamSynchronize();
     #endif
 
-    amrex::Print() << "RhoEq_loc: \n";
+    Deallocate_TemporaryArraysForGFComputation();
+
+    //amrex::Print() << "RhoEq_loc: \n";
     if(!flag_noneq_exists) 
     {
+        Compute_GR_atPoles();
         auto const& h_GR_atPoles_loc = h_GR_atPoles_loc_data.const_table();
 
         for (int n=0; n <blkCol_size_loc; ++n) 
         {
             h_RhoEq_loc(n) = h_RhoEq_loc(n) + h_GR_atPoles_loc(n);
-            amrex::Print() << n << "  " <<std::setprecision(3)<< h_RhoEq_loc(n)  << "\n";
+            //amrex::Print() << n << "  " <<std::setprecision(3)<< h_RhoEq_loc(n)  << "\n";
         }
     }
-    Deallocate_TemporaryArraysForGFComputation();
 
 }
 
@@ -1430,11 +1467,11 @@ c_NEGF_Common<T>:: Compute_GR_atPoles ()
     amrex::Gpu::streamSynchronize();
     #endif
 
-    amrex::Print() << "GR_atPoles_loc: \n";
-    for (int n=0; n <blkCol_size_loc; ++n) 
-    {
-        amrex::Print() << n << "  " <<std::setprecision(3)<< h_GR_atPoles_loc(n)  << "\n";
-    }
+    //amrex::Print() << "GR_atPoles_loc: \n";
+    //for (int n=0; n <blkCol_size_loc; ++n) 
+    //{
+    //    amrex::Print() << n << "  " <<std::setprecision(3)<< h_GR_atPoles_loc(n)  << "\n";
+    //}
 
     Deallocate_TemporaryArraysForGFComputation();
 
@@ -1583,11 +1620,11 @@ c_NEGF_Common<T>:: Compute_Rho0 ()
     amrex::Gpu::streamSynchronize();
     #endif
 
-    amrex::Print() << "Rho0_loc: \n";
-    for (int n=0; n <blkCol_size_loc; ++n) 
-    {
-       amrex::Print() << n << "  " <<std::setprecision(4) << h_Rho0_loc(n)  << "\n";
-    }
+    //amrex::Print() << "Rho0_loc: \n";
+    //for (int n=0; n <blkCol_size_loc; ++n) 
+    //{
+    //   amrex::Print() << n << "  " <<std::setprecision(4) << h_Rho0_loc(n)  << "\n";
+    //}
 
     Deallocate_TemporaryArraysForGFComputation();
 
@@ -1664,12 +1701,12 @@ c_NEGF_Common<T>::Write_BlkTable1D_asaf_E(const amrex::Vector<ComplexType>& E_ve
 
 
 template<typename T>
-template<typename U>
+template<typename VectorType, typename TableType>
 void
-c_NEGF_Common<T>::Write_Table1D_asaf_E(const amrex::Vector<ComplexType>& E_vec,
-                                       const U& Arr_data, 
-                                       std::string filename, 
-                                       std::string header)
+c_NEGF_Common<T>::Write_Table1D(const amrex::Vector<VectorType>& Vec,
+                                const TableType& Arr_data, 
+                                std::string filename, 
+                                std::string header)
 { 
     if (amrex::ParallelDescriptor::IOProcessor())
     {
@@ -1681,15 +1718,15 @@ c_NEGF_Common<T>::Write_Table1D_asaf_E(const amrex::Vector<ComplexType>& E_vec,
         auto thi = Arr_data.hi();
 
         outfile << header  << "\n";
-        if(E_vec.size() == thi[0]) {   
+        if(Vec.size() == thi[0]) {   
             for (int e=0; e< thi[0]; ++e)
             {
-                outfile << std::setw(10) << E_vec[e].real() 
+                outfile << std::setw(10) << Vec[e] 
                         << std::setw(15) << Arr(e) << "\n";
             }
         }
         else {
-            outfile << "Mismatch in the size of E_vec and Arr_data!"  << "\n";
+            outfile << "Mismatch in the size of Vec and Table1D_data!"  << "\n";
         }
         outfile.close();
     }

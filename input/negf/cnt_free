@@ -31,12 +31,11 @@ transport.use_negf = 1
 #transport.NS_initial_deposit_value  = 1e-4*q/(dx*dy*dz)
 
 cnt.type = CNT
-cnt.read_filename = ../input/cntfet_small_structure/cnt_zigzag_17_0_20nm.txt
 cnt.type_id = 17 0 #m n
 cnt.acc = bond_length
 cnt.gamma = 2.5 #coupling strength (eV)
 cnt.num_unitcells = N_unitcells
-cnt.offset = 0 (-(N_unitcells/2.)*L_unitcell - 3*bond_length/4.) CN_h
+cnt.offset = 0. 0. CN_h
 
 #graphene.type = Graphene
 ######################################

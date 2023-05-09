@@ -100,9 +100,9 @@ c_TransportSolver::InitData()
     std::string NS_deposit_field_str = "charge_density";
     amrex::Real NS_initial_deposit_value = 0.;
 
-    if(use_selfconsistent_potential) 
+    auto& rCode = c_Code::GetInstance();
+    if(rCode.use_electrostatic)
     {
-        auto& rCode = c_Code::GetInstance();
         auto& rGprop = rCode.get_GeometryProperties();
 
         _geom = &rGprop.geom;
@@ -191,20 +191,13 @@ c_TransportSolver::InitData()
 void 
 c_TransportSolver::Solve() 
 {
-
+   amrex::Print() << "In Transport Solve \n";
    for (int c=0; c < vp_CNT.size(); ++c)
    {
-       if(use_selfconsistent_potential) 
+       if(use_negf) 
        {
-          vp_CNT[c]->Gather_MeshAttributeAtAtoms();
-          vp_CNT[c]->Obtain_PotentialAtSites();
-          vp_CNT[c]->Write_PotentialAtSites();
-       }
-
-       //if(use_negf) 
-       //{
-       //    vp_CNT[c]->NEGF_Solve();
-       //} 
+           vp_CNT[c]->Solve_NEGF();
+       } 
 
    }
 

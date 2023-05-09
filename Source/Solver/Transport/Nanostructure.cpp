@@ -49,10 +49,12 @@ c_Nanostructure<NSType>::c_Nanostructure (const amrex::Geometry            & geo
     if(_use_negf) 
     {
         ReadNanostructureProperties();
-        InitializeNEGF();
+
+        pos_vec.resize(NSType::num_atoms);
+        Read_AtomLocations();
     } 
 
-    if(_use_selfconsistent_potential) 
+    if(_use_electrostatic) 
     {
         auto& rGprop = rCode.get_GeometryProperties();
 
@@ -64,12 +66,18 @@ c_Nanostructure<NSType>::c_Nanostructure (const amrex::Geometry            & geo
         p_mf_gather = rMprop.get_p_mf(NS_gather_str);  
         p_mf_deposit = rMprop.get_p_mf(NS_deposit_str);  
 
-        ReadAtomLocations();
+        Fill_AtomLocations();
         Redistribute(); //This function is in amrex::ParticleContainer
 
         MarkCellsWithAtoms();
         Initialize_AttributeToDeposit(NS_initial_deposit_value);
         Deposit_AtomAttributeToMesh();
+    }
+
+    if(_use_negf) 
+    {
+        InitializeNEGF();
+        pos_vec.clear(); 
     }
 
 #ifdef PRINT_NAME
@@ -96,7 +104,7 @@ void
 c_Nanostructure<NSType>:: ReadNanostructureProperties ()
 {
     amrex::ParmParse pp_ns(NSType::name);
-    read_filename = "__NONE__";
+    read_filename = "NONE";
     pp_ns.query("read_filename", read_filename);
     amrex::Print() << "##### read_filename: " << read_filename << "\n";
 
@@ -106,70 +114,93 @@ c_Nanostructure<NSType>:: ReadNanostructureProperties ()
 
 template<typename NSType>
 void 
-c_Nanostructure<NSType>::ReadAtomLocations() 
+c_Nanostructure<NSType>::Fill_AtomLocations() 
 {
 
     if (ParallelDescriptor::IOProcessor()) 
     {
-        std::ifstream infile;
-        infile.open(read_filename.c_str());
-         
-        if(infile.fail())
+        for(int i=0; i < NSType::num_atoms; ++i) 
         {
-            amrex::Abort("Failed to read file " + read_filename);
+            ParticleType p;
+            p.id() = ParticleType::NextID();
+            p.cpu() = ParallelDescriptor::MyProc();
+
+            for(int j=0; j < AMREX_SPACEDIM; ++j) 
+            {
+                p.pos(j)  = pos_vec[i].dir[j];
+            } 
+
+            std::array<int,intPA::NUM> int_attribs;
+            int_attribs[intPA::cid]  = 0;
+
+            std::array<ParticleReal,realPA::NUM> real_attribs;
+            real_attribs[realPA::gather]  = 0.0;
+            real_attribs[realPA::deposit]  = 0.0;
+
+            std::pair<int,int> key {0,0}; //{grid_index, tile index}
+            int lev=0;
+            auto& particle_tile = GetParticles(lev)[key];
+          
+            particle_tile.push_back(p);
+            particle_tile.push_back_int(int_attribs);
+            particle_tile.push_back_real(real_attribs);
         }
-        else
+    }
+
+}
+
+
+template<typename NSType>
+void 
+c_Nanostructure<NSType>::Read_AtomLocations() 
+{
+
+    if (ParallelDescriptor::IOProcessor()) 
+    {
+
+        std::string str_null = "NONE";
+        if(strcmp(read_filename.c_str(),str_null.c_str()) == 0)
         {
-            int filesize=0;
-            std::string line; 
-            while(infile.peek()!=EOF)
+            NSType::Generate_AtomLocations(pos_vec);
+        }
+        else 
+        {
+            std::ifstream infile;
+            infile.open(read_filename.c_str());
+             
+            if(infile.fail())
             {
-                std::getline(infile, line);
-                filesize++;
+                amrex::Abort("Failed to read file " + read_filename);
             }
-            WARPX_ALWAYS_ASSERT_WITH_MESSAGE(filesize == NSType::num_atoms,
-            "Number of atoms, " + std::to_string(NSType::num_atoms) 
-             + ", are not equal to the filesize, " + std::to_string(filesize) + " !");
-
-            infile.seekg(0, std::ios_base::beg);
-           
-            std::string id[2];
-
-            for(int i=0; i < NSType::num_atoms; ++i) 
+            else
             {
-                ParticleType p;
-                p.id() = ParticleType::NextID();
-                p.cpu() = ParallelDescriptor::MyProc();
-                
-                infile >> id[0] >> id[1];
-
-        		//auto get_1D_site_id = NSType::get_1D_site_id();
-                //int site_id         = get_1D_site_id(p.id());
-
-	        	//auto get_atom_id_at_site = NSType::get_atom_id_at_site();
-                //int atom_id_at_site      = get_atom_id_at_site(p.id());
-
-                for(int j=0; j < AMREX_SPACEDIM; ++j) {
-                    infile >> p.pos(j);
-                    p.pos(j) += NSType::offset[j];
+                int filesize=0;
+                std::string line; 
+                while(infile.peek()!=EOF)
+                {
+                    std::getline(infile, line);
+                    filesize++;
                 }
-                
-                std::array<int,intPA::NUM> int_attribs;
-                int_attribs[intPA::cid]  = 0;
+                WARPX_ALWAYS_ASSERT_WITH_MESSAGE(filesize == NSType::num_atoms,
+                "Number of atoms, " + std::to_string(NSType::num_atoms) 
+                 + ", are not equal to the filesize, " + std::to_string(filesize) + " !");
 
-                std::array<ParticleReal,realPA::NUM> real_attribs;
-                real_attribs[realPA::gather]  = 0.0;
-                real_attribs[realPA::deposit]  = 0.0;
+                infile.seekg(0, std::ios_base::beg);
+               
+                std::string id[2];
 
-                std::pair<int,int> key {0,0}; //{grid_index, tile index}
-                int lev=0;
-                auto& particle_tile = GetParticles(lev)[key];
-              
-                particle_tile.push_back(p);
-                particle_tile.push_back_int(int_attribs);
-                particle_tile.push_back_real(real_attribs);
+                for(int i=0; i < NSType::num_atoms; ++i) 
+                {
+                    infile >> id[0] >> id[1];
+
+                    for(int j=0; j < AMREX_SPACEDIM; ++j) 
+                    {
+                        infile >> pos_vec[i].dir[j];
+                        pos_vec[i].dir[j] += NSType::offset[j];
+                    }
+                }
+                infile.close();
             }
-            infile.close();
         } 
     }
 
@@ -189,6 +220,7 @@ c_Nanostructure<NSType>::MarkCellsWithAtoms()
 
     auto& mf = rMprop.get_mf("atom_locations"); //define in macroscopic.fields_to_define
     
+    amrex::Print() << "Marking atom locations\n";
     int lev = 0;
     for (MyParIter pti(*this, lev); pti.isValid(); ++pti) 
     { 
@@ -209,8 +241,8 @@ c_Nanostructure<NSType>::MarkCellsWithAtoms()
                index = { AMREX_D_DECL(static_cast<int>(amrex::Math::floor(l[0])), 
                                       static_cast<int>(amrex::Math::floor(l[1])), 
                                       static_cast<int>(amrex::Math::floor(l[2]))) };
-
-            mf_arr(index[0],index[1],index[2]) = -1;                            
+            //amrex::Print() << p << "  " << p_par[p].pos(0) << " "<< p_par[p].pos(1) << " " << p_par[p].pos(2) << " " << index[0] << " " << index[1] << " " << index[2] << "\n";
+            mf_arr(index[0],index[1],index[2]) = 1;                            
         });
     }
     mf.FillBoundary(_geom->periodicity());
@@ -326,19 +358,19 @@ c_Nanostructure<NSType>::Obtain_PotentialAtSites()
     const int num_atoms_per_field_site = NSType::num_atoms_per_field_site;
     const int num_atoms_to_avg_over    = NSType::num_atoms_to_avg_over;
     const int average_field_flag       = NSType::average_field_flag;
-    const int PTD_id                   = NSType::primary_transport_dir;
+    //const int PTD_id                   = NSType::primary_transport_dir;
 
     amrex::Gpu::DeviceVector<amrex::Real> vec_U(num_field_sites);
-    amrex::Gpu::DeviceVector<amrex::Real> vec_PTD(num_field_sites);
+    //amrex::Gpu::DeviceVector<amrex::Real> vec_PTD(num_field_sites);
 
     for (int l=0; l < num_field_sites; ++l) 
     {
         vec_U[l]   = 0.;
-        vec_PTD[l] = 0.;
+    //    vec_PTD[l] = 0.;
     }
 
     amrex::Real* p_U   = vec_U.dataPtr();  
-    amrex::Real* p_PTD = vec_PTD.dataPtr();  
+    //amrex::Real* p_PTD = vec_PTD.dataPtr();  
     
     int lev = 0;
     for (MyParIter pti(*this, lev); pti.isValid(); ++pti)
@@ -361,7 +393,7 @@ c_Nanostructure<NSType>::Obtain_PotentialAtSites()
                     int global_id = p_par[p].id();
                     int site_id = get_1D_site_id(global_id); 
                     amrex::HostDevice::Atomic::Add(&(p_U[site_id]), p_par_gather[p]);
-                    amrex::HostDevice::Atomic::Add(&(p_PTD[site_id]), p_par[p].pos(PTD_id));
+                    //amrex::HostDevice::Atomic::Add(&(p_PTD[site_id]), p_par[p].pos(PTD_id));
                 });
             }
             else if(NSType::avg_type == s_AVG_TYPE::SPECIFIC) 
@@ -382,7 +414,7 @@ c_Nanostructure<NSType>::Obtain_PotentialAtSites()
                         if(remainder == avg_indices_ptr[m]) 
 		                {
                             amrex::HostDevice::Atomic::Add(&(p_U[site_id]), p_par_gather[p]);
-                            amrex::HostDevice::Atomic::Add(&(p_PTD[site_id]), p_par[p].pos(PTD_id));
+                            //amrex::HostDevice::Atomic::Add(&(p_PTD[site_id]), p_par[p].pos(PTD_id));
                         }
                     } 
                 });
@@ -395,7 +427,7 @@ c_Nanostructure<NSType>::Obtain_PotentialAtSites()
                 int global_id  = p_par[p].id();
                 int site_id    = get_1D_site_id(global_id); 
                 p_U[site_id]   = p_par_gather[p];
-                p_PTD[site_id] = p_par[p].pos(PTD_id);
+                //p_PTD[site_id] = p_par[p].pos(PTD_id);
             });
         } 
     }
@@ -403,13 +435,14 @@ c_Nanostructure<NSType>::Obtain_PotentialAtSites()
     for (int l=0; l<num_field_sites; ++l) 
     {
         ParallelDescriptor::ReduceRealSum(p_U[l]);
-        ParallelDescriptor::ReduceRealSum(p_PTD[l]);
+        //ParallelDescriptor::ReduceRealSum(p_PTD[l]);
     }
 
     for (int l=0; l<num_field_sites; ++l) 
     {
-        NSType::Potential[l]   = p_U[l]   / num_atoms_to_avg_over;
-        NSType::PTD[l] = p_PTD[l] / num_atoms_to_avg_over;
+        NSType::Potential[l]   = -p_U[l] / num_atoms_to_avg_over;
+        /*minus because Potential is experienced by electrons*/
+        //NSType::PTD[l] = p_PTD[l] / num_atoms_to_avg_over;
     }
 
 }
@@ -445,19 +478,47 @@ c_Nanostructure<NSType>:: InitializeNEGF ()
     NSType::DefineMatrixPartition();
     NSType::AllocateArrays();
     NSType::ConstructHamiltonian();
-
-    if(_use_electrostatic) 
-    {
-        NSType::AddPotentialToHamiltonian();
-        NSType::Update_ContactPotential(); 
-    }
-
     NSType::Define_ContactInfo();
+
+    //if(_use_electrostatic) 
+    //{
+    //    NSType::AddPotentialToHamiltonian();
+    //    NSType::Update_ContactPotential(); 
+    //}
+
     NSType::Define_EnergyLimits();
     NSType::Define_IntegrationPaths();
     NSType::Compute_DensityOfStates();
     NSType::Compute_Rho0();
-    NSType::Compute_GR_atPoles();
+
+}
+
+
+template<typename NSType>
+void
+c_Nanostructure<NSType>:: Solve_NEGF ()
+{
+    if(_use_electrostatic) 
+    {
+        Gather_MeshAttributeAtAtoms();
+        Obtain_PotentialAtSites();
+        //Write_PotentialAtSites();
+    }
+    //else 
+    //{
+    //    amrex::Array<amrex::Real,2> QD_loc = {0., 1}; //1nm away in z
+    //    for (int l=0; l<NSType::num_field_sites; ++l) 
+    //    {
+    //        amrex::Real r = sqrt(pow((NSType::PTD[l] - QD_loc[0]),2.) + pow(QD_loc[1],2))*1e-9;
+    //        NSType::Potential[l]   = -1*(1./(4.*MathConst::pi*PhysConst::ep0*1.)*(PhysConst::q_e/r));
+    //        /*-1 is multiplied because potential is experienced by electrons*/
+    //    }
+    //} 
+    NSType::AddPotentialToHamiltonian();
+    NSType::Update_ContactPotential(); 
+    NSType::Define_EnergyLimits();
+    NSType::Update_IntegrationPaths();
+
     NSType::Compute_InducedChargePerAtom();
 
 }

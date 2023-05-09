@@ -134,13 +134,16 @@ public:
     void Obtain_PotentialAtSites();
     void Write_PotentialAtSites();
 
+    void Solve_NEGF();
+
 //    const amrex::Vector<amrex::Real>* get_avg_gatherField() { &avg_gatherField };
 
 private:
     const amrex::GpuArray<int, AMREX_SPACEDIM>* _n_cell; 
     const amrex::Geometry * _geom;
 
-    void ReadAtomLocations ();
+    void Fill_AtomLocations ();
+    void Read_AtomLocations ();
     std::string read_filename;
 
     amrex::MultiFab* p_mf_gather=nullptr;
@@ -152,6 +155,7 @@ private:
     int _use_electrostatic=0;
     int _use_selfconsistent_potential=0;
     int _use_negf=0;
+    amrex::Vector<s_Position3D> pos_vec;
 
     void InitializeNEGF();
 };

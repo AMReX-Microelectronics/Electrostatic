@@ -32,6 +32,10 @@ c_CNT:: ReadNanostructureProperties ()
     for (int i=0; i<2; ++i) amrex::Print() << type_id[i] << "  ";
     amrex::Print() << "\n";
 
+    R_cnt = acc*sqrt(3.*(pow(type_id[0],2) 
+                   + pow(type_id[1],2) 
+                   + type_id[0]*type_id[1])) / (2.*MathConst::pi);
+    amrex::Print() << "#####* R_cnt / (nm): " << R_cnt/1.e-9 << "\n";
     //getWithParser(pp_ns,"num_unitcells", num_unitcells);
     //amrex::Print() << "##### num_unitcells: " << num_unitcells << "\n";
 
@@ -98,6 +102,65 @@ c_CNT::set_material_specific_parameters()
                      block_degen_vec.begin(), block_degen_vec.end(), 
                      block_degen_gpuvec.begin());
     #endif
+}
+
+
+s_Position3D
+c_CNT:: get_AtomPosition_ZigZag_CNT(int ring_id, int atom_id)
+{
+     amrex::Real theta = 0;  
+     amrex::Real m = static_cast<amrex::Real>(num_atoms_per_field_site);
+
+     s_Position3D center_offset;
+
+     center_offset.dir[0] = 0.;
+     center_offset.dir[1] = -(num_unitcells/2.)*3.*acc - acc/2.;
+     center_offset.dir[2] = 0.;
+  
+     s_Position3D pos;
+  
+     int unit_cell_id = ring_id/rings_per_unitcell;
+     amrex::Real unit_cell_offset = 3*acc*unit_cell_id;
+
+     if(ring_id % rings_per_unitcell == 0) pos.dir[1] = acc + unit_cell_offset;
+     if(ring_id % rings_per_unitcell == 1) pos.dir[1] = 1.5*acc + unit_cell_offset;
+     if(ring_id % rings_per_unitcell == 2) pos.dir[1] = 2.5*acc + unit_cell_offset;
+     if(ring_id % rings_per_unitcell == 3) pos.dir[1] = 3*acc + unit_cell_offset;
+   
+     pos.dir[1] += center_offset.dir[1];
+
+     if(ring_id %4 == 0 or ring_id %4 == 3) 
+     {
+         theta = (atom_id/m)*2.*MathConst::pi;
+     }
+     else 
+     {
+         theta = (atom_id/m)*2.*MathConst::pi + (sqrt(3.)/2.)*(acc/R_cnt);
+     }
+     pos.dir[2] = R_cnt*cos(theta) + center_offset.dir[2];
+     pos.dir[0] = R_cnt*sin(theta) + center_offset.dir[0];
+  
+     return pos; 
+}
+
+
+void
+c_CNT:: Generate_AtomLocations (amrex::Vector<s_Position3D>& pos)
+{
+    int m = num_atoms_per_field_site;
+    int counter = 0;
+    for(int i = 0; i<num_field_sites; ++i) 
+    {
+       for(int j = 0; j<num_atoms_per_field_site; ++j) 
+       {
+           pos[i*m + j] = get_AtomPosition_ZigZag_CNT(i, j);
+           counter +=1;
+           //amrex::Print() << counter << " " << pos[i*m+j].dir[0]/1.e-9 << "  " 
+           //                                 << pos[i*m+j].dir[1]/1.e-9 << "  "
+           //                                 << pos[i*m+j].dir[2]/1.e-9 << "\n";
+       }
+    }
+    c_NEGF_Common<BlkType>::Generate_AtomLocations(pos);
 }
 
 
@@ -259,7 +322,7 @@ c_CNT::Define_EnergyLimits ()
 {
 
     /*set in the input*/
-    E_f = 0.3; 
+    E_f = 0.0; 
     E_valence_min = -10.; 
     E_pole_max = 3; 
     c_NEGF_Common<BlkType>:: Define_EnergyLimits ();

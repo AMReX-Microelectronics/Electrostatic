@@ -16,6 +16,10 @@ struct s_AVG_TYPE
     };
 };
 
+struct s_Position3D
+{
+   amrex::Array<amrex::Real,AMREX_SPACEDIM> dir = {AMREX_D_DECL(0.,0.,0.)};
+};
 
 template<typename T>
 class c_NEGF_Common: public MatrixBlock<T>, 
@@ -176,6 +180,7 @@ public:
     virtual int get_Hsize() {return 0;}
     virtual int get_offDiag_repeatBlkSize() {return 0;}
     virtual void set_material_specific_parameters();
+    virtual void Generate_AtomLocations(amrex::Vector<s_Position3D>& pos);
 
     void DefineMatrixPartition();
 
@@ -187,6 +192,7 @@ public:
     void Update_ContactPotential ();
     virtual void Define_EnergyLimits ();
     virtual void Define_IntegrationPaths ();
+    void Update_IntegrationPaths ();
     virtual void Define_ContactInfo();
     virtual 
     AMREX_GPU_HOST_DEVICE
@@ -214,11 +220,11 @@ public:
 
     ComplexTable1D h_E_RealPath_data;
 
-    template<typename U> 
-    void Write_Table1D_asaf_E(const amrex::Vector<ComplexType>& E_vec,
-                              const U& Arr_data,
-                              std::string filename,
-                              std::string header);
+    template<typename VectorType, typename TableType> 
+    void Write_Table1D(const amrex::Vector<VectorType>& Vec,
+                       const TableType& Arr_data,
+                       std::string filename,
+                       std::string header);
 
     void Write_BlkTable1D_asaf_E(const amrex::Vector<ComplexType>& E_vec,
                                  const BlkTable1D& Arr_data,
