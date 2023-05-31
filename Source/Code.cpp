@@ -327,25 +327,29 @@ c_Code::Solve_PostProcess_Output()
     for(int step=0; step < m_total_steps; ++step) 
     {
         auto time = set_time(step);
+        amrex::Print() << "step: "  << std::setw(5) 
+                       << step      << std::setw(7) 
+                       << "     time: " << std::setw(5) 
+                       << time << std::setw(15) << "\n";
 
+        #ifdef USE_TRANSPORT
+        if(use_transport) m_pTransportSolver->Solve();
+        if(use_electrostatic) 
+        {
+            m_pPostProcessor->Compute(); 
+	}
+	#else
         if(use_electrostatic) 
         {
             m_pMLMGSolver->UpdateBoundaryConditions();
-
             auto mlmg_solve_time = m_pMLMGSolver->Solve_PoissonEqn();
             avg_mlmg_solve_time += mlmg_solve_time;
-            amrex::Print() << "step: "  << std::setw(5) 
-                           << step      << std::setw(7) 
-                           << "     time: " << std::setw(5) 
-                           << time << std::setw(15) 
-                           << "     mlmg_solve_time: " << std::setw(15) 
+
+	    amrex::Print() << "    mlmg_solve_time: " << std::setw(15) 
                            << mlmg_solve_time << "\n";
 
             m_pPostProcessor->Compute(); 
         } 
-
-        #ifdef USE_TRANSPORT
-        if(use_transport) m_pTransportSolver->Solve();
         #endif
 
         amrex::Print() << "use diagnostics: " << use_diagnostics << "\n";

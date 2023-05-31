@@ -127,14 +127,13 @@ public:
     virtual void ReadNanostructureProperties () override;
 
     void MarkCellsWithAtoms(); 
-    void Initialize_AttributeToDeposit(const amrex::Real value);
 
     void Gather_MeshAttributeAtAtoms();
     void Deposit_AtomAttributeToMesh();
     void Obtain_PotentialAtSites();
     void Write_PotentialAtSites();
-
     void Solve_NEGF();
+    void Reset();
 
 //    const amrex::Vector<amrex::Real>* get_avg_gatherField() { &avg_gatherField };
 
@@ -150,7 +149,6 @@ private:
     amrex::MultiFab* p_mf_deposit=nullptr;
 
     //amrex::Vector<amrex::Real> avg_gatherField;
-    amrex::Gpu::DeviceVector<int> gpuvec_avg_indices;
 
     int _use_electrostatic=0;
     int _use_selfconsistent_potential=0;

@@ -44,6 +44,7 @@ public:
     int num_atoms_per_field_site = 1;
     int num_atoms_to_avg_over = 1;
     int primary_transport_dir = 1; /*Y*/
+    amrex::Real cell_volume = 1.;
 
     amrex::RealArray offset;
     int avg_type;
@@ -92,7 +93,6 @@ public:
     BlkTable1D  h_GR_atPoles_loc_data;
     BlkTable1D  h_RhoEq_loc_data;
     BlkTable1D  h_RhoNonEq_loc_data;
-    RealTable1D h_RhoInduced_perAtom_loc_data;
 
     /*Tables required to compute Green and Spectral Functions */
     BlkTable1D h_Alpha_loc_data;
@@ -176,6 +176,22 @@ public:
     amrex::Vector<c_IntegrationPath> ContourPath_RhoNonEq;
     c_IntegrationPath ContourPath_DOS;
 
+
+    /*For Broyden*/
+    int Broyden_Step = 1;
+    amrex::Real Broyden_fraction = 0.5;
+    amrex::Real Broyden_Norm = 1.0;
+    RealTable1D h_n_curr_in_data;
+    RealTable1D d_n_curr_in_data;
+
+    RealTable1D n_curr_out_data;
+    RealTable1D n_prev_in_data;
+    RealTable1D F_curr_data;
+
+    amrex::Vector<RealTable1D*> W_Broyden;
+    amrex::Vector<RealTable1D*> V_Broyden;
+
+    void Initialize_ChargeAtFieldSites(const amrex::Real value);
     virtual void ReadNanostructureProperties();
     virtual int get_Hsize() {return 0;}
     virtual int get_offDiag_repeatBlkSize() {return 0;}
@@ -202,7 +218,10 @@ public:
     void Compute_GR_atPoles();
     void Compute_RhoEq();
     void Compute_RhoNonEq();
-    void Compute_InducedChargePerAtom();
+    void Compute_InducedCharge();
+    //void Compute_ChargeDensity();
+    void GuessNewCharge_ModifiedBroydenSecondAlg();
+    void Reset_Broyden();
     //virtual void ComputeChargeDensity();
     //virtual void DeallocateArrays();
 
@@ -245,6 +264,8 @@ public:
 
     template<typename U, typename V> 
     void SetVal_Table2D(U& Tab2D_data, V val);
+
+    virtual void Deallocate();
 
 };
 

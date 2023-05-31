@@ -22,6 +22,29 @@ my_constants.GO_h = 3.0e-9      #smallest dimension that limits n_cell in z.
 
 my_constants.epsilon_GO = 1*epsilon_0
 
+#contact metal
+my_constants.CM_w = 3.e-9
+my_constants.CM_l = CN_co_l
+my_constants.CM_h = 3.e-9
+my_constants.epsilon_CM = 1.7*epsilon_0 #Palladium
+
+my_constants.SV =  0  #source voltage [V]
+my_constants.DV = 0.1 #drain voltage [V]
+
+my_constants.CM_lo_z =  GO_h
+my_constants.CM_hi_z =  GO_h + CM_h
+
+my_constants.tiny_ebx = dx/4
+my_constants.tiny_eby = dy/4
+my_constants.tiny_ebz = dz/4
+
+my_constants.source_lo_y = -Ly/2 + bond_length + tiny_eby
+my_constants.source_hi_y = source_lo_y + CM_l + 2*tiny_eby
+
+my_constants.drain_hi_y = Ly/2 - bond_length - tiny_eby
+my_constants.drain_lo_y = drain_hi_y - CM_l - 2*tiny_eby
+
+
 ### Carbon nanotube
 my_constants.bond_length = 0.142e-9
 my_constants.N_unitcells = 24
@@ -29,6 +52,7 @@ my_constants.L_unitcell = 3*bond_length #0.426e-9
 
 my_constants.R_CN = 0.6654e-9    #radius
 my_constants.CN_h = R_CN + GO_h
+my_constants.CN_co_l = 1*L_unitcell  #contact length 1 unit cells
 
 my_constants.epsilon_CN = epsilon_0 #vacuum
 
@@ -124,9 +148,9 @@ macroscopic.fields_to_define = alpha epsilon charge_density phi atom_locations
 macroscopic.ghostcells_for_fields = alpha.0 epsilon.1 charge_density.1 phi.1  atom_locations.0
 
 macroscopic.alpha = 0.
-macroscopic.charge_density = 0.
-#macroscopic.charge_density_function = "charge_density_surr + charge_density_QD * ( sqrt(x**2 + y**2 + (z-QD_h)**2) <= R_QD )"
-macroscopic.charge_density_function = "charge_density_surr + charge_QD * (1./(sqrt(2*pi)*sigma_QD)**3)* exp(-1*( (x-QD_x)**2 + (y-QD_y)**2 + (z-QD_z)**2 ) / (2*sigma_QD**2) )"
+#macroscopic.charge_density = 0.
+macroscopic.charge_density_function = "charge_density_surr + charge_density_QD * ( sqrt(x**2 + y**2 + (z-QD_h)**2) <= R_QD )"
+#macroscopic.charge_density_function = "charge_density_surr + charge_QD * (1./(sqrt(2*pi)*sigma_QD)**3)* exp(-1*( (x-QD_x)**2 + (y-QD_y)**2 + (z-QD_z)**2 ) / (2*sigma_QD**2) )"
 
 macroscopic.epsilon_function = "epsilon_0 + (epsilon_GO - epsilon_0)    *(z >= 0.)   *(z < GO_h)"
 macroscopic.phi = 0.
@@ -190,7 +214,7 @@ transport.use_selfconsistent_potential = 0
 transport.use_negf = 1
 transport.NS_gather_field = phi            
 transport.NS_deposit_field  = charge_density 
-transport.NS_initial_deposit_value  = 1e-4
+transport.NS_initial_deposit_value  = 0.
 
 cnt.type = CNT
 cnt.type_id = 17 0     #m n
@@ -198,7 +222,6 @@ cnt.acc = bond_length
 cnt.gamma = 2.5        #coupling strength (eV)
 cnt.num_unitcells = N_unitcells
 cnt.offset = 0. 0. CN_h
-cnt.field_averaging_type = all
-#cnt.atom_indices_for_averaging = 1 8
+
 #graphene.type = Graphene
 ######################################

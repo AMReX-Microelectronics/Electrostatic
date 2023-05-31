@@ -81,6 +81,8 @@ public:
 
     ComplexType get_beta(int J);
 
+    virtual void Deallocate() override;
+
 };
 
 #endif

@@ -6,9 +6,11 @@
 #include "../../Utils/CodeUtils/CodeUtil.H"
 #include "../../Code.H"
 #include "../../Input/GeometryProperties/GeometryProperties.H"
-//#include "Input/MacroscopicProperties/MacroscopicProperties.H"
-//#include "Input/BoundaryConditions/BoundaryConditions.H"
-//
+#include "../../Input/MacroscopicProperties/MacroscopicProperties.H"
+#include "../Electrostatics/MLMG.H"
+#include "../Output/Output.H"
+#include "../PostProcessor/PostProcessor.H"
+
 #include <AMReX.H>
 //#include <AMReX_ParmParse.H>
 //#include <AMReX_Parser.H>
@@ -96,8 +98,8 @@ c_TransportSolver::InitData()
     amrex::Print() << "##### transport.use_negf: " 
                    << use_negf << "\n";
 
-    std::string NS_gather_field_str = "phi";
-    std::string NS_deposit_field_str = "charge_density";
+    NS_gather_field_str = "phi";
+    NS_deposit_field_str = "charge_density";
     amrex::Real NS_initial_deposit_value = 0.;
 
     auto& rCode = c_Code::GetInstance();
@@ -191,14 +193,57 @@ c_TransportSolver::InitData()
 void 
 c_TransportSolver::Solve() 
 {
+
    amrex::Print() << "In Transport Solve \n";
-   for (int c=0; c < vp_CNT.size(); ++c)
+   auto& rCode    = c_Code::GetInstance();
+   auto& rMprop = rCode.get_MacroscopicProperties();
+   auto& rMLMG    = rCode.get_MLMGSolver();
+   auto& rOutput  = rCode.get_Output();
+   auto& rPostPro = rCode.get_PostProcessor();
+
+   amrex::Real total_mlmg_solve_time = 0.;
+
+   amrex::Real max_norm = 1.;
+   int max_step = 0;
+   int step=0;
+   do 
    {
-       if(use_negf) 
+       if(rCode.use_electrostatic)
+       {
+           rMLMG.UpdateBoundaryConditions();
+           auto mlmg_solve_time = rMLMG.Solve_PoissonEqn();
+	   amrex::Print() << "mlmg_solve_time: " << mlmg_solve_time << "\n";
+	   total_mlmg_solve_time += mlmg_solve_time;
+
+           rPostPro.Compute();
+
+           rOutput.WriteOutput(step, -1.);
+	   step++;
+       }
+
+       for (int c=0; c < vp_CNT.size(); ++c)
        {
            vp_CNT[c]->Solve_NEGF();
-       } 
 
+           if(rCode.use_electrostatic)
+           {
+               rMprop.ReInitializeMacroparam(NS_deposit_field_str);
+               vp_CNT[c]->Deposit_AtomAttributeToMesh();
+           }
+
+           max_norm = vp_CNT[c]->Broyden_Norm;
+           max_step = vp_CNT[c]->Broyden_Step;
+       }
+
+
+
+     amrex::Print() << "Maximum norm: " << max_norm << "\n";
+
+   } while(max_norm > 1.e-3 or max_step < 10);    
+
+   for (int c=0; c < vp_CNT.size(); ++c)
+   {
+       vp_CNT[c]->Reset();
    }
 
 }
