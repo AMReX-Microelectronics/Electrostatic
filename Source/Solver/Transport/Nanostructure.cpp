@@ -27,6 +27,7 @@ c_Nanostructure<NSType>::c_Nanostructure (const amrex::Geometry            & geo
                                   const std::string NS_gather_str,
                                   const std::string NS_deposit_str,
                                   const amrex::Real NS_initial_deposit_value,
+                                  const amrex::Real NS_Broyden_frac,
                                   const int use_selfconsistent_potential,
                                   const int use_negf)
                  : amrex::ParticleContainer<realPD::NUM, intPD::NUM, 
@@ -48,6 +49,8 @@ c_Nanostructure<NSType>::c_Nanostructure (const amrex::Geometry            & geo
 
     if(_use_negf) 
     {
+        NSType::Broyden_fraction = NS_Broyden_frac;
+
         ReadNanostructureProperties();
 
         pos_vec.resize(NSType::num_atoms);
@@ -74,6 +77,7 @@ c_Nanostructure<NSType>::c_Nanostructure (const amrex::Geometry            & geo
         Redistribute(); //This function is in amrex::ParticleContainer
 
         MarkCellsWithAtoms();
+
 
         NSType::Initialize_ChargeAtFieldSites(NS_initial_deposit_value);
         Deposit_AtomAttributeToMesh();
@@ -340,6 +344,7 @@ c_Nanostructure<NSType>::Gather_MeshAttributeAtAtoms()
     p_mf_gather->setVal(0.);
     p_mf_deposit->FillBoundary(_geom->periodicity());
 
+    Obtain_PotentialAtSites();
 }
 
 
@@ -626,14 +631,8 @@ template<typename NSType>
 void
 c_Nanostructure<NSType>:: Solve_NEGF ()
 {
-    if(_use_electrostatic) 
-    {
-        Gather_MeshAttributeAtAtoms();
-        Obtain_PotentialAtSites();
-        Write_PotentialAtSites();
-    }
-    else 
-    {
+    //if(!_use_electrostatic) 
+    //{
     //    amrex::Array<amrex::Real,2> QD_loc = {0., 1}; //1nm away in z
     //    for (int l=0; l<NSType::num_field_sites; ++l) 
     //    {
@@ -641,16 +640,13 @@ c_Nanostructure<NSType>:: Solve_NEGF ()
     //        NSType::Potential[l]   = -1*(1./(4.*MathConst::pi*PhysConst::ep0*1.)*(PhysConst::q_e/r));
     //        /*-1 is multiplied because potential is experienced by electrons*/
     //    }
-    } 
-    NSType::AddPotentialToHamiltonian();
-    //if(NSType::Broyden_Step == 1) {
-    NSType::Update_ContactPotential(); 
     //}
+
+    NSType::AddPotentialToHamiltonian();
+    NSType::Update_ContactPotential(); 
     NSType::Define_EnergyLimits();
     NSType::Update_IntegrationPaths();
     NSType::Compute_InducedCharge();
-    //NSType::GuessNewCharge_ModifiedBroydenSecondAlg();
-    NSType::GuessNewCharge_Broyden_FirstAlg();
 
 }
 

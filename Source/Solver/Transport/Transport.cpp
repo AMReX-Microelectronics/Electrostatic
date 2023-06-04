@@ -102,6 +102,8 @@ c_TransportSolver::InitData()
     NS_deposit_field_str = "charge_density";
     amrex::Real NS_initial_deposit_value = 0.;
 
+    amrex::Real NS_Broyden_frac = 0.1;
+
     auto& rCode = c_Code::GetInstance();
     if(rCode.use_electrostatic)
     {
@@ -133,6 +135,13 @@ c_TransportSolver::InitData()
 
         queryWithParser(pp_transport,"NS_initial_deposit_value", NS_initial_deposit_value);
         amrex::Print() << "##### transport.NS_initial_deposit_value: " << NS_initial_deposit_value << "\n";
+
+        queryWithParser(pp_transport,"Broyden_fraction", NS_Broyden_frac);
+        amrex::Print() << "#####* Broyden_fraction: " << NS_Broyden_frac << "\n";
+
+        queryWithParser(pp_transport,"Broyden_max_norm", Broyden_max_norm);
+        amrex::Print() << "#####* Broyden_max_norm: " << Broyden_max_norm << "\n";
+
     }
 
     std::string type;
@@ -156,6 +165,7 @@ c_TransportSolver::InitData()
                                                                        NS_gather_field_str, 
                                                                        NS_deposit_field_str, 
                                                                        NS_initial_deposit_value,
+                                                                       NS_Broyden_frac,
                                                                        use_selfconsistent_potential,
                                                                        use_negf
                                                                       ));
@@ -170,6 +180,7 @@ c_TransportSolver::InitData()
                                                                             NS_gather_field_str, 
                                                                             NS_deposit_field_str, 
                                                                             NS_initial_deposit_value,
+                                                                            NS_Broyden_frac,
                                                                             use_selfconsistent_potential,
                                                                             use_negf
                                                                            ));
@@ -194,7 +205,6 @@ void
 c_TransportSolver::Solve() 
 {
 
-   amrex::Print() << "In Transport Solve \n";
    auto& rCode    = c_Code::GetInstance();
    auto& rMprop = rCode.get_MacroscopicProperties();
    auto& rMLMG    = rCode.get_MLMGSolver();
@@ -205,44 +215,57 @@ c_TransportSolver::Solve()
 
    amrex::Real max_norm = 1.;
    int max_step = 0;
-   int step=0;
-   do 
-   {
-       amrex::Print() << "\n\nmax_step: " << max_step << "\n";
-       if(rCode.use_electrostatic)
+
+   if(rCode.use_electrostatic) 
+   {	   
+       do 
        {
+           amrex::Print() << "\n\nmax_step: " << max_step << "\n";
+
            rMLMG.UpdateBoundaryConditions();
            auto mlmg_solve_time = rMLMG.Solve_PoissonEqn();
-	   amrex::Print() << "mlmg_solve_time: " << mlmg_solve_time << "\n";
-	   total_mlmg_solve_time += mlmg_solve_time;
+           amrex::Print() << "mlmg_solve_time: " << mlmg_solve_time << "\n";
+           total_mlmg_solve_time += mlmg_solve_time;
 
            rPostPro.Compute();
 
-           rOutput.WriteOutput(step, -1.);
-	   step++;
-       }
+           rOutput.WriteOutput(max_step, -1.);
+
+           for (int c=0; c < vp_CNT.size(); ++c)
+           {
+	       vp_CNT[c]->Gather_MeshAttributeAtAtoms();  
+	       //vp_CNT[c]->Write_PotentialAtSites();
+
+               vp_CNT[c]->Solve_NEGF();
+
+	       //vp_CNT[c]->GuessNewCharge_ModifiedBroydenSecondAlg();
+               vp_CNT[c]->GuessNewCharge_Broyden_FirstAlg();
+
+               //rMprop.ReInitializeMacroparam(NS_deposit_field_str);
+
+               vp_CNT[c]->Deposit_AtomAttributeToMesh();
+
+               max_norm = vp_CNT[c]->Broyden_Norm;
+               max_step = vp_CNT[c]->Broyden_Step;
+           }
+
+       } while(max_norm > Broyden_max_norm);    
 
        for (int c=0; c < vp_CNT.size(); ++c)
        {
-           vp_CNT[c]->Solve_NEGF();
-
-           if(rCode.use_electrostatic)
-           {
-               //rMprop.ReInitializeMacroparam(NS_deposit_field_str);
-               vp_CNT[c]->Deposit_AtomAttributeToMesh();
-           }
-
-           max_norm = vp_CNT[c]->Broyden_Norm;
-           max_step = vp_CNT[c]->Broyden_Step;
+           vp_CNT[c]->Reset();
        }
-
-     //amrex::Print() << "Maximum norm: " << max_norm << "\n";
-
-   } while(max_norm > 1.e-5);    
-
-   for (int c=0; c < vp_CNT.size(); ++c)
-   {
-       vp_CNT[c]->Reset();
    }
-
+   else 
+   {
+       amrex::Real negf_solve_time = amrex::second();
+       int matrix_size = 0;
+       for (int c=0; c < vp_CNT.size(); ++c)
+       {
+           vp_CNT[c]->Solve_NEGF();
+	   matrix_size += vp_CNT[c]->Hsize_glo;
+       }
+       negf_solve_time = amrex::second() - negf_solve_time;
+       amrex::Print() << "NEGF solve time (s): " << negf_solve_time << ",  matrix size: " << matrix_size << "\n";
+   }
 }

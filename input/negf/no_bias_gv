@@ -222,6 +222,9 @@ transport.use_negf = 1
 transport.NS_gather_field = phi            
 transport.NS_deposit_field  = charge_density 
 transport.NS_initial_deposit_value  = 0.02
+transport.Broyden_fraction = 0.01
+transport.Broyden_max_norm = 1.e-5
+
 
 cnt.type = CNT
 cnt.type_id = 17 0     #m n
@@ -229,6 +232,10 @@ cnt.acc = bond_length
 cnt.gamma = 2.5        #coupling strength (eV)
 cnt.num_unitcells = N_unitcells
 cnt.offset = 0. 0. CN_h
+
+cnt.E_f = -1
+cnt.E_valence_min = -10
+cnt.E_pole_max    = 3
 
 #graphene.type = Graphene
 ######################################

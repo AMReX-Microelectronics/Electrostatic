@@ -107,6 +107,14 @@ c_NEGF_Common<T>:: ReadNanostructureProperties ()
                         gpuvec_avg_indices.begin());
        #endif
     }
+
+    amrex::Vector<amrex::Real> vec_Temperature;
+    auto is_specified = queryArrWithParser(pp_ns, "contact_temperature", vec_Temperature, 0, NUM_CONTACTS);
+    if(is_specified) {
+        for(int c=0; c<NUM_CONTACTS; ++c) {
+            Contact_Temperature[c] = vec_Temperature[c];
+        }
+    }
     
     set_material_specific_parameters();
 
@@ -118,13 +126,17 @@ c_NEGF_Common<T>:: ReadNanostructureProperties ()
     amrex::Print() << "#####* num_atoms_per_field_site: " << num_atoms_per_field_site   << "\n";
     amrex::Print() << "#####* num_atoms_to_avg_over: "    << num_atoms_to_avg_over      << "\n";
     amrex::Print() << "#####* primary_transport_dir: "    << primary_transport_dir      << "\n";
+    amrex::Print() << "#####* Broyden_fraction: "         << Broyden_fraction           << "\n";
+    amrex::Print() << "#####* Contact_Temperature: \n";
+    for(int c=0; c<NUM_CONTACTS; ++c) {
+        amrex::Print() << "#####*   contact, temperature (K): " << c << "  " << Contact_Temperature[c] <<"\n";
+    }
 
     Potential.resize(num_field_sites);
     PTD.resize(num_field_sites);
 
     /*Broyden*/
     Broyden_Step = 1;
-    Broyden_fraction = 0.5;
 
     h_n_curr_in_data.resize({0},{num_field_sites}, The_Pinned_Arena());
     
@@ -270,9 +282,9 @@ c_NEGF_Common<T>::DefineMatrixPartition()
           MPI_recv_count[p] = 0;
           MPI_disp[p] = 0;
        }
-       amrex::Print() << "p,recv, disp: " << p << "  " 
-                      << MPI_recv_count[p] << "  " 
-                      << MPI_disp[p] << "\n";
+       //amrex::Print() << "p,recv, disp: " << p << "  " 
+       //               << MPI_recv_count[p] << "  " 
+       //               << MPI_disp[p] << "\n";
     }
 
     Define_MPI_BlkType();
@@ -372,11 +384,11 @@ template<typename T>
 void 
 c_NEGF_Common<T>:: Update_ContactPotential () 
 {
-    amrex::Print() <<  "Updated contact potential: \n";
+    //amrex::Print() <<  "Updated contact potential: \n";
     for(int c=0; c < NUM_CONTACTS; ++c)
     {
         U_contact[c] = Potential[global_contact_index[c]];
-        amrex::Print() <<  c << " " << U_contact[c] << "\n";
+        //amrex::Print() << "  contact, potential: " <<  c << " " << U_contact[c] << "\n";
     }
 }
 
@@ -388,7 +400,7 @@ c_NEGF_Common<T>:: Define_EnergyLimits ()
     for (int c=0; c<NUM_CONTACTS; ++c)
     {
         mu_contact[c] = E_f + U_contact[c];
-        kT_contact[c] = PhysConst::kb_eVperK*298.; /*set in the input*/
+        kT_contact[c] = PhysConst::kb_eVperK*Contact_Temperature[c]; /*set Temp in the input*/
     }
 
     mu_min = mu_contact[0];
@@ -448,13 +460,13 @@ c_NEGF_Common<T>:: Define_EnergyLimits ()
     E_zeta = val2;
     E_eta =  E_zeta - 2*Fermi_tail_factor*kT_max;
 
-    amrex::Print() << "\nE_f: " << E_f << "\n";
-    amrex::Print() << "U_contact: ";
-    for (int c=0; c<NUM_CONTACTS; ++c)
-    {
-        amrex::Print() <<  U_contact[c] << " ";
-    }
-    amrex::Print() << "\n";
+    //amrex::Print() << "\nE_f: " << E_f << "\n";
+    //amrex::Print() << "U_contact: ";
+    //for (int c=0; c<NUM_CONTACTS; ++c)
+    //{
+    //    amrex::Print() <<  U_contact[c] << " ";
+    //}
+    //amrex::Print() << "\n";
     //amrex::Print() << "mu_min/max: " << mu_min << " " << mu_max << "\n";
     //amrex::Print() << "kT_min/max: " << kT_min << " " << kT_max << "\n";
     //amrex::Print() << "E_zPlus: "  << E_zPlus << "\n";
@@ -497,21 +509,21 @@ c_NEGF_Common<T>:: Define_IntegrationPaths ()
     auto* Fermi_path = &ContourPath_DOS;
     if(flag_noneq_exists) Fermi_path = &ContourPath_RhoNonEq[0];
 
-    amrex::Print() << "Writing Fermi Function over points" << Fermi_path->num_pts; 
-    std::string filename = "FermiFunction";
-    std::ofstream outfile;
-    outfile.open(filename.c_str());
+    //amrex::Print() << "Writing Fermi Function over points" << Fermi_path->num_pts; 
+    //std::string filename = "FermiFunction";
+    //std::ofstream outfile;
+    //outfile.open(filename.c_str());
 
-    for(int i=0; i<Fermi_path->num_pts; ++i) 
-    {
-        auto E = Fermi_path->E_vec[i];
-        outfile << std::setw(20) << E.real()
-                << std::setw(20) << FermiFunction(E-mu_contact[0], kT_contact[0]).real() 
-                << std::setw(20) << FermiFunction(E-mu_contact[1], kT_contact[1]).real()
-                << "\n";
-    }
+    //for(int i=0; i<Fermi_path->num_pts; ++i) 
+    //{
+    //    auto E = Fermi_path->E_vec[i];
+    //    outfile << std::setw(20) << E.real()
+    //            << std::setw(20) << FermiFunction(E-mu_contact[0], kT_contact[0]).real() 
+    //            << std::setw(20) << FermiFunction(E-mu_contact[1], kT_contact[1]).real()
+    //            << "\n";
+    //}
 
-    outfile.close();
+    //outfile.close();
 }
 
 
@@ -968,8 +980,13 @@ c_NEGF_Common<T>:: Compute_InducedCharge ()
         h_RhoInduced_loc(n) = ( h_RhoEq_loc(n).DiagSum().imag() 
                               + h_RhoNonEq_loc(n).DiagSum().real() 
                              - h_Rho0_loc(n).DiagSum().imag() );
-    }
 
+        //amrex::Print() << "n/rho_Eq/Rho_NonEq/Rho0/RhoInduced: " << n << " " <<  h_RhoEq_loc(n).DiagSum().imag() 
+        //        	                                                  << " " <<  h_RhoNonEq_loc(n).DiagSum().real() 
+        //        							  << " " <<  h_Rho0_loc(n).DiagSum().imag() 
+        //        							  << " " <<  h_RhoInduced_loc(n) << "\n";
+    }
+    
     auto const& n_curr_out = n_curr_out_data.table();
 
     MPI_Allgatherv(&h_RhoInduced_loc(0),
@@ -985,9 +1002,9 @@ c_NEGF_Common<T>:: Compute_InducedCharge ()
 
     h_RhoInduced_loc_data.clear();
 
-    std::string filename = "Qm_out_" + std::to_string(Broyden_Step) + ".dat";
-    Write_Table1D(PTD, n_curr_out_data, filename.c_str(), 
-                  "'axial location / (nm)', 'Induced charge / (e)");
+    //std::string filename = "Qm_out_" + std::to_string(Broyden_Step) + ".dat";
+    //Write_Table1D(PTD, n_curr_out_data, filename.c_str(), 
+    //              "'axial location / (nm)', 'Induced charge per site / (e)'");
 
 }
 
@@ -1736,8 +1753,8 @@ c_NEGF_Common<T>:: Compute_RhoEq ()
 
         for (int n=0; n <blkCol_size_loc; ++n) 
         {
+            //amrex::Print() << n << "  " <<std::setprecision(3)<< h_RhoEq_loc(n) << "  " << h_GR_atPoles_loc(n)  << "\n";
             h_RhoEq_loc(n) = h_RhoEq_loc(n) + h_GR_atPoles_loc(n);
-            //amrex::Print() << n << "  " <<std::setprecision(3)<< h_RhoEq_loc(n)  << "\n";
         }
     }
 

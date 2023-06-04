@@ -121,6 +121,7 @@ public:
                      const std::string NS_gather_str,
                      const std::string NS_deposit_str,
                      const amrex::Real NS_initial_deposit_value,
+                     const amrex::Real NS_Broyden_frac,
                      const int use_selfconsistent_potential,
                      const int use_negf    );
 

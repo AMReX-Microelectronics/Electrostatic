@@ -57,6 +57,7 @@ private:
     std::string NS_gather_field_str;
     std::string NS_deposit_field_str;
     amrex::Real NS_initial_deposit_value;
+    amrex::Real Broyden_max_norm = 1.e-5;
 
     int use_selfconsistent_potential;
     int use_negf;

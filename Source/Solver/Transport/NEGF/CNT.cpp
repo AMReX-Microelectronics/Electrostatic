@@ -68,6 +68,20 @@ c_CNT:: ReadNanostructureProperties ()
     amrex::Print() << "#####* rings_per_unitcell: " << rings_per_unitcell << "\n";
     amrex::Print() << "#####* atoms_per_ring: " << atoms_per_ring << "\n";
 
+
+    E_f = 0.;
+    queryWithParser(pp_ns,"E_f", E_f); 
+    amrex::Print() << "#####* Fermi level, E_f (eV): " << E_f << "\n";
+
+    E_valence_min = -10.; 
+    queryWithParser(pp_ns,"E_valence_min", E_valence_min); 
+    amrex::Print() << "#####* valence_band_lower_limit, E_valence_min (eV): " << E_valence_min << "\n";
+
+    E_pole_max = 3; 
+    queryWithParser(pp_ns,"E_pole_max", E_pole_max); 
+    amrex::Print() << "#####* pole_energy_upper_limit, E_pole_max (eV): " << E_pole_max << "\n";
+
+
     c_NEGF_Common<BlkType>::ReadNanostructureProperties();
 
 }
@@ -256,8 +270,8 @@ c_CNT::ConstructHamiltonian()
         int J = mode_vec[j];
         beta.block[j] = get_beta(J);
     }
-    amrex::Print() << "\n Printing beta: "<< "\n";
-    amrex::Print() << beta << "\n";
+    //amrex::Print() << "\n Printing beta: "<< "\n";
+    //amrex::Print() << beta << "\n";
 
     for (std::size_t i = 0; i < offDiag_repeatBlkSize; ++i)
     {
@@ -328,9 +342,6 @@ c_CNT::Define_EnergyLimits ()
 {
 
     /*set in the input*/
-    E_f = -1.0; 
-    E_valence_min = -10.; 
-    E_pole_max = 3; 
     c_NEGF_Common<BlkType>:: Define_EnergyLimits ();
 
 }
