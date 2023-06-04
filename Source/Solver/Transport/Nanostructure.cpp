@@ -613,16 +613,21 @@ c_Nanostructure<NSType>:: InitializeNEGF ()
     NSType::ConstructHamiltonian();
     NSType::Define_ContactInfo();
 
-    //if(_use_electrostatic) 
-    //{
-    //    NSType::AddPotentialToHamiltonian();
-    //    NSType::Update_ContactPotential(); 
-    //}
-
     NSType::Define_EnergyLimits();
     NSType::Define_IntegrationPaths();
+
+    BL_PROFILE_VAR("Compute_DOS", compute_dos);
+
     NSType::Compute_DensityOfStates();
+
+    BL_PROFILE_VAR_STOP(compute_dos);
+
+
+    BL_PROFILE_VAR("Compute_Rho0", compute_rho0);
+
     NSType::Compute_Rho0();
+
+    BL_PROFILE_VAR_STOP(compute_rho0);
 
 }
 
@@ -646,7 +651,12 @@ c_Nanostructure<NSType>:: Solve_NEGF ()
     NSType::Update_ContactPotential(); 
     NSType::Define_EnergyLimits();
     NSType::Update_IntegrationPaths();
+
+    BL_PROFILE_VAR("Compute_RhoInduced", compute_rho_ind);
+
     NSType::Compute_InducedCharge();
+
+    BL_PROFILE_VAR_STOP(compute_rho_ind);
 
 }
 

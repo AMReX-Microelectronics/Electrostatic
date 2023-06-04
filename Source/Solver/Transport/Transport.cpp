@@ -85,6 +85,8 @@ c_TransportSolver::ReadData()
 void 
 c_TransportSolver::InitData() 
 {
+    amrex::Real negf_init_time = amrex::second();
+
     amrex::Print() << "\n##### TRANSPORT PROPERTIES #####\n\n";
 
     amrex::ParmParse pp_transport("transport");
@@ -242,7 +244,6 @@ c_TransportSolver::Solve()
                vp_CNT[c]->GuessNewCharge_Broyden_FirstAlg();
 
                //rMprop.ReInitializeMacroparam(NS_deposit_field_str);
-
                vp_CNT[c]->Deposit_AtomAttributeToMesh();
 
                max_norm = vp_CNT[c]->Broyden_Norm;
@@ -258,14 +259,9 @@ c_TransportSolver::Solve()
    }
    else 
    {
-       amrex::Real negf_solve_time = amrex::second();
-       int matrix_size = 0;
        for (int c=0; c < vp_CNT.size(); ++c)
        {
            vp_CNT[c]->Solve_NEGF();
-	   matrix_size += vp_CNT[c]->Hsize_glo;
        }
-       negf_solve_time = amrex::second() - negf_solve_time;
-       amrex::Print() << "NEGF solve time (s): " << negf_solve_time << ",  matrix size: " << matrix_size << "\n";
    }
 }
