@@ -208,6 +208,7 @@ c_TransportSolver::Solve()
    int step=0;
    do 
    {
+       amrex::Print() << "\n\nmax_step: " << max_step << "\n";
        if(rCode.use_electrostatic)
        {
            rMLMG.UpdateBoundaryConditions();
@@ -227,7 +228,7 @@ c_TransportSolver::Solve()
 
            if(rCode.use_electrostatic)
            {
-               rMprop.ReInitializeMacroparam(NS_deposit_field_str);
+               //rMprop.ReInitializeMacroparam(NS_deposit_field_str);
                vp_CNT[c]->Deposit_AtomAttributeToMesh();
            }
 
@@ -235,11 +236,9 @@ c_TransportSolver::Solve()
            max_step = vp_CNT[c]->Broyden_Step;
        }
 
+     //amrex::Print() << "Maximum norm: " << max_norm << "\n";
 
-
-     amrex::Print() << "Maximum norm: " << max_norm << "\n";
-
-   } while(max_norm > 1.e-3 or max_step < 10);    
+   } while(max_norm > 1.e-5);    
 
    for (int c=0; c < vp_CNT.size(); ++c)
    {

@@ -1,6 +1,8 @@
 use_electrostatic = 1
 use_transport = 1
 
+#my_constants.CN_h = GO_h + CM_h/2.
+my_constants.CN_h = Lz/2.
 ##################################
 ##### USER DEFINED CONSTANTS #####
 ##################################
@@ -18,7 +20,7 @@ my_constants.dt = 0.
 ### gate oxide
 my_constants.GO_w = Lx
 my_constants.GO_l = Ly
-my_constants.GO_h = 3.0e-9      #smallest dimension that limits n_cell in z.
+my_constants.GO_h = CN_h - CM_h/2.      #smallest dimension that limits n_cell in z.
 
 my_constants.epsilon_GO = 1*epsilon_0
 
@@ -29,7 +31,7 @@ my_constants.CM_h = 3.e-9
 my_constants.epsilon_CM = 1.7*epsilon_0 #Palladium
 
 my_constants.SV =  0  #source voltage [V]
-my_constants.DV = 0.1 #drain voltage [V]
+my_constants.DV = 0. #drain voltage [V]
 
 my_constants.CM_lo_z =  GO_h
 my_constants.CM_hi_z =  GO_h + CM_h
@@ -47,12 +49,11 @@ my_constants.drain_lo_y = drain_hi_y - CM_l - 2*tiny_eby
 
 ### Carbon nanotube
 my_constants.bond_length = 0.142e-9
-my_constants.N_unitcells = 24
+my_constants.N_unitcells = 1
 my_constants.L_unitcell = 3*bond_length #0.426e-9
 
 my_constants.R_CN = 0.6654e-9    #radius
-my_constants.CN_h = GO_h + CM_h/2.
-my_constants.CN_co_l = 4*L_unitcell  #contact length 1 unit cells
+my_constants.CN_co_l = 6*L_unitcell  #contact length 1 unit cells
 
 my_constants.small_gap = 3*dz #0.1e-9 #5*bond_length #0.355e-9, gap between nanotube and the contacts
 
@@ -76,12 +77,13 @@ my_constants.charge_density_QD = charge_QD / ((4./3)*pi*R_QD**3)
 ### Total domain dimensions
 my_constants.D_CN_unitcell = 1          #ceil(R_CN*2./L_unitcell) #2
 
+my_constants.Ly_offset_unitcells = 8
 my_constants.Lx = D_CN_unitcell*8*L_unitcell 
-my_constants.Ly = (N_unitcells + 2)*L_unitcell
+my_constants.Ly = (N_unitcells + Ly_offset_unitcells)*L_unitcell 
 my_constants.Lz = D_CN_unitcell*16*L_unitcell 
 
-my_constants.nx = 2*7*D_CN_unitcell*8  #224, dx= 0.0355 nm
-my_constants.ny = 2*7*(N_unitcells+2)     #28,  dy= 0.071 nm
+my_constants.nx = 2*7*D_CN_unitcell*4  #224, dx= 0.0355 nm
+my_constants.ny = 2*7*(N_unitcells+Ly_offset_unitcells)     #28,  dy= 0.071 nm
 my_constants.nz = 2*7*D_CN_unitcell*16   #224, dz= 0.0355 nm
 
 my_constants.dx = Lx/nx
@@ -101,7 +103,7 @@ steps = Nsteps
 ###### EMBEDDED BOUNDARIES ######
 ####################################
 
-domain.embedded_boundary = 1  #options: 1=true, 0=false (default)
+domain.embedded_boundary = 0  #options: 1=true, 0=false (default)
 domain.specify_using_eb2 = 0  #options: 1=true, 0=false (default)
 
 ebgeom.objects = Source Drain
@@ -138,8 +140,10 @@ domain.coord_sys = cartesian
 #################################
 ###### BOUNDARY CONDITIONS ######
 #################################
-boundary.hi = neu(0) neu(0) neu(0)
-boundary.lo = neu(0) neu(0) dir(0)
+boundary.hi = dir(-6) neu(0) dir(-6)
+boundary.lo = dir(-6) neu(0) dir(-6)
+#boundary.hi = neu(0) neu(0) neu(0)
+#boundary.lo = neu(0) neu(0) dir(0)
 
 #boundary.GV_function = "GV_min + (GV_max-GV_min) * t" #V
 
@@ -162,22 +166,23 @@ macroscopic.atom_locations = 0.
 ###### POST PROCESSING ######
 #############################
 
-post_process.fields_to_process = vecField
+#post_process.fields_to_process = vecField
 
 ####################
 ###### OUTPUT ######
 ####################
 
-plot.folder_name = cntfet
-plot.fields_to_plot = epsilon.1 charge_density.1 phi.1 vecField atom_locations
-plot.write_after_init = 1
+plot.folder_name = no_bias_gv_dot1
+plot.fields_to_plot = epsilon.1 charge_density.1 phi.1 atom_locations
+#vecField 
+plot.write_after_init = 0
 plot.write_interval = 1
-plot.rawfield_write_interval = 1
+plot.rawfield_write_interval = 1000000
 
 ########################
 ###### DIAGNOSTICS #####
 ########################
-use_diagnostics = 1
+use_diagnostics = 0
 
 diag.specify_using_eb = 1
 diag.objects = Surf1
@@ -216,7 +221,7 @@ transport.use_selfconsistent_potential = 0
 transport.use_negf = 1
 transport.NS_gather_field = phi            
 transport.NS_deposit_field  = charge_density 
-transport.NS_initial_deposit_value  = 1e-4
+transport.NS_initial_deposit_value  = 0.02
 
 cnt.type = CNT
 cnt.type_id = 17 0     #m n

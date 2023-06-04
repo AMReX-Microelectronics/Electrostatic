@@ -55,15 +55,15 @@ c_IntegrationPath::Define_GaussLegendrePoints(const ComplexType min,
         amrex::Real R = E_center_real - max.real();
 
         ComplexType E_center(E_center_real, max.imag());
-        amrex::Print() << "E_center: " << E_center << "\n";
-        amrex::Print() << "R: "        << R << "\n";
+        //amrex::Print() << "E_center: " << E_center << "\n";
+        //amrex::Print() << "R: "        << R << "\n";
 
         amrex::Real theta1 = asin(fabs(min.imag())/R);
         if(E_center_real > min.real()) theta1 = MathConst::pi - theta1;
 
         amrex::Real theta2 = MathConst::pi;
   
-        amrex::Print() << "theta1: "<< theta1 << "\n";
+        //amrex::Print() << "theta1: "<< theta1 << "\n";
 
         for(int i=0; i<num_pts; ++i) 
         {

@@ -187,6 +187,7 @@ public:
     RealTable1D n_curr_out_data;
     RealTable1D n_prev_in_data;
     RealTable1D F_curr_data;
+    RealTable2D Jinv_curr_data;
 
     amrex::Vector<RealTable1D*> W_Broyden;
     amrex::Vector<RealTable1D*> V_Broyden;
@@ -221,6 +222,7 @@ public:
     void Compute_InducedCharge();
     //void Compute_ChargeDensity();
     void GuessNewCharge_ModifiedBroydenSecondAlg();
+    void GuessNewCharge_Broyden_FirstAlg();
     void Reset_Broyden();
     //virtual void ComputeChargeDensity();
     //virtual void DeallocateArrays();

@@ -328,7 +328,7 @@ c_CNT::Define_EnergyLimits ()
 {
 
     /*set in the input*/
-    E_f = 0.0; 
+    E_f = -1.0; 
     E_valence_min = -10.; 
     E_pole_max = 3; 
     c_NEGF_Common<BlkType>:: Define_EnergyLimits ();

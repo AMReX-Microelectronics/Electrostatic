@@ -164,8 +164,7 @@ amrex::Real Guess_ModifiedBroydenSecondAlg(const int Broyden_Step,
 
         denom += pow(delta_F_curr(l),2.);
 
-        //Norm(l) = fabs((Fcurr) / (n_curr_in(l) + n_curr_out(l)) );
-        Norm(l) = fabs(Fcurr);
+        Norm(l) = fabs(n_curr_in(l)-n_prev_in(l));
 
         sum_deltaFcurr(l) = 0;
         sum_Fcurr(l) = 0;
@@ -234,8 +233,19 @@ amrex::Real Guess_ModifiedBroydenSecondAlg(const int Broyden_Step,
             }
         }
     }
+    amrex::Print() << "size of W and V: " << W_Broyden.size() << "\n";
 
 
+    amrex::Real max_norm = fabs(n_curr_in(0) - n_curr_in(1));
+    amrex::Print() << "max_norm: " << max_norm << "\n";
+    //for(int l=1; l < NUM_ROOTS; ++l)
+    //{
+    //    //if(fabs(max_norm - Norm(l)) > 1e-10) 
+    //    if(max_norm < Norm(l))
+    //    {
+    //        max_norm = Norm(l);
+    //    }
+    //}
     for(int l=0; l < NUM_ROOTS; ++l)
     {
         n_prev_in(l) = n_curr_in(l);
@@ -258,15 +268,6 @@ amrex::Real Guess_ModifiedBroydenSecondAlg(const int Broyden_Step,
                                                       << "  " << Norm(l) << "\n";
     }
 
-    amrex::Real max_norm = Norm(0);
-    for(int l=1; l < NUM_ROOTS; ++l)
-    {
-	//if(fabs(max_norm - Norm(l)) > 1e-10) 
-	if(max_norm < Norm(l))
-	{
-	    max_norm = Norm(l);
-	}
-    }
 
     //std::string filename = "norm_" + std::to_string(Broyden_Step) + ".dat";
     //Write_Table1D(PTD, Norm_data, filename.c_str(),
@@ -284,7 +285,7 @@ int main (int argc, char* argv[])
     amrex::Initialize(argc,argv);
 
     int Broyden_Step = 1;
-    amrex::Real Broyden_fraction = 0.3;
+    amrex::Real Broyden_fraction = 0.1;
     //amrex::Real init_guess = 0.5;
 
     RealTable1D h_n_curr_in_data({0},{NUM_ROOTS}, The_Pinned_Arena());;
@@ -314,7 +315,7 @@ int main (int argc, char* argv[])
 		                                 W_Broyden, V_Broyden);
 
        Broyden_Step += 1;
-    } while(max_norm >= 1e-6);
+    } while(max_norm > 1e-6);
 
     /*Broyden*/
     h_n_curr_in_data.clear();
