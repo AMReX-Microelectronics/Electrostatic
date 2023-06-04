@@ -115,6 +115,14 @@ c_NEGF_Common<T>:: ReadNanostructureProperties ()
             Contact_Temperature[c] = vec_Temperature[c];
         }
     }
+
+    amrex::Vector<amrex::Real> vec_contact_potential;
+    is_specified = queryArrWithParser(pp_ns, "contact_potential", vec_contact_potential, 0, NUM_CONTACTS);
+    if(is_specified) {
+        for(int c=0; c<NUM_CONTACTS; ++c) {
+            Contact_Potential[c] = vec_contact_potential[c];
+        }
+    }
     
     set_material_specific_parameters();
 
@@ -130,6 +138,10 @@ c_NEGF_Common<T>:: ReadNanostructureProperties ()
     amrex::Print() << "#####* Contact_Temperature: \n";
     for(int c=0; c<NUM_CONTACTS; ++c) {
         amrex::Print() << "#####*   contact, temperature (K): " << c << "  " << Contact_Temperature[c] <<"\n";
+    }
+    amrex::Print() << "#####* Contact_Potential: \n";
+    for(int c=0; c<NUM_CONTACTS; ++c) {
+        amrex::Print() << "#####*   contact, potential (V): " << c << "  " << Contact_Potential[c] <<"\n";
     }
 
     Potential.resize(num_field_sites);

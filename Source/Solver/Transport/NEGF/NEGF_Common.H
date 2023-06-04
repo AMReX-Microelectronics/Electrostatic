@@ -164,6 +164,7 @@ public:
     amrex::Real Fermi_tail_factor = 14.;
 
     amrex::Real Contact_Temperature[NUM_CONTACTS] = {298., 298.};
+    amrex::Real Contact_Potential[NUM_CONTACTS] = {0., 0.};
     amrex::Real kT_contact[NUM_CONTACTS] = {PhysConst::kb_eVperK*298.,PhysConst::kb_eVperK*298.};
     amrex::Real kT_min=PhysConst::kb_eVperK*298.;
     amrex::Real kT_max=PhysConst::kb_eVperK*298.;

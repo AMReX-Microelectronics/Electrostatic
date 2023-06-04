@@ -33,13 +33,13 @@ my_constants.DV = 0. #drain voltage [V]
 my_constants.epsilon_CM = 1.7*epsilon_0 #Palladium
 
 my_constants.source_lo_y = -Ly/2 + (Ly_offset_unitcells/2 - 2)*L_unitcell
-my_constants.source_hi_y = -Ly/2  + (Ly_offset_unitcells/2) * L_unitcell + CN_co_l
+my_constants.source_hi_y = -Ly/2  + (Ly_offset_unitcells/2) * L_unitcell + CN_co_l #+ bond_length/2.
 
 my_constants.drain_hi_y  =  Ly/2 - (Ly_offset_unitcells/2 - 2)*L_unitcell
-my_constants.drain_lo_y =  Ly/2  - (Ly_offset_unitcells/2) * L_unitcell - CN_co_l
+my_constants.drain_lo_y =  Ly/2  - (Ly_offset_unitcells/2) * L_unitcell - CN_co_l #- bond_length/2.
 
-my_constants.source_center_y = (source_lo_y + source_hi_y)/2 + 0.5*L_unitcell
-my_constants.drain_center_y = (drain_lo_y + drain_hi_y)/2  -  0.5*L_unitcell
+my_constants.source_center_y = (source_lo_y + source_hi_y)/2 
+my_constants.drain_center_y = (drain_lo_y + drain_hi_y)/2  
 
 ### Carbon nanotube
 my_constants.bond_length = 0.142e-9
@@ -47,9 +47,9 @@ my_constants.N_unitcells = 20
 my_constants.L_unitcell = 3*bond_length #0.426e-9
 
 my_constants.R_CN = 0.6654e-9    #radius
-my_constants.CN_co_l = 6*L_unitcell  #contact length 1 unit cells
+my_constants.CN_co_l = 0*L_unitcell  #contact length 1 unit cells
 
-my_constants.small_gap = 3*dz #0.1e-9 #5*bond_length #0.355e-9, gap between nanotube and the contacts
+my_constants.small_gap = 3.2*dz #0.1e-9 #5*bond_length #0.355e-9, gap between nanotube and the contacts
 
 my_constants.epsilon_CN = epsilon_0 #vacuum
 
@@ -236,6 +236,7 @@ cnt.acc = bond_length
 cnt.gamma = 2.5        #coupling strength (eV)
 cnt.num_unitcells = N_unitcells
 cnt.offset = CN_x CN_y CN_z
+cnt.contact_potential = SV DV
 
 cnt.E_f = -1
 cnt.E_valence_min = -10
