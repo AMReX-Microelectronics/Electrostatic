@@ -986,7 +986,7 @@ c_NEGF_Common<T>:: Compute_InducedCharge ()
         //        							  << " " <<  h_Rho0_loc(n).DiagSum().imag() 
         //        							  << " " <<  h_RhoInduced_loc(n) << "\n";
     }
-    
+    amrex::Print() << "induced charge at site 0: " << h_RhoInduced_loc(0) << "\n";
     auto const& n_curr_out = n_curr_out_data.table();
 
     MPI_Allgatherv(&h_RhoInduced_loc(0),
