@@ -300,16 +300,16 @@ c_Nanostructure<NSType>::Gather_MeshAttributeAtAtoms()
             amrex::Real wy_lo = amrex::Real(1.0) - wy_hi;
             amrex::Real wz_lo = amrex::Real(1.0) - wz_hi;
 
-	    if(p == 0) {
-                amrex::Print() << "\np: " << p << "\n";
-                amrex::Print() << "dx: "   << dx[0] << " " << dx[1] << " " << dx[2] << "\n";
-                amrex::Print() << "pos: " << p_par[p].pos(0) << " " << p_par[p].pos(1) << " " << p_par[p].pos(2) << "\n";
-                amrex::Print() << "plo: " << plo[0] << " " << plo[1] << " " << plo[2] << "\n";
-                amrex::Print() << "l: "   << lx << " " << ly << " " << lz << "\n";
-                amrex::Print() << "ijk: " << i << " " << j << " " << k << "\n";
-                amrex::Print() << "w_hi: " << wx_hi << " " << wy_hi << " " << wz_hi << "\n";
-                amrex::Print() << "w_lo: " << wx_lo << " " << wy_lo << " " << wz_lo << "\n";
-	    }
+	    //if(p == 0) {
+            //    amrex::Print() << "\np: " << p << "\n";
+            //    amrex::Print() << "dx: "   << dx[0] << " " << dx[1] << " " << dx[2] << "\n";
+            //    amrex::Print() << "pos: " << p_par[p].pos(0) << " " << p_par[p].pos(1) << " " << p_par[p].pos(2) << "\n";
+            //    amrex::Print() << "plo: " << plo[0] << " " << plo[1] << " " << plo[2] << "\n";
+            //    amrex::Print() << "l: "   << lx << " " << ly << " " << lz << "\n";
+            //    amrex::Print() << "ijk: " << i << " " << j << " " << k << "\n";
+            //    amrex::Print() << "w_hi: " << wx_hi << " " << wy_hi << " " << wz_hi << "\n";
+            //    amrex::Print() << "w_lo: " << wx_lo << " " << wy_lo << " " << wz_lo << "\n";
+	    //}
 
             p_par_gather[p] = wx_lo*wy_lo*wz_lo*phi(i  , j  , k  , 0)
 
@@ -322,17 +322,17 @@ c_Nanostructure<NSType>::Gather_MeshAttributeAtAtoms()
 			    + wx_hi*wy_lo*wz_hi*phi(i+1, j  , k+1, 0)
 
 			    + wx_hi*wy_hi*wz_hi*phi(i+1, j+1, k+1, 0);
-	    if(p == 0) {
-		amrex::Print() << "phi(i  , j  , k  , 0): " << phi(i  , j  , k  , 0) << "\n";
-		amrex::Print() << "phi(i+1, j  , k  , 0): " << phi(i+1, j  , k  , 0) << "\n";
-		amrex::Print() << "phi(i  , j+1, k  , 0): " << phi(i  , j+1, k  , 0)<< "\n";
-		amrex::Print() << "phi(i  , j  , k+1, 0): " << phi(i  , j  , k+1, 0) << "\n";
-		amrex::Print() << "phi(i+1, j+1, k  , 0) "  << phi(i+1, j+1, k  , 0)<< "\n";
-		amrex::Print() << "phi(i  , j+1, k+1, 0): " << phi(i  , j+1, k+1, 0)<< "\n";
-		amrex::Print() << "phi(i+1, j  , k+1, 0): " << phi(i+1, j  , k+1, 0) << "\n";
-		amrex::Print() << "phi(i+1, j+1, k+1, 0): " << phi(i+1, j+1, k+1, 0) << "\n";
-                amrex::Print() << "\npar_phi: " <<  p_par_gather[p] << "\n";
-	    }	
+	    //if(p == 0) {
+	    //    amrex::Print() << "phi(i  , j  , k  , 0): " << phi(i  , j  , k  , 0) << "\n";
+	    //    amrex::Print() << "phi(i+1, j  , k  , 0): " << phi(i+1, j  , k  , 0) << "\n";
+	    //    amrex::Print() << "phi(i  , j+1, k  , 0): " << phi(i  , j+1, k  , 0)<< "\n";
+	    //    amrex::Print() << "phi(i  , j  , k+1, 0): " << phi(i  , j  , k+1, 0) << "\n";
+	    //    amrex::Print() << "phi(i+1, j+1, k  , 0) "  << phi(i+1, j+1, k  , 0)<< "\n";
+	    //    amrex::Print() << "phi(i  , j+1, k+1, 0): " << phi(i  , j+1, k+1, 0)<< "\n";
+	    //    amrex::Print() << "phi(i+1, j  , k+1, 0): " << phi(i+1, j  , k+1, 0) << "\n";
+	    //    amrex::Print() << "phi(i+1, j+1, k+1, 0): " << phi(i+1, j+1, k+1, 0) << "\n";
+            //    amrex::Print() << "\npar_phi: " <<  p_par_gather[p] << "\n";
+	    //}	
 
         });
 
@@ -433,20 +433,20 @@ c_Nanostructure<NSType>::Deposit_AtomAttributeToMesh()
             amrex::Real wy_lo = amrex::Real(1.0) - wy_hi;
             amrex::Real wz_lo = amrex::Real(1.0) - wz_hi;
 
-	    if(p == 0) {
-                amrex::Print() << "\np: " << p << "\n";
-                amrex::Print() << "\nn_curr_in: " << n_curr_in(site_id) << "\n";
-                amrex::Print() << "atoms_per_field_site: " << atoms_per_field_site << "\n";
-                amrex::Print() << "dx: "   << dx[0] << " " << dx[1] << " " << dx[2] << "\n";
-                amrex::Print() << "vol: " << vol << "\n";
-                amrex::Print() << "qp: " << qp << "\n";
-                amrex::Print() << "pos: " << p_par[p].pos(0) << " " << p_par[p].pos(1) << " " << p_par[p].pos(2) << "\n";
-                amrex::Print() << "plo: " << plo[0] << " " << plo[1] << " " << plo[2] << "\n";
-                amrex::Print() << "l: "   << lx << " " << ly << " " << lz << "\n";
-                amrex::Print() << "ijk: " << i << " " << j << " " << k << "\n";
-                amrex::Print() << "w_hi: " << wx_hi << " " << wy_hi << " " << wz_hi << "\n";
-                amrex::Print() << "w_lo: " << wx_lo << " " << wy_lo << " " << wz_lo << "\n";
-	    }
+	    //if(p == 0) {
+            //    amrex::Print() << "\np: " << p << "\n";
+            //    amrex::Print() << "\nn_curr_in: " << n_curr_in(site_id) << "\n";
+            //    amrex::Print() << "atoms_per_field_site: " << atoms_per_field_site << "\n";
+            //    amrex::Print() << "dx: "   << dx[0] << " " << dx[1] << " " << dx[2] << "\n";
+            //    amrex::Print() << "vol: " << vol << "\n";
+            //    amrex::Print() << "qp: " << qp << "\n";
+            //    amrex::Print() << "pos: " << p_par[p].pos(0) << " " << p_par[p].pos(1) << " " << p_par[p].pos(2) << "\n";
+            //    amrex::Print() << "plo: " << plo[0] << " " << plo[1] << " " << plo[2] << "\n";
+            //    amrex::Print() << "l: "   << lx << " " << ly << " " << lz << "\n";
+            //    amrex::Print() << "ijk: " << i << " " << j << " " << k << "\n";
+            //    amrex::Print() << "w_hi: " << wx_hi << " " << wy_hi << " " << wz_hi << "\n";
+            //    amrex::Print() << "w_lo: " << wx_lo << " " << wy_lo << " " << wz_lo << "\n";
+	    //}
  
 	    amrex::Gpu::Atomic::AddNoRet(&rho(i  , j  , k  , 0), wx_lo*wy_lo*wz_lo*qp);
 
@@ -459,20 +459,20 @@ c_Nanostructure<NSType>::Deposit_AtomAttributeToMesh()
 	    amrex::Gpu::Atomic::AddNoRet(&rho(i+1, j  , k+1, 0), wx_hi*wy_lo*wz_hi*qp);
 
             amrex::Gpu::Atomic::AddNoRet(&rho(i+1, j+1, k+1, 0), wx_hi*wy_hi*wz_hi*qp);
-	    if(p == 0) {
-		amrex::Print() << "rho(i  , j  , k  , 0): " << rho(i  , j  , k  , 0) << "\n";
-		amrex::Print() << "rho(i+1, j  , k  , 0): " << rho(i+1, j  , k  , 0) << "\n";
-		amrex::Print() << "rho(i  , j+1, k  , 0): " << rho(i  , j+1, k  , 0)<< "\n";
-		amrex::Print() << "rho(i  , j  , k+1, 0): " << rho(i  , j  , k+1, 0) << "\n";
-		amrex::Print() << "rho(i+1, j+1, k  , 0) "  << rho(i+1, j+1, k  , 0)<< "\n";
-		amrex::Print() << "rho(i  , j+1, k+1, 0): " << rho(i  , j+1, k+1, 0)<< "\n";
-		amrex::Print() << "rho(i+1, j  , k+1, 0): " << rho(i+1, j  , k+1, 0) << "\n";
-		amrex::Print() << "rho(i+1, j+1, k+1, 0): " << rho(i+1, j+1, k+1, 0) << "\n";
-                amrex::Print() << "\nrho_sum: " <<  rho(i  , j  , k  , 0) 
-			                          + rho(i+1, j  , k  , 0) + rho(i  , j+1, k  , 0) + rho(i  , j  , k+1, 0)
-						  + rho(i+1, j+1, k  , 0) + rho(i  , j+1, k+1, 0) + rho(i+1, j  , k+1, 0)
-						  + rho(i+1, j+1, k+1, 0) << "\n";
-	    }	
+	    //if(p == 0) {
+	    //    amrex::Print() << "rho(i  , j  , k  , 0): " << rho(i  , j  , k  , 0) << "\n";
+	    //    amrex::Print() << "rho(i+1, j  , k  , 0): " << rho(i+1, j  , k  , 0) << "\n";
+	    //    amrex::Print() << "rho(i  , j+1, k  , 0): " << rho(i  , j+1, k  , 0)<< "\n";
+	    //    amrex::Print() << "rho(i  , j  , k+1, 0): " << rho(i  , j  , k+1, 0) << "\n";
+	    //    amrex::Print() << "rho(i+1, j+1, k  , 0) "  << rho(i+1, j+1, k  , 0)<< "\n";
+	    //    amrex::Print() << "rho(i  , j+1, k+1, 0): " << rho(i  , j+1, k+1, 0)<< "\n";
+	    //    amrex::Print() << "rho(i+1, j  , k+1, 0): " << rho(i+1, j  , k+1, 0) << "\n";
+	    //    amrex::Print() << "rho(i+1, j+1, k+1, 0): " << rho(i+1, j+1, k+1, 0) << "\n";
+            //    amrex::Print() << "\nrho_sum: " <<  rho(i  , j  , k  , 0) 
+	    //    	                          + rho(i+1, j  , k  , 0) + rho(i  , j+1, k  , 0) + rho(i  , j  , k+1, 0)
+	    //    				  + rho(i+1, j+1, k  , 0) + rho(i  , j+1, k+1, 0) + rho(i+1, j  , k+1, 0)
+	    //    				  + rho(i+1, j+1, k+1, 0) << "\n";
+	    //}	
 
         });
     }
