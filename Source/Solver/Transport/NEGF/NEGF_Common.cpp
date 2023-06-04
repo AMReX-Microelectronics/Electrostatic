@@ -398,9 +398,14 @@ void
 c_NEGF_Common<T>:: Update_ContactPotential () 
 {
     //amrex::Print() <<  "Updated contact potential: \n";
+    //for(int c=0; c < NUM_CONTACTS; ++c)
+    //{
+    //    U_contact[c] = Potential[global_contact_index[c]];
+    //    amrex::Print() << "  contact, potential: " <<  c << " " << U_contact[c] << "\n";
+    //}
     for(int c=0; c < NUM_CONTACTS; ++c)
     {
-        U_contact[c] = Potential[global_contact_index[c]];
+        U_contact[c] = Contact_Potential[c];
         amrex::Print() << "  contact, potential: " <<  c << " " << U_contact[c] << "\n";
     }
 }

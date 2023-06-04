@@ -33,10 +33,10 @@ my_constants.DV = 0. #drain voltage [V]
 my_constants.epsilon_CM = 1.7*epsilon_0 #Palladium
 
 my_constants.source_lo_y = -Ly/2 + (Ly_offset_unitcells/2 - 2)*L_unitcell
-my_constants.source_hi_y = -Ly/2  + (Ly_offset_unitcells/2) * L_unitcell + CN_co_l #+ bond_length/2.
+my_constants.source_hi_y = -Ly/2  + (Ly_offset_unitcells/2) * L_unitcell + CN_co_l + bond_length/2.
 
 my_constants.drain_hi_y  =  Ly/2 - (Ly_offset_unitcells/2 - 2)*L_unitcell
-my_constants.drain_lo_y =  Ly/2  - (Ly_offset_unitcells/2) * L_unitcell - CN_co_l #- bond_length/2.
+my_constants.drain_lo_y =  Ly/2  - (Ly_offset_unitcells/2) * L_unitcell - CN_co_l - bond_length/2.
 
 my_constants.source_center_y = (source_lo_y + source_hi_y)/2 
 my_constants.drain_center_y = (drain_lo_y + drain_hi_y)/2  
