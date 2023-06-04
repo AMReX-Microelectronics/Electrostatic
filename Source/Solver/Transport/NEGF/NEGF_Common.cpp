@@ -388,7 +388,7 @@ c_NEGF_Common<T>:: Update_ContactPotential ()
     for(int c=0; c < NUM_CONTACTS; ++c)
     {
         U_contact[c] = Potential[global_contact_index[c]];
-        //amrex::Print() << "  contact, potential: " <<  c << " " << U_contact[c] << "\n";
+        amrex::Print() << "  contact, potential: " <<  c << " " << U_contact[c] << "\n";
     }
 }
 
@@ -454,7 +454,6 @@ c_NEGF_Common<T>:: Define_EnergyLimits ()
             ComplexType pole(mu_min, MathConst::pi*kT_min*(2*p+1));
             E_poles_vec[p] = pole;
         }
-        
     }
     ComplexType val2(E_contour_right.real(), 2*num_enclosed_poles*MathConst::pi*kT_max);
     E_zeta = val2;
@@ -1052,7 +1051,7 @@ c_NEGF_Common<T>:: GuessNewCharge_Broyden_FirstAlg ()
 
         sum_deltaFcurr(l) = 0;		 
         sum_Fcurr(l) = 0;		 
-
+        delta_n_Jinv(l) = 0.;
     }
     total_diff = sqrt(total_diff);
 

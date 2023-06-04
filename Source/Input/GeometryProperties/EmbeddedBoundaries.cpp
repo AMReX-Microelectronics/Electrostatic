@@ -407,6 +407,51 @@ c_EmbeddedBoundaries::ReadObjectInfo(std::string object_name, std::string object
             map_basic_objects_info[object_name] = cntfet_contact;  
             break;
         }
+        case s_ObjectType::object::cntfet_contact_cyl:
+        {
+            amrex::Real thickness;
+            getWithParser(pp_object,"thickness", thickness);
+            amrex::Print() << "##### cylinder thickness: " << thickness << "\n";
+
+            amrex::Real inner_radius;
+            getWithParser(pp_object,"inner_radius", inner_radius);
+            amrex::Print() << "##### cylinder inner radius: " << inner_radius << "\n";
+
+	    amrex::Real outer_radius = inner_radius + thickness;
+
+            int direction;
+            pp_object.get("direction", direction);
+            AMREX_ALWAYS_ASSERT_WITH_MESSAGE(direction >=0 && direction < 3,
+                                             "cyl_cavity_direction is invalid");
+
+            amrex::Print() << "##### cylinder direction: " << direction << "\n";
+
+            amrex::Real height=-1;
+            getWithParser(pp_object,"height", height);
+
+            amrex::Print() << "##### cylinder height: " << height << "\n";
+	    
+
+            amrex::Vector<amrex::Real> center;
+            getArrWithParser(pp_object, "center", center, 0, AMREX_SPACEDIM);
+
+            amrex::Print() << "##### cylinder center: ";
+            for (int i=0; i<AMREX_SPACEDIM; ++i) amrex::Print() << center[i] << "  ";
+            amrex::Print() << "\n";
+
+            bool outer_cyl_has_fluid_inside=0;
+            bool inner_cyl_has_fluid_inside=1;
+
+            amrex::EB2::CylinderIF outer_cyl(outer_radius, height, direction, vecToArr(center), outer_cyl_has_fluid_inside);
+            amrex::EB2::CylinderIF inner_cyl(inner_radius, height, direction, vecToArr(center), inner_cyl_has_fluid_inside);
+
+            auto cntfet_contact_cyl = amrex::EB2::makeIntersection(outer_cyl, inner_cyl);
+
+            map_basic_objects_info[object_name] = cntfet_contact_cyl;  
+
+            break;
+
+        }
         default:
         {
             amrex::Abort("geom_type " + object_type + " not supported");
@@ -519,6 +564,12 @@ c_EmbeddedBoundaries::BuildGeometry(const amrex::Geometry* GEOM, const amrex::Bo
                     BuildSingleObject<ObjectType>(name);
                     break;
                 }
+                case s_ObjectType::object::cntfet_contact_cyl:
+                {
+                    using ObjectType = cntfet_contact_cyl_type;
+                    BuildSingleObject<ObjectType>(name);
+                    break;
+                }
             }
 
             //if(specify_separate_surf_beta == 1) 
@@ -557,6 +608,14 @@ c_EmbeddedBoundaries::BuildGeometry(const amrex::Geometry* GEOM, const amrex::Bo
             {  
                 using ObjectType1 = cntfet_contact_type;
                 using ObjectType2 = cntfet_contact_type;
+
+                BuildUnionObject<ObjectType1, ObjectType2>(name1, name2);
+            }
+	    else if( (map_object_type_enum[geom_type1] == s_ObjectType::object::cntfet_contact_cyl) && 
+                (map_object_type_enum[geom_type2] == s_ObjectType::object::cntfet_contact_cyl) ) 
+            {  
+                using ObjectType1 = cntfet_contact_cyl_type;
+                using ObjectType2 = cntfet_contact_cyl_type;
 
                 BuildUnionObject<ObjectType1, ObjectType2>(name1, name2);
             }
@@ -611,7 +670,31 @@ c_EmbeddedBoundaries::BuildGeometry(const amrex::Geometry* GEOM, const amrex::Bo
             amrex::Print() << prt  << "Index space size after making union of two objects: " << EB2::IndexSpace::size() << "\n";
 #endif
         }
+        else if(num_objects == 3) 
+        {  
+            auto name1 = vec_object_names[0];  
+            auto geom_type1 = map_basic_objects_type[name1];  
+            auto name2 = vec_object_names[1];
+            auto geom_type2 = map_basic_objects_type[name2];  
+            auto name3 = vec_object_names[2];
+            auto geom_type3 = map_basic_objects_type[name3];  
 
+	    if( (map_object_type_enum[geom_type1] == s_ObjectType::object::cntfet_contact_cyl) && 
+                (map_object_type_enum[geom_type2] == s_ObjectType::object::cntfet_contact_cyl) &&
+                (map_object_type_enum[geom_type3] == s_ObjectType::object::cntfet_contact_cyl) ) 
+            {  
+                using ObjectType1 = cntfet_contact_cyl_type;
+                using ObjectType2 = cntfet_contact_cyl_type;
+                using ObjectType3 = cntfet_contact_cyl_type;
+
+                BuildUnionObject<ObjectType1, ObjectType2, ObjectType3>(name1, name2, name3);
+            }
+            else 
+            {
+                amrex::Abort("Error: 1) For more than 3 objects, one must code the operation such as union, intersection, etc.\
+                              2) At present, union operation is performed only when 3 geometries are of type cntfet_contact_cyl");
+            }   
+        }
         //if(specify_separate_surf_beta == 1)
         //{
         //    p_surf_beta_union = std::make_unique<amrex::MultiFab>(*ba, *dm, 1, 0, MFInfo(), *p_factory_union);
@@ -733,6 +816,28 @@ c_EmbeddedBoundaries::BuildSingleSTLObject(std::string name)
     amrex::Print() << "\t\t\t\t\t}************************c_EmbeddedBoundaries()::BuildSingleSTLObject()************************\n";
 #endif
 }
+template<typename ObjectType1, typename ObjectType2, typename ObjectType3>
+void
+c_EmbeddedBoundaries::BuildUnionObject(std::string name1, std::string name2, std::string name3)
+{
+
+    auto object1 = std::any_cast<ObjectType1>(map_basic_objects_info[name1]);
+    auto object2 = std::any_cast<ObjectType2>(map_basic_objects_info[name2]);
+    auto object3 = std::any_cast<ObjectType3>(map_basic_objects_info[name3]);
+    auto union_object_two   = amrex::EB2::makeUnion(object1, object2);
+    auto union_object_three = amrex::EB2::makeUnion(object3, union_object_two);
+
+    auto gshop = amrex::EB2::makeShop(union_object_three);
+    amrex::EB2::Build(gshop, *geom, required_coarsening_level, max_coarsening_level);
+    const auto& eb_is = EB2::IndexSpace::top();
+    const auto& eb_level = eb_is.getLevel(*geom);
+    Vector<int> ng_ebs = {2,2,2};
+
+    p_factory_union = amrex::makeEBFabFactory(&eb_level, *ba, *dm, ng_ebs, support);
+
+}
+
+
 
 
 template<typename ObjectType1, typename ObjectType2>

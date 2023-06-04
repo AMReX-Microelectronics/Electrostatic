@@ -574,7 +574,7 @@ c_Nanostructure<NSType>::Obtain_PotentialAtSites()
     for (int l=0; l<num_field_sites; ++l) 
     {
         NSType::Potential[l]   = -p_U[l] / num_atoms_to_avg_over;
-	amrex::Print() << "site_id, avg_potential: " << l << "  " << NSType::Potential[l] << "\n";
+	//amrex::Print() << "site_id, avg_potential: " << l << "  " << NSType::Potential[l] << "\n";
         /*minus because Potential is experienced by electrons*/
     }
 

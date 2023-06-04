@@ -39,7 +39,7 @@ struct s_PARSER {
 };
 
 struct s_ObjectType {
-    enum object { sphere, box, cylinder, plane, torus, parser, stl, cntfet_contact };
+    enum object { sphere, box, cylinder, plane, torus, parser, stl, cntfet_contact, cntfet_contact_cyl };
 };
 
 class
@@ -93,6 +93,7 @@ private:
                                {"parser"         , s_ObjectType::object::parser},
                                {"stl"            , s_ObjectType::object::stl},
                                {"cntfet_contact" , s_ObjectType::object::cntfet_contact},
+                               {"cntfet_contact_cyl" , s_ObjectType::object::cntfet_contact_cyl},
 
                                {"Sphere"         , s_ObjectType::object::sphere},
                                {"Box"            , s_ObjectType::object::box},
@@ -102,11 +103,14 @@ private:
                                {"Parser"         , s_ObjectType::object::parser},
                                {"Stl"            , s_ObjectType::object::stl},
                                {"Cntfet_contact" , s_ObjectType::object::cntfet_contact},
+                               {"Cntfet_contact_cyl" , s_ObjectType::object::cntfet_contact_cyl},
 
                                {"STL"            , s_ObjectType::object::stl},
                                {"CNTFET_contact" , s_ObjectType::object::cntfet_contact},
+                               {"CNTFET_contact_cyl" , s_ObjectType::object::cntfet_contact_cyl},
                            };
     using cntfet_contact_type = amrex::EB2::IntersectionIF<amrex::EB2::CylinderIF, amrex::EB2::BoxIF>;
+    using cntfet_contact_cyl_type = amrex::EB2::IntersectionIF<amrex::EB2::CylinderIF, amrex::EB2::CylinderIF>;
 
     int num_final_objects;
     std::map<int,int> map_basic_objects;
@@ -133,6 +137,9 @@ private:
 
     template<typename ObjectType1, typename ObjectType2>
     void BuildUnionObject(std::string name1, std::string name2);
+
+    template<typename ObjectType1, typename ObjectType2, typename ObjectType3>
+    void BuildUnionObject(std::string name1, std::string name2, std::string name3);
 
     template<typename ObjectType1, typename ObjectType2>
     void BuildUnionParserObject(std::string name1, std::string name2);

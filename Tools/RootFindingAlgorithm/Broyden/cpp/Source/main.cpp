@@ -16,6 +16,8 @@
 #include <math.h> 
 using namespace amrex;
 using RealTable1D    = TableData<amrex::Real, 1>;
+using RealTable2D    = TableData<amrex::Real, 2>;
+
 #define NUM_ROOTS 2
 
 template<typename T>
@@ -71,6 +73,23 @@ void SetVal_Table1D (U& Tab1D_data, V val)
     }
 }
 
+template<typename U, typename V>
+void
+SetVal_Table2D (U& Tab2D_data, V val)
+{
+    auto tlo = Tab2D_data.lo();
+    auto thi = Tab2D_data.hi();
+
+    auto const& Tab2D = Tab2D_data.table();
+
+    for (int i = tlo[0]; i < thi[0]; ++i)
+    {
+        for (int j = tlo[1]; j < thi[1]; ++j) //slow moving index. printing slow
+        {
+            Tab2D(i,j) = val;
+        }
+    }
+}
 
 void Define_InitGuess(RealTable1D& h_n_curr_in_data)
 { 
@@ -112,6 +131,142 @@ void Compute_FofX(RealTable1D& h_n_curr_in_data,
         }
     }
 }
+
+
+amrex::Real Guess_BroydenFirstAlg(const int Broyden_Step, 
+		                  const amrex::Real Broyden_fraction,
+		                  RealTable1D& h_n_curr_in_data,
+                                  RealTable1D& n_curr_out_data,
+				  RealTable1D& n_prev_in_data,
+				  RealTable1D& F_curr_data,
+				  RealTable2D& Jinv_curr_data)
+{
+    amrex::Print() << "\nBroydenStep: " << Broyden_Step << "\n";
+
+    auto const& n_curr_in  = h_n_curr_in_data.table();
+    auto const& n_curr_out = n_curr_out_data.table();
+    auto const& n_prev_in  = n_prev_in_data.table();
+    auto const& F_curr     = F_curr_data.table();
+
+    RealTable1D sum_Fcurr_data({0},{NUM_ROOTS}, The_Pinned_Arena());
+    RealTable1D sum_deltaFcurr_data({0},{NUM_ROOTS}, The_Pinned_Arena());
+    RealTable1D delta_F_curr_data({0},{NUM_ROOTS}, The_Pinned_Arena());
+    RealTable1D delta_n_Jinv_data({0},{NUM_ROOTS}, The_Pinned_Arena());
+
+    RealTable1D Norm_data({0},{NUM_ROOTS}, The_Pinned_Arena());
+
+    auto const& sum_Fcurr      = sum_Fcurr_data.table();
+    auto const& sum_deltaFcurr = sum_deltaFcurr_data.table();
+    auto const& delta_F_curr   = delta_F_curr_data.table();
+    auto const& delta_n_Jinv   = delta_n_Jinv_data.table();
+    auto const& Jinv_curr    = Jinv_curr_data.table();
+    auto const& Norm     = Norm_data.table();
+
+    amrex::Real denom = 0.;
+    int m = Broyden_Step-1;
+
+    for(int l=0; l < NUM_ROOTS; ++l)
+    {
+        amrex::Real Fcurr = n_curr_out(l);
+
+        delta_F_curr(l) = Fcurr - F_curr(l);
+
+        F_curr(l) = Fcurr;
+
+        Norm(l) = fabs(Fcurr);
+
+        sum_deltaFcurr(l) = 0;
+        sum_Fcurr(l) = 0;
+	delta_n_Jinv(l) = 0.;
+    }
+
+    if(m > 0 ) 
+    {
+        for(int a=0; a < NUM_ROOTS; ++a)
+        {
+            amrex::Real sum = 0.;
+            for(int b=0; b < NUM_ROOTS; ++b)
+            {
+                sum += Jinv_curr(a,b)*delta_F_curr(b);
+            }
+            sum_deltaFcurr(a) += sum;
+        }
+
+        for(int l=0; l < NUM_ROOTS; ++l)
+        {
+            denom += (n_curr_in(l) - n_prev_in(l)) * sum_deltaFcurr(l);
+        }
+
+        for(int b=0; b < NUM_ROOTS; ++b)
+        {
+            amrex::Real sum = 0.;
+            for(int a=0; a < NUM_ROOTS; ++a)
+            {
+                sum += (n_curr_in(a) - n_prev_in(a))*Jinv_curr(a,b);
+            }
+            delta_n_Jinv(b) += sum;
+        }
+
+        for(int a=0; a < NUM_ROOTS; ++a)
+        {
+            for(int b=0; b < NUM_ROOTS; ++b)
+            {
+                Jinv_curr(a,b) += ( (n_curr_in(a) - n_prev_in(a)) - sum_deltaFcurr(a) )  * delta_n_Jinv(b) / denom;
+            }
+        }
+    }
+    amrex::Print() << "\nJ_inverse: \n";
+    amrex::Print() << "  " << Jinv_curr(0,0) << "  " << Jinv_curr(0,1) << "\n";
+    amrex::Print() << "  " << Jinv_curr(1,0) << "  " << Jinv_curr(1,1) << "\n";
+
+    amrex::Real j_denom = ( Jinv_curr(0,0)*Jinv_curr(1,1) - Jinv_curr(0,1)*Jinv_curr(1,0) );
+    amrex::Print() << "j_denom: " << j_denom << "\n";
+    amrex::Print() << "\nJ: \n";
+    amrex::Print() << "  " <<  Jinv_curr(1,1)/j_denom << "  " << -Jinv_curr(0,1)/j_denom << "\n";
+    amrex::Print() << "  " << -Jinv_curr(1,0)/j_denom << "  " <<  Jinv_curr(0,0)/j_denom << "\n";
+
+    for(int a=0; a < NUM_ROOTS; ++a)
+    {
+        amrex::Real sum = 0.;
+        for(int b=0; b < NUM_ROOTS; ++b)
+        {
+            sum += Jinv_curr(a,b)*F_curr(b);
+        }
+        sum_Fcurr(a) += sum;
+    }
+
+    amrex::Real max_norm = fabs(n_curr_in(0) - n_curr_in(1));
+    amrex::Print() << "max_norm: " << max_norm << "\n";
+
+
+    for(int l=0; l < NUM_ROOTS; ++l)
+    {
+        n_prev_in(l) = n_curr_in(l);
+        n_curr_in(l) = n_prev_in(l) - sum_Fcurr(l);
+    }
+
+    sum_Fcurr_data.clear();
+    sum_deltaFcurr_data.clear();
+    delta_F_curr_data.clear();
+    delta_n_Jinv_data.clear();
+
+    for(int l=0; l < NUM_ROOTS; ++l)
+    {
+        amrex::Print() << "Xn_in, Xn_out, Xn+1_in, norm: " << l << "  " << n_prev_in(l) 
+		                                                << "  " << n_curr_out(l) 
+		                                                << "  " << n_curr_in(l)
+                                                                << "  " << Norm(l) << "\n";
+    }
+
+    //std::string filename = "norm_" + std::to_string(Broyden_Step) + ".dat";
+    //Write_Table1D(PTD, Norm_data, filename.c_str(), 
+    //              "'axial location / (nm)', 'norm");
+    Norm_data.clear();
+
+    return max_norm;
+}
+
+
 
 
 amrex::Real Guess_ModifiedBroydenSecondAlg(const int Broyden_Step, 
@@ -305,15 +460,36 @@ int main (int argc, char* argv[])
     SetVal_Table1D(n_prev_in_data,0.);
     SetVal_Table1D(F_curr_data,0.);
     
+    RealTable2D Jinv_curr_data({0,0},{NUM_ROOTS, NUM_ROOTS}, The_Pinned_Arena());
+    SetVal_Table2D(Jinv_curr_data,0.);
+
+    auto const& Jinv_curr    = Jinv_curr_data.table();
+    /*In this example, we know J is: ([2x, -1]; [1, -2y]). We can use the inverse of this matrix as initial guess for Jinv. 
+     *This is only required for the first algorithm of Broyden*/
+    Jinv_curr(0,0) =  4./7.; 
+    Jinv_curr(0,1) = -1./7.;
+    Jinv_curr(1,0) =  1./7.;
+    Jinv_curr(1,1) = -2./7.;
+    /*For the first algorithm any random diagonal matrix as a guess for Jinv doesn't work*/
+    //for(int a=0; a < NUM_ROOTS; ++a)
+    //{
+    //    Jinv_curr(a,a) = Broyden_fraction;
+    //}
+
     int step=0;
     amrex::Real max_norm = 1;
     do
     {
        Compute_FofX(h_n_curr_in_data, n_curr_out_data);	    
+
        max_norm = Guess_ModifiedBroydenSecondAlg(Broyden_Step, Broyden_fraction, 
 		                                 h_n_curr_in_data, n_curr_out_data, n_prev_in_data, F_curr_data,
 		                                 W_Broyden, V_Broyden);
 
+//       max_norm = Guess_BroydenFirstAlg(Broyden_Step, Broyden_fraction, 
+//		                        h_n_curr_in_data, n_curr_out_data, n_prev_in_data, F_curr_data,
+//		                        Jinv_curr_data);
+//
        Broyden_Step += 1;
     } while(max_norm > 1e-6);
 
