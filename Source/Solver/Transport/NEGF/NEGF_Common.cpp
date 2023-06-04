@@ -160,6 +160,7 @@ c_NEGF_Common<T>:: ReadNanostructureProperties ()
     n_prev_in_data.resize({0},{num_field_sites}, The_Pinned_Arena());
     F_curr_data.resize({0},{num_field_sites}, The_Pinned_Arena());
 
+    SetVal_Table1D(h_n_curr_in_data,0.);
     SetVal_Table1D(n_curr_out_data,0.);
     SetVal_Table1D(n_prev_in_data,0.);
     SetVal_Table1D(F_curr_data,0.);
