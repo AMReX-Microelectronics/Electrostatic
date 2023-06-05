@@ -32,24 +32,9 @@ my_constants.SV =  0  #source voltage [V]
 my_constants.DV = 0. #drain voltage [V]
 my_constants.epsilon_CM = 1.7*epsilon_0 #Palladium
 
-#my_constants.source_lo_y = -Ly/2 + (Ly_offset_unitcells/2 - 2)* L_unitcell
-#my_constants.source_hi_y = -Ly/2  + (Ly_offset_unitcells/2) * L_unitcell + CN_co_l + bond_length/2.
-#
-#my_constants.drain_hi_y  =  Ly/2 - (Ly_offset_unitcells/2 - 2)*L_unitcell
-#my_constants.drain_lo_y =  Ly/2  - (Ly_offset_unitcells/2) * L_unitcell - CN_co_l - bond_length/2.
-#
-my_constants.source_lo_y = -Ly/2 
-my_constants.source_hi_y = source_lo_y + CN_co_l
-
-my_constants.drain_hi_y  =  Ly/2 
-my_constants.drain_lo_y =  drain_hi_y - CN_co_l
-
-my_constants.source_center_y = (source_lo_y + source_hi_y)/2 
-my_constants.drain_center_y = (drain_lo_y + drain_hi_y)/2  
-
 ### Carbon nanotube
 my_constants.bond_length = 0.142e-9
-my_constants.N_unitcells = 10
+my_constants.N_unitcells = 4
 my_constants.L_unitcell = 3*bond_length #0.426e-9
 
 my_constants.R_CN = 0.6654e-9    #radius
@@ -106,30 +91,14 @@ steps = Nsteps
 domain.embedded_boundary = 1  #options: 1=true, 0=false (default)
 domain.specify_using_eb2 = 0  #options: 1=true, 0=false (default)
 
-ebgeom.objects = Source Drain Gate 
+ebgeom.objects =  Gate 
 ebgeom.specify_inhomo_dir = 1
 
-Source.geom_type    = cntfet_contact_cyl
-Source.inner_radius = R_CN + small_gap
-Source.thickness    = 5*dz
-Source.center       = CN_x source_center_y CN_z
-Source.height       = source_hi_y - source_lo_y
-Source.direction    = 1
-Source.surf_soln    = SV 
-
-Drain.geom_type     = cntfet_contact_cyl
-Drain.inner_radius  = R_CN + small_gap
-Drain.thickness     = 5*dz
-Drain.center        = CN_x drain_center_y CN_z
-Drain.height        = drain_hi_y - drain_lo_y
-Drain.direction     = 1
-Drain.surf_soln     = DV 
-
 Gate.geom_type      = cntfet_contact_cyl
-Gate.inner_radius   = R_CN + small_gap + 12*dz
-Gate.thickness      = 5*dz
+Gate.inner_radius   = R_CN + small_gap 
+Gate.thickness      = 10*dz
 Gate.center         = CN_x CN_y CN_z
-Gate.height         = drain_lo_y - source_hi_y
+Gate.height         = Ly
 Gate.direction      = 1
 Gate.surf_soln      = GV 
 
@@ -182,7 +151,7 @@ macroscopic.atom_locations = 0.
 ###### OUTPUT ######
 ####################
 
-plot.folder_name = all_around_gate
+plot.folder_name = all_around_metal
 plot.fields_to_plot = epsilon.1 charge_density.1 phi.1 atom_locations
 #vecField 
 plot.write_after_init = 1
@@ -232,7 +201,7 @@ transport.use_negf = 1
 transport.NS_gather_field = phi            
 transport.NS_deposit_field  = charge_density 
 transport.NS_initial_deposit_value  = 1e-4
-transport.Broyden_fraction = 1e-3
+transport.Broyden_fraction = 1e-2
 transport.Broyden_max_norm = 1.e-5
 
 cnt.type = CNT

@@ -578,8 +578,8 @@ c_Nanostructure<NSType>::Obtain_PotentialAtSites()
 	//amrex::Print() << "site_id, avg_potential: " << l << "  " << NSType::Potential[l] << "\n";
         /*minus because Potential is experienced by electrons*/
     }
-    NSType::Potential[0] = NSType::Contact_Potential[0];
-    NSType::Potential[num_field_sites-1] = NSType::Contact_Potential[1];
+    //NSType::Potential[0] = NSType::Contact_Potential[0];
+    //NSType::Potential[num_field_sites-1] = NSType::Contact_Potential[1];
 
 }
 
