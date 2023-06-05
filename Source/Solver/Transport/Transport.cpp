@@ -240,7 +240,8 @@ c_TransportSolver::Solve()
 
                vp_CNT[c]->Solve_NEGF();
 
-	       vp_CNT[c]->GuessNewCharge_ModifiedBroydenSecondAlg();
+	       vp_CNT[c]->GuessNewCharge_SimpleMixingAlg();
+	       //vp_CNT[c]->GuessNewCharge_ModifiedBroydenSecondAlg();
                //vp_CNT[c]->GuessNewCharge_Broyden_FirstAlg();
 
                //rMprop.ReInitializeMacroparam(NS_deposit_field_str);

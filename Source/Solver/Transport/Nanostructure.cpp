@@ -268,6 +268,8 @@ c_Nanostructure<NSType>::Gather_MeshAttributeAtAtoms()
     const auto& plo = _geom->ProbLoArray();
     const auto dx =_geom->CellSizeArray();
 
+    p_mf_deposit->FillBoundary(_geom->periodicity());
+
     int lev = 0;
     for (MyParIter pti(*this, lev); pti.isValid(); ++pti) 
     { 
@@ -576,6 +578,8 @@ c_Nanostructure<NSType>::Obtain_PotentialAtSites()
 	//amrex::Print() << "site_id, avg_potential: " << l << "  " << NSType::Potential[l] << "\n";
         /*minus because Potential is experienced by electrons*/
     }
+    NSType::Potential[0] = NSType::Contact_Potential[0];
+    NSType::Potential[num_field_sites-1] = NSType::Contact_Potential[1];
 
 }
 

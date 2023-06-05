@@ -5,7 +5,7 @@ use_transport = 1
 my_constants.CN_z = Lz/2.
 my_constants.CN_x = 0.
 my_constants.CN_y = 0.
-my_constants.GV = 0.1
+my_constants.GV = 0.
 ##################################
 ##### USER DEFINED CONSTANTS #####
 ##################################
@@ -43,7 +43,7 @@ my_constants.drain_center_y = (drain_lo_y + drain_hi_y)/2
 
 ### Carbon nanotube
 my_constants.bond_length = 0.142e-9
-my_constants.N_unitcells = 20
+my_constants.N_unitcells = 10
 my_constants.L_unitcell = 3*bond_length #0.426e-9
 
 my_constants.R_CN = 0.6654e-9    #radius
@@ -226,8 +226,8 @@ transport.use_selfconsistent_potential = 0
 transport.use_negf = 1
 transport.NS_gather_field = phi            
 transport.NS_deposit_field  = charge_density 
-transport.NS_initial_deposit_value  = 0.02
-transport.Broyden_fraction = 0.01
+transport.NS_initial_deposit_value  = 1e-4
+transport.Broyden_fraction = 0.1
 transport.Broyden_max_norm = 1.e-5
 
 cnt.type = CNT
@@ -238,7 +238,7 @@ cnt.num_unitcells = N_unitcells
 cnt.offset = CN_x CN_y CN_z
 cnt.contact_potential = SV DV
 
-cnt.E_f = -1
+cnt.E_f = 0.3
 cnt.E_valence_min = -10
 cnt.E_pole_max    = 3
 #####################################

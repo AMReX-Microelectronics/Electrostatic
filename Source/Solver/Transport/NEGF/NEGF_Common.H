@@ -223,6 +223,7 @@ public:
     void Compute_RhoNonEq();
     void Compute_InducedCharge();
     //void Compute_ChargeDensity();
+    void GuessNewCharge_SimpleMixingAlg();
     void GuessNewCharge_ModifiedBroydenSecondAlg();
     void GuessNewCharge_Broyden_FirstAlg();
     void Reset_Broyden();

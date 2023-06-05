@@ -397,15 +397,10 @@ template<typename T>
 void 
 c_NEGF_Common<T>:: Update_ContactPotential () 
 {
-    //amrex::Print() <<  "Updated contact potential: \n";
-    //for(int c=0; c < NUM_CONTACTS; ++c)
-    //{
-    //    U_contact[c] = Potential[global_contact_index[c]];
-    //    amrex::Print() << "  contact, potential: " <<  c << " " << U_contact[c] << "\n";
-    //}
+    amrex::Print() <<  "Updated contact potential: \n";
     for(int c=0; c < NUM_CONTACTS; ++c)
     {
-        U_contact[c] = Contact_Potential[c];
+        U_contact[c] = Potential[global_contact_index[c]];
         amrex::Print() << "  contact, potential: " <<  c << " " << U_contact[c] << "\n";
     }
 }
@@ -1019,9 +1014,9 @@ c_NEGF_Common<T>:: Compute_InducedCharge ()
 
     h_RhoInduced_loc_data.clear();
 
-    //std::string filename = "Qm_out_" + std::to_string(Broyden_Step) + ".dat";
-    //Write_Table1D(PTD, n_curr_out_data, filename.c_str(), 
-    //              "'axial location / (nm)', 'Induced charge per site / (e)'");
+    std::string filename = "Qm_out_" + std::to_string(Broyden_Step) + ".dat";
+    Write_Table1D(PTD, n_curr_out_data, filename.c_str(), 
+                  "'axial location / (nm)', 'Induced charge per site / (e)'");
 
 }
 
@@ -1313,7 +1308,137 @@ c_NEGF_Common<T>:: GuessNewCharge_ModifiedBroydenSecondAlg ()
     W_curr_data.clear();
     V_curr_data.clear();
     
-    for(int l=0; l < 4; ++l) 
+    for(int l=0; l < 1; ++l) 
+    {
+        amrex::Print() << "Qm_in, Qm_out, Qm+1_in, sumFcrr, F_curr, deltaF, *: " << l << " "  << n_prev_in(l) 
+		                                                          << "  " << n_curr_out(l)  
+									  << "  " << n_curr_in(l) 
+									  << "  " << sum_Fcurr(l)
+									  << "  " << F_curr(l)
+									  << "  " << delta_F_curr(l) 
+									  << "  " << - Broyden_fraction*F_curr(l) - sum_Fcurr(l)
+									  << "\n";
+    }
+    for(int l=num_field_sites-1; l < num_field_sites; ++l) 
+    {
+        amrex::Print() << "Qm_in, Qm_out, Qm+1_in, sumFcrr, F_curr, deltaF, *: " << l << " "  << n_prev_in(l) 
+		                                                          << "  " << n_curr_out(l)  
+									  << "  " << n_curr_in(l) 
+									  << "  " << sum_Fcurr(l)
+									  << "  " << F_curr(l)
+									  << "  " << delta_F_curr(l) 
+									  << "  " << - Broyden_fraction*F_curr(l) - sum_Fcurr(l)
+									  << "\n";
+    }
+
+
+    Broyden_Norm = Norm(0);
+    int norm_index = 0;
+    for(int l=1; l < num_field_sites; ++l)
+    {
+        if(Broyden_Norm < Norm(l))
+        {
+            Broyden_Norm = Norm(l);
+	    norm_index = l;
+        }
+    }
+
+    amrex::Print() << "\nL2 norm: " << total_diff << " Max norm: " << Broyden_Norm << " location: " <<  norm_index << "\n";
+
+    std::string filename = "norm_" + std::to_string(Broyden_Step) + ".dat";
+    Write_Table1D(PTD, Norm_data, filename.c_str(), 
+                  "'axial location / (nm)', 'norm");
+    Norm_data.clear();
+
+    Broyden_Step += 1;
+
+}
+
+template<typename T>
+void 
+c_NEGF_Common<T>:: GuessNewCharge_SimpleMixingAlg ()
+{
+    /*update h_RhoInduced_glo*/
+
+    amrex::Print() << "BroydenStep: " << Broyden_Step << "\n";
+
+    auto const& n_curr_in  = h_n_curr_in_data.table();
+    auto const& n_curr_out = n_curr_out_data.table();
+    auto const& n_prev_in  = n_prev_in_data.table();
+    auto const& F_curr     = F_curr_data.table();
+
+    RealTable1D sum_Fcurr_data({0},{num_field_sites}, The_Pinned_Arena());
+    RealTable1D sum_deltaFcurr_data({0},{num_field_sites}, The_Pinned_Arena());
+    RealTable1D delta_F_curr_data({0},{num_field_sites}, The_Pinned_Arena());
+    RealTable1D Norm_data({0},{num_field_sites}, The_Pinned_Arena());
+
+    auto const& sum_Fcurr      = sum_Fcurr_data.table();
+    auto const& sum_deltaFcurr = sum_deltaFcurr_data.table();
+    auto const& delta_F_curr   = delta_F_curr_data.table();
+    auto const& Norm     = Norm_data.table();
+
+    amrex::Real denom = 0.;
+    amrex::Real total_diff = 0.;
+    int m = Broyden_Step-1;
+    
+    if(m<4) 
+    {
+        for(int l=0; l < 4; ++l) 
+        {
+            amrex::Print() << "l, n_curr_in(l), n_curr_out(l), F_prev(l): " << l << " "  << n_curr_in(l) << "  " << n_curr_out(l) << "  "<< F_curr(l) << "\n";
+	}    
+    }
+
+    for(int l=0; l < num_field_sites; ++l) 
+    {
+        amrex::Real Fcurr = n_curr_in(l) - n_curr_out(l);
+
+	delta_F_curr(l) = Fcurr - F_curr(l);    
+
+        F_curr(l) = Fcurr;
+
+	denom += pow(delta_F_curr(l),2.);
+
+	Norm(l) = fabs(Fcurr);
+
+	total_diff += pow(Fcurr,2);
+
+        sum_deltaFcurr(l) = 0;		 
+        sum_Fcurr(l) = 0;		 
+
+    }
+    total_diff = sqrt(total_diff);
+
+    if(m<4) 
+    {
+        for(int l=0; l < 4; ++l) 
+        {
+            amrex::Print() << "l, F_curr(l), delta_F_curr(l): " << l << " "  << F_curr(l) << "  " << n_curr_out(l) << "\n";
+	}    
+    }
+
+    for(int l=0; l < num_field_sites; ++l) 
+    {
+	n_prev_in(l) = n_curr_in(l); 
+        n_curr_in(l) = n_prev_in(l) - Broyden_fraction*F_curr(l);
+    }
+
+    sum_Fcurr_data.clear();
+    sum_deltaFcurr_data.clear();
+    delta_F_curr_data.clear();
+    
+    for(int l=0; l < 1; ++l) 
+    {
+        amrex::Print() << "Qm_in, Qm_out, Qm+1_in, sumFcrr, F_curr, deltaF, *: " << l << " "  << n_prev_in(l) 
+		                                                          << "  " << n_curr_out(l)  
+									  << "  " << n_curr_in(l) 
+									  << "  " << sum_Fcurr(l)
+									  << "  " << F_curr(l)
+									  << "  " << delta_F_curr(l) 
+									  << "  " << - Broyden_fraction*F_curr(l) - sum_Fcurr(l)
+									  << "\n";
+    }
+    for(int l=num_field_sites-1; l < num_field_sites; ++l) 
     {
         amrex::Print() << "Qm_in, Qm_out, Qm+1_in, sumFcrr, F_curr, deltaF, *: " << l << " "  << n_prev_in(l) 
 		                                                          << "  " << n_curr_out(l)  
