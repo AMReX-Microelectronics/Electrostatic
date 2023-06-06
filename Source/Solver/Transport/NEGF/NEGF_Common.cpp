@@ -387,7 +387,7 @@ c_NEGF_Common<T>:: AddPotentialToHamiltonian ()
     int c=0;
     for(auto& col_gid: vec_blkCol_gids)
     {
-        h_Ha(c) = -1*(h_Ha(c) + Potential[col_gid]); /*Note we define, H = -(H0+U)*/
+        h_Ha(c) = -1*(Potential[col_gid]); /*Note we define, H = -(H0+U)*/
         ++c;
     }
 }
@@ -1381,13 +1381,6 @@ c_NEGF_Common<T>:: GuessNewCharge_SimpleMixingAlg ()
     amrex::Real total_diff = 0.;
     int m = Broyden_Step-1;
     
-    if(m<4) 
-    {
-        for(int l=0; l < 4; ++l) 
-        {
-            amrex::Print() << "l, n_curr_in(l), n_curr_out(l), F_prev(l): " << l << " "  << n_curr_in(l) << "  " << n_curr_out(l) << "  "<< F_curr(l) << "\n";
-	}    
-    }
 
     for(int l=0; l < num_field_sites; ++l) 
     {
@@ -1409,14 +1402,6 @@ c_NEGF_Common<T>:: GuessNewCharge_SimpleMixingAlg ()
     }
     total_diff = sqrt(total_diff);
 
-    if(m<4) 
-    {
-        for(int l=0; l < 4; ++l) 
-        {
-            amrex::Print() << "l, F_curr(l), delta_F_curr(l): " << l << " "  << F_curr(l) << "  " << n_curr_out(l) << "\n";
-	}    
-    }
-
     for(int l=0; l < num_field_sites; ++l) 
     {
 	n_prev_in(l) = n_curr_in(l); 
@@ -1427,28 +1412,34 @@ c_NEGF_Common<T>:: GuessNewCharge_SimpleMixingAlg ()
     sum_deltaFcurr_data.clear();
     delta_F_curr_data.clear();
     
-    for(int l=0; l < 1; ++l) 
+    for(int l=0; l < num_field_sites; ++l) 
     {
-        amrex::Print() << "Qm_in, Qm_out, Qm+1_in, sumFcrr, F_curr, deltaF, *: " << l << " "  << n_prev_in(l) 
+        amrex::Print() << "l, Qm_in, Qm_out, Qm+1_in, F_curr, Norm: " << l << " "  << n_prev_in(l) 
 		                                                          << "  " << n_curr_out(l)  
 									  << "  " << n_curr_in(l) 
-									  << "  " << sum_Fcurr(l)
 									  << "  " << F_curr(l)
-									  << "  " << delta_F_curr(l) 
-									  << "  " << - Broyden_fraction*F_curr(l) - sum_Fcurr(l)
+									  << "  " << Norm(l)
 									  << "\n";
     }
-    for(int l=num_field_sites-1; l < num_field_sites; ++l) 
-    {
-        amrex::Print() << "Qm_in, Qm_out, Qm+1_in, sumFcrr, F_curr, deltaF, *: " << l << " "  << n_prev_in(l) 
-		                                                          << "  " << n_curr_out(l)  
-									  << "  " << n_curr_in(l) 
-									  << "  " << sum_Fcurr(l)
-									  << "  " << F_curr(l)
-									  << "  " << delta_F_curr(l) 
-									  << "  " << - Broyden_fraction*F_curr(l) - sum_Fcurr(l)
-									  << "\n";
-    }
+    //int half_sites = int(num_field_sites/2);
+    //for(int l=half_sites; l < half_sites+1; ++l) 
+    //{
+    //    amrex::Print() << "l, Qm_in, Qm_out, Qm+1_in, F_curr, Norm: " << l << " "  << n_prev_in(l) 
+    //    	                                                          << "  " << n_curr_out(l)  
+    //    								  << "  " << n_curr_in(l) 
+    //    								  << "  " << F_curr(l)
+    //    								  << "  " << Norm(l)
+    //    								  << "\n";
+    //}
+    //for(int l=num_field_sites-1; l < num_field_sites; ++l) 
+    //{
+    //    amrex::Print() << "l, Qm_in, Qm_out, Qm+1_in, F_curr, Norm: " << l << " "  << n_prev_in(l) 
+    //    	                                                          << "  " << n_curr_out(l)  
+    //    								  << "  " << n_curr_in(l) 
+    //    								  << "  " << F_curr(l)
+    //    								  << "  " << Norm(l)
+    //    								  << "\n";
+    //}
 
 
     Broyden_Norm = Norm(0);
@@ -1958,6 +1949,7 @@ c_NEGF_Common<T>:: Compute_GR_atPoles ()
     {
 
         ComplexType E = E_poles_vec[e];
+	//amrex::Print() << "e, E: " << e << " " << E << "\n";
 
         for(int n=0; n<blkCol_size_loc; ++n)
         {
@@ -2032,6 +2024,7 @@ c_NEGF_Common<T>:: Compute_GR_atPoles ()
             MatrixBlock<T> GR_atPoles_n  = pole_const*G_nn;
 
 	    GR_atPoles_loc(n) = GR_atPoles_loc(n) + GR_atPoles_n.DiagMult(degen_vec_ptr);
+
         }); 
         #ifdef AMREX_USE_GPU
         amrex::Gpu::streamSynchronize();
@@ -2043,12 +2036,6 @@ c_NEGF_Common<T>:: Compute_GR_atPoles ()
     h_GR_atPoles_loc_data.copy(d_GR_atPoles_loc_data); 
     amrex::Gpu::streamSynchronize();
     #endif
-
-    //amrex::Print() << "GR_atPoles_loc: \n";
-    //for (int n=0; n <blkCol_size_loc; ++n) 
-    //{
-    //    amrex::Print() << n << "  " <<std::setprecision(3)<< h_GR_atPoles_loc(n)  << "\n";
-    //}
 
     Deallocate_TemporaryArraysForGFComputation();
 

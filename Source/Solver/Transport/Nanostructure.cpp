@@ -78,8 +78,8 @@ c_Nanostructure<NSType>::c_Nanostructure (const amrex::Geometry            & geo
 
         MarkCellsWithAtoms();
 
-        //NSType::Initialize_ChargeAtFieldSites(NS_initial_deposit_value);
-        //Deposit_AtomAttributeToMesh();
+        NSType::Initialize_ChargeAtFieldSites(NS_initial_deposit_value);
+        Deposit_AtomAttributeToMesh();
     }
 
     if(_use_negf) 
