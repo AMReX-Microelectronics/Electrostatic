@@ -329,8 +329,8 @@ void
 c_NEGF_Common<T>::AllocateArrays () 
 {
     ComplexType zero(0.,0.);   
-    h_Ha_loc_data.resize({0},{blkCol_size_loc}, The_Pinned_Arena());
-    SetVal_Table1D(h_Ha_loc_data,zero);
+    h_minusHa_loc_data.resize({0},{blkCol_size_loc}, The_Pinned_Arena());
+    SetVal_Table1D(h_minusHa_loc_data,zero);
 
     offDiag_repeatBlkSize = get_offDiag_repeatBlkSize();
     h_Hb_loc_data.resize({0},{offDiag_repeatBlkSize}, The_Pinned_Arena());
@@ -383,11 +383,11 @@ template<typename T>
 void 
 c_NEGF_Common<T>:: AddPotentialToHamiltonian () 
 {
-    auto const& h_Ha = h_Ha_loc_data.table();
+    auto const& h_minusHa = h_minusHa_loc_data.table();
     int c=0;
     for(auto& col_gid: vec_blkCol_gids)
     {
-        h_Ha(c) = -1*(Potential[col_gid]); /*Note we define, H = -(H0+U)*/
+        h_minusHa(c) = -1*(Potential[col_gid]); /*Note: Ha = H0a (=0) + U, so -Ha = -U */
         ++c;
     }
 }
@@ -401,7 +401,7 @@ c_NEGF_Common<T>:: Update_ContactPotential ()
     for(int c=0; c < NUM_CONTACTS; ++c)
     {
         U_contact[c] = Potential[global_contact_index[c]];
-        amrex::Print() << "  contact, potential: " <<  c << " " << U_contact[c] << "\n";
+        amrex::Print() << "  contact, U: " <<  c << " " << U_contact[c] << "\n";
     }
 }
 
@@ -412,7 +412,8 @@ c_NEGF_Common<T>:: Define_EnergyLimits ()
 {
     for (int c=0; c<NUM_CONTACTS; ++c)
     {
-        mu_contact[c] = E_f + U_contact[c];
+        //mu_contact[c] = E_f + U_contact[c];
+        mu_contact[c] = E_f ;
         kT_contact[c] = PhysConst::kb_eVperK*Contact_Temperature[c]; /*set Temp in the input*/
     }
 
@@ -449,6 +450,7 @@ c_NEGF_Common<T>:: Define_EnergyLimits ()
     E_zPlus = val;
     E_contour_left  = E_valence_min + E_zPlus; /*set in the input*/
     E_rightmost = mu_max + Fermi_tail_factor*kT_max + E_zPlus;
+    //E_rightmost = E_f + Fermi_tail_factor*kT_max + E_zPlus;
 
     if(flag_noneq_exists)
     {
@@ -470,15 +472,18 @@ c_NEGF_Common<T>:: Define_EnergyLimits ()
     }
     ComplexType val2(E_contour_right.real(), 2*num_enclosed_poles*MathConst::pi*kT_max);
     E_zeta = val2;
-    E_eta =  E_zeta - 2*Fermi_tail_factor*kT_max;
+    //E_eta =  E_zeta - 2*Fermi_tail_factor*kT_max;
+    ComplexType val3(mu_max - Fermi_tail_factor*kT_max, E_zeta.imag());
+    //ComplexType val3(E_f - Fermi_tail_factor*kT_max, E_zeta.imag());
+    E_eta =  val3;
 
-    //amrex::Print() << "\nE_f: " << E_f << "\n";
     //amrex::Print() << "U_contact: ";
     //for (int c=0; c<NUM_CONTACTS; ++c)
     //{
     //    amrex::Print() <<  U_contact[c] << " ";
     //}
     //amrex::Print() << "\n";
+    //amrex::Print() << "\nE_f: " << E_f << "\n";
     //amrex::Print() << "mu_min/max: " << mu_min << " " << mu_max << "\n";
     //amrex::Print() << "kT_min/max: " << kT_min << " " << kT_max << "\n";
     //amrex::Print() << "E_zPlus: "  << E_zPlus << "\n";
@@ -680,7 +685,7 @@ c_NEGF_Common<T>:: Compute_DensityOfStates ()
     SetVal_Table1D(h_Transmission_loc_data,0.);
 
 
-    auto const& h_Ha_loc  = h_Ha_loc_data.table();
+    auto const& h_minusHa_loc  = h_minusHa_loc_data.table();
     auto const& h_Hb_loc  = h_Hb_loc_data.table();
     auto const& h_Hc_loc  = h_Hc_loc_data.table();
     auto const& h_tau     = h_tau_glo_data.table();
@@ -750,8 +755,8 @@ c_NEGF_Common<T>:: Compute_DensityOfStates ()
 
         for(int n=0; n<blkCol_size_loc; ++n)
         {
-            h_Alpha_loc(n) = E + h_Ha_loc(n); 
-            /*+ because h_Ha is defined previously as -(H0+U)*/
+            h_Alpha_loc(n) = E + h_minusHa_loc(n); 
+            /*+ because h_minusHa is defined previously as -(H0+U)*/
         }
 
         get_Sigma_at_contacts(h_Sigma_contact_data, E);
@@ -993,10 +998,12 @@ c_NEGF_Common<T>:: Compute_InducedCharge ()
                               + h_RhoNonEq_loc(n).DiagSum().real() 
                              - h_Rho0_loc(n).DiagSum().imag() );
 
+	//if(n < 5) {
         //amrex::Print() << "n/rho_Eq/Rho_NonEq/Rho0/RhoInduced: " << n << " " <<  h_RhoEq_loc(n).DiagSum().imag() 
         //        	                                                  << " " <<  h_RhoNonEq_loc(n).DiagSum().real() 
         //        							  << " " <<  h_Rho0_loc(n).DiagSum().imag() 
         //        							  << " " <<  h_RhoInduced_loc(n) << "\n";
+	//}
     }
     amrex::Print() << "induced charge at site 0: " << h_RhoInduced_loc(0) << "\n";
     auto const& n_curr_out = n_curr_out_data.table();
@@ -1195,12 +1202,12 @@ c_NEGF_Common<T>:: GuessNewCharge_ModifiedBroydenSecondAlg ()
     //Write_Table1D(PTD, h_n_curr_in_data, filename.c_str(), 
     //              "'axial location / (nm)', 'Induced charge density / (m^3)");
 
-    if(m<4) {
-        for(int l=0; l < 4; ++l) 
-        {
-            amrex::Print() << "l, n_curr_in(l), n_curr_out(l), F_prev(l): " << l << " "  << n_curr_in(l) << "  " << n_curr_out(l) << "  "<< F_curr(l) << "\n";
-	}    
-    }
+    //if(m<4) {
+    //    for(int l=0; l < 4; ++l) 
+    //    {
+    //        amrex::Print() << "l, n_curr_in(l), n_curr_out(l), F_prev(l): " << l << " "  << n_curr_in(l) << "  " << n_curr_out(l) << "  "<< F_curr(l) << "\n";
+    //    }    
+    //}
 
     for(int l=0; l < num_field_sites; ++l) 
     {
@@ -1224,13 +1231,13 @@ c_NEGF_Common<T>:: GuessNewCharge_ModifiedBroydenSecondAlg ()
     }
     total_diff = sqrt(total_diff);
 
-    if(m<4) {
-        for(int l=0; l < 4; ++l) 
-        {
-            amrex::Print() << "l, F_curr(l), delta_F_curr(l): " << l << " "  << F_curr(l) << "  " << n_curr_out(l) << "\n";
-	}    
-    }
-    amrex::Print() << "denom: " << denom<< "\n";
+    //if(m<4) {
+    //    for(int l=0; l < 4; ++l) 
+    //    {
+    //        amrex::Print() << "l, F_curr(l), delta_F_curr(l): " << l << " "  << F_curr(l) << "  " << n_curr_out(l) << "\n";
+    //    }    
+    //}
+    //amrex::Print() << "denom: " << denom<< "\n";
 
     W_Broyden.push_back(new RealTable1D({0},{num_field_sites}, The_Pinned_Arena()));
     V_Broyden.push_back(new RealTable1D({0},{num_field_sites}, The_Pinned_Arena()));
@@ -1310,25 +1317,19 @@ c_NEGF_Common<T>:: GuessNewCharge_ModifiedBroydenSecondAlg ()
     
     for(int l=0; l < 1; ++l) 
     {
-        amrex::Print() << "Qm_in, Qm_out, Qm+1_in, sumFcrr, F_curr, deltaF, *: " << l << " "  << n_prev_in(l) 
-		                                                          << "  " << n_curr_out(l)  
-									  << "  " << n_curr_in(l) 
-									  << "  " << sum_Fcurr(l)
-									  << "  " << F_curr(l)
-									  << "  " << delta_F_curr(l) 
-									  << "  " << - Broyden_fraction*F_curr(l) - sum_Fcurr(l)
-									  << "\n";
+        amrex::Print() << "Qm_in, Qm_out, Qm+1_in, F_curr: " << l << " "  << n_prev_in(l) 
+		                                                  << "  " << n_curr_out(l)  
+								  << "  " << n_curr_in(l) 
+								  << "  " << F_curr(l)
+								  << "\n";
     }
     for(int l=num_field_sites-1; l < num_field_sites; ++l) 
     {
-        amrex::Print() << "Qm_in, Qm_out, Qm+1_in, sumFcrr, F_curr, deltaF, *: " << l << " "  << n_prev_in(l) 
-		                                                          << "  " << n_curr_out(l)  
-									  << "  " << n_curr_in(l) 
-									  << "  " << sum_Fcurr(l)
-									  << "  " << F_curr(l)
-									  << "  " << delta_F_curr(l) 
-									  << "  " << - Broyden_fraction*F_curr(l) - sum_Fcurr(l)
-									  << "\n";
+        amrex::Print() << "Qm_in, Qm_out, Qm+1_in, F_curr: " << l << " "  << n_prev_in(l) 
+		                                                  << "  " << n_curr_out(l)  
+								  << "  " << n_curr_in(l) 
+								  << "  " << F_curr(l)
+								  << "\n";
     }
 
 
@@ -1470,7 +1471,7 @@ void
 c_NEGF_Common<T>:: Compute_RhoNonEq ()
 {
 
-    auto const& h_Ha_loc  = h_Ha_loc_data.table();
+    auto const& h_minusHa_loc  = h_minusHa_loc_data.table();
     auto const& h_Hb_loc  = h_Hb_loc_data.table();
     auto const& h_Hc_loc  = h_Hc_loc_data.table();
     auto const& h_tau     = h_tau_glo_data.table();
@@ -1548,8 +1549,8 @@ c_NEGF_Common<T>:: Compute_RhoNonEq ()
 
             for(int n=0; n<blkCol_size_loc; ++n)
             {
-                h_Alpha_loc(n) = E + h_Ha_loc(n); 
-                /*+ because h_Ha is defined previously as -(H0+U)*/
+                h_Alpha_loc(n) = E + h_minusHa_loc(n); 
+                /*+ because h_minusHa is defined previously as -(H0+U)*/
             }
 
             get_Sigma_at_contacts(h_Sigma_contact_data, E);
@@ -1735,7 +1736,7 @@ template<typename T>
 void 
 c_NEGF_Common<T>:: Compute_RhoEq ()
 {
-    auto const& h_Ha_loc  = h_Ha_loc_data.table();
+    auto const& h_minusHa_loc  = h_minusHa_loc_data.table();
     auto const& h_Hb_loc  = h_Hb_loc_data.table();
     auto const& h_Hc_loc  = h_Hc_loc_data.table();
     auto const& h_tau     = h_tau_glo_data.table();
@@ -1792,8 +1793,8 @@ c_NEGF_Common<T>:: Compute_RhoEq ()
 
             for(int n=0; n<blkCol_size_loc; ++n)
             {
-                h_Alpha_loc(n) = E + h_Ha_loc(n); 
-                /*+ because h_Ha is defined previously as -(H0+U)*/
+                h_Alpha_loc(n) = E + h_minusHa_loc(n); 
+                /*+ because -Ha = -H0a (=0) -U = -U as defined previously*/
             }
 
             get_Sigma_at_contacts(h_Sigma_contact_data, E);
@@ -1807,6 +1808,10 @@ c_NEGF_Common<T>:: Compute_RhoEq ()
                     int n = n_glo - vec_cumu_blkCol_size[my_rank];
                     h_Alpha_loc(n) = h_Alpha_loc(n) - h_Sigma_contact(c);
                 }
+		//if(e==0) {
+                //     amrex::Print() << "contact, Sigma, E, U, EmU: " << c << "  " << h_Sigma_contact(c) << "  " << E << "  " << U_contact[c] 
+		//	                                             << "  " << E - U_contact[c]<< "\n";
+		//}
             }
 
             /*MPI_Allgather*/
@@ -1853,6 +1858,7 @@ c_NEGF_Common<T>:: Compute_RhoEq ()
 	    /*following is for lambda capture*/
             int cumulative_columns = vec_cumu_blkCol_size[my_rank];
             auto* degen_vec_ptr = degen_vec.dataPtr();
+	    //amrex::Print() << "mu_min: " << mu_min << "\n";
             ComplexType nF_eq = FermiFunction(E-mu_min, kT_min);
 	    amrex::Real const_multiplier = -1.*spin_degen/MathConst::pi;
 
@@ -1886,7 +1892,9 @@ c_NEGF_Common<T>:: Compute_RhoEq ()
 
         for (int n=0; n <blkCol_size_loc; ++n) 
         {
-            //amrex::Print() << n << "  " <<std::setprecision(3)<< h_RhoEq_loc(n) << "  " << h_GR_atPoles_loc(n)  << "\n";
+            //if(n < 5) {		
+            //   amrex::Print() << "RhoEq and GR: " << n << "  " <<std::setprecision(3)<< h_RhoEq_loc(n) << "  " << h_GR_atPoles_loc(n)  << "\n";
+	    //}
             h_RhoEq_loc(n) = h_RhoEq_loc(n) + h_GR_atPoles_loc(n);
         }
     }
@@ -1899,7 +1907,7 @@ template<typename T>
 void 
 c_NEGF_Common<T>:: Compute_GR_atPoles ()
 {
-    auto const& h_Ha_loc  = h_Ha_loc_data.table();
+    auto const& h_minusHa_loc  = h_minusHa_loc_data.table();
     auto const& h_Hb_loc  = h_Hb_loc_data.table();
     auto const& h_Hc_loc  = h_Hc_loc_data.table();
     auto const& h_tau     = h_tau_glo_data.table();
@@ -1953,8 +1961,8 @@ c_NEGF_Common<T>:: Compute_GR_atPoles ()
 
         for(int n=0; n<blkCol_size_loc; ++n)
         {
-            h_Alpha_loc(n) = E + h_Ha_loc(n); 
-            /*+ because h_Ha is defined previously as -(H0+U)*/
+            h_Alpha_loc(n) = E + h_minusHa_loc(n); 
+            /*+ because h_minusHa is defined previously as -(H0+U)*/
         }
 
         get_Sigma_at_contacts(h_Sigma_contact_data, E);
@@ -2045,7 +2053,7 @@ template<typename T>
 void 
 c_NEGF_Common<T>:: Compute_Rho0 ()
 {
-    auto const& h_Ha_loc  = h_Ha_loc_data.table();
+    auto const& h_minusHa_loc  = h_minusHa_loc_data.table();
     auto const& h_Hb_loc  = h_Hb_loc_data.table();
     auto const& h_Hc_loc  = h_Hc_loc_data.table();
     auto const& h_tau     = h_tau_glo_data.table();
@@ -2103,8 +2111,8 @@ c_NEGF_Common<T>:: Compute_Rho0 ()
 
             for(int n=0; n<blkCol_size_loc; ++n)
             {
-                h_Alpha_loc(n) = E + h_Ha_loc(n); 
-                /*+ because h_Ha is defined previously as -(H0+U)*/
+                h_Alpha_loc(n) = E + h_minusHa_loc(n); 
+                /*+ because h_minusHa is defined previously as -(H0+U)*/
             }
 
             get_Sigma_at_contacts(h_Sigma_contact_data, E);
@@ -2213,7 +2221,7 @@ c_NEGF_Common<T>:: get_Sigma_at_contacts
     for (std::size_t c = 0; c < NUM_CONTACTS; ++c)
     {
         MatrixBlock<T> gr;
-        Compute_SurfaceGreensFunction(gr, E-U_contact[c]);
+        Compute_SurfaceGreensFunction(gr, E - U_contact[c]);
         //amrex::Print() << "c, E, gr: " << c << " " << E << " " << gr << "\n";
         h_Sigma(c) = h_tau(c)*gr*h_tau(c).Dagger();
     }
@@ -2274,7 +2282,7 @@ c_NEGF_Common<T>::Write_Table1D(const amrex::Vector<VectorType>& Vec,
 { 
     if (amrex::ParallelDescriptor::IOProcessor())
     {
-        amrex::Print() << "\n Root Writing " << filename << "\n";
+        amrex::Print() << "\nRoot Writing " << filename << "\n";
         std::ofstream outfile;
         outfile.open(filename.c_str());
 

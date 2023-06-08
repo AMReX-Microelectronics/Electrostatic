@@ -1,11 +1,13 @@
-use_electrostatic = 0
+use_electrostatic = 1
 use_transport = 1
 
+my_constants.m_index = 17
+my_constants.n_index = 0
 #my_constants.CN_z = GO_h + CM_h/2.
 my_constants.CN_z = Lz/2.
 my_constants.CN_x = 0.
 my_constants.CN_y = 0.
-my_constants.GV = 0.
+my_constants.GV = 0
 ##################################
 ##### USER DEFINED CONSTANTS #####
 ##################################
@@ -37,10 +39,10 @@ my_constants.bond_length = 0.142e-9
 my_constants.N_unitcells = 4
 my_constants.L_unitcell = 3*bond_length #0.426e-9
 
-my_constants.R_CN = 0.6654e-9    #radius
-my_constants.CN_co_l = 2*L_unitcell  #contact length 1 unit cells
+my_constants.R_CN = bond_length*sqrt(3.*(m_index*m_index + n_index*n_index + m_index*n_index))/(2*pi)  #radius
+my_constants.CN_co_l = 2*L_unitcell  
 
-my_constants.small_gap = 3.2*dz #0.1e-9 #5*bond_length #0.355e-9, gap between nanotube and the contacts
+my_constants.small_gap = 0.3e-9  #0.1e-9 #5*bond_length #0.355e-9, gap between nanotube and the contacts
 
 my_constants.epsilon_CN = epsilon_0 #vacuum
 
@@ -98,7 +100,7 @@ Gate.geom_type      = cntfet_contact_cyl
 Gate.inner_radius   = R_CN + small_gap 
 Gate.thickness      = 10*dz
 Gate.center         = CN_x CN_y CN_z
-Gate.height         = Ly
+Gate.height         = Ly + 2*dy/5
 Gate.direction      = 1
 Gate.surf_soln      = GV 
 
@@ -121,8 +123,8 @@ domain.coord_sys = cartesian
 #################################
 #boundary.hi = neu(0.) neu(0) neu(0.)
 #boundary.lo = neu(0.) neu(0) neu(0.)
-boundary.hi = dir(0.) neu(0) dir(0.)
-boundary.lo = dir(0.) neu(0) dir(0.)
+boundary.hi = neu(0.) neu neu(0.)
+boundary.lo = neu(0.) neu neu(0.)
 
 #boundary.GV_function = "GV_min + (GV_max-GV_min) * t" #V
 
@@ -200,19 +202,19 @@ transport.use_selfconsistent_potential = 0
 transport.use_negf = 1
 transport.NS_gather_field = phi            
 transport.NS_deposit_field  = charge_density 
-transport.NS_initial_deposit_value  = -2e-2
+transport.NS_initial_deposit_value  = 1e-2
 transport.Broyden_fraction = 1e-1
-transport.Broyden_max_norm = 1.e-4
+transport.Broyden_max_norm = 1.e-6
 
 cnt.type = CNT
-cnt.type_id = 17 0     #m n
+cnt.type_id = m_index n_index     #m n
 cnt.acc = bond_length
 cnt.gamma = 2.5        #coupling strength (eV)
 cnt.num_unitcells = N_unitcells
 cnt.offset = CN_x CN_y CN_z
-cnt.contact_potential = SV DV
+cnt.contact_potential = 0 0
 
-cnt.E_f = 0.3
+cnt.E_f = -1
 cnt.E_valence_min = -10
 cnt.E_pole_max    = 3
 #####################################

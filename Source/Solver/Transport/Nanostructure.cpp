@@ -81,6 +81,10 @@ c_Nanostructure<NSType>::c_Nanostructure (const amrex::Geometry            & geo
         NSType::Initialize_ChargeAtFieldSites(NS_initial_deposit_value);
         Deposit_AtomAttributeToMesh();
     }
+    else 
+    {
+         Define_PotentialProfile();
+    }
 
     if(_use_negf) 
     {
@@ -268,7 +272,7 @@ c_Nanostructure<NSType>::Gather_MeshAttributeAtAtoms()
     const auto& plo = _geom->ProbLoArray();
     const auto dx =_geom->CellSizeArray();
 
-    p_mf_deposit->FillBoundary(_geom->periodicity());
+    //p_mf_deposit->FillBoundary(_geom->periodicity());
 
     int lev = 0;
     for (MyParIter pti(*this, lev); pti.isValid(); ++pti) 
@@ -342,8 +346,8 @@ c_Nanostructure<NSType>::Gather_MeshAttributeAtAtoms()
         });
 
     }
-    p_mf_gather->setVal(0.);
-    p_mf_deposit->FillBoundary(_geom->periodicity());
+    //p_mf_gather->setVal(0.);
+    //p_mf_deposit->FillBoundary(_geom->periodicity());
 
     Obtain_PotentialAtSites();
 }
@@ -410,7 +414,7 @@ c_Nanostructure<NSType>::Deposit_AtomAttributeToMesh()
 	//amrex::Gpu::streamSynchronize();
         //#endif
 
-	amrex::Print() << "np: " << np << "\n";
+	//amrex::Print() << "np: " << np << "\n";
         amrex::ParallelFor(np, [=] AMREX_GPU_DEVICE (int p) noexcept 
         {
 	    amrex::Real vol = AMREX_D_TERM(dx[0], *dx[1], *dx[2]);
@@ -497,14 +501,14 @@ c_Nanostructure<NSType>::Obtain_PotentialAtSites()
     const int num_atoms_to_avg_over    = NSType::num_atoms_to_avg_over;
     const int average_field_flag       = NSType::average_field_flag;
 
-    amrex::Gpu::DeviceVector<amrex::Real> vec_U(num_field_sites);
+    amrex::Gpu::DeviceVector<amrex::Real> vec_V(num_field_sites);
 
     for (int l=0; l < num_field_sites; ++l) 
     {
-        vec_U[l] = 0.;
+        vec_V[l] = 0.;
     }
 
-    amrex::Real* p_U   = vec_U.dataPtr();  
+    amrex::Real* p_V   = vec_V.dataPtr();  
     
     int lev = 0;
     for (MyParIter pti(*this, lev); pti.isValid(); ++pti)
@@ -526,7 +530,7 @@ c_Nanostructure<NSType>::Obtain_PotentialAtSites()
                 {
                     int global_id = p_par[p].id();
                     int site_id = get_1D_site_id(global_id); 
-                    amrex::HostDevice::Atomic::Add(&(p_U[site_id]), p_par_gather[p]);
+                    amrex::HostDevice::Atomic::Add(&(p_V[site_id]), p_par_gather[p]);
                 });
             }
             else if(NSType::avg_type == s_AVG_TYPE::SPECIFIC) 
@@ -550,7 +554,7 @@ c_Nanostructure<NSType>::Obtain_PotentialAtSites()
 	            {
                         if(remainder == avg_indices_ptr[m]) 
 	                {
-                            amrex::HostDevice::Atomic::Add(&(p_U[site_id]), p_par_gather[p]);
+                            amrex::HostDevice::Atomic::Add(&(p_V[site_id]), p_par_gather[p]);
                         }
                     } 
                 });
@@ -562,24 +566,22 @@ c_Nanostructure<NSType>::Obtain_PotentialAtSites()
             {
                 int global_id  = p_par[p].id();
                 int site_id    = get_1D_site_id(global_id); 
-                p_U[site_id]   = p_par_gather[p];
+                p_V[site_id]   = p_par_gather[p];
             });
         } 
     }
 
     for (int l=0; l<num_field_sites; ++l) 
     {
-        ParallelDescriptor::ReduceRealSum(p_U[l]);
+        ParallelDescriptor::ReduceRealSum(p_V[l]);
     }
 
     for (int l=0; l<num_field_sites; ++l) 
     {
-        NSType::Potential[l]   = -p_U[l] / num_atoms_to_avg_over;
+        NSType::Potential[l]   = -p_V[l] / num_atoms_to_avg_over;
 	//amrex::Print() << "site_id, avg_potential: " << l << "  " << NSType::Potential[l] << "\n";
         /*minus because Potential is experienced by electrons*/
     }
-    //NSType::Potential[0] = NSType::Contact_Potential[0];
-    //NSType::Potential[num_field_sites-1] = NSType::Contact_Potential[1];
 
 }
 
@@ -591,7 +593,10 @@ c_Nanostructure<NSType>::Write_PotentialAtSites()
     if (ParallelDescriptor::IOProcessor()) 
     {
         std::ofstream outfile;
-        outfile.open("Potential.dat");
+
+        std::string filename = "U_" + std::to_string(NSType::Broyden_Step) + ".dat";
+ 
+        outfile.open(filename);
         
         for (int l=0; l<NSType::num_field_sites; ++l)
         {
@@ -632,6 +637,7 @@ c_Nanostructure<NSType>:: InitializeNEGF ()
 
     BL_PROFILE_VAR_STOP(compute_rho0);
 
+
 }
 
 
@@ -671,5 +677,17 @@ c_Nanostructure<NSType>:: Reset ()
     if(_use_electrostatic) 
     {
         NSType::Reset_Broyden();
+    }
+}
+
+
+template<typename NSType>
+void
+c_Nanostructure<NSType>:: Define_PotentialProfile ()
+{
+    for (int l=0; l<NSType::num_field_sites; ++l) 
+    {
+        NSType::Potential[l]   = -NSType::Contact_Potential[0];
+        /*minus because Potential is experienced by electrons*/
     }
 }

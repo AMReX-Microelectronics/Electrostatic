@@ -543,6 +543,10 @@ c_MLMGSolver:: UpdateBoundaryConditions()
 
     #ifdef AMREX_USE_EB
     if(rGprop.embedded_boundary_flag) {
+        if(some_constant_inhomogeneous_boundaries)
+        {
+            Fill_Constant_Inhomogeneous_Boundaries();
+        }
         if(some_functionbased_inhomogeneous_boundaries) 
         {
             Fill_FunctionBased_Inhomogeneous_Boundaries();
@@ -563,6 +567,10 @@ c_MLMGSolver:: UpdateBoundaryConditions()
     }
     #endif
     if(!rGprop.embedded_boundary_flag) {
+        if(some_constant_inhomogeneous_boundaries)
+        {
+            Fill_Constant_Inhomogeneous_Boundaries();
+        }
         if(some_functionbased_inhomogeneous_boundaries) 
         {
             Fill_FunctionBased_Inhomogeneous_Boundaries();
@@ -583,6 +591,7 @@ c_MLMGSolver:: UpdateBoundaryConditions()
     }
 
 }
+
 
 void
 c_MLMGSolver:: Fill_Constant_Inhomogeneous_Boundaries()

@@ -55,6 +55,7 @@ public:
 
     amrex::Vector<int> mode_vec;
     amrex::Vector<int> mode_degen_vec;
+    amrex::Vector<amrex::Real> bandgap_vec;
     MatrixBlock<BlkType> beta;
 
     void Define_SortedModeVector();
@@ -75,6 +76,8 @@ public:
     virtual AMREX_GPU_HOST_DEVICE
     void Compute_SurfaceGreensFunction (MatrixBlock<BlkType>& gr, 
                                         const ComplexType EmU) override;
+
+    amrex::Real Get_Bandgap_Of_Mode(int p);
 
     //virtual void DeallocateArrays() override;
     //virtual void ComputeChargeDensity() override;

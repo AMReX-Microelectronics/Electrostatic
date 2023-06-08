@@ -216,32 +216,32 @@ c_TransportSolver::Solve()
    amrex::Real total_mlmg_solve_time = 0.;
 
    amrex::Real max_norm = 1.;
-   int max_step = 0;
+   int max_step = 1;
 
    if(rCode.use_electrostatic) 
    {	   
        do 
        {
-           amrex::Print() << "\n\nmax_step: " << max_step << "\n";
+           amrex::Print() << "\n\nstep: " << max_step << "\n";
 
            rMLMG.UpdateBoundaryConditions();
            auto mlmg_solve_time = rMLMG.Solve_PoissonEqn();
-           amrex::Print() << "mlmg_solve_time: " << mlmg_solve_time << "\n";
            total_mlmg_solve_time += mlmg_solve_time;
 
            rPostPro.Compute();
+
 
            rOutput.WriteOutput(max_step, -1.);
 
            for (int c=0; c < vp_CNT.size(); ++c)
            {
 	       vp_CNT[c]->Gather_MeshAttributeAtAtoms();  
-	       //vp_CNT[c]->Write_PotentialAtSites();
+	       vp_CNT[c]->Write_PotentialAtSites();
 
                vp_CNT[c]->Solve_NEGF();
 
-	       vp_CNT[c]->GuessNewCharge_SimpleMixingAlg();
-	       //vp_CNT[c]->GuessNewCharge_ModifiedBroydenSecondAlg();
+	       //vp_CNT[c]->GuessNewCharge_SimpleMixingAlg();
+	       vp_CNT[c]->GuessNewCharge_ModifiedBroydenSecondAlg();
                //vp_CNT[c]->GuessNewCharge_Broyden_FirstAlg();
 
                //rMprop.ReInitializeMacroparam(NS_deposit_field_str);
@@ -257,6 +257,7 @@ c_TransportSolver::Solve()
        {
            vp_CNT[c]->Reset();
        }
+       amrex::Print() << "\nAverage mlmg time for self-consistency (s): " << total_mlmg_solve_time / max_step << "\n";
    }
    else 
    {
@@ -265,4 +266,5 @@ c_TransportSolver::Solve()
            vp_CNT[c]->Solve_NEGF();
        }
    }
+
 }

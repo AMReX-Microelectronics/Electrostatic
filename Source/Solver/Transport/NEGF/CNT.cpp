@@ -42,6 +42,7 @@ c_CNT:: ReadNanostructureProperties ()
                    + pow(type_id[1],2) 
                    + type_id[0]*type_id[1])) / (2.*MathConst::pi);
     amrex::Print() << "#####* R_cnt / (nm): " << R_cnt/1.e-9 << "\n";
+    amrex::Print() << "#####* D_cnt / (nm): " << 2*R_cnt/1.e-9 << "\n";
     //getWithParser(pp_ns,"num_unitcells", num_unitcells);
     //amrex::Print() << "##### num_unitcells: " << num_unitcells << "\n";
 
@@ -184,37 +185,135 @@ c_CNT:: Generate_AtomLocations (amrex::Vector<s_Position3D>& pos)
 }
 
 
+amrex::Real
+c_CNT::Get_Bandgap_Of_Mode(int p)
+{
+    int m = type_id[0];
+    int n = type_id[1];
+    amrex::Array<amrex::Real,6> Eg_case;
+    Eg_case[0] = (acc*gamma/R_cnt)*fabs( 3*p - (2*m + n  ));
+    Eg_case[1] = (acc*gamma/R_cnt)*fabs( 3*p - (  m + 2*n));
+    Eg_case[2] = (acc*gamma/R_cnt)*fabs( 3*p - (  m - n  ));
+    Eg_case[3] = (acc*gamma/R_cnt)*fabs(-3*p + (2*m + n  ));
+    Eg_case[4] = (acc*gamma/R_cnt)*fabs(-3*p + (  m + 2*n));
+    Eg_case[5] = (acc*gamma/R_cnt)*fabs( 3*p - (  m - n  ));
+
+    amrex::Real Eg_min = Eg_case[0];
+    int min_index = 0;
+    for(int i=1; i<6; ++i) 
+    {
+        if(Eg_min > Eg_case[i]) 
+	{
+            Eg_min = Eg_case[i];
+	    min_index = i;
+	}
+    }
+    return Eg_min;
+}
+
+void swap(amrex::Vector<amrex::Real>& vec, amrex::Vector<int>& mode_vec, int pos1, int pos2){
+	amrex::Real temp;
+	temp = vec[pos1];
+	vec[pos1] = vec[pos2];
+	vec[pos2] = temp;
+	
+	int temp_id;
+	temp_id = mode_vec[pos1];
+	mode_vec[pos1] = mode_vec[pos2];
+	mode_vec[pos2] = temp_id;
+}
+
+int partition(amrex::Vector<amrex::Real>& vec, amrex::Vector<int>& mode_vec, int low, int high, amrex::Real pivot){
+	int i = low;
+	int j = low;
+	while( i <= high){
+		if(vec[i] > pivot){
+			i++;
+		}
+		else{
+			swap(vec, mode_vec, i, j);
+			i++;
+			j++;
+		}
+	}
+	return j-1;
+}
+
+void quickSort(amrex::Vector<amrex::Real>& vec, amrex::Vector<int>& mode_vec, int low, int high)
+{
+    //Credit: https://favtutor.com/blogs/quick-sort-cpp
+    if(low < high)
+    {
+        amrex::Real pivot = vec[high];
+        int pos = partition(vec, mode_vec, low, high, pivot);
+        
+        quickSort(vec, mode_vec, low, pos-1);
+        quickSort(vec, mode_vec, pos+1, high);
+    }
+}
+
+
 void 
 c_CNT::Define_SortedModeVector()
 {
-    int num_double_degenerate_modes = int(atoms_per_ring/2);
-    int num_singly_degenerate_modes = atoms_per_ring%2;
-    int total_modes = num_double_degenerate_modes + num_singly_degenerate_modes;
-    mode_vec.resize(total_modes);
-    mode_degen_vec.resize(total_modes);
+    amrex::Vector<amrex::Real> Eg_vec;
+    Eg_vec.resize(atoms_per_ring);
 
-    for(int m=0; m<total_modes; ++m) 
+    amrex::Vector<int> mode_index_vec;
+    mode_index_vec.resize(atoms_per_ring);
+
+    amrex::Print() << "All modes: \n";
+    for(int p=1; p<atoms_per_ring+1; ++p) 
     {
-        if(m < num_double_degenerate_modes) 
-        {
-            mode_degen_vec[m] = 2;
-        }
-        else 
-        {
-            mode_degen_vec[m] = 1;
-        }
+	amrex::Real Eg = Get_Bandgap_Of_Mode(p);
+	
+	Eg_vec[p-1] = Eg;
+	mode_index_vec[p-1] = p;
+
+	amrex::Print() << "mode: " << p << " bandgap (nm): " << Eg << "\n";
     }
 
-    /*Hard-coding modes for 17,0 nanotube*/
-    mode_vec[0] = 6;
-    mode_vec[1] = 5;
-    mode_vec[2] = 7;
-    mode_vec[3] = 4;
-    mode_vec[4] = 8;
-    mode_vec[5] = 3;
-    mode_vec[6] = 2;
-    mode_vec[7] = 1;
-    mode_vec[8] = 17;
+    quickSort(Eg_vec, mode_index_vec, 0, atoms_per_ring - 1) ;
+
+
+    mode_vec.resize(0);
+    bandgap_vec.resize(0);
+    mode_degen_vec.resize(0);
+
+    mode_vec.push_back(mode_index_vec[0]);
+    bandgap_vec.push_back(Eg_vec[0]);
+    mode_degen_vec.push_back(1);
+
+    int counter = 1;
+    for(int p=1; p < atoms_per_ring; ++p) 
+    {
+	 if((Eg_vec[p] - bandgap_vec[counter-1]) > 1e-6) 
+	 {
+             mode_vec.push_back(mode_index_vec[p]);		 
+             bandgap_vec.push_back(Eg_vec[p]);
+             mode_degen_vec.push_back(1);
+	     counter++;
+	 }
+	 else 
+	 { 
+             mode_degen_vec[counter-1] += 1;
+	 }
+    }
+
+    int total_modes = mode_vec.size();
+
+    amrex::Print() << "\nSorted, distinct modes: " << total_modes << "\n";
+    for(int i=0; i<total_modes; ++i) 
+    {
+        amrex::Print() << "mode: " << std::setw(5) << mode_vec[i] << std::setw(5) 
+		       << ", bandgap / (nm): " << std::setw(15)  << bandgap_vec[i] << std::setw(15) 
+		       << ", degeneracy: " << std::setw(5) << mode_degen_vec[i]  << std::setw(5) << "\n";
+
+    }
+
+    Eg_vec.clear();
+    mode_index_vec.clear();
+  
 }
 
 ComplexType 
@@ -256,13 +355,13 @@ c_CNT::ConstructHamiltonian()
 {
     /*Here we define -H0 where H0 is Hamiltonian of flat bands*/
 
-    auto const& h_Ha = h_Ha_loc_data.table();
+    auto const& h_minusHa = h_minusHa_loc_data.table();
     auto const& h_Hb = h_Hb_loc_data.table();
     auto const& h_Hc = h_Hc_loc_data.table();
 
     for (std::size_t i = 0; i < blkCol_size_loc; ++i)
     {
-        h_Ha(i) = 0.;
+        h_minusHa(i) = 0.;
     }
 
     for (int j=0; j<NUM_MODES; ++j) 

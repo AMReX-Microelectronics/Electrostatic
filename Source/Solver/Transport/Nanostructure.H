@@ -135,6 +135,7 @@ public:
     void Write_PotentialAtSites();
     void Solve_NEGF();
     void Reset();
+    void Define_PotentialProfile();
 
 //    const amrex::Vector<amrex::Real>* get_avg_gatherField() { &avg_gatherField };
 

@@ -77,7 +77,7 @@ public:
     amrex::Vector<amrex::Real> PTD; /*PTD: primary transport dir*/
 
     /*Tables required to store Hamiltonian */
-    BlkTable1D h_Ha_loc_data;
+    BlkTable1D h_minusHa_loc_data;
     BlkTable1D h_Hb_loc_data;
     BlkTable1D h_Hc_loc_data;
 
@@ -161,7 +161,7 @@ public:
     amrex::Vector<ComplexType> E_f_vec;
     int num_enclosed_poles = 0.;
     amrex::Vector<ComplexType> E_poles_vec;
-    amrex::Real Fermi_tail_factor = 14.;
+    amrex::Real Fermi_tail_factor = 20.;
 
     amrex::Real Contact_Temperature[NUM_CONTACTS] = {298., 298.};
     amrex::Real Contact_Potential[NUM_CONTACTS] = {0., 0.};

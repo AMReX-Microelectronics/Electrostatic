@@ -131,6 +131,10 @@ c_Code::ReadData ()
     amrex::Print() << "\n\n\t\t{************************c_Code::ReadData()************************\n";
     amrex::Print() << "\t\tin file: " << __FILE__ << " at line: " << __LINE__ << "\n";
 #endif
+    //amrex::ParmParse pp_const("my_constants");
+    //amrex::Real R_CN;
+    //queryWithParser(pp_const,"R_CN", R_CN);
+    //amrex::Print() << "my_constants.R_CN: " << R_CN << "\n";
 
     m_timestep = 0;
     m_total_steps = 1;
