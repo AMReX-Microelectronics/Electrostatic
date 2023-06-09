@@ -16,6 +16,17 @@ struct s_AVG_TYPE
     };
 };
 
+
+struct s_Potential_Profile
+{
+    enum Type
+    { 
+          CONSTANT,
+          LINEAR,
+	  POINT_CHARGE
+    };
+};
+
 struct s_Position3D
 {
    amrex::Array<amrex::Real,AMREX_SPACEDIM> dir = {AMREX_D_DECL(0.,0.,0.)};
@@ -165,6 +176,17 @@ public:
 
     amrex::Real Contact_Temperature[NUM_CONTACTS] = {298., 298.};
     amrex::Real Contact_Potential[NUM_CONTACTS] = {0., 0.};
+
+    int flag_impose_potential = 0;
+    std::string potential_profile_type_str = "constant";
+    std::map<std::string, s_Potential_Profile::Type>
+    map_PotentialProfile =
+        {
+           {"constant"        , s_Potential_Profile::Type::CONSTANT},
+           {"linear"          , s_Potential_Profile::Type::LINEAR},
+           {"point_charge"    , s_Potential_Profile::Type::POINT_CHARGE}
+        };
+
     amrex::Real kT_contact[NUM_CONTACTS] = {PhysConst::kb_eVperK*298.,PhysConst::kb_eVperK*298.};
     amrex::Real kT_min=PhysConst::kb_eVperK*298.;
     amrex::Real kT_max=PhysConst::kb_eVperK*298.;
@@ -200,6 +222,7 @@ public:
     virtual int get_offDiag_repeatBlkSize() {return 0;}
     virtual void set_material_specific_parameters();
     virtual void Generate_AtomLocations(amrex::Vector<s_Position3D>& pos);
+    virtual void Define_PotentialProfile();
 
     void DefineMatrixPartition();
 

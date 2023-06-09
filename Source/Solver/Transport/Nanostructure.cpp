@@ -83,7 +83,8 @@ c_Nanostructure<NSType>::c_Nanostructure (const amrex::Geometry            & geo
     }
     else 
     {
-         Define_PotentialProfile();
+	    NSType::Define_PotentialProfile();
+	    Write_PotentialAtSites();
     }
 
     if(_use_negf) 
@@ -645,16 +646,6 @@ template<typename NSType>
 void
 c_Nanostructure<NSType>:: Solve_NEGF ()
 {
-    //if(!_use_electrostatic) 
-    //{
-    //    amrex::Array<amrex::Real,2> QD_loc = {0., 1}; //1nm away in z
-    //    for (int l=0; l<NSType::num_field_sites; ++l) 
-    //    {
-    //        amrex::Real r = sqrt(pow((NSType::PTD[l] - QD_loc[0]),2.) + pow(QD_loc[1],2))*1e-9;
-    //        NSType::Potential[l]   = -1*(1./(4.*MathConst::pi*PhysConst::ep0*1.)*(PhysConst::q_e/r));
-    //        /*-1 is multiplied because potential is experienced by electrons*/
-    //    }
-    //}
 
     NSType::AddPotentialToHamiltonian();
     NSType::Update_ContactPotential(); 
@@ -677,17 +668,5 @@ c_Nanostructure<NSType>:: Reset ()
     if(_use_electrostatic) 
     {
         NSType::Reset_Broyden();
-    }
-}
-
-
-template<typename NSType>
-void
-c_Nanostructure<NSType>:: Define_PotentialProfile ()
-{
-    for (int l=0; l<NSType::num_field_sites; ++l) 
-    {
-        NSType::Potential[l]   = -NSType::Contact_Potential[0];
-        /*minus because Potential is experienced by electrons*/
     }
 }

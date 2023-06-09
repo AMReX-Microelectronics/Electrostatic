@@ -123,6 +123,12 @@ c_NEGF_Common<T>:: ReadNanostructureProperties ()
             Contact_Potential[c] = vec_contact_potential[c];
         }
     }
+
+    pp_ns.query("impose_potential", flag_impose_potential);
+    if(flag_impose_potential) 
+    {
+        pp_ns.query("potential_profile_type", potential_profile_type_str);
+    }
     
     set_material_specific_parameters();
 
@@ -143,6 +149,8 @@ c_NEGF_Common<T>:: ReadNanostructureProperties ()
     for(int c=0; c<NUM_CONTACTS; ++c) {
         amrex::Print() << "#####*   contact, potential (V): " << c << "  " << Contact_Potential[c] <<"\n";
     }
+    amrex::Print() << "##### flag_impose_potential: " << flag_impose_potential << "\n";
+    amrex::Print() << "##### potential_profile_type: " << potential_profile_type_str << "\n";
 
     Potential.resize(num_field_sites);
     PTD.resize(num_field_sites);
@@ -226,6 +234,48 @@ c_NEGF_Common<T>:: Generate_AtomLocations (amrex::Vector<s_Position3D>& pos)
        //amrex::Print() << l << "  " << PTD[l] << "\n";
     }
 }
+
+
+template<typename T>
+void
+c_NEGF_Common<T>:: Define_PotentialProfile()
+{
+
+    amrex::Real U1 = -Contact_Potential[0];
+    amrex::Real U2 = -Contact_Potential[1];
+
+    switch(map_PotentialProfile[potential_profile_type_str])
+    {
+        case s_Potential_Profile::Type::CONSTANT:
+        {
+            for (int l=0; l<num_field_sites; ++l)
+            {
+                Potential[l]   = U1;
+            }
+            break;
+        }
+        case s_Potential_Profile::Type::LINEAR:
+        {
+		
+            for (int l=0; l<num_field_sites; ++l)
+            {
+                Potential[l]   = U1 + (static_cast<amrex::Real>(l)/(num_field_sites-1.))*(U2-U1);
+            }
+            break;
+        }
+        case s_Potential_Profile::Type::POINT_CHARGE:
+        {
+            //amrex::Array<amrex::Real,2> QD_loc = {0., 1}; //1nm away in z
+            //for (int l=0; l<NSType::num_field_sites; ++l)
+            //{
+            //    amrex::Real r = sqrt(pow((PTD[l] - QD_loc[0]),2.) + pow(QD_loc[1],2))*1e-9;
+            //    NSType::Potential[l]   = -1*(1./(4.*MathConst::pi*PhysConst::ep0*1.)*(PhysConst::q_e/r));
+            //}
+            break;
+        }
+    }
+}
+
 
 template<typename T>
 void 

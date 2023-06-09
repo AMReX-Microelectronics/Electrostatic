@@ -89,6 +89,13 @@ c_CNT:: ReadNanostructureProperties ()
 
 
 void 
+c_CNT:: Define_PotentialProfile() 
+{
+    c_NEGF_Common<BlkType>::Define_PotentialProfile();
+}
+
+
+void 
 c_CNT::set_material_specific_parameters()
 {
     num_atoms                = num_unitcells*rings_per_unitcell*atoms_per_ring;

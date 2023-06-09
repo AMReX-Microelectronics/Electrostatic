@@ -5,17 +5,11 @@ use_transport = 1
 ##### USER DEFINED CONSTANTS #####
 ##################################
 
-### Physical and Other Constants 
-my_constants.q = 1.602e-19
-my_constants.epsilon_0 = 8.8541878128e-12
-my_constants.tiny = 1e-12
-
 ### Carbon nanotube
+my_constants.m_index = 17
+my_constants.n_index = 0
 my_constants.bond_length = 0.142e-9
 my_constants.N_unitcells = 1
-my_constants.L_unitcell = 3*bond_length #0.426e-9
-my_constants.R_CN = 0.6654e-9    #radius
-my_constants.CN_h = R_CN + 2e-9
 ######################################
 
 #################
@@ -24,18 +18,20 @@ my_constants.CN_h = R_CN + 2e-9
 
 #nanostructure names
 transport.NS_names = cnt 
-transport.use_selfconsistent_potential = 0
 transport.use_negf = 1
-#transport.NS_gather_field = phi            
-#transport.NS_deposit_field  = charge_density 
-#transport.NS_initial_deposit_value  = 1e-4*q/(dx*dy*dz)
 
 cnt.type = CNT
-cnt.type_id = 17 0 #m n
+cnt.type_id = m_index n_index     
 cnt.acc = bond_length
-cnt.gamma = 2.5 #coupling strength (eV)
+cnt.gamma = 2.5 
 cnt.num_unitcells = N_unitcells
-cnt.offset = 0. 0. CN_h
+cnt.offset = 0 0 0 
 
-#graphene.type = Graphene
+cnt.contact_potential = 0 1
+cnt.impose_potential = 1
+cnt.potential_profile_type = constant
+
+cnt.E_f = -1
+cnt.E_valence_min = -10
+cnt.E_pole_max    = 3
 ######################################
