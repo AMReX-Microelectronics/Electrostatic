@@ -84,7 +84,7 @@ c_Nanostructure<NSType>::c_Nanostructure (const amrex::Geometry            & geo
     else 
     {
 	    NSType::Define_PotentialProfile();
-	    Write_PotentialAtSites();
+	    //Write_PotentialAtSites();
     }
 
     if(_use_negf) 
