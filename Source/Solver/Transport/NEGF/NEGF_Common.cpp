@@ -567,9 +567,9 @@ c_NEGF_Common<T>:: Define_IntegrationPaths ()
     ContourPath_Rho0[2].Define_GaussLegendrePoints(E_eta, E_contour_left, 100, 1); 
 
     /* Define_ContourPath_DOS */
-    ComplexType minus_one(-1.,E_zPlus.imag());
-    ComplexType one(1.,E_zPlus.imag());
-    ContourPath_DOS.Define_GaussLegendrePoints(minus_one, one, 400,0);
+    ComplexType minus_one(-0.2,E_zPlus.imag());
+    ComplexType one(0.2,E_zPlus.imag());
+    ContourPath_DOS.Define_GaussLegendrePoints(minus_one, one, 10,0);
     //ContourPath_DOS.Define_GaussLegendrePoints(E_contour_left, -E_contour_left, 400,0);
 
     /* Write Fermi function */
