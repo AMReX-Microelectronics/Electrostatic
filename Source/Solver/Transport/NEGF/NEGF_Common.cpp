@@ -562,14 +562,14 @@ c_NEGF_Common<T>:: Define_IntegrationPaths ()
 {
     /* Define_ContourPath_Rho0 */
     ContourPath_Rho0.resize(3); 
-    ContourPath_Rho0[0].Define_GaussLegendrePoints(E_zPlus, E_zeta, 100, 0); 
-    ContourPath_Rho0[1].Define_GaussLegendrePoints(E_zeta,  E_eta, 100, 0); 
-    ContourPath_Rho0[2].Define_GaussLegendrePoints(E_eta, E_contour_left, 100, 1); 
+    ContourPath_Rho0[0].Define_GaussLegendrePoints(E_zPlus, E_zeta, 30, 0); 
+    ContourPath_Rho0[1].Define_GaussLegendrePoints(E_zeta,  E_eta, 30, 0); 
+    ContourPath_Rho0[2].Define_GaussLegendrePoints(E_eta, E_contour_left, 30, 1); 
 
     /* Define_ContourPath_DOS */
-    ComplexType minus_one(-0.8,E_zPlus.imag());
-    ComplexType one(0.8,E_zPlus.imag());
-    ContourPath_DOS.Define_GaussLegendrePoints(minus_one, one, 10,0);
+    ComplexType lower_limit(-0.8,E_zPlus.imag());
+    ComplexType upper_limit(0.8,E_zPlus.imag());
+    ContourPath_DOS.Define_GaussLegendrePoints(lower_limit, upper_limit, 10,0);
     //ContourPath_DOS.Define_GaussLegendrePoints(E_contour_left, -E_contour_left, 400,0);
 
     /* Write Fermi function */
@@ -603,15 +603,15 @@ c_NEGF_Common<T>:: Update_IntegrationPaths ()
 
     /* Define_ContourPath_RhoEq */
     ContourPath_RhoEq.resize(3); 
-    ContourPath_RhoEq[0].Define_GaussLegendrePoints(E_contour_right, E_zeta, 100, 0); 
-    ContourPath_RhoEq[1].Define_GaussLegendrePoints(E_zeta, E_eta, 100, 0); 
-    ContourPath_RhoEq[2].Define_GaussLegendrePoints(E_eta, E_contour_left, 100, 1); 
+    ContourPath_RhoEq[0].Define_GaussLegendrePoints(E_contour_right, E_zeta, 30, 0); 
+    ContourPath_RhoEq[1].Define_GaussLegendrePoints(E_zeta, E_eta, 30, 0); 
+    ContourPath_RhoEq[2].Define_GaussLegendrePoints(E_eta, E_contour_left, 30, 1); 
 
     /* Define_ContourPath_RhoNonEq */
     if(flag_noneq_exists) 
     {
         ContourPath_RhoNonEq.resize(1); 
-        ContourPath_RhoNonEq[0].Define_GaussLegendrePoints(E_contour_right, E_rightmost, 400, 0);
+        ContourPath_RhoNonEq[0].Define_GaussLegendrePoints(E_contour_right, E_rightmost, 100, 0);
     }
 
 }

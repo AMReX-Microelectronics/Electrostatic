@@ -647,10 +647,14 @@ void
 c_Nanostructure<NSType>:: Solve_NEGF ()
 {
 
+    BL_PROFILE_VAR("Other", compute_other);
+
     NSType::AddPotentialToHamiltonian();
     NSType::Update_ContactPotential(); 
     NSType::Define_EnergyLimits();
     NSType::Update_IntegrationPaths();
+
+    BL_PROFILE_VAR_STOP(compute_other);
 
     BL_PROFILE_VAR("Compute_RhoInduced", compute_rho_ind);
 

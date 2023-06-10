@@ -6,7 +6,7 @@ use_transport = 1
 ##################################
 
 ### Carbon nanotube
-my_constants.N_unitcells = 256000
+my_constants.N_unitcells = 128000
 
 my_constants.m_index = 17
 my_constants.n_index = 0
