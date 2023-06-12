@@ -1071,9 +1071,9 @@ c_NEGF_Common<T>:: Compute_InducedCharge ()
 
     h_RhoInduced_loc_data.clear();
 
-    //std::string filename = "Qm_out_" + std::to_string(Broyden_Step) + ".dat";
-    //Write_Table1D(PTD, n_curr_out_data, filename.c_str(), 
-    //              "'axial location / (nm)', 'Induced charge per site / (e)'");
+    std::string filename = "Qm_out_" + std::to_string(Broyden_Step) + ".dat";
+    Write_Table1D(PTD, n_curr_out_data, filename.c_str(), 
+                  "'axial location / (nm)', 'Induced charge per site / (e)'");
 
 }
 

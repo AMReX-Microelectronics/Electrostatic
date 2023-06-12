@@ -1,96 +1,105 @@
 use_electrostatic = 1
 use_transport = 1
 
-#my_constants.CN_z = GO_h + CM_h/2.
-my_constants.CN_z = Lz/2.
-my_constants.CN_x = 0.
-my_constants.CN_y = 0.
-my_constants.GV = 0.
 ##################################
 ##### USER DEFINED CONSTANTS #####
 ##################################
 
-### Physical and Other Constants 
+### Physical and Other Constants ###
+####################################
+
 my_constants.q = 1.602e-19
 my_constants.epsilon_0 = 8.8541878128e-12
 my_constants.tiny = 1e-12
 my_constants.pi = 3.141592653589793
 
-
 my_constants.Nsteps =  1
 my_constants.dt = 0.
 
-### gate oxide
-my_constants.GO_w = Lx
-my_constants.GO_l = Ly
-my_constants.GO_h = CN_z - 10*dz      #smallest dimension that limits n_cell in z.
+my_constants.epsilon_CN     = epsilon_0 #vacuum
+my_constants.epsilon_GO     = 3.9*epsilon_0
+my_constants.epsilon_domain = epsilon_0 #air
+my_constants.epsilon_CM     = 1.7*epsilon_0 #Palladium
 
-my_constants.epsilon_GO = 1*epsilon_0
+my_constants.SV = 0.  #source voltage [V]
+my_constants.DV = 0.  #drain voltage [V]
+my_constants.GV = 0.  #gate voltage [V]
 
-#contact metal
-my_constants.SV =  0  #source voltage [V]
-my_constants.DV = 0. #drain voltage [V]
-my_constants.epsilon_CM = 1.7*epsilon_0 #Palladium
-
-#my_constants.source_lo_y = -Ly/2 + (Ly_offset_unitcells/2 - 2)* L_unitcell
-#my_constants.source_hi_y = -Ly/2  + (Ly_offset_unitcells/2) * L_unitcell + CN_co_l + bond_length/2.
-#
-#my_constants.drain_hi_y  =  Ly/2 - (Ly_offset_unitcells/2 - 2)*L_unitcell
-#my_constants.drain_lo_y =  Ly/2  - (Ly_offset_unitcells/2) * L_unitcell - CN_co_l - bond_length/2.
-#
-my_constants.source_lo_y = -Ly/2 
-my_constants.source_hi_y = source_lo_y + CN_co_l
-
-my_constants.drain_hi_y  =  Ly/2 
-my_constants.drain_lo_y =  drain_hi_y - CN_co_l
-
-my_constants.source_center_y = (source_lo_y + source_hi_y)/2 
-my_constants.drain_center_y = (drain_lo_y + drain_hi_y)/2  
-
-### Carbon nanotube
-my_constants.bond_length = 0.142e-9
-my_constants.N_unitcells = 10
-my_constants.L_unitcell = 3*bond_length #0.426e-9
-
-my_constants.R_CN = 0.6654e-9    #radius
-my_constants.CN_co_l = 2*L_unitcell  #contact length 1 unit cells
-
-my_constants.small_gap = 3.2*dz #0.1e-9 #5*bond_length #0.355e-9, gap between nanotube and the contacts
-
-my_constants.epsilon_CN = epsilon_0 #vacuum
-
-### Quantum dot
-my_constants.charge_density_surr = 0.0 #surrounding charge density
-
-#my_constants.charge_QD = 0.
-my_constants.charge_QD = q
-my_constants.QD_x = 0.
-my_constants.QD_y = 0.
-my_constants.QD_z = GO_h + 2*R_CN + 1e-9
-
-my_constants.sigma_QD = 0.2e-9 #used for Gaussian spreading
-
-# charge density without Gaussian spreading
-my_constants.R_QD = 0.2e-9
-my_constants.charge_density_QD = charge_QD / ((4./3)*pi*R_QD**3)
-
-### Total domain dimensions
-my_constants.D_CN_unitcell = 1          #ceil(R_CN*2./L_unitcell) #2
-
+### Total domain dimensions ###
+###############################
 my_constants.Ly_offset_unitcells = 0
-my_constants.Lx = D_CN_unitcell*8*L_unitcell 
-my_constants.Ly = (N_unitcells + Ly_offset_unitcells)*L_unitcell 
-my_constants.Lz = D_CN_unitcell*16*L_unitcell 
 
-my_constants.nx = 2*7*D_CN_unitcell*4  #224, dx= 0.0355 nm
-my_constants.ny = 2*7*(N_unitcells+Ly_offset_unitcells)     #28,  dy= 0.071 nm
-my_constants.nz = 2*7*D_CN_unitcell*16   #224, dz= 0.0355 nm
+my_constants.cells_per_unitcell = 14 #cell_size = 0.030428571 nm
+
+my_constants.unitcells_per_D_CN = ceil((R_CN*2)/(L_unitcell)) #unitcells per diameter
+
+my_constants.width_factor  = 5
+my_constants.height_factor = 5
+
+my_constants.ny = (N_unitcells + Ly_offset_unitcells) * cells_per_unitcell  
+my_constants.nx =  width_factor  * unitcells_per_D_CN * cells_per_unitcell  
+my_constants.nz =  height_factor * unitcells_per_D_CN * cells_per_unitcell  
+
+my_constants.Ly = (N_unitcells + Ly_offset_unitcells) * L_unitcell 
+my_constants.Lx = width_factor  * unitcells_per_D_CN  * L_unitcell 
+my_constants.Lz = height_factor * unitcells_per_D_CN  * L_unitcell
+
 
 my_constants.dx = Lx/nx
 my_constants.dy = Ly/ny
 my_constants.dz = Lz/nz
 
-my_constants.epsilon_domain = epsilon_0 #air
+### Carbon nanotube ###
+#######################
+
+my_constants.m_index = 17
+my_constants.n_index = 0
+
+my_constants.N_unitcells = 18 
+my_constants.Overlap_unitcells = 4
+#channel unitcells: N_unitcells - 2*Overlap_unitcells = 43 - 2*10 = 23, i.e. ~10 nm tube
+
+my_constants.bond_length = 0.142e-9
+my_constants.small_gap = 0.3e-9 #gap between nanotube and the contacts
+
+my_constants.CN_z = 0.
+my_constants.CN_x = 0.
+my_constants.CN_y = 0.
+
+my_constants.L_unitcell = 3*bond_length #0.426e-9
+my_constants.R_CN = bond_length*sqrt(3.*(m_index*m_index + n_index*n_index + m_index*n_index))/(2*pi)  #radius
+my_constants.CN_co_l = Overlap_unitcells*L_unitcell  #total contact overlap length on both sides 
+
+### contact metal ###
+#####################
+
+my_constants.source_lo_y = -Ly/2  - dy/5.
+my_constants.source_hi_y = source_lo_y + CN_co_l + dy/5.
+
+my_constants.drain_hi_y  =  Ly/2 + dy/5.
+my_constants.drain_lo_y =  drain_hi_y - CN_co_l - dy/5.
+
+my_constants.source_center_y = (source_lo_y + source_hi_y)/2 
+my_constants.drain_center_y = (drain_lo_y + drain_hi_y)/2  
+
+#my_constants.CM_thickness = G_inner_rad - (R_CN + small_gap) - 8*dz
+my_constants.CM_thickness = 10*dz
+
+### gate ###
+############
+
+my_constants.G_inner_rad = 3.e-9 #Gate_InnerRadius
+my_constants.G_thickness = 10*dz
+
+### gate oxide ###
+##################
+
+my_constants.GO_thickness = G_inner_rad - (R_CN + small_gap)
+
+### oxide-nanotube gap ###
+##########################
+
+my_constants.length_scale_lattice_const = 8.5e-12
 
 ##################################################
 ###### TIME DEPENDENT SIMULATION PROPERTIES ######
@@ -100,7 +109,7 @@ timestep = dt
 steps = Nsteps
 
 ####################################
-###### EMBEDDED BOUNDARIES ######
+###### EMBEDDED BOUNDARIES #########
 ####################################
 
 domain.embedded_boundary = 1  #options: 1=true, 0=false (default)
@@ -111,7 +120,7 @@ ebgeom.specify_inhomo_dir = 1
 
 Source.geom_type    = cntfet_contact_cyl
 Source.inner_radius = R_CN + small_gap
-Source.thickness    = 5*dz
+Source.thickness    = CM_thickness
 Source.center       = CN_x source_center_y CN_z
 Source.height       = source_hi_y - source_lo_y
 Source.direction    = 1
@@ -119,15 +128,15 @@ Source.surf_soln    = SV
 
 Drain.geom_type     = cntfet_contact_cyl
 Drain.inner_radius  = R_CN + small_gap
-Drain.thickness     = 5*dz
+Drain.thickness     = CM_thickness
 Drain.center        = CN_x drain_center_y CN_z
 Drain.height        = drain_hi_y - drain_lo_y
 Drain.direction     = 1
 Drain.surf_soln     = DV 
 
 Gate.geom_type      = cntfet_contact_cyl
-Gate.inner_radius   = R_CN + small_gap + 12*dz
-Gate.thickness      = 5*dz
+Gate.inner_radius   = G_inner_rad
+Gate.thickness      = G_thickness
 Gate.center         = CN_x CN_y CN_z
 Gate.height         = drain_lo_y - source_hi_y
 Gate.direction      = 1
@@ -140,8 +149,8 @@ domain.n_cell = nx ny nz
 domain.max_grid_size = nx ny nz
 domain.blocking_factor = nx ny nz
 
-domain.prob_lo = -Lx/2. -Ly/2.  0.
-domain.prob_hi =  Lx/2.  Ly/2.  Lz
+domain.prob_lo = -Lx/2. -Ly/2.  -Lz/2.
+domain.prob_hi =  Lx/2.  Ly/2.   Lz/2.
 
 domain.is_periodic = 0 0 0
 
@@ -150,10 +159,8 @@ domain.coord_sys = cartesian
 #################################
 ###### BOUNDARY CONDITIONS ######
 #################################
-#boundary.hi = neu(0.) neu(0) neu(0.)
-#boundary.lo = neu(0.) neu(0) neu(0.)
-boundary.hi = dir(0.) neu(0) dir(0.)
-boundary.lo = dir(0.) neu(0) dir(0.)
+boundary.hi = neu(0.) neu(0) neu(0.)
+boundary.lo = neu(0.) neu(0) neu(0.)
 
 #boundary.GV_function = "GV_min + (GV_max-GV_min) * t" #V
 
@@ -165,10 +172,17 @@ macroscopic.ghostcells_for_fields = alpha.0 epsilon.1 charge_density.1 phi.1  at
 
 macroscopic.alpha = 0.
 macroscopic.charge_density = 0.
-#macroscopic.charge_density_function = "charge_density_surr + charge_QD * (1./(sqrt(2*pi)*sigma_QD)**3)* exp(-1*( (x-QD_x)**2 + (y-QD_y)**2 + (z-QD_z)**2 ) / (2*sigma_QD**2) )"
 
-#macroscopic.epsilon_function = "epsilon_0 + (epsilon_GO - epsilon_0)    *(z >= 0.)   *(z < GO_h)"
-macroscopic.epsilon_function = "epsilon_0"
+macroscopic.epsilon_function = 
+" epsilon_0 
++ (epsilon_GO - epsilon_0) 
+  * (sqrt( (x-CN_x)**2 + (z-CN_z)**2 )  < G_inner_rad) 
+  * (sqrt( (x-CN_x)**2 + (z-CN_z)**2 )  >= (R_CN + small_gap))  
+  * (y > source_hi_y) * (y < drain_lo_y)"
+#+ (((epsilon_GO + 1) + (epsilon_GO - 1) * tanh( (sqrt( (x-CN_x)**2 + (z-CN_z)**2 ) - R_CN - small_gap) / length_scale_lattice_const))   - epsilon_0 )
+#  * ( sqrt( (x-CN_x)**2 + (z-CN_z)**2 )  <= (R_CN + small_gap) ) 
+#  * ( sqrt( (x-CN_x)**2 + (z-CN_z)**2 )  > R_CN  )"
+
 macroscopic.phi = 0.
 macroscopic.atom_locations = 0.
 
@@ -183,8 +197,7 @@ macroscopic.atom_locations = 0.
 ####################
 
 plot.folder_name = all_around_gate
-plot.fields_to_plot = epsilon.1 charge_density.1 phi.1 atom_locations
-#vecField 
+plot.fields_to_plot = epsilon.1 charge_density.1 phi.1 atom_locations #vecField 
 plot.write_after_init = 1
 plot.write_interval = 1
 plot.rawfield_write_interval = 1000000
@@ -202,7 +215,7 @@ Surf1.radius = R_CN
 Surf1.axial_direction = 1
 Surf1.theta_reference_direction = 0
 Surf1.has_fluid_inside = 0
-Surf1.fields_to_plot = phi charge_density atom_locations
+Surf1.fields_to_plot = phi charge_density
 
 ####################################
 ###### MLMG SOLVER PROPERTIES ######
@@ -225,25 +238,24 @@ mlmg.relative_tolerance=1e-10
 ###### NEGF #####
 #################
 
-#nanostructure names
+#NS stands for nanostructure
 transport.NS_names = cnt 
-transport.use_selfconsistent_potential = 0
 transport.use_negf = 1
 transport.NS_gather_field = phi            
 transport.NS_deposit_field  = charge_density 
-transport.NS_initial_deposit_value  = 1e-4
-transport.Broyden_fraction = 1e-3
-transport.Broyden_max_norm = 1.e-5
+transport.NS_initial_deposit_value  = 1e-2
+transport.Broyden_fraction = 1e-1
+transport.Broyden_max_norm = 1.e-6
 
 cnt.type = CNT
 cnt.type_id = 17 0     #m n
 cnt.acc = bond_length
-cnt.gamma = 2.5        #coupling strength (eV)
+cnt.gamma = 2.5       #coupling strength (eV)
 cnt.num_unitcells = N_unitcells
 cnt.offset = CN_x CN_y CN_z
 cnt.contact_potential = SV DV
 
-cnt.E_f = 0.3
+cnt.E_f = -0.3
 cnt.E_valence_min = -10
 cnt.E_pole_max    = 3
 #####################################
