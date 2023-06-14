@@ -175,7 +175,6 @@ public:
     amrex::Real Fermi_tail_factor = 20.;
 
     amrex::Real Contact_Temperature[NUM_CONTACTS] = {298., 298.};
-    amrex::Real Contact_Potential[NUM_CONTACTS] = {0., 0.};
 
     int flag_impose_potential = 0;
     std::string potential_profile_type_str = "constant";

@@ -21,9 +21,11 @@ my_constants.epsilon_GO     = 3.9*epsilon_0
 my_constants.epsilon_domain = epsilon_0 #air
 my_constants.epsilon_CM     = 1.7*epsilon_0 #Palladium
 
-my_constants.SV = 0.  #source voltage [V]
-my_constants.DV = 0.  #drain voltage [V]
-my_constants.GV = 1.  #gate voltage [V]
+my_constants.SV = 0.      #source voltage [V]
+my_constants.Vds = -0.1   #Drain-Source voltage [V]
+my_constants.Vgs = 1.     #Gate-Source voltage [V]
+
+my_constants.Ef = -1.       #Palladium Contact Fermi level [eV] 
 
 ### Total domain dimensions ###
 ###############################
@@ -132,7 +134,7 @@ Drain.thickness     = CM_thickness
 Drain.center        = CN_x drain_center_y CN_z
 Drain.height        = drain_hi_y - drain_lo_y
 Drain.direction     = 1
-Drain.surf_soln     = DV 
+Drain.surf_soln     = Vds + SV 
 
 Gate.geom_type      = cntfet_contact_cyl
 Gate.inner_radius   = G_inner_rad
@@ -140,7 +142,7 @@ Gate.thickness      = G_thickness
 Gate.center         = CN_x CN_y CN_z
 Gate.height         = drain_lo_y - source_hi_y
 Gate.direction      = 1
-Gate.surf_soln      = GV 
+Gate.surf_soln      = Vgs + SV
 
 #################################
 ###### GEOMETRY PROPERTIES ######
@@ -254,9 +256,10 @@ cnt.acc = bond_length
 cnt.gamma = 2.5       #coupling strength (eV)
 cnt.num_unitcells = N_unitcells
 cnt.offset = CN_x CN_y CN_z
-cnt.contact_potential = SV DV
+cnt.contact_electrochemical_potentials = (Ef - Vds/2.) (Ef + Vds/2.)
+cnt.contact_temperatures = 298. 298.
 
-cnt.E_f = -1.
+cnt.contact_Fermi_level = Ef
 cnt.E_valence_min = -10
 cnt.E_pole_max    = 3
 #####################################

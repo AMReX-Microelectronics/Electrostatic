@@ -70,10 +70,6 @@ c_CNT:: ReadNanostructureProperties ()
     amrex::Print() << "#####* atoms_per_ring: " << atoms_per_ring << "\n";
 
 
-    E_f = 0.;
-    queryWithParser(pp_ns,"E_f", E_f); 
-    amrex::Print() << "#####* Fermi level, E_f (eV): " << E_f << "\n";
-
     E_valence_min = -10.; 
     queryWithParser(pp_ns,"E_valence_min", E_valence_min); 
     amrex::Print() << "#####* valence_band_lower_limit, E_valence_min (eV): " << E_valence_min << "\n";

@@ -109,20 +109,23 @@ c_NEGF_Common<T>:: ReadNanostructureProperties ()
     }
 
     amrex::Vector<amrex::Real> vec_Temperature;
-    auto is_specified = queryArrWithParser(pp_ns, "contact_temperature", vec_Temperature, 0, NUM_CONTACTS);
+    auto is_specified = queryArrWithParser(pp_ns, "contact_temperatures", vec_Temperature, 0, NUM_CONTACTS);
     if(is_specified) {
         for(int c=0; c<NUM_CONTACTS; ++c) {
             Contact_Temperature[c] = vec_Temperature[c];
         }
     }
 
-    amrex::Vector<amrex::Real> vec_contact_potential;
-    is_specified = queryArrWithParser(pp_ns, "contact_potential", vec_contact_potential, 0, NUM_CONTACTS);
+    amrex::Vector<amrex::Real> vec_mu;
+    is_specified = queryArrWithParser(pp_ns, "contact_electrochemical_potentials", vec_mu, 0, NUM_CONTACTS);
     if(is_specified) {
         for(int c=0; c<NUM_CONTACTS; ++c) {
-            Contact_Potential[c] = vec_contact_potential[c];
+            mu_contact[c] = vec_mu[c];
         }
     }
+
+    E_f = 0.;
+    queryWithParser(pp_ns,"contact_Fermi_level", E_f);
 
     pp_ns.query("impose_potential", flag_impose_potential);
     if(flag_impose_potential) 
@@ -141,14 +144,15 @@ c_NEGF_Common<T>:: ReadNanostructureProperties ()
     amrex::Print() << "#####* num_atoms_to_avg_over: "    << num_atoms_to_avg_over      << "\n";
     amrex::Print() << "#####* primary_transport_dir: "    << primary_transport_dir      << "\n";
     amrex::Print() << "#####* Broyden_fraction: "         << Broyden_fraction           << "\n";
-    amrex::Print() << "#####* Contact_Temperature: \n";
+    amrex::Print() << "#####* Contact_Temperatures, T / [K]: \n";
     for(int c=0; c<NUM_CONTACTS; ++c) {
-        amrex::Print() << "#####*   contact, temperature (K): " << c << "  " << Contact_Temperature[c] <<"\n";
+        amrex::Print() << "#####*   contact, T: " << c << "  " << Contact_Temperature[c] <<"\n";
     }
-    amrex::Print() << "#####* Contact_Potential: \n";
+    amrex::Print() << "#####* Contact_Electrochemical_Potentials, mu / [eV]: \n";
     for(int c=0; c<NUM_CONTACTS; ++c) {
-        amrex::Print() << "#####*   contact, potential (V): " << c << "  " << Contact_Potential[c] <<"\n";
+        amrex::Print() << "#####*   contact, mu: " << c << "  " << mu_contact[c] <<"\n";
     }
+    amrex::Print() << "#####* contact_Fermi_level, E_f / [eV]: " << E_f << "\n";
     amrex::Print() << "##### flag_impose_potential: " << flag_impose_potential << "\n";
     amrex::Print() << "##### potential_profile_type: " << potential_profile_type_str << "\n";
 
@@ -241,25 +245,32 @@ void
 c_NEGF_Common<T>:: Define_PotentialProfile()
 {
 
-    amrex::Real U1 = -Contact_Potential[0];
-    amrex::Real U2 = -Contact_Potential[1];
 
     switch(map_PotentialProfile[potential_profile_type_str])
     {
         case s_Potential_Profile::Type::CONSTANT:
         {
+            amrex::ParmParse pp_ns(name);
+            amrex::Real V_const = 0;
+            getWithParser(pp_ns,"applied_voltage", V_const);
+            amrex::Print() << "#####* For Constant Potential Profile, applied voltage: " << V_const << "\n";
+
             for (int l=0; l<num_field_sites; ++l)
             {
-                Potential[l]   = U1;
+                Potential[l]   = -V_const;
             }
             break;
         }
         case s_Potential_Profile::Type::LINEAR:
         {
-		
+            amrex::ParmParse pp_ns(name);
+	    amrex::Vector<amrex::Real> vec_V;
+            getArrWithParser(pp_ns, "applied_voltage_limits", vec_V, 0, NUM_CONTACTS);
+
+            amrex::Print() << "#####* For Linear Potential Profile, applied_voltage_limits: " << vec_V[0] << "  " << vec_V[1] << "\n";
             for (int l=0; l<num_field_sites; ++l)
             {
-                Potential[l]   = U1 + (static_cast<amrex::Real>(l)/(num_field_sites-1.))*(U2-U1);
+                Potential[l]   = -vec_V[0] + (static_cast<amrex::Real>(l)/(num_field_sites-1.))*(vec_V[0] - vec_V[1]);
             }
             break;
         }
@@ -462,8 +473,6 @@ c_NEGF_Common<T>:: Define_EnergyLimits ()
 {
     for (int c=0; c<NUM_CONTACTS; ++c)
     {
-        //mu_contact[c] = E_f + U_contact[c];
-        mu_contact[c] = E_f ;
         kT_contact[c] = PhysConst::kb_eVperK*Contact_Temperature[c]; /*set Temp in the input*/
     }
 
@@ -500,7 +509,6 @@ c_NEGF_Common<T>:: Define_EnergyLimits ()
     E_zPlus = val;
     E_contour_left  = E_valence_min + E_zPlus; /*set in the input*/
     E_rightmost = mu_max + Fermi_tail_factor*kT_max + E_zPlus;
-    //E_rightmost = E_f + Fermi_tail_factor*kT_max + E_zPlus;
 
     if(flag_noneq_exists)
     {
@@ -522,9 +530,7 @@ c_NEGF_Common<T>:: Define_EnergyLimits ()
     }
     ComplexType val2(E_contour_right.real(), 2*num_enclosed_poles*MathConst::pi*kT_max);
     E_zeta = val2;
-    //E_eta =  E_zeta - 2*Fermi_tail_factor*kT_max;
     ComplexType val3(mu_max - Fermi_tail_factor*kT_max, E_zeta.imag());
-    //ComplexType val3(E_f - Fermi_tail_factor*kT_max, E_zeta.imag());
     E_eta =  val3;
 
     //amrex::Print() << "U_contact: ";
@@ -2426,6 +2432,272 @@ c_NEGF_Common<T>::Print_Table2D_loc(const U& Tab2D_data)
     std::cout << "]\n";
 }
 
+
+//template<typename T>
+//void 
+//c_NEGF_Common<T>:: Compute_Current ()
+//{
+//
+//    auto const& h_minusHa_loc  = h_minusHa_loc_data.table();
+//    auto const& h_Hb_loc  = h_Hb_loc_data.table();
+//    auto const& h_Hc_loc  = h_Hc_loc_data.table();
+//    auto const& h_tau     = h_tau_glo_data.table();
+//
+//    Allocate_TemporaryArraysForGFComputation();
+//
+//    auto const& h_Alpha_loc = h_Alpha_loc_data.table();
+//    auto const& h_Alpha_glo = h_Alpha_glo_data.table();
+//    auto const& h_Xtil_glo = h_Xtil_glo_data.table();
+//    auto const& h_Ytil_glo = h_Ytil_glo_data.table();
+//    auto const& h_X_glo = h_X_glo_data.table();
+//    auto const& h_Y_glo = h_Y_glo_data.table();
+//    auto const& h_X_loc = h_X_loc_data.table();
+//    auto const& h_Y_loc = h_Y_loc_data.table();
+//    auto const& h_Alpha_contact = h_Alpha_contact_data.table();
+//    auto const& h_Y_contact = h_Y_contact_data.table();
+//    auto const& h_X_contact = h_X_contact_data.table();
+//    auto const& h_Sigma_contact = h_Sigma_contact_data.table();
+//    auto const& h_Fermi_contact = h_Fermi_contact_data.table();
+//
+//    auto const& h_RhoNonEq_loc  = h_RhoNonEq_loc_data.table();
+//    ComplexType zero(0.,0.); 
+//    SetVal_Table1D(h_RhoNonEq_loc_data,zero);
+//
+//    #ifdef AMREX_USE_GPU
+//    auto const& RhoNonEq_loc    = d_RhoNonEq_loc_data.table();
+//    auto const& GR_loc          = d_GR_loc_data.table();
+//    auto const& A_loc           = d_A_loc_data.table();
+//    /*constant references*/
+//    auto const& Alpha           = d_Alpha_loc_data.const_table();
+//    auto const& Xtil_glo        = d_Xtil_glo_data.const_table();
+//    auto const& Ytil_glo        = d_Ytil_glo_data.const_table();
+//    auto const& X               = d_X_loc_data.const_table();
+//    auto const& Y               = d_Y_loc_data.const_table();
+//
+//    auto const& Alpha_contact   = d_Alpha_contact_data.const_table();
+//    auto const& X_contact       = d_X_contact_data.const_table();
+//    auto const& Y_contact       = d_Y_contact_data.const_table();
+//    auto const& Sigma_contact   = d_Sigma_contact_data.const_table();
+//    auto const& Fermi_contact   = d_Fermi_contact_data.const_table();
+//
+//    auto& degen_vec             = block_degen_gpuvec;
+//
+//    d_RhoNonEq_loc_data.copy(h_RhoNonEq_loc_data);
+//
+//    #else
+//    auto const& RhoNonEq_loc    = h_RhoNonEq_loc_data.table();
+//    auto const& GR_loc          = h_GR_loc_data.table();
+//    auto const& A_loc           = h_A_loc_data.table();
+//    /*constant references*/
+//    auto const& Alpha           = h_Alpha_loc_data.const_table();
+//    auto const& Xtil_glo        = h_Xtil_glo_data.const_table();
+//    auto const& Ytil_glo        = h_Ytil_glo_data.const_table();
+//    auto const& X               = h_X_loc_data.const_table();
+//    auto const& Y               = h_Y_loc_data.const_table();
+//
+//    auto const& Alpha_contact   = h_Alpha_contact_data.const_table();
+//    auto const& X_contact       = h_X_contact_data.const_table();
+//    auto const& Y_contact       = h_Y_contact_data.const_table();
+//    auto const& Sigma_contact   = h_Sigma_contact_data.const_table();
+//    auto const& Fermi_contact   = h_Fermi_contact_data.const_table();
+//
+//    auto& degen_vec             = block_degen_vec;
+//    #endif
+//  
+//    for(int p=0; p < ContourPath_RhoNonEq.size(); ++p) 
+//    {
+//        for(int e=0; e < ContourPath_RhoNonEq[p].num_pts; ++e) 
+//        {
+//            
+//            ComplexType E = ContourPath_RhoNonEq[p].E_vec[e];
+//            ComplexType weight = ContourPath_RhoNonEq[p].weight_vec[e];
+//            ComplexType mul_factor = ContourPath_RhoNonEq[p].mul_factor_vec[e];
+//
+//
+//            for(int n=0; n<blkCol_size_loc; ++n)
+//            {
+//                h_Alpha_loc(n) = E + h_minusHa_loc(n); 
+//                /*+ because h_minusHa is defined previously as -(H0+U)*/
+//            }
+//
+//            get_Sigma_at_contacts(h_Sigma_contact_data, E);
+//
+//            for (int c=0; c<NUM_CONTACTS; ++c)
+//            {
+//                int n_glo = global_contact_index[c];
+//                int n = n_glo - vec_cumu_blkCol_size[my_rank];
+//
+//                if(n_glo >= vec_cumu_blkCol_size[my_rank] && n_glo < vec_cumu_blkCol_size[my_rank+1])
+//                {
+//                    h_Alpha_loc(n) = h_Alpha_loc(n) - h_Sigma_contact(c);
+//                }
+//                h_Fermi_contact(c) = FermiFunction(E-mu_contact[c], kT_contact[c]);
+//            }
+//
+//            /*MPI_Allgather*/
+//            MPI_Allgatherv(&h_Alpha_loc(0),
+//                            blkCol_size_loc,
+//                            MPI_BlkType,
+//                           &h_Alpha_glo(0),
+//                            MPI_recv_count.data(),
+//                            MPI_disp.data(),
+//                            MPI_BlkType,
+//                            ParallelDescriptor::Communicator());
+//
+//            for (int c=0; c<NUM_CONTACTS; ++c)
+//            {
+//                int n_glo = global_contact_index[c];
+//                h_Alpha_contact(c) = h_Alpha_glo(n_glo);
+//            }
+//
+//            h_Y_glo(0) = 0;
+//            for (int n = 1; n < Hsize_glo; ++n)
+//            {
+//            int p = (n-1)%offDiag_repeatBlkSize;
+//                h_Ytil_glo(n) = h_Hc_loc(p) / ( h_Alpha_glo(n-1) - h_Y_glo(n-1) );
+//                h_Y_glo(n) = h_Hb_loc(p) * h_Ytil_glo(n);
+//            }
+//
+//            h_X_glo(Hsize_glo-1) = 0;
+//            for (int n = Hsize_glo-2; n > -1; n--)
+//            {
+//            int p = n%offDiag_repeatBlkSize;
+//                h_Xtil_glo(n) = h_Hb_loc(p)/(h_Alpha_glo(n+1) - h_X_glo(n+1));
+//                h_X_glo(n) = h_Hc_loc(p)*h_Xtil_glo(n);
+//            }
+//
+//            for (int c = 0; c < blkCol_size_loc; ++c)
+//            {
+//                int n = c + vec_cumu_blkCol_size[my_rank];
+//                h_Y_loc(c) = h_Y_glo(n);
+//                h_X_loc(c) = h_X_glo(n);
+//            }
+// 
+//            for (int c = 0; c < NUM_CONTACTS; ++c)
+//            {
+//                int n = global_contact_index[c];
+//                h_Y_contact(c) = h_Y_glo(n);
+//                h_X_contact(c) = h_X_glo(n);
+//            }
+//
+//            #ifdef AMREX_USE_GPU
+//            d_Alpha_loc_data.copy(h_Alpha_loc_data);
+//            d_Xtil_glo_data.copy(h_Xtil_glo_data);
+//            d_Ytil_glo_data.copy(h_Ytil_glo_data);
+//            d_X_loc_data.copy(h_X_loc_data);
+//            d_Y_loc_data.copy(h_Y_loc_data);
+//
+//            d_Alpha_contact_data.copy(h_Alpha_contact_data);
+//            d_X_contact_data.copy(h_X_contact_data);
+//            d_Y_contact_data.copy(h_Y_contact_data);
+//            d_Sigma_contact_data.copy(h_Sigma_contact_data);
+//            d_Fermi_contact_data.copy(h_Fermi_contact_data);
+//
+//            amrex::Gpu::streamSynchronize();
+//            #endif        
+//
+//    	    /*following is for lambda capture*/
+//            int cumulative_columns = vec_cumu_blkCol_size[my_rank];
+//            int Hsize = Hsize_glo;  
+//     	    auto& GC_ID = global_contact_index;
+//    	    auto& CT_ID = contact_transmission_index;
+//            auto* degen_vec_ptr = degen_vec.dataPtr();
+//
+//	    amrex::Real const_multiplier = -1*spin_degen/(2*MathConst::pi);
+//
+//            amrex::ParallelFor(blkCol_size_loc, [=] AMREX_GPU_DEVICE (int n) noexcept
+//            {
+//                int n_glo = n + cumulative_columns; /*global column number*/
+//                ComplexType one(1., 0.);
+//                ComplexType minus_one(-1., 0.);
+//	            ComplexType imag(0., 1.);
+//
+//                GR_loc(n_glo,n) =  one/(Alpha(n) - X(n) - Y(n));
+//
+//                for (int m = n_glo; m > 0; m--)
+//                {
+//                    GR_loc(m-1,n) =  -1*Ytil_glo(m)*GR_loc(m,n);
+//                }
+//                for (int m = n_glo; m < Hsize-1; ++m)
+//                {
+//                    GR_loc(m+1,n) = -1*Xtil_glo(m)*GR_loc(m,n);
+//                }
+//
+//                MatrixBlock<T> A_tk[NUM_CONTACTS];
+//                MatrixBlock<T> Gamma[NUM_CONTACTS];
+//                MatrixBlock<T> AnF_sum;
+//                AnF_sum = 0.;
+//                for (int m=0; m < Hsize; ++m)
+//                {
+//                    A_loc(m, n) = 0.;
+//                }
+//                for (int k=0; k < NUM_CONTACTS; ++k)
+//                {
+//                    int k_glo = GC_ID[k];
+//                    MatrixBlock<T> G_contact_kk =  
+//                                   one/(Alpha_contact(k) - X_contact(k) - Y_contact(k));
+//
+//                    MatrixBlock<T> temp = G_contact_kk;
+//                    for (int m = k_glo; m < n_glo; ++m)
+//                    {
+//                        temp = -1*Xtil_glo(m)*temp;
+//                    }
+//                    for (int m = k_glo; m > n_glo; m--)
+//                    {
+//                        temp = -1*Ytil_glo(m)*temp;
+//                    }
+//                    MatrixBlock<T> G_contact_nk = temp;
+//
+//                    Gamma[k] = imag*(Sigma_contact(k) - Sigma_contact(k).Dagger());
+//
+//                    MatrixBlock<T> A_nn  = G_contact_nk * Gamma[k] *  G_contact_nk.Dagger();
+//                    MatrixBlock<T> A_kn  = G_contact_kk * Gamma[k] *  G_contact_nk.Dagger();
+//
+//                    A_loc(k_glo, n) = A_loc(k_glo, n) + A_kn;
+//                    for (int m = k_glo+1; m < Hsize; ++m)
+//                    {
+//                        A_kn = -1*Xtil_glo(m-1)*A_kn;
+//                        A_loc(m,n) = A_loc(m,n) + A_kn;
+//                    }
+//                    for (int m = k_glo-1; m >= 0; m--)
+//                    {
+//                        A_kn = -1*Ytil_glo(m+1)*A_kn;
+//                        A_loc(m,n) = A_loc(m,n) + A_kn;
+//                    }
+//                    A_tk[k] = 0.;
+//                    if(n_glo == CT_ID[k])
+//                    {
+//                        A_tk[k] = A_kn;
+//                    }
+//
+//                    AnF_sum = AnF_sum + A_nn*Fermi_contact(k);
+//                }
+//
+//                /*RhoNonEq*/
+//                MatrixBlock<T> RhoNonEq_n = const_multiplier*AnF_sum*weight*mul_factor;
+//                RhoNonEq_loc(n) = RhoNonEq_loc(n) + RhoNonEq_n.DiagMult(degen_vec_ptr);
+//
+//            }); 
+//            #ifdef AMREX_USE_GPU
+//            amrex::Gpu::streamSynchronize();
+//            #endif
+//        } 
+//    }
+//
+//    #ifdef AMREX_USE_GPU
+//    h_RhoNonEq_loc_data.copy(d_RhoNonEq_loc_data); 
+//    amrex::Gpu::streamSynchronize();
+//    #endif
+//
+//    //amrex::Print() << "RhoNonEq_loc: \n";
+//    //for (int n=0; n <blkCol_size_loc; ++n) 
+//    //{
+//    //    amrex::Print() << n << "  " <<std::setprecision(3)<< h_RhoNonEq_loc(n)  << "\n";
+//    //}
+//
+//    Deallocate_TemporaryArraysForGFComputation();
+//
+//}
 //template<typename T>
 //void 
 //c_NEGF_Common<T>::DeallocateArrays () 
