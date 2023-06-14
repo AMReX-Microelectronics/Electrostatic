@@ -23,7 +23,7 @@ my_constants.epsilon_CM     = 1.7*epsilon_0 #Palladium
 
 my_constants.SV = 0.  #source voltage [V]
 my_constants.DV = 0.  #drain voltage [V]
-my_constants.GV = 0.  #gate voltage [V]
+my_constants.GV = 1.  #gate voltage [V]
 
 ### Total domain dimensions ###
 ###############################
@@ -55,8 +55,8 @@ my_constants.dz = Lz/nz
 my_constants.m_index = 17
 my_constants.n_index = 0
 
-my_constants.N_unitcells = 18 
-my_constants.Overlap_unitcells = 4
+my_constants.N_unitcells = 66 
+my_constants.Overlap_unitcells = 10 #9.788
 #channel unitcells: N_unitcells - 2*Overlap_unitcells = 43 - 2*10 = 23, i.e. ~10 nm tube
 
 my_constants.bond_length = 0.142e-9
@@ -74,10 +74,10 @@ my_constants.CN_co_l = Overlap_unitcells*L_unitcell  #total contact overlap leng
 #####################
 
 my_constants.source_lo_y = -Ly/2  - dy/5.
-my_constants.source_hi_y = source_lo_y + CN_co_l + dy/5.
+my_constants.source_hi_y = source_lo_y + CN_co_l 
 
 my_constants.drain_hi_y  =  Ly/2 + dy/5.
-my_constants.drain_lo_y =  drain_hi_y - CN_co_l - dy/5.
+my_constants.drain_lo_y =  drain_hi_y - CN_co_l 
 
 my_constants.source_center_y = (source_lo_y + source_hi_y)/2 
 my_constants.drain_center_y = (drain_lo_y + drain_hi_y)/2  
@@ -89,7 +89,7 @@ my_constants.CM_thickness = 10*dz
 ############
 
 my_constants.G_inner_rad = 3.e-9 #Gate_InnerRadius
-my_constants.G_thickness = 10*dz
+my_constants.G_thickness = 30*dz
 
 ### gate oxide ###
 ##################
@@ -180,9 +180,10 @@ macroscopic.epsilon_function =
   * (sqrt( (x-CN_x)**2 + (z-CN_z)**2 )  >= (R_CN + small_gap))  
   * (y > source_hi_y) * (y < drain_lo_y)"
 #+ (((epsilon_GO + 1) + (epsilon_GO - 1) * tanh( (sqrt( (x-CN_x)**2 + (z-CN_z)**2 ) - R_CN - small_gap) / length_scale_lattice_const))   - epsilon_0 )
-#  * ( sqrt( (x-CN_x)**2 + (z-CN_z)**2 )  <= (R_CN + small_gap) ) 
-#  * ( sqrt( (x-CN_x)**2 + (z-CN_z)**2 )  > R_CN  )"
-
+#  * ( sqrt( (x-CN_x)**2 + (z-CN_z)**2 )  < (R_CN + small_gap) )
+#  * ( sqrt( (x-CN_x)**2 + (z-CN_z)**2 )  >= R_CN  ) 
+#  * ( y > source_hi_y + dy) 
+#  * ( y < drain_lo_y  - dy)"
 macroscopic.phi = 0.
 macroscopic.atom_locations = 0.
 
@@ -255,7 +256,7 @@ cnt.num_unitcells = N_unitcells
 cnt.offset = CN_x CN_y CN_z
 cnt.contact_potential = SV DV
 
-cnt.E_f = -0.3
+cnt.E_f = -1.
 cnt.E_valence_min = -10
 cnt.E_pole_max    = 3
 #####################################
