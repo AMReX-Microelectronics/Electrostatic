@@ -104,7 +104,7 @@ public:
     BlkTable1D  h_GR_atPoles_loc_data;
     BlkTable1D  h_RhoEq_loc_data;
     BlkTable1D  h_RhoNonEq_loc_data;
-    BlkTable1D h_Current_root_data;
+    RealTable1D h_Current_root_data;
 
 
     /*Tables required to compute Green and Spectral Functions */

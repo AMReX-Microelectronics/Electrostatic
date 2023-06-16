@@ -406,7 +406,7 @@ c_NEGF_Common<T>::AllocateArrays ()
     if(ParallelDescriptor::IOProcessor())
     {
         h_Current_root_data.resize({0},{NUM_CONTACTS},The_Pinned_Arena());
-        SetVal_Table1D(h_Current_root_data,zero);
+        SetVal_Table1D(h_Current_root_data,0.);
     }
 
     #if AMREX_USE_GPU
@@ -2474,15 +2474,15 @@ c_NEGF_Common<T>:: Compute_Current ()
 
     Allocate_TemporaryArraysForGFComputation();
 
-    BlkTable1D h_Current_loc_data({0},{NUM_CONTACTS},The_Pinned_Arena());
-    ComplexType zero(0.,0.);
-    SetVal_Table1D(h_Current_loc_data,zero);
+    RealTable1D h_Current_loc_data({0},{NUM_CONTACTS},The_Pinned_Arena());
+    //ComplexType zero(0.,0.);
+    SetVal_Table1D(h_Current_loc_data,0.);
     auto const& h_Current_loc   = h_Current_loc_data.table();
     auto const& h_Current_root  = h_Current_root_data.table();
 
     if(ParallelDescriptor::IOProcessor())
     {
-        SetVal_Table1D(h_Current_root_data, zero);
+        SetVal_Table1D(h_Current_root_data, 0.);
     }
 
     auto const& h_Alpha_loc = h_Alpha_loc_data.table();
@@ -2500,7 +2500,7 @@ c_NEGF_Common<T>:: Compute_Current ()
     auto const& h_Fermi_contact = h_Fermi_contact_data.table();
 
     #ifdef AMREX_USE_GPU
-    BlkTable1D d_Current_loc_data({0},{NUM_CONTACTS}, The_Arena());
+    RealTable1D d_Current_loc_data({0},{NUM_CONTACTS}, The_Arena());
     auto const& Current_loc     = d_Current_loc_data.table();
     d_Current_loc_data.copy(h_Current_loc_data);
 
@@ -2724,8 +2724,9 @@ c_NEGF_Common<T>:: Compute_Current ()
                     {
                         MatrixBlock<T> IF = Gamma[k]*Fermi_contact(k)*A_loc(n_glo,n) - Gamma[k]*Gn_nn;
 
-                        Current_loc(k)  = Current_loc(k)
-                                        + const_multiplier * IF.DiagMult(degen_vec_ptr) * weight * mul_factor; /*integrating*/
+			MatrixBlock<T> Current_atE = const_multiplier * IF.DiagMult(degen_vec_ptr) * weight * mul_factor; 
+			/*integrating*/
+			Current_loc(k)  = Current_loc(k) + Current_atE.DiagSum().real(); 
                     }
 
                     //amrex::HostDevice::Atomic::Add(&(Current(k)), Current_AtE[k].real());
@@ -2747,7 +2748,7 @@ c_NEGF_Common<T>:: Compute_Current ()
     MPI_Reduce(&h_Current_loc(0),
                &h_Current_root(0),
                NUM_CONTACTS,
-               MPI_BlkType,
+               MPI_DOUBLE,
                MPI_SUM,
                ParallelDescriptor::IOProcessor(),
                ParallelDescriptor::Communicator());
@@ -2762,8 +2763,7 @@ c_NEGF_Common<T>:: Compute_Current ()
             amrex::Print() << " contact, current, total current: "
 		           << k 
 		           << std::setprecision(5)  
-		           << std::setw(15) << h_Current_root(k) 
-	         	   << std::setw(15) << h_Current_root(k).DiagSum() << "\n";
+		           << std::setw(15) << h_Current_root(k) << "\n";
         }
     }
 
