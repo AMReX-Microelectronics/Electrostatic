@@ -247,15 +247,16 @@ c_TransportSolver::Solve()
                //rMprop.ReInitializeMacroparam(NS_deposit_field_str);
                vp_CNT[c]->Deposit_AtomAttributeToMesh();
 
-               vp_CNT[c]->Compute_Current();
                max_norm = vp_CNT[c]->Broyden_Norm;
                max_step = vp_CNT[c]->Broyden_Step;
            }
 
        } while(max_norm > Broyden_max_norm);    
 
+       amrex::Print() << "Compute current: \n";
        for (int c=0; c < vp_CNT.size(); ++c)
        {
+           vp_CNT[c]->Compute_Current();
            vp_CNT[c]->Reset();
        }
        amrex::Print() << "\nAverage mlmg time for self-consistency (s): " << total_mlmg_solve_time / max_step << "\n";

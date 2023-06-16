@@ -2458,15 +2458,6 @@ void
 c_NEGF_Common<T>:: Compute_Current ()
 {
 
-    amrex::Print() <<  "Computing current \n";
-    amrex::Print() << " contact potential and mu: \n";
-    for(int c=0; c < NUM_CONTACTS; ++c)
-    {
-        U_contact[c] = Potential[global_contact_index[c]];
-        amrex::Print() << "    contact, U, mu: " <<  c << " " << U_contact[c] << " " << mu_contact[c] << "\n";
-    }
-
-
     auto const& h_minusHa_loc  = h_minusHa_loc_data.table();
     auto const& h_Hb_loc  = h_Hb_loc_data.table();
     auto const& h_Hc_loc  = h_Hc_loc_data.table();
@@ -2745,18 +2736,17 @@ c_NEGF_Common<T>:: Compute_Current ()
     amrex::Gpu::streamSynchronize();
     #endif
 
-    //for (int t=0; t< num_traces; ++t)
-    //{
-    //    amrex::ParallelDescriptor::ReduceRealSum(h_Trace_r[t]);
-    //    amrex::ParallelDescriptor::ReduceRealSum(h_Trace_i[t]);
-    //}
-    MPI_Reduce(&h_Current_loc(0),
-               &h_Current_root(0),
-               NUM_CONTACTS,
-               MPI_DOUBLE,
-               MPI_SUM,
-               ParallelDescriptor::IOProcessor(),
-               ParallelDescriptor::Communicator());
+    for (int k=0; k < NUM_CONTACTS; ++k)
+    {
+        amrex::ParallelDescriptor::ReduceRealSum(h_Current_loc(k));
+    }
+    //MPI_Reduce(&h_Current_loc(0),
+    //           &h_Current_root(0),
+    //           NUM_CONTACTS,
+    //           MPI_DOUBLE,
+    //           MPI_SUM,
+    //           ParallelDescriptor::IOProcessor(),
+    //           ParallelDescriptor::Communicator());
 
     MPI_Barrier(ParallelDescriptor::Communicator());
 
@@ -2768,6 +2758,7 @@ c_NEGF_Common<T>:: Compute_Current ()
             amrex::Print() << " contact, current, total current: "
 		           << k 
 		           << std::setprecision(5)  
+		           << std::setw(15) << h_Current_loc(k) 
 		           << std::setw(15) << h_Current_root(k) << "\n";
         }
     }
