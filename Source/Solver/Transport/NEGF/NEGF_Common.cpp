@@ -109,7 +109,7 @@ c_NEGF_Common<T>:: ReadNanostructureProperties ()
     }
 
     amrex::Vector<amrex::Real> vec_Temperature;
-    auto is_specified = queryArrWithParser(pp_ns, "contact_temperatures", vec_Temperature, 0, NUM_CONTACTS);
+    auto is_specified = queryArrWithParser(pp_ns, "contact_T", vec_Temperature, 0, NUM_CONTACTS);
     if(is_specified) {
         for(int c=0; c<NUM_CONTACTS; ++c) {
             Contact_Temperature[c] = vec_Temperature[c];
@@ -117,10 +117,10 @@ c_NEGF_Common<T>:: ReadNanostructureProperties ()
     }
 
     amrex::Vector<amrex::Real> vec_mu;
-    is_specified = queryArrWithParser(pp_ns, "contact_electrochemical_potentials", vec_mu, 0, NUM_CONTACTS);
+    is_specified = queryArrWithParser(pp_ns, "contact_mu", vec_mu, 0, NUM_CONTACTS);
     if(is_specified) {
         for(int c=0; c<NUM_CONTACTS; ++c) {
-            mu_contact[c] = vec_mu[c];
+            Contact_Electrochemical_Potential[c] = vec_mu[c];
         }
     }
 
@@ -150,7 +150,7 @@ c_NEGF_Common<T>:: ReadNanostructureProperties ()
     }
     amrex::Print() << "#####* Contact_Electrochemical_Potentials, mu / [eV]: \n";
     for(int c=0; c<NUM_CONTACTS; ++c) {
-        amrex::Print() << "#####*   contact, mu: " << c << "  " << mu_contact[c] <<"\n";
+        amrex::Print() << "#####*   contact, mu: " << c << "  " << Contact_Electrochemical_Potential[c] <<"\n";
     }
     amrex::Print() << "#####* contact_Fermi_level, E_f / [eV]: " << E_f << "\n";
     amrex::Print() << "##### flag_impose_potential: " << flag_impose_potential << "\n";
@@ -403,6 +403,12 @@ c_NEGF_Common<T>::AllocateArrays ()
     h_tau_glo_data.resize({0},{NUM_CONTACTS},The_Pinned_Arena());
     SetVal_Table1D(h_tau_glo_data,zero);
 
+    if(ParallelDescriptor::IOProcessor())
+    {
+        h_Current_root_data.resize({0},{NUM_CONTACTS},The_Pinned_Arena());
+        SetVal_Table1D(h_Current_root_data,zero);
+    }
+
     #if AMREX_USE_GPU
     d_GR_loc_data.resize({0,0}, {Hsize_glo, blkCol_size_loc}, The_Arena());
     d_A_loc_data.resize({0,0}, {Hsize_glo, blkCol_size_loc}, The_Arena());
@@ -463,6 +469,19 @@ c_NEGF_Common<T>:: Update_ContactPotential ()
     {
         U_contact[c] = Potential[global_contact_index[c]];
         amrex::Print() << "  contact, U: " <<  c << " " << U_contact[c] << "\n";
+    }
+}
+
+
+template<typename T>
+void 
+c_NEGF_Common<T>:: Update_ContactElectrochemicalPotential () 
+{
+    amrex::Print() <<  "Updated contact electrochemical potential: \n";
+    for(int c=0; c < NUM_CONTACTS; ++c)
+    {
+        mu_contact[c] = Contact_Electrochemical_Potential[c];
+        amrex::Print() << "  contact, mu: " <<  c << " " << mu_contact[c] << "\n";
     }
 }
 
@@ -2433,271 +2452,328 @@ c_NEGF_Common<T>::Print_Table2D_loc(const U& Tab2D_data)
 }
 
 
-//template<typename T>
-//void 
-//c_NEGF_Common<T>:: Compute_Current ()
-//{
-//
-//    auto const& h_minusHa_loc  = h_minusHa_loc_data.table();
-//    auto const& h_Hb_loc  = h_Hb_loc_data.table();
-//    auto const& h_Hc_loc  = h_Hc_loc_data.table();
-//    auto const& h_tau     = h_tau_glo_data.table();
-//
-//    Allocate_TemporaryArraysForGFComputation();
-//
-//    auto const& h_Alpha_loc = h_Alpha_loc_data.table();
-//    auto const& h_Alpha_glo = h_Alpha_glo_data.table();
-//    auto const& h_Xtil_glo = h_Xtil_glo_data.table();
-//    auto const& h_Ytil_glo = h_Ytil_glo_data.table();
-//    auto const& h_X_glo = h_X_glo_data.table();
-//    auto const& h_Y_glo = h_Y_glo_data.table();
-//    auto const& h_X_loc = h_X_loc_data.table();
-//    auto const& h_Y_loc = h_Y_loc_data.table();
-//    auto const& h_Alpha_contact = h_Alpha_contact_data.table();
-//    auto const& h_Y_contact = h_Y_contact_data.table();
-//    auto const& h_X_contact = h_X_contact_data.table();
-//    auto const& h_Sigma_contact = h_Sigma_contact_data.table();
-//    auto const& h_Fermi_contact = h_Fermi_contact_data.table();
-//
-//    auto const& h_RhoNonEq_loc  = h_RhoNonEq_loc_data.table();
-//    ComplexType zero(0.,0.); 
-//    SetVal_Table1D(h_RhoNonEq_loc_data,zero);
-//
-//    #ifdef AMREX_USE_GPU
-//    auto const& RhoNonEq_loc    = d_RhoNonEq_loc_data.table();
-//    auto const& GR_loc          = d_GR_loc_data.table();
-//    auto const& A_loc           = d_A_loc_data.table();
-//    /*constant references*/
-//    auto const& Alpha           = d_Alpha_loc_data.const_table();
-//    auto const& Xtil_glo        = d_Xtil_glo_data.const_table();
-//    auto const& Ytil_glo        = d_Ytil_glo_data.const_table();
-//    auto const& X               = d_X_loc_data.const_table();
-//    auto const& Y               = d_Y_loc_data.const_table();
-//
-//    auto const& Alpha_contact   = d_Alpha_contact_data.const_table();
-//    auto const& X_contact       = d_X_contact_data.const_table();
-//    auto const& Y_contact       = d_Y_contact_data.const_table();
-//    auto const& Sigma_contact   = d_Sigma_contact_data.const_table();
-//    auto const& Fermi_contact   = d_Fermi_contact_data.const_table();
-//
-//    auto& degen_vec             = block_degen_gpuvec;
-//
-//    d_RhoNonEq_loc_data.copy(h_RhoNonEq_loc_data);
-//
-//    #else
-//    auto const& RhoNonEq_loc    = h_RhoNonEq_loc_data.table();
-//    auto const& GR_loc          = h_GR_loc_data.table();
-//    auto const& A_loc           = h_A_loc_data.table();
-//    /*constant references*/
-//    auto const& Alpha           = h_Alpha_loc_data.const_table();
-//    auto const& Xtil_glo        = h_Xtil_glo_data.const_table();
-//    auto const& Ytil_glo        = h_Ytil_glo_data.const_table();
-//    auto const& X               = h_X_loc_data.const_table();
-//    auto const& Y               = h_Y_loc_data.const_table();
-//
-//    auto const& Alpha_contact   = h_Alpha_contact_data.const_table();
-//    auto const& X_contact       = h_X_contact_data.const_table();
-//    auto const& Y_contact       = h_Y_contact_data.const_table();
-//    auto const& Sigma_contact   = h_Sigma_contact_data.const_table();
-//    auto const& Fermi_contact   = h_Fermi_contact_data.const_table();
-//
-//    auto& degen_vec             = block_degen_vec;
-//    #endif
-//  
-//    for(int p=0; p < ContourPath_RhoNonEq.size(); ++p) 
-//    {
-//        for(int e=0; e < ContourPath_RhoNonEq[p].num_pts; ++e) 
-//        {
-//            
-//            ComplexType E = ContourPath_RhoNonEq[p].E_vec[e];
-//            ComplexType weight = ContourPath_RhoNonEq[p].weight_vec[e];
-//            ComplexType mul_factor = ContourPath_RhoNonEq[p].mul_factor_vec[e];
-//
-//
-//            for(int n=0; n<blkCol_size_loc; ++n)
-//            {
-//                h_Alpha_loc(n) = E + h_minusHa_loc(n); 
-//                /*+ because h_minusHa is defined previously as -(H0+U)*/
-//            }
-//
-//            get_Sigma_at_contacts(h_Sigma_contact_data, E);
-//
-//            for (int c=0; c<NUM_CONTACTS; ++c)
-//            {
-//                int n_glo = global_contact_index[c];
-//                int n = n_glo - vec_cumu_blkCol_size[my_rank];
-//
-//                if(n_glo >= vec_cumu_blkCol_size[my_rank] && n_glo < vec_cumu_blkCol_size[my_rank+1])
-//                {
-//                    h_Alpha_loc(n) = h_Alpha_loc(n) - h_Sigma_contact(c);
-//                }
-//                h_Fermi_contact(c) = FermiFunction(E-mu_contact[c], kT_contact[c]);
-//            }
-//
-//            /*MPI_Allgather*/
-//            MPI_Allgatherv(&h_Alpha_loc(0),
-//                            blkCol_size_loc,
-//                            MPI_BlkType,
-//                           &h_Alpha_glo(0),
-//                            MPI_recv_count.data(),
-//                            MPI_disp.data(),
-//                            MPI_BlkType,
-//                            ParallelDescriptor::Communicator());
-//
-//            for (int c=0; c<NUM_CONTACTS; ++c)
-//            {
-//                int n_glo = global_contact_index[c];
-//                h_Alpha_contact(c) = h_Alpha_glo(n_glo);
-//            }
-//
-//            h_Y_glo(0) = 0;
-//            for (int n = 1; n < Hsize_glo; ++n)
-//            {
-//            int p = (n-1)%offDiag_repeatBlkSize;
-//                h_Ytil_glo(n) = h_Hc_loc(p) / ( h_Alpha_glo(n-1) - h_Y_glo(n-1) );
-//                h_Y_glo(n) = h_Hb_loc(p) * h_Ytil_glo(n);
-//            }
-//
-//            h_X_glo(Hsize_glo-1) = 0;
-//            for (int n = Hsize_glo-2; n > -1; n--)
-//            {
-//            int p = n%offDiag_repeatBlkSize;
-//                h_Xtil_glo(n) = h_Hb_loc(p)/(h_Alpha_glo(n+1) - h_X_glo(n+1));
-//                h_X_glo(n) = h_Hc_loc(p)*h_Xtil_glo(n);
-//            }
-//
-//            for (int c = 0; c < blkCol_size_loc; ++c)
-//            {
-//                int n = c + vec_cumu_blkCol_size[my_rank];
-//                h_Y_loc(c) = h_Y_glo(n);
-//                h_X_loc(c) = h_X_glo(n);
-//            }
-// 
-//            for (int c = 0; c < NUM_CONTACTS; ++c)
-//            {
-//                int n = global_contact_index[c];
-//                h_Y_contact(c) = h_Y_glo(n);
-//                h_X_contact(c) = h_X_glo(n);
-//            }
-//
-//            #ifdef AMREX_USE_GPU
-//            d_Alpha_loc_data.copy(h_Alpha_loc_data);
-//            d_Xtil_glo_data.copy(h_Xtil_glo_data);
-//            d_Ytil_glo_data.copy(h_Ytil_glo_data);
-//            d_X_loc_data.copy(h_X_loc_data);
-//            d_Y_loc_data.copy(h_Y_loc_data);
-//
-//            d_Alpha_contact_data.copy(h_Alpha_contact_data);
-//            d_X_contact_data.copy(h_X_contact_data);
-//            d_Y_contact_data.copy(h_Y_contact_data);
-//            d_Sigma_contact_data.copy(h_Sigma_contact_data);
-//            d_Fermi_contact_data.copy(h_Fermi_contact_data);
-//
-//            amrex::Gpu::streamSynchronize();
-//            #endif        
-//
-//    	    /*following is for lambda capture*/
-//            int cumulative_columns = vec_cumu_blkCol_size[my_rank];
-//            int Hsize = Hsize_glo;  
-//     	    auto& GC_ID = global_contact_index;
-//    	    auto& CT_ID = contact_transmission_index;
-//            auto* degen_vec_ptr = degen_vec.dataPtr();
-//
-//	    amrex::Real const_multiplier = -1*spin_degen/(2*MathConst::pi);
-//
-//            amrex::ParallelFor(blkCol_size_loc, [=] AMREX_GPU_DEVICE (int n) noexcept
-//            {
-//                int n_glo = n + cumulative_columns; /*global column number*/
-//                ComplexType one(1., 0.);
-//                ComplexType minus_one(-1., 0.);
-//	            ComplexType imag(0., 1.);
-//
-//                GR_loc(n_glo,n) =  one/(Alpha(n) - X(n) - Y(n));
-//
-//                for (int m = n_glo; m > 0; m--)
-//                {
-//                    GR_loc(m-1,n) =  -1*Ytil_glo(m)*GR_loc(m,n);
-//                }
-//                for (int m = n_glo; m < Hsize-1; ++m)
-//                {
-//                    GR_loc(m+1,n) = -1*Xtil_glo(m)*GR_loc(m,n);
-//                }
-//
-//                MatrixBlock<T> A_tk[NUM_CONTACTS];
-//                MatrixBlock<T> Gamma[NUM_CONTACTS];
-//                MatrixBlock<T> AnF_sum;
-//                AnF_sum = 0.;
-//                for (int m=0; m < Hsize; ++m)
-//                {
-//                    A_loc(m, n) = 0.;
-//                }
-//                for (int k=0; k < NUM_CONTACTS; ++k)
-//                {
-//                    int k_glo = GC_ID[k];
-//                    MatrixBlock<T> G_contact_kk =  
-//                                   one/(Alpha_contact(k) - X_contact(k) - Y_contact(k));
-//
-//                    MatrixBlock<T> temp = G_contact_kk;
-//                    for (int m = k_glo; m < n_glo; ++m)
-//                    {
-//                        temp = -1*Xtil_glo(m)*temp;
-//                    }
-//                    for (int m = k_glo; m > n_glo; m--)
-//                    {
-//                        temp = -1*Ytil_glo(m)*temp;
-//                    }
-//                    MatrixBlock<T> G_contact_nk = temp;
-//
-//                    Gamma[k] = imag*(Sigma_contact(k) - Sigma_contact(k).Dagger());
-//
-//                    MatrixBlock<T> A_nn  = G_contact_nk * Gamma[k] *  G_contact_nk.Dagger();
-//                    MatrixBlock<T> A_kn  = G_contact_kk * Gamma[k] *  G_contact_nk.Dagger();
-//
-//                    A_loc(k_glo, n) = A_loc(k_glo, n) + A_kn;
-//                    for (int m = k_glo+1; m < Hsize; ++m)
-//                    {
-//                        A_kn = -1*Xtil_glo(m-1)*A_kn;
-//                        A_loc(m,n) = A_loc(m,n) + A_kn;
-//                    }
-//                    for (int m = k_glo-1; m >= 0; m--)
-//                    {
-//                        A_kn = -1*Ytil_glo(m+1)*A_kn;
-//                        A_loc(m,n) = A_loc(m,n) + A_kn;
-//                    }
-//                    A_tk[k] = 0.;
-//                    if(n_glo == CT_ID[k])
-//                    {
-//                        A_tk[k] = A_kn;
-//                    }
-//
-//                    AnF_sum = AnF_sum + A_nn*Fermi_contact(k);
-//                }
-//
-//                /*RhoNonEq*/
-//                MatrixBlock<T> RhoNonEq_n = const_multiplier*AnF_sum*weight*mul_factor;
-//                RhoNonEq_loc(n) = RhoNonEq_loc(n) + RhoNonEq_n.DiagMult(degen_vec_ptr);
-//
-//            }); 
-//            #ifdef AMREX_USE_GPU
-//            amrex::Gpu::streamSynchronize();
-//            #endif
-//        } 
-//    }
-//
-//    #ifdef AMREX_USE_GPU
-//    h_RhoNonEq_loc_data.copy(d_RhoNonEq_loc_data); 
-//    amrex::Gpu::streamSynchronize();
-//    #endif
-//
-//    //amrex::Print() << "RhoNonEq_loc: \n";
-//    //for (int n=0; n <blkCol_size_loc; ++n) 
-//    //{
-//    //    amrex::Print() << n << "  " <<std::setprecision(3)<< h_RhoNonEq_loc(n)  << "\n";
-//    //}
-//
-//    Deallocate_TemporaryArraysForGFComputation();
-//
-//}
+
+template<typename T>
+void
+c_NEGF_Common<T>:: Compute_Current ()
+{
+
+    amrex::Print() <<  "Computing current \n";
+    amrex::Print() << " contact potential and mu: \n";
+    for(int c=0; c < NUM_CONTACTS; ++c)
+    {
+        U_contact[c] = Potential[global_contact_index[c]];
+        amrex::Print() << "    contact, U, mu: " <<  c << " " << U_contact[c] << " " << mu_contact[c] << "\n";
+    }
+
+
+    auto const& h_minusHa_loc  = h_minusHa_loc_data.table();
+    auto const& h_Hb_loc  = h_Hb_loc_data.table();
+    auto const& h_Hc_loc  = h_Hc_loc_data.table();
+    auto const& h_tau     = h_tau_glo_data.table();
+
+    Allocate_TemporaryArraysForGFComputation();
+
+    BlkTable1D h_Current_loc_data({0},{NUM_CONTACTS},The_Pinned_Arena());
+    ComplexType zero(0.,0.);
+    SetVal_Table1D(h_Current_loc_data,zero);
+    auto const& h_Current_loc   = h_Current_loc_data.table();
+    auto const& h_Current_root  = h_Current_root_data.table();
+
+    if(ParallelDescriptor::IOProcessor())
+    {
+        SetVal_Table1D(h_Current_root_data, zero);
+    }
+
+    auto const& h_Alpha_loc = h_Alpha_loc_data.table();
+    auto const& h_Alpha_glo = h_Alpha_glo_data.table();
+    auto const& h_Xtil_glo = h_Xtil_glo_data.table();
+    auto const& h_Ytil_glo = h_Ytil_glo_data.table();
+    auto const& h_X_glo = h_X_glo_data.table();
+    auto const& h_Y_glo = h_Y_glo_data.table();
+    auto const& h_X_loc = h_X_loc_data.table();
+    auto const& h_Y_loc = h_Y_loc_data.table();
+    auto const& h_Alpha_contact = h_Alpha_contact_data.table();
+    auto const& h_Y_contact = h_Y_contact_data.table();
+    auto const& h_X_contact = h_X_contact_data.table();
+    auto const& h_Sigma_contact = h_Sigma_contact_data.table();
+    auto const& h_Fermi_contact = h_Fermi_contact_data.table();
+
+    #ifdef AMREX_USE_GPU
+    BlkTable1D d_Current_loc_data({0},{NUM_CONTACTS}, The_Arena());
+    auto const& Current_loc     = d_Current_loc_data.table();
+    d_Current_loc_data.copy(h_Current_loc_data);
+
+    auto const& GR_loc          = d_GR_loc_data.table();
+    auto const& A_loc           = d_A_loc_data.table();
+    /*constant references*/
+    auto const& Alpha           = d_Alpha_loc_data.const_table();
+    auto const& Xtil_glo        = d_Xtil_glo_data.const_table();
+    auto const& Ytil_glo        = d_Ytil_glo_data.const_table();
+    auto const& X               = d_X_loc_data.const_table();
+    auto const& Y               = d_Y_loc_data.const_table();
+
+    auto const& Alpha_contact   = d_Alpha_contact_data.const_table();
+    auto const& X_contact       = d_X_contact_data.const_table();
+    auto const& Y_contact       = d_Y_contact_data.const_table();
+    auto const& Sigma_contact   = d_Sigma_contact_data.const_table();
+    auto const& Fermi_contact   = d_Fermi_contact_data.const_table();
+
+    auto& degen_vec             = block_degen_gpuvec;
+
+    #else
+    auto const& Current_loc     = h_Current_loc_data.table();
+
+    auto const& GR_loc          = h_GR_loc_data.table();
+    auto const& A_loc           = h_A_loc_data.table();
+    /*constant references*/
+    auto const& Alpha           = h_Alpha_loc_data.const_table();
+    auto const& Xtil_glo        = h_Xtil_glo_data.const_table();
+    auto const& Ytil_glo        = h_Ytil_glo_data.const_table();
+    auto const& X               = h_X_loc_data.const_table();
+    auto const& Y               = h_Y_loc_data.const_table();
+
+    auto const& Alpha_contact   = h_Alpha_contact_data.const_table();
+    auto const& X_contact       = h_X_contact_data.const_table();
+    auto const& Y_contact       = h_Y_contact_data.const_table();
+    auto const& Sigma_contact   = h_Sigma_contact_data.const_table();
+    auto const& Fermi_contact   = h_Fermi_contact_data.const_table();
+
+
+    auto& degen_vec             = block_degen_vec;
+    #endif
+
+
+    for(int p=0; p < ContourPath_RhoNonEq.size(); ++p)
+    {
+        for(int e=0; e < ContourPath_RhoNonEq[p].num_pts; ++e)
+        {
+
+            ComplexType E = ContourPath_RhoNonEq[p].E_vec[e];
+            ComplexType weight = ContourPath_RhoNonEq[p].weight_vec[e];
+            ComplexType mul_factor = ContourPath_RhoNonEq[p].mul_factor_vec[e];
+
+            for(int n=0; n<blkCol_size_loc; ++n)
+            {
+                h_Alpha_loc(n) = E + h_minusHa_loc(n);
+                /*+ because h_minusHa is defined previously as -(H0+U)*/
+            }
+
+            get_Sigma_at_contacts(h_Sigma_contact_data, E);
+
+            for (int c=0; c<NUM_CONTACTS; ++c)
+            {
+                int n_glo = global_contact_index[c];
+                int n = n_glo - vec_cumu_blkCol_size[my_rank];
+
+                if(n_glo >= vec_cumu_blkCol_size[my_rank] && n_glo < vec_cumu_blkCol_size[my_rank+1])
+                {
+                    h_Alpha_loc(n) = h_Alpha_loc(n) - h_Sigma_contact(c);
+                }
+                h_Fermi_contact(c) = FermiFunction(E-mu_contact[c], kT_contact[c]);
+            }
+
+
+            /*MPI_Allgather*/
+            MPI_Allgatherv(&h_Alpha_loc(0),
+                            blkCol_size_loc,
+                            MPI_BlkType,
+                           &h_Alpha_glo(0),
+                            MPI_recv_count.data(),
+                            MPI_disp.data(),
+                            MPI_BlkType,
+                            ParallelDescriptor::Communicator());
+
+            for (int c=0; c<NUM_CONTACTS; ++c)
+            {
+                int n_glo = global_contact_index[c];
+                h_Alpha_contact(c) = h_Alpha_glo(n_glo);
+            }
+
+            h_Y_glo(0) = 0;
+            for (int n = 1; n < Hsize_glo; ++n)
+            {
+            int p = (n-1)%offDiag_repeatBlkSize;
+                h_Ytil_glo(n) = h_Hc_loc(p) / ( h_Alpha_glo(n-1) - h_Y_glo(n-1) );
+                h_Y_glo(n) = h_Hb_loc(p) * h_Ytil_glo(n);
+            }
+
+            h_X_glo(Hsize_glo-1) = 0;
+            for (int n = Hsize_glo-2; n > -1; n--)
+            {
+            int p = n%offDiag_repeatBlkSize;
+                h_Xtil_glo(n) = h_Hb_loc(p)/(h_Alpha_glo(n+1) - h_X_glo(n+1));
+                h_X_glo(n) = h_Hc_loc(p)*h_Xtil_glo(n);
+            }
+
+            for (int c = 0; c < blkCol_size_loc; ++c)
+            {
+                int n = c + vec_cumu_blkCol_size[my_rank];
+                h_Y_loc(c) = h_Y_glo(n);
+                h_X_loc(c) = h_X_glo(n);
+            }
+
+            for (int c = 0; c < NUM_CONTACTS; ++c)
+            {
+                int n = global_contact_index[c];
+                h_Y_contact(c) = h_Y_glo(n);
+                h_X_contact(c) = h_X_glo(n);
+            }
+
+
+            #ifdef AMREX_USE_GPU
+            d_Alpha_loc_data.copy(h_Alpha_loc_data);
+            d_Xtil_glo_data.copy(h_Xtil_glo_data);
+            d_Ytil_glo_data.copy(h_Ytil_glo_data);
+            d_X_loc_data.copy(h_X_loc_data);
+            d_Y_loc_data.copy(h_Y_loc_data);
+
+            d_Alpha_contact_data.copy(h_Alpha_contact_data);
+            d_X_contact_data.copy(h_X_contact_data);
+            d_Y_contact_data.copy(h_Y_contact_data);
+            d_Sigma_contact_data.copy(h_Sigma_contact_data);
+            d_Fermi_contact_data.copy(h_Fermi_contact_data);
+
+            amrex::Gpu::streamSynchronize();
+            #endif
+
+            /*following is for lambda capture*/
+            int cumulative_columns = vec_cumu_blkCol_size[my_rank];
+            int Hsize = Hsize_glo;
+            auto& GC_ID = global_contact_index;
+            auto& CT_ID = contact_transmission_index;
+            auto* degen_vec_ptr = degen_vec.dataPtr();
+
+            amrex::Real const_multiplier = spin_degen*(PhysConst::q_e)/(PhysConst::h_eVperHz);
+
+
+            amrex::ParallelFor(blkCol_size_loc, [=] AMREX_GPU_DEVICE (int n) noexcept
+            {
+                int n_glo = n + cumulative_columns; /*global column number*/
+                ComplexType one(1., 0.);
+                ComplexType minus_one(-1., 0.);
+                    ComplexType imag(0., 1.);
+
+                GR_loc(n_glo,n) =  one/(Alpha(n) - X(n) - Y(n));
+
+                for (int m = n_glo; m > 0; m--)
+                {
+                    GR_loc(m-1,n) =  -1*Ytil_glo(m)*GR_loc(m,n);
+                }
+                for (int m = n_glo; m < Hsize-1; ++m)
+                {
+                    GR_loc(m+1,n) = -1*Xtil_glo(m)*GR_loc(m,n);
+                }
+
+                MatrixBlock<T> A_tk[NUM_CONTACTS];
+                MatrixBlock<T> Gamma[NUM_CONTACTS];
+                MatrixBlock<T> Gn_nn;
+                Gn_nn  = 0.;
+                for (int m=0; m < Hsize; ++m)
+                {
+                    A_loc(m, n) = 0.;
+                }
+                for (int k=0; k < NUM_CONTACTS; ++k)
+                {
+                    int k_glo = GC_ID[k];
+                    MatrixBlock<T> G_contact_kk =
+                                   one/(Alpha_contact(k) - X_contact(k) - Y_contact(k));
+
+                    MatrixBlock<T> temp = G_contact_kk;
+                    for (int m = k_glo; m < n_glo; ++m)
+                    {
+                        temp = -1*Xtil_glo(m)*temp;
+                    }
+                    for (int m = k_glo; m > n_glo; m--)
+                    {
+                        temp = -1*Ytil_glo(m)*temp;
+                    }
+                    MatrixBlock<T> G_contact_nk = temp;
+
+                    Gamma[k] = imag*(Sigma_contact(k) - Sigma_contact(k).Dagger());
+
+
+                    MatrixBlock<T> A_nn  = G_contact_nk * Gamma[k] *  G_contact_nk.Dagger();
+                    MatrixBlock<T> A_kn  = G_contact_kk * Gamma[k] *  G_contact_nk.Dagger();
+
+                    A_loc(k_glo, n) = A_loc(k_glo, n) + A_kn;
+                    for (int m = k_glo+1; m < Hsize; ++m)
+                    {
+                        A_kn = -1*Xtil_glo(m-1)*A_kn;
+                        A_loc(m,n) = A_loc(m,n) + A_kn;
+                    }
+                    for (int m = k_glo-1; m >= 0; m--)
+                    {
+                        A_kn = -1*Ytil_glo(m+1)*A_kn;
+                        A_loc(m,n) = A_loc(m,n) + A_kn;
+                    }
+                    A_tk[k] = 0.;
+                    if(n_glo == CT_ID[k])
+                    {
+                        A_tk[k] = A_kn;
+                    }
+
+                    Gn_nn  = Gn_nn + A_nn*Fermi_contact(k);
+
+                }
+
+
+                for (int k=0; k < NUM_CONTACTS; ++k)
+                {
+                    if(n_glo == GC_ID[k])
+                    {
+                        MatrixBlock<T> IF = Gamma[k]*Fermi_contact(k)*A_loc(n_glo,n) - Gamma[k]*Gn_nn;
+
+                        Current_loc(k)  = Current_loc(k)
+                                        + const_multiplier * IF.DiagMult(degen_vec_ptr) * weight * mul_factor; /*integrating*/
+                    }
+
+                    //amrex::HostDevice::Atomic::Add(&(Current(k)), Current_AtE[k].real());
+                }
+
+            });
+            #ifdef AMREX_USE_GPU
+            amrex::Gpu::streamSynchronize();
+            #endif
+        }
+    }
+
+
+    #ifdef AMREX_USE_GPU
+    h_Current_loc_data.copy(d_Current_loc_data);
+    amrex::Gpu::streamSynchronize();
+    #endif
+
+    MPI_Reduce(&h_Current_loc(0),
+               &h_Current_root(0),
+               NUM_CONTACTS,
+               MPI_BlkType,
+               MPI_SUM,
+               ParallelDescriptor::IOProcessor(),
+               ParallelDescriptor::Communicator());
+
+    MPI_Barrier(ParallelDescriptor::Communicator());
+
+    if(ParallelDescriptor::IOProcessor())
+    {
+        amrex::Print() << "Current: \n";
+        for (int k=0; k <NUM_CONTACTS; ++k)
+        {
+            amrex::Print() << " contact, current, total current: "
+		           << k 
+		           << std::setprecision(5)  
+		           << std::setw(15) << h_Current_root(k) 
+	         	   << std::setw(15) << h_Current_root(k).DiagSum() << "\n";
+        }
+    }
+
+    Deallocate_TemporaryArraysForGFComputation();
+
+}
+
+
+
+
 //template<typename T>
 //void 
 //c_NEGF_Common<T>::DeallocateArrays () 

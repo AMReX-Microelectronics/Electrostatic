@@ -104,6 +104,8 @@ public:
     BlkTable1D  h_GR_atPoles_loc_data;
     BlkTable1D  h_RhoEq_loc_data;
     BlkTable1D  h_RhoNonEq_loc_data;
+    BlkTable1D h_Current_root_data;
+
 
     /*Tables required to compute Green and Spectral Functions */
     BlkTable1D h_Alpha_loc_data;
@@ -175,6 +177,7 @@ public:
     amrex::Real Fermi_tail_factor = 20.;
 
     amrex::Real Contact_Temperature[NUM_CONTACTS] = {298., 298.};
+    amrex::Real Contact_Electrochemical_Potential[NUM_CONTACTS] = {0., 0.};
 
     int flag_impose_potential = 0;
     std::string potential_profile_type_str = "constant";
@@ -231,6 +234,7 @@ public:
     virtual void ConstructHamiltonian ();
     void AddPotentialToHamiltonian ();
     void Update_ContactPotential ();
+    void Update_ContactElectrochemicalPotential ();
     virtual void Define_EnergyLimits ();
     virtual void Define_IntegrationPaths ();
     void Update_IntegrationPaths ();
@@ -244,6 +248,7 @@ public:
     void Compute_RhoEq();
     void Compute_RhoNonEq();
     void Compute_InducedCharge();
+    void Compute_Current();
     //void Compute_ChargeDensity();
     void GuessNewCharge_SimpleMixingAlg();
     void GuessNewCharge_ModifiedBroydenSecondAlg();

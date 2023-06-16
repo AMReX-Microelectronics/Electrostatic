@@ -19,11 +19,11 @@ my_constants.dt = 0.
 my_constants.epsilon_CN     = epsilon_0 #vacuum
 my_constants.epsilon_GO     = 3.9*epsilon_0
 my_constants.epsilon_domain = epsilon_0 #air
-my_constants.epsilon_CM     = 1.7*epsilon_0 #Palladium
+my_constants.epsilon_CM     = epsilon_0 #Palladium
 
 my_constants.SV = 0.      #source voltage [V]
-my_constants.Vds = -0.1   #Drain-Source voltage [V]
-my_constants.Vgs = 1.     #Gate-Source voltage [V]
+my_constants.Vds = -0.2   #Drain-Source voltage [V]
+my_constants.Vgs = 0.8     #Gate-Source voltage [V]
 
 my_constants.Ef = -1.       #Palladium Contact Fermi level [eV] 
 
@@ -57,9 +57,9 @@ my_constants.dz = Lz/nz
 my_constants.m_index = 17
 my_constants.n_index = 0
 
-my_constants.N_unitcells = 66 
-my_constants.Overlap_unitcells = 10 #9.788
-#channel unitcells: N_unitcells - 2*Overlap_unitcells = 43 - 2*10 = 23, i.e. ~10 nm tube
+my_constants.Channel_unitcells = 23 
+my_constants.Overlap_unitcells = 10 
+my_constants.N_unitcells = Channel_unitcells + 2*Overlap_unitcells 
 
 my_constants.bond_length = 0.142e-9
 my_constants.small_gap = 0.3e-9 #gap between nanotube and the contacts
@@ -84,14 +84,13 @@ my_constants.drain_lo_y =  drain_hi_y - CN_co_l
 my_constants.source_center_y = (source_lo_y + source_hi_y)/2 
 my_constants.drain_center_y = (drain_lo_y + drain_hi_y)/2  
 
-#my_constants.CM_thickness = G_inner_rad - (R_CN + small_gap) - 8*dz
-my_constants.CM_thickness = 10*dz
+my_constants.CM_thickness = 50*dz
 
 ### gate ###
 ############
 
 my_constants.G_inner_rad = 3.e-9 #Gate_InnerRadius
-my_constants.G_thickness = 30*dz
+my_constants.G_thickness = 10*dz
 
 ### gate oxide ###
 ##################
@@ -251,13 +250,13 @@ transport.Broyden_fraction = 1e-1
 transport.Broyden_max_norm = 1.e-6
 
 cnt.type = CNT
-cnt.type_id = 17 0     #m n
+cnt.type_id = m_index n_index     #m n
 cnt.acc = bond_length
 cnt.gamma = 2.5       #coupling strength (eV)
 cnt.num_unitcells = N_unitcells
 cnt.offset = CN_x CN_y CN_z
-cnt.contact_electrochemical_potentials = (Ef - Vds/2.) (Ef + Vds/2.)
-cnt.contact_temperatures = 298. 298.
+cnt.contact_mu = Ef (Ef - Vds)
+cnt.contact_T  = 298. 298.
 
 cnt.contact_Fermi_level = Ef
 cnt.E_valence_min = -10

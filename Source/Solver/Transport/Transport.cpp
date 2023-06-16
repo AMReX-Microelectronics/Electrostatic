@@ -222,7 +222,7 @@ c_TransportSolver::Solve()
    {	   
        do 
        {
-           amrex::Print() << "\n\nstep: " << max_step << "\n";
+           amrex::Print() << "\n\nBroyden iteration: " << max_step << "\n";
 
            rMLMG.UpdateBoundaryConditions();
            auto mlmg_solve_time = rMLMG.Solve_PoissonEqn();
@@ -255,6 +255,7 @@ c_TransportSolver::Solve()
 
        for (int c=0; c < vp_CNT.size(); ++c)
        {
+           vp_CNT[c]->Compute_Current();
            vp_CNT[c]->Reset();
        }
        amrex::Print() << "\nAverage mlmg time for self-consistency (s): " << total_mlmg_solve_time / max_step << "\n";

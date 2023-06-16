@@ -30,6 +30,7 @@ namespace MathConst
 // as the corresponding Python definitions
 namespace PhysConst
 {
+    static constexpr auto h_eVperHz = static_cast<amrex::Real>( 4.135667696e-15 );
     static constexpr auto c     = static_cast<amrex::Real>( 299'792'458. );
     static constexpr auto ep0   = static_cast<amrex::Real>( 8.8541878128e-12 );
     static constexpr auto mu0   = static_cast<amrex::Real>( 1.25663706212e-06 );

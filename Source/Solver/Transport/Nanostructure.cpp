@@ -651,6 +651,7 @@ c_Nanostructure<NSType>:: Solve_NEGF ()
 
     NSType::AddPotentialToHamiltonian();
     NSType::Update_ContactPotential(); 
+    NSType::Update_ContactElectrochemicalPotential(); 
     NSType::Define_EnergyLimits();
     NSType::Update_IntegrationPaths();
 
