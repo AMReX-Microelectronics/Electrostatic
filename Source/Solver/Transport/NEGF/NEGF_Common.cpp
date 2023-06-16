@@ -403,11 +403,11 @@ c_NEGF_Common<T>::AllocateArrays ()
     h_tau_glo_data.resize({0},{NUM_CONTACTS},The_Pinned_Arena());
     SetVal_Table1D(h_tau_glo_data,zero);
 
-    if(ParallelDescriptor::IOProcessor())
-    {
-        h_Current_root_data.resize({0},{NUM_CONTACTS},The_Pinned_Arena());
-        SetVal_Table1D(h_Current_root_data,0.);
-    }
+    h_Current_root_data.resize({0},{NUM_CONTACTS},The_Pinned_Arena());
+    SetVal_Table1D(h_Current_root_data,0.);
+    //if(ParallelDescriptor::IOProcessor())
+    //{
+    //}
 
     #if AMREX_USE_GPU
     d_GR_loc_data.resize({0,0}, {Hsize_glo, blkCol_size_loc}, The_Arena());
@@ -2479,11 +2479,11 @@ c_NEGF_Common<T>:: Compute_Current ()
     SetVal_Table1D(h_Current_loc_data,0.);
     auto const& h_Current_loc   = h_Current_loc_data.table();
     auto const& h_Current_root  = h_Current_root_data.table();
+    SetVal_Table1D(h_Current_root_data, 0.);
 
-    if(ParallelDescriptor::IOProcessor())
-    {
-        SetVal_Table1D(h_Current_root_data, 0.);
-    }
+    //if(ParallelDescriptor::IOProcessor())
+    //{
+    //}
 
     auto const& h_Alpha_loc = h_Alpha_loc_data.table();
     auto const& h_Alpha_glo = h_Alpha_glo_data.table();
@@ -2745,6 +2745,11 @@ c_NEGF_Common<T>:: Compute_Current ()
     amrex::Gpu::streamSynchronize();
     #endif
 
+    //for (int t=0; t< num_traces; ++t)
+    //{
+    //    amrex::ParallelDescriptor::ReduceRealSum(h_Trace_r[t]);
+    //    amrex::ParallelDescriptor::ReduceRealSum(h_Trace_i[t]);
+    //}
     MPI_Reduce(&h_Current_loc(0),
                &h_Current_root(0),
                NUM_CONTACTS,
