@@ -203,7 +203,7 @@ macroscopic.atom_locations = 0.
 ###### OUTPUT ######
 ####################
 
-plot.folder_name = all_around_gate
+plot.folder_name = all_around_gate_Vds_mdot1
 plot.fields_to_plot = epsilon.1 charge_density.1 phi.1 atom_locations #vecField 
 plot.write_after_init = 1
 plot.write_interval = 1
