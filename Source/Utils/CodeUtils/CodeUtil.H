@@ -108,6 +108,15 @@ void ConvertParserIntoMultiFab_4vars(const int i, const int j, const int k, cons
 #ifdef AMREX_USE_EB
 void SpecifyValueOnlyOnCutcells(amrex::MultiFab& mf, amrex::Real const value);
 
+void SpecifyValueOnlyOnCutcells_UsingParser_4vars(amrex::MultiFab& mf,
+                                                  amrex::ParserExecutor<4> const& macro_parser,
+                                                  const amrex::Geometry& geom,
+                                                  const amrex::Real t);
+
+void SpecifyValueOnlyOnCutcells_UsingParser_3vars(amrex::MultiFab& mf,
+                                                  amrex::ParserExecutor<3> const& macro_parser,
+                                                  const amrex::Geometry& geom);
+
 void CopyValuesIntoAMultiFabOnCutcells(amrex::MultiFab& target_mf, amrex::MultiFab& source_mf);
 
 amrex::Real GetTotalNumberOfCutcells(amrex::MultiFab& mf);
@@ -234,3 +243,6 @@ namespace Quadrature
    void Gauss_Legendre(amrex::Vector<amrex::Real>& x, 
                        amrex::Vector<amrex::Real>& w, const int n);
 }
+
+void 
+CreateDirectory(std::string foldername);

@@ -539,10 +539,13 @@ c_MLMGSolver:: UpdateBoundaryConditions()
     auto& rGprop = rCode.get_GeometryProperties();
     auto& rBC = rCode.get_BoundaryConditions();
     auto& geom = rGprop.geom;
+    auto& ba   = rGprop.ba;
+    auto& dm   = rGprop.dm;
     int amrlev = 0;
 
     #ifdef AMREX_USE_EB
-    if(rGprop.embedded_boundary_flag) {
+    if(rGprop.embedded_boundary_flag) 
+    {
         if(some_constant_inhomogeneous_boundaries)
         {
             Fill_Constant_Inhomogeneous_Boundaries();
@@ -564,9 +567,19 @@ c_MLMGSolver:: UpdateBoundaryConditions()
         {
             p_mlebabec->setLevelBC(amrlev, soln);
         }
+
+        const amrex::Real time = rCode.get_time();
+
+        rGprop.pEB->Update_SurfaceSolution(time);
+
+        if(rGprop.pEB->specify_inhomogeneous_dirichlet != 0) 
+        {
+            p_mlebabec->setEBDirichlet(amrlev, *rGprop.pEB->p_surf_soln_union, *beta);
+        }
     }
     #endif
-    if(!rGprop.embedded_boundary_flag) {
+    if(!rGprop.embedded_boundary_flag) 
+    {
         if(some_constant_inhomogeneous_boundaries)
         {
             Fill_Constant_Inhomogeneous_Boundaries();

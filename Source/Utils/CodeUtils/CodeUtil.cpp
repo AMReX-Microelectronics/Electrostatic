@@ -3,6 +3,8 @@
 #include "../../Input/MacroscopicProperties/MacroscopicProperties.H"
 #include "../../PostProcessor/PostProcessor.H"
 
+#include <sys/stat.h>
+
 using namespace amrex;
 
 void 
@@ -192,6 +194,130 @@ Multifab_Manipulation::SpecifyValueOnlyOnCutcells(amrex::MultiFab& mf, amrex::Re
 #ifdef PRINT_NAME
     amrex::Print() << "\t\t\t\t\t}************************Multifab_Manipulation::SpecifyValueOnlyOnCutcells************************\n";
 #endif
+}
+
+
+void
+Multifab_Manipulation::SpecifyValueOnlyOnCutcells_UsingParser_4vars(amrex::MultiFab& mf,
+                                                                    amrex::ParserExecutor<4> const& macro_parser,
+                                                                    const amrex::Geometry& geom,
+                                                                    const amrex::Real t)
+{
+    auto factory  = dynamic_cast<amrex::EBFArrayBoxFactory const*>(&(mf.Factory()));
+
+    auto const &flags = factory->getMultiEBCellFlagFab();
+    auto const &vfrac = factory->getVolFrac();
+
+    auto iv = mf.ixType().toIntVect();
+    auto dx = geom.CellSizeArray();
+    auto& real_box = geom.ProbDomain();
+
+    for ( amrex::MFIter mfi(flags, amrex::TilingIfNotGPU()); mfi.isValid(); ++mfi ) 
+    {
+        const auto& box = mfi.tilebox( iv, mf.nGrowVect() ); 
+
+        auto const& mf_array =  mf.array(mfi); 
+
+        amrex::FabType fab_type = flags[mfi].getType(box);
+
+        if(fab_type == amrex::FabType::regular) 
+        {
+            amrex::ParallelFor(box, [=] AMREX_GPU_DEVICE (int i, int j, int k)
+            {
+               mf_array(i, j, k) = amrex::Real(0.);
+            });
+        }
+        else if (fab_type == amrex::FabType::covered) 
+        {
+            amrex::ParallelFor(box, [=] AMREX_GPU_DEVICE (int i, int j, int k)
+            {
+               mf_array(i, j, k) = amrex::Real(0.);
+            });
+        }
+        else //box contains some cutcells
+        {
+            auto const &vfrac_array = vfrac.const_array(mfi);
+
+            amrex::ParallelFor(box, [=] AMREX_GPU_DEVICE (int i, int j, int k)
+            {
+               if(vfrac_array(i,j,k) > 0 and vfrac_array(i,j,k) < 1) 
+               {
+                   amrex::Real fac_x = (1._rt - iv[0]) * dx[0] * 0.5_rt;
+                   amrex::Real x = i * dx[0] + real_box.lo(0) + fac_x;
+
+                   amrex::Real fac_y = (1._rt - iv[1]) * dx[1] * 0.5_rt;
+                   amrex::Real y = j * dx[1] + real_box.lo(1) + fac_y;
+
+                   amrex::Real fac_z = (1._rt - iv[2]) * dx[2] * 0.5_rt;
+                   amrex::Real z = k * dx[2] + real_box.lo(2) + fac_z;
+
+                   mf_array(i, j, k) = macro_parser(x,y,z,t);
+               } 
+            });
+        }
+    }
+}
+
+
+
+void
+Multifab_Manipulation::SpecifyValueOnlyOnCutcells_UsingParser_3vars(amrex::MultiFab& mf,
+                                                                    amrex::ParserExecutor<3> const& macro_parser,
+                                                                    const amrex::Geometry& geom)
+{
+    auto factory  = dynamic_cast<amrex::EBFArrayBoxFactory const*>(&(mf.Factory()));
+
+    auto const &flags = factory->getMultiEBCellFlagFab();
+    auto const &vfrac = factory->getVolFrac();
+
+    auto iv = mf.ixType().toIntVect();
+    auto dx = geom.CellSizeArray();
+    auto& real_box = geom.ProbDomain();
+
+    for ( amrex::MFIter mfi(flags, amrex::TilingIfNotGPU()); mfi.isValid(); ++mfi ) 
+    {
+        const auto& box = mfi.tilebox( iv, mf.nGrowVect() ); 
+
+        auto const& mf_array =  mf.array(mfi); 
+
+        amrex::FabType fab_type = flags[mfi].getType(box);
+
+        if(fab_type == amrex::FabType::regular) 
+        {
+            amrex::ParallelFor(box, [=] AMREX_GPU_DEVICE (int i, int j, int k)
+            {
+               mf_array(i, j, k) = amrex::Real(0.);
+            });
+        }
+        else if (fab_type == amrex::FabType::covered) 
+        {
+            amrex::ParallelFor(box, [=] AMREX_GPU_DEVICE (int i, int j, int k)
+            {
+               mf_array(i, j, k) = amrex::Real(0.);
+            });
+        }
+        else //box contains some cutcells
+        {
+            auto const &vfrac_array = vfrac.const_array(mfi);
+
+            amrex::ParallelFor(box, [=] AMREX_GPU_DEVICE (int i, int j, int k)
+            {
+               if(vfrac_array(i,j,k) > 0 and vfrac_array(i,j,k) < 1) 
+               {
+                   amrex::Real fac_x = (1._rt - iv[0]) * dx[0] * 0.5_rt;
+                   amrex::Real x = i * dx[0] + real_box.lo(0) + fac_x;
+
+                   amrex::Real fac_y = (1._rt - iv[1]) * dx[1] * 0.5_rt;
+                   amrex::Real y = j * dx[1] + real_box.lo(1) + fac_y;
+
+                   amrex::Real fac_z = (1._rt - iv[2]) * dx[2] * 0.5_rt;
+                   amrex::Real z = k * dx[2] + real_box.lo(2) + fac_z;
+
+                   mf_array(i, j, k) = macro_parser(x,y,z);
+               } 
+            });
+        }
+    }
 }
 
 
@@ -542,6 +668,26 @@ Quadrature::Gauss_Legendre(amrex::Vector<amrex::Real>& x,
         x[n-i] = z;
         w[i-1] = 2.0/((1.0-z*z)*pp*pp);
         w[n-i] = w[i-1];
+    }
+
+}
+
+
+void 
+CreateDirectory(std::string foldername) 
+{
+    if(ParallelDescriptor::IOProcessor()) 
+    {	
+        const int dir_err = mkdir(foldername.c_str(), S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
+ 
+        if(dir_err == -1) 
+        {
+            amrex::Print() << "Directory exists with name: "<< foldername << "\n";
+        } 
+        else 
+        {
+            amrex::Print() << "Directory created with name: "<< foldername << "\n";
+        }
     }
 
 }

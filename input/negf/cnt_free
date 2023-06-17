@@ -11,12 +11,27 @@ my_constants.epsilon_0 = 8.8541878128e-12
 my_constants.tiny = 1e-12
 
 ### Carbon nanotube
+my_constants.m_index = 17
+my_constants.n_index = 0
 my_constants.bond_length = 0.142e-9
 my_constants.N_unitcells = 1000
 my_constants.L_unitcell = 3*bond_length #0.426e-9
-my_constants.R_CN = 0.6654e-9    #radius
-my_constants.CN_h = R_CN + 2e-9
+
+my_constants.R_CN = bond_length*sqrt(3.*(m_index*m_index + n_index*n_index + m_index*n_index))/(2*pi)  #radius
+
+my_constants.CN_z = R_CN + 2e-9
+my_constants.CN_x = 0.
+my_constants.CN_y = 0.
+
+my_constants.Ef = -1.       #Palladium Contact Fermi level [eV] 
+
 ######################################
+
+####################
+###### OUTPUT ######
+####################
+
+plot.folder_name = free_cnt
 
 #################
 ###### NEGF #####
@@ -24,22 +39,25 @@ my_constants.CN_h = R_CN + 2e-9
 
 #nanostructure names
 transport.NS_names = cnt 
-transport.use_selfconsistent_potential = 0
 transport.use_negf = 1
-#transport.NS_gather_field = phi            
-#transport.NS_deposit_field  = charge_density 
-#transport.NS_initial_deposit_value  = 1e-4*q/(dx*dy*dz)
-#transport.Broyden_fraction = 0.01
-#transport.Broyden_max_norm = 1.e-5
 
 cnt.type = CNT
-cnt.type_id = 17 0 #m n
+cnt.type_id = m_index n_index     #m n
 cnt.acc = bond_length
-cnt.gamma = 2.5 #coupling strength (eV)
+cnt.gamma = 2.5        #coupling strength (eV)
 cnt.num_unitcells = N_unitcells
-cnt.offset = 0. 0. CN_h
+cnt.offset = CN_x CN_y CN_z
 
-cnt.E_f = 0.3
+cnt.contact_mu = Ef Ef+0.1
+cnt.contact_T  = 298. 298.
+
+cnt.impose_potential = 1
+#cnt.potential_profile_type = constant
+#cnt.applied_voltage = 0.
+cnt.potential_profile_type = linear
+cnt.applied_voltage_limits = 0. -0.1
+
+cnt.contact_Fermi_level = Ef
 cnt.E_valence_min = -10
 cnt.E_pole_max    = 3
 

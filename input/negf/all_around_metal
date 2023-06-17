@@ -3,24 +3,26 @@ use_transport = 1
 
 my_constants.m_index = 17
 my_constants.n_index = 0
-#my_constants.CN_z = GO_h + CM_h/2.
 my_constants.CN_z = Lz/2.
 my_constants.CN_x = 0.
 my_constants.CN_y = 0.
-my_constants.GV = 0
+
+my_constants.GV_min = 0.
+my_constants.GV_max = 1.
+my_constants.Nsteps =  11
+my_constants.dt = 1./(Nsteps-1)
+
+my_constants.Ef = -1.       #Palladium Contact Fermi level [eV]
+
 ##################################
 ##### USER DEFINED CONSTANTS #####
 ##################################
-
-### Physical and Other Constants 
+### Physical and Other Constants
 my_constants.q = 1.602e-19
 my_constants.epsilon_0 = 8.8541878128e-12
 my_constants.tiny = 1e-12
 my_constants.pi = 3.141592653589793
 
-
-my_constants.Nsteps =  1
-my_constants.dt = 0.
 
 ### gate oxide
 my_constants.GO_w = Lx
@@ -40,7 +42,7 @@ my_constants.N_unitcells = 4
 my_constants.L_unitcell = 3*bond_length #0.426e-9
 
 my_constants.R_CN = bond_length*sqrt(3.*(m_index*m_index + n_index*n_index + m_index*n_index))/(2*pi)  #radius
-my_constants.CN_co_l = 2*L_unitcell  
+my_constants.CN_co_l = 2*L_unitcell
 
 my_constants.small_gap = 0.3e-9  #0.1e-9 #5*bond_length #0.355e-9, gap between nanotube and the contacts
 
@@ -65,9 +67,9 @@ my_constants.charge_density_QD = charge_QD / ((4./3)*pi*R_QD**3)
 my_constants.D_CN_unitcell = 1          #ceil(R_CN*2./L_unitcell) #2
 
 my_constants.Ly_offset_unitcells = 0
-my_constants.Lx = D_CN_unitcell*8*L_unitcell 
-my_constants.Ly = (N_unitcells + Ly_offset_unitcells)*L_unitcell 
-my_constants.Lz = D_CN_unitcell*8*L_unitcell 
+my_constants.Lx = D_CN_unitcell*8*L_unitcell
+my_constants.Ly = (N_unitcells + Ly_offset_unitcells)*L_unitcell
+my_constants.Lz = D_CN_unitcell*8*L_unitcell
 
 my_constants.nx = 2*7*D_CN_unitcell*8  #224, dx= 0.0355 nm
 my_constants.ny = 2*7*(N_unitcells+Ly_offset_unitcells)     #28,  dy= 0.071 nm
@@ -76,6 +78,7 @@ my_constants.nz = 2*7*D_CN_unitcell*8   #224, dz= 0.0355 nm
 my_constants.dx = Lx/nx
 my_constants.dy = Ly/ny
 my_constants.dz = Lz/nz
+
 
 my_constants.epsilon_domain = epsilon_0 #air
 
@@ -93,16 +96,17 @@ steps = Nsteps
 domain.embedded_boundary = 1  #options: 1=true, 0=false (default)
 domain.specify_using_eb2 = 0  #options: 1=true, 0=false (default)
 
-ebgeom.objects =  Gate 
+ebgeom.objects =  Gate
 ebgeom.specify_inhomo_dir = 1
 
 Gate.geom_type      = cntfet_contact_cyl
-Gate.inner_radius   = R_CN + small_gap 
+Gate.inner_radius   = R_CN + small_gap
 Gate.thickness      = 10*dz
 Gate.center         = CN_x CN_y CN_z
 Gate.height         = Ly + 2*dy/5
 Gate.direction      = 1
-Gate.surf_soln      = GV 
+Gate.surf_soln_parser   = 1
+Gate.surf_soln_function = "GV_min + (GV_max-GV_min) * t"
 
 #################################
 ###### GEOMETRY PROPERTIES ######
@@ -127,6 +131,7 @@ boundary.hi = neu(0.) neu neu(0.)
 boundary.lo = neu(0.) neu neu(0.)
 
 #boundary.GV_function = "GV_min + (GV_max-GV_min) * t" #V
+
 
 ####################################
 ###### MACROSCOPIC PROPERTIES ######
@@ -155,7 +160,7 @@ macroscopic.atom_locations = 0.
 
 plot.folder_name = all_around_metal
 plot.fields_to_plot = epsilon.1 charge_density.1 phi.1 atom_locations
-#vecField 
+#vecField
 plot.write_after_init = 1
 plot.write_interval = 1
 plot.rawfield_write_interval = 1000000
@@ -197,12 +202,11 @@ mlmg.relative_tolerance=1e-10
 #################
 
 #nanostructure names
-transport.NS_names = cnt 
-transport.use_selfconsistent_potential = 0
+transport.NS_names = cnt
 transport.use_negf = 1
-transport.NS_gather_field = phi            
-transport.NS_deposit_field  = charge_density 
-transport.NS_initial_deposit_value  = 1e-2
+transport.NS_gather_field = phi
+transport.NS_deposit_field  = charge_density
+transport.NS_initial_deposit_value  = 0.
 transport.Broyden_fraction = 1e-1
 transport.Broyden_max_norm = 1.e-6
 
@@ -212,9 +216,12 @@ cnt.acc = bond_length
 cnt.gamma = 2.5        #coupling strength (eV)
 cnt.num_unitcells = N_unitcells
 cnt.offset = CN_x CN_y CN_z
-cnt.contact_potential = 0 0
 
-cnt.E_f = -1
+cnt.contact_mu = Ef Ef
+cnt.contact_T  = 298. 298.
+
+cnt.contact_Fermi_level = Ef
 cnt.E_valence_min = -10
 cnt.E_pole_max    = 3
+cnt.write_at_iter = 1
 #####################################

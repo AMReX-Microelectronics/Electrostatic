@@ -1,7 +1,5 @@
 #include "Transport.H"
 
-//#include "../../Utils/SelectWarpXUtils/WarpXUtil.H"
-//#include "../../Utils/SelectWarpXUtils/TextMsg.H"
 #include "../../Utils/SelectWarpXUtils/WarpXConst.H"
 #include "../../Utils/CodeUtils/CodeUtil.H"
 #include "../../Code.H"
@@ -106,7 +104,17 @@ c_TransportSolver::InitData()
 
     amrex::Real NS_Broyden_frac = 0.1;
 
-    auto& rCode = c_Code::GetInstance();
+    auto& rCode    = c_Code::GetInstance();
+
+    amrex::ParmParse pp_plot("plot");
+    std::string foldername_str = "output";
+    pp_plot.query("folder_name", foldername_str);
+    negf_foldername_str = foldername_str + "/negf";
+
+    CreateDirectory(foldername_str);
+    CreateDirectory(negf_foldername_str);
+    
+
     if(rCode.use_electrostatic)
     {
         auto& rGprop = rCode.get_GeometryProperties();
@@ -168,8 +176,8 @@ c_TransportSolver::InitData()
                                                                        NS_deposit_field_str, 
                                                                        NS_initial_deposit_value,
                                                                        NS_Broyden_frac,
-                                                                       use_selfconsistent_potential,
-                                                                       use_negf
+                                                                       use_negf,
+								       negf_foldername_str
                                                                       ));
                 break;
             }
@@ -183,8 +191,8 @@ c_TransportSolver::InitData()
                                                                             NS_deposit_field_str, 
                                                                             NS_initial_deposit_value,
                                                                             NS_Broyden_frac,
-                                                                            use_selfconsistent_potential,
-                                                                            use_negf
+                                                                            use_negf,
+									    negf_foldername_str
                                                                            ));
                 amrex::Abort("NS_type " + type + " is not yet defined.");
                 break; 
@@ -204,7 +212,7 @@ c_TransportSolver::InitData()
 }
 
 void 
-c_TransportSolver::Solve() 
+c_TransportSolver::Solve(const int step, const amrex::Real time) 
 {
 
    auto& rCode    = c_Code::GetInstance();
@@ -216,56 +224,94 @@ c_TransportSolver::Solve()
    amrex::Real total_mlmg_solve_time = 0.;
 
    amrex::Real max_norm = 1.;
-   int max_step = 1;
+   int max_iter = 1;
+
+
+   for (int c=0; c < vp_CNT.size(); ++c)
+   {
+       vp_CNT[c]->Set_StepFilenameString(step);
+   }
+
 
    if(rCode.use_electrostatic) 
    {	   
+
        do 
        {
-           amrex::Print() << "\n\nBroyden iteration: " << max_step << "\n";
+           amrex::Print() << "\n\nBroyden iteration: " << max_iter << "\n";
 
            rMLMG.UpdateBoundaryConditions();
+
+           rMprop.ReInitializeMacroparam(NS_gather_field_str);
+
            auto mlmg_solve_time = rMLMG.Solve_PoissonEqn();
            total_mlmg_solve_time += mlmg_solve_time;
 
            rPostPro.Compute();
 
-
-           rOutput.WriteOutput(max_step, -1.);
-
            for (int c=0; c < vp_CNT.size(); ++c)
            {
+
+	       vp_CNT[c]->Set_IterationFilenameString();
+
+
 	       vp_CNT[c]->Gather_MeshAttributeAtAtoms();  
-	       vp_CNT[c]->Write_PotentialAtSites();
+
+               //rOutput.WriteOutput(step, time);
 
                vp_CNT[c]->Solve_NEGF();
 
 	       //vp_CNT[c]->GuessNewCharge_SimpleMixingAlg();
 	       vp_CNT[c]->GuessNewCharge_ModifiedBroydenSecondAlg();
-               //vp_CNT[c]->GuessNewCharge_Broyden_FirstAlg();
 
-               //rMprop.ReInitializeMacroparam(NS_deposit_field_str);
+	       if(vp_CNT[c]->write_at_iter) 
+	       {
+                   vp_CNT[c]->Write_Data(vp_CNT[c]->iter_filename_str);
+	       }
+
+               rMprop.ReInitializeMacroparam(NS_deposit_field_str);
+
                vp_CNT[c]->Deposit_AtomAttributeToMesh();
 
                max_norm = vp_CNT[c]->Broyden_Norm;
-               max_step = vp_CNT[c]->Broyden_Step;
+               max_iter = vp_CNT[c]->Broyden_Step;
+
            }
 
        } while(max_norm > Broyden_max_norm);    
 
+
+
        amrex::Print() << "Compute current: \n";
        for (int c=0; c < vp_CNT.size(); ++c)
        {
+
+           vp_CNT[c]->Write_Data(vp_CNT[c]->step_filename_str);
+
            vp_CNT[c]->Compute_Current();
+
+           vp_CNT[c]->Write_Current(step);
+
            vp_CNT[c]->Reset();
+
+           //rMprop.ReInitializeMacroparam(NS_deposit_field_str);
+
        }
-       amrex::Print() << "\nAverage mlmg time for self-consistency (s): " << total_mlmg_solve_time / max_step << "\n";
+
+       amrex::Print() << "\nAverage mlmg time for self-consistency (s): " << total_mlmg_solve_time / max_iter << "\n";
+
    }
    else 
    {
        for (int c=0; c < vp_CNT.size(); ++c)
        {
            vp_CNT[c]->Solve_NEGF();
+
+           vp_CNT[c]->Write_Data(vp_CNT[c]->step_filename_str);
+
+           vp_CNT[c]->Compute_Current();
+
+           vp_CNT[c]->Write_Current(step);
        }
    }
 

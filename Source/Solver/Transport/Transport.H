@@ -26,7 +26,7 @@ public:
     ~c_TransportSolver();
 
     void InitData();
-    void Solve();
+    void Solve(const int step, const amrex::Real time);
 
 private:
     int num_NS=0;
@@ -61,6 +61,8 @@ private:
 
     int use_selfconsistent_potential;
     int use_negf;
+
+    std::string negf_foldername_str = "output/negf";
 
 };
 

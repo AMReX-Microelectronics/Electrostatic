@@ -22,8 +22,12 @@ my_constants.epsilon_domain = epsilon_0 #air
 my_constants.epsilon_CM     = epsilon_0 #Palladium
 
 my_constants.SV = 0.      #source voltage [V]
-my_constants.Vds = -0.2   #Drain-Source voltage [V]
-my_constants.Vgs = 0.8     #Gate-Source voltage [V]
+my_constants.Vds = -0.1   #Drain-Source voltage [V]
+my_constants.Vgs_min = -0.3
+my_constants.Vgs_max =  0.9
+my_constants.Nsteps =  13
+my_constants.dt = 1./(Nsteps-1)
+
 
 my_constants.Ef = -1.       #Palladium Contact Fermi level [eV] 
 
@@ -57,7 +61,7 @@ my_constants.dz = Lz/nz
 my_constants.m_index = 17
 my_constants.n_index = 0
 
-my_constants.Channel_unitcells = 23 
+my_constants.Channel_unitcells = 46 
 my_constants.Overlap_unitcells = 10 
 my_constants.N_unitcells = Channel_unitcells + 2*Overlap_unitcells 
 
@@ -141,7 +145,8 @@ Gate.thickness      = G_thickness
 Gate.center         = CN_x CN_y CN_z
 Gate.height         = drain_lo_y - source_hi_y
 Gate.direction      = 1
-Gate.surf_soln      = Vgs + SV
+Gate.surf_soln_parser   = 1
+Gate.surf_soln_function = "SV + Vgs_min + (Vgs_max-Vgs_min) * t"
 
 #################################
 ###### GEOMETRY PROPERTIES ######

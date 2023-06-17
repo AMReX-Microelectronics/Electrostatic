@@ -8,6 +8,8 @@
 
 #include<AMReX_TableData.H>
 
+#include <fstream>
+
 struct s_AVG_TYPE 
 {
     enum { 
@@ -104,7 +106,7 @@ public:
     BlkTable1D  h_GR_atPoles_loc_data;
     BlkTable1D  h_RhoEq_loc_data;
     BlkTable1D  h_RhoNonEq_loc_data;
-    RealTable1D h_Current_root_data;
+    RealTable1D h_Current_loc_data;
 
 
     /*Tables required to compute Green and Spectral Functions */
@@ -213,10 +215,28 @@ public:
     RealTable1D n_curr_out_data;
     RealTable1D n_prev_in_data;
     RealTable1D F_curr_data;
+    RealTable1D Norm_data;
     RealTable2D Jinv_curr_data;
 
     amrex::Vector<RealTable1D*> W_Broyden;
     amrex::Vector<RealTable1D*> V_Broyden;
+
+    /*For Output*/
+    const int negf_plt_name_digits = 4;
+    std::string step_foldername_str;
+    std::string step_filename_prefix_str;
+    std::string current_filename_str; /*current here means charge current, I */
+    std::ofstream outfile_I;
+
+    std::string step_filename_str;
+    std::string iter_foldername_str;
+    std::string iter_filename_prefix_str;
+    std::string iter_filename_str;
+    int write_at_iter = 0;
+
+    void Set_StepFilenameString(const int step);
+    void Set_IterationFilenameString();
+
 
     void Initialize_ChargeAtFieldSites(const amrex::Real value);
     virtual void ReadNanostructureProperties();
@@ -285,6 +305,10 @@ public:
     void Write_BlkTable2D_asaf_E(const BlkTable2D& Arr_data,
                                  std::string filename,
                                  std::string header);
+
+    void Write_InducedCharge (const std::string filename_prefix);
+    void Write_ChargeNorm(const std::string filename_prefix);
+    void Write_Current (const int step);
 
     template<typename U> 
     void Print_Table1D_loc(const U& Tab1D_data);

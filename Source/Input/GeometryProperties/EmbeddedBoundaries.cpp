@@ -51,6 +51,10 @@ c_EmbeddedBoundaries::~c_EmbeddedBoundaries()
     map_basic_objects_info.clear();
     map_basic_objects_soln.clear();
     map_basic_objects_beta.clear(); 
+    map_basic_objects_soln_parser_flag.clear();
+    //for (auto it: map_basic_objects_soln_parser) {it.second.reset();} 
+
+    map_basic_objects_soln_parser.clear();
 
     geom = nullptr;
     ba = nullptr;
@@ -129,8 +133,26 @@ c_EmbeddedBoundaries::ReadGeometry()
 
                 if(specify_inhomogeneous_dirichlet == 1) 
                 {
-                    getWithParser(pp_object,"surf_soln", map_basic_objects_soln[it]);
-                    amrex::Print()  << "##### surf_soln: " << map_basic_objects_soln[it] << "\n";
+	            map_basic_objects_soln_parser_flag[it] = 0;
+
+                    queryWithParser(pp_object,"surf_soln_parser", map_basic_objects_soln_parser_flag[it]);
+
+	            if(map_basic_objects_soln_parser_flag[it]) 
+		    {
+	                std::string surf_soln_function_str;    
+
+		        Store_parserString(pp_object, "surf_soln_function", surf_soln_function_str);
+                        amrex::Print()  << "##### surf_soln_function: " << surf_soln_function_str << "\n";
+
+                        map_basic_objects_soln_parser[it] = std::make_unique<amrex::Parser>(
+                                           makeParser(surf_soln_function_str, m_parser_varname_vector));
+
+	            }
+                    else 
+		    {		    
+                        getWithParser(pp_object,"surf_soln", map_basic_objects_soln[it]);
+                        amrex::Print()  << "##### surf_soln: " << map_basic_objects_soln[it] << "\n";
+		    }
                 } 
 
                 //if(specify_separate_surf_beta == 1) 
@@ -581,7 +603,9 @@ c_EmbeddedBoundaries::BuildGeometry(const amrex::Geometry* GEOM, const amrex::Bo
             {
                 m_p_soln_mf[c] = std::make_unique<amrex::MultiFab>(*ba, *dm, 1, 0, MFInfo(), *m_p_factory[c]); 
                 (*m_p_soln_mf[c]).setVal(0.); 
-                Multifab_Manipulation::SpecifyValueOnlyOnCutcells(*m_p_soln_mf[c], map_basic_objects_soln[name]);
+
+	        const amrex::Real init_time = 0.;
+                Specify_SurfSolnOnCutcells(*m_p_soln_mf[c], name, init_time);
 
                 #ifdef PRINT_LOW
                 amrex::Print() << prt << "Index space size : " << amrex::EB2::IndexSpace::size() << "\n";
@@ -719,6 +743,7 @@ c_EmbeddedBoundaries::BuildGeometry(const amrex::Geometry* GEOM, const amrex::Bo
             {
                 p_surf_soln_union->plus(get_soln_mf(i), 0, 1, 0);
             }
+
             clear_soln_mf();
         }
     }
@@ -727,6 +752,87 @@ c_EmbeddedBoundaries::BuildGeometry(const amrex::Geometry* GEOM, const amrex::Bo
 #endif
 }
 
+
+void
+c_EmbeddedBoundaries::Specify_SurfSolnOnCutcells(amrex::MultiFab& mf, const std::string name, const amrex::Real time) 
+{
+
+    if(map_basic_objects_soln_parser_flag[name]) /*specify value using parser*/
+    {
+        #ifdef TIME_DEPENDENT
+        Multifab_Manipulation::SpecifyValueOnlyOnCutcells_UsingParser_4vars(mf,
+			                                                    map_basic_objects_soln_parser[name]->compile<4>(),
+									    *geom,
+									    time);
+	amrex::ParserExecutor<4> const&  macro_parser = map_basic_objects_soln_parser[name]->compile<4>();
+	amrex::Print() << "Surface solution: " << macro_parser(0.,0.,0.,time);
+        #else
+        Multifab_Manipulation::SpecifyValueOnlyOnCutcells_UsingParser_3vars(mf,
+			                                                    map_basic_objects_soln_parser[name]->compile<3>(),
+									    *geom);
+        #endif
+    }
+    else /*specify constant value*/
+    {    
+        Multifab_Manipulation::SpecifyValueOnlyOnCutcells(mf, map_basic_objects_soln[name]);
+    }
+
+}
+
+
+void
+c_EmbeddedBoundaries::Update_SurfaceSolution(const amrex::Real time)
+{
+
+    if(specify_input_using_eb2)
+    {
+        if(specify_inhomogeneous_dirichlet == 1) 
+        {
+            p_surf_soln_union->setVal(surf_soln);
+        }
+    }
+    else 
+    {
+        if(specify_inhomogeneous_dirichlet == 1) 
+	{	
+	    if(num_objects == 1)
+            {
+                for (auto it: map_basic_objects_type)
+                {
+		    Specify_SurfSolnOnCutcells(*p_surf_soln_union, it.first, time);
+		}
+            }
+	    else if(num_objects > 1) 
+	    {
+	        m_p_soln_mf.resize(num_objects);
+
+                int c=0;
+                for (auto it: map_basic_objects_type)
+                {
+                    std::string name = it.first; 
+                      
+	            amrex::Print() << "\nResetting field on, name: " << name << "\n";
+	            amrex::Print() << "\nSoln: "<< map_basic_objects_soln[name] << "\n";
+	               	
+	            m_p_soln_mf[c] = std::make_unique<amrex::MultiFab>(*ba, *dm, 1, 0, MFInfo(), *m_p_factory[c]); 
+
+                    (*m_p_soln_mf[c]).setVal(0.); 
+		    Specify_SurfSolnOnCutcells(*p_surf_soln_union, it.first, time);
+                    ++c;
+                }
+    	
+                p_surf_soln_union->setVal(0);    
+                for(int i=0; i < num_objects; ++i)
+                {
+                    p_surf_soln_union->plus(get_soln_mf(i), 0, 1, 0);
+                }
+
+                clear_soln_mf();
+	    }
+	}
+    }
+
+}
 
 template<typename ObjectType>
 void

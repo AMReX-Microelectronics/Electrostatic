@@ -70,16 +70,28 @@ public:
 
     amrex::MultiFab& get_soln_mf  (int i) {return (*m_p_soln_mf[i]);}
     //amrex::MultiFab& get_beta_mf  (int i) {return (*m_p_beta_mf[i]);}
-    void clear_soln_mf() { m_p_soln_mf.clear(); };
+    void clear_soln_mf() 
+    { 
+	for (int i=0; i < m_p_soln_mf.size(); ++i) 
+	{ 
+	    m_p_soln_mf[i].reset(); 
+	} 
+	m_p_soln_mf.clear(); 
+    };
     //void clear_beta_mf() { m_p_beta_mf.clear(); };
 
     void BuildGeometry(const amrex::Geometry* geom, const amrex::BoxArray* ba, const amrex::DistributionMapping* dm);
+
+    void Update_SurfaceSolution(const amrex::Real time);
+
 
 private:
     amrex::Vector< std::string > vec_object_names;
     std::map<std::string,std::string> map_basic_objects_type;
     std::map<std::string,std::any> map_basic_objects_info;
     std::map<std::string,amrex::Real> map_basic_objects_soln;
+    std::map<std::string,int> map_basic_objects_soln_parser_flag;
+    std::map<std::string,std::unique_ptr<amrex::Parser>> map_basic_objects_soln_parser;
     std::map<std::string,amrex::Real> map_basic_objects_beta;
     const amrex::Array<amrex::Real, AMREX_SPACEDIM>* _dx;
 
@@ -151,5 +163,13 @@ private:
     amrex::Vector< std::unique_ptr<amrex::MultiFab> > m_p_soln_mf;
     //amrex::Vector< std::unique_ptr<amrex::MultiFab> > m_p_beta_mf;
     amrex::Vector< std::unique_ptr<amrex::EBFArrayBoxFactory> > m_p_factory;
+
+    #ifdef TIME_DEPENDENT
+    amrex::Vector<std::string> m_parser_varname_vector = {"x", "y", "z", "t"};
+    #else
+    amrex::Vector<std::string> m_parser_varname_vector = {"x", "y", "z"};
+    #endif
+
+    void Specify_SurfSolnOnCutcells(amrex::MultiFab& mf, const std::string name, const amrex::Real time);
 };
 #endif

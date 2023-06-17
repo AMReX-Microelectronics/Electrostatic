@@ -25,8 +25,49 @@ c_NEGF_Common<T>:: Deallocate ()
     n_curr_out_data.clear();
     n_prev_in_data.clear();
     F_curr_data.clear();
+    Norm_data.clear();
 
 }
+
+
+template<typename T>
+void
+c_NEGF_Common<T>:: Set_StepFilenameString(const int step)
+{
+
+    step_filename_str  = amrex::Concatenate(step_filename_prefix_str, step, negf_plt_name_digits);
+    /*eg. output/negf/cnt/step0001 for step 1*/
+    amrex::Print() << "step_filename_str: " << step_filename_str << "\n";
+
+
+    if(write_at_iter) 
+    {
+         iter_foldername_str      = step_filename_str   + "_iter/";
+         /*eg. output/negf/cnt/step0001_iter/ */
+         amrex::Print() << "iter_foldername_str: " << iter_foldername_str << "\n";
+
+         CreateDirectory(iter_foldername_str);
+
+         iter_filename_prefix_str = iter_foldername_str + "iter";
+         /*eg. output/negf/cnt/step0001_iter/iter */
+         amrex::Print() << "iter_filename_prefix_str: " << iter_filename_prefix_str << "\n";
+    }
+
+}
+
+
+template<typename T>
+void
+c_NEGF_Common<T>:: Set_IterationFilenameString()
+{
+    if(write_at_iter) 
+    {
+        iter_filename_str  = amrex::Concatenate(iter_filename_prefix_str, Broyden_Step, negf_plt_name_digits);
+        /*eg. output/negf/cnt/step0001_iter/iter0001  for iteration 1*/
+        amrex::Print() << "iter_filename_str: " << iter_filename_str << "\n";
+    }
+}
+
 
 template<typename T>
 void
@@ -41,6 +82,7 @@ template<typename T>
 void
 c_NEGF_Common<T>:: Reset_Broyden ()
 {
+    amrex::Print() << "\n\n\n\nResetting Broyden\n";	
     int size = W_Broyden.size();	
     for(int j=0; j<size; ++j) 
     {
@@ -51,9 +93,11 @@ c_NEGF_Common<T>:: Reset_Broyden ()
     V_Broyden.clear();
 
     /* At present, we set n_curr_in as the converged charge density for previous gate voltage*/
-    SetVal_Table1D(n_curr_out_data,0.);
-    SetVal_Table1D(n_prev_in_data,0.);
-    SetVal_Table1D(F_curr_data,0.);
+    //SetVal_Table1D(h_n_curr_in_data, 0.);
+    SetVal_Table1D(n_curr_out_data, 0.);
+    SetVal_Table1D(n_prev_in_data, 0.);
+    SetVal_Table1D(F_curr_data, 0.);
+    SetVal_Table1D(Norm_data, 0.);
 
     SetVal_Table2D(Jinv_curr_data,0.);
 
@@ -132,6 +176,9 @@ c_NEGF_Common<T>:: ReadNanostructureProperties ()
     {
         pp_ns.query("potential_profile_type", potential_profile_type_str);
     }
+
+    write_at_iter = 0;
+    queryWithParser(pp_ns,"write_at_iter", write_at_iter);
     
     set_material_specific_parameters();
 
@@ -171,11 +218,13 @@ c_NEGF_Common<T>:: ReadNanostructureProperties ()
     n_curr_out_data.resize({0},{num_field_sites}, The_Pinned_Arena());
     n_prev_in_data.resize({0},{num_field_sites}, The_Pinned_Arena());
     F_curr_data.resize({0},{num_field_sites}, The_Pinned_Arena());
+    Norm_data.resize({0},{num_field_sites}, The_Pinned_Arena());
 
     SetVal_Table1D(h_n_curr_in_data,0.);
     SetVal_Table1D(n_curr_out_data,0.);
     SetVal_Table1D(n_prev_in_data,0.);
     SetVal_Table1D(F_curr_data,0.);
+    SetVal_Table1D(Norm_data, 0.);
 
 
     Jinv_curr_data.resize({0,0},{num_field_sites, num_field_sites}, The_Pinned_Arena());
@@ -403,11 +452,8 @@ c_NEGF_Common<T>::AllocateArrays ()
     h_tau_glo_data.resize({0},{NUM_CONTACTS},The_Pinned_Arena());
     SetVal_Table1D(h_tau_glo_data,zero);
 
-    h_Current_root_data.resize({0},{NUM_CONTACTS},The_Pinned_Arena());
-    SetVal_Table1D(h_Current_root_data,0.);
-    //if(ParallelDescriptor::IOProcessor())
-    //{
-    //}
+    h_Current_loc_data.resize({0},{NUM_CONTACTS},The_Pinned_Arena());
+    SetVal_Table1D(h_Current_loc_data,0.);
 
     #if AMREX_USE_GPU
     d_GR_loc_data.resize({0,0}, {Hsize_glo, blkCol_size_loc}, The_Arena());
@@ -1096,9 +1142,23 @@ c_NEGF_Common<T>:: Compute_InducedCharge ()
 
     h_RhoInduced_loc_data.clear();
 
-    std::string filename = "Qm_out_" + std::to_string(Broyden_Step) + ".dat";
-    Write_Table1D(PTD, n_curr_out_data, filename.c_str(), 
-                  "'axial location / (nm)', 'Induced charge per site / (e)'");
+
+}
+
+
+template<typename T>
+void 
+c_NEGF_Common<T>:: Write_InducedCharge (const std::string filename_prefix)
+{
+
+    if (ParallelDescriptor::IOProcessor())
+    {
+
+        std::string filename = filename_prefix + "_Qout.dat";
+
+        Write_Table1D(PTD, n_curr_out_data, filename.c_str(), 
+                      "'axial location / (nm)', 'Induced charge per site / (e)'");
+    }
 
 }
 
@@ -1114,19 +1174,19 @@ c_NEGF_Common<T>:: GuessNewCharge_Broyden_FirstAlg ()
     auto const& n_prev_in  = n_prev_in_data.table();
     auto const& F_curr     = F_curr_data.table();
 
+    SetVal_Table1D(Norm_data, 0.);
+    auto const& Norm       = Norm_data.table();
+
     RealTable1D sum_Fcurr_data({0},{num_field_sites}, The_Pinned_Arena());
     RealTable1D sum_deltaFcurr_data({0},{num_field_sites}, The_Pinned_Arena());
     RealTable1D delta_F_curr_data({0},{num_field_sites}, The_Pinned_Arena());
     RealTable1D delta_n_Jinv_data({0},{num_field_sites}, The_Pinned_Arena());
-
-    RealTable1D Norm_data({0},{num_field_sites}, The_Pinned_Arena());
 
     auto const& sum_Fcurr      = sum_Fcurr_data.table();
     auto const& sum_deltaFcurr = sum_deltaFcurr_data.table();
     auto const& delta_F_curr   = delta_F_curr_data.table();
     auto const& delta_n_Jinv   = delta_n_Jinv_data.table();
     auto const& Jinv_curr    = Jinv_curr_data.table();
-    auto const& Norm     = Norm_data.table();
 
     amrex::Real denom = 0.;
     amrex::Real total_diff = 0.;
@@ -1205,17 +1265,17 @@ c_NEGF_Common<T>:: GuessNewCharge_Broyden_FirstAlg ()
     delta_F_curr_data.clear();
     delta_n_Jinv_data.clear();
     
-    for(int l=0; l < 4; ++l) 
-    {
-        amrex::Print() << "Qm_in, Qm_out, Qm+1_in, sumFcrr, F_curr, deltaF: " << l 
-		                                                          << "  "  << n_prev_in(l) 
-		                                                          << "  " << n_curr_out(l)  
-									  << "  " << n_curr_in(l) 
-									  << "  " << sum_Fcurr(l)
-									  << "  " << F_curr(l)
-									  << "  " << delta_F_curr(l) 
-									  << "\n";
-    }
+    //for(int l=0; l < 4; ++l) 
+    //{
+    //    amrex::Print() << "Qm_in, Qm_out, Qm+1_in, sumFcrr, F_curr, deltaF: " << l 
+    //    	                                                          << "  "  << n_prev_in(l) 
+    //    	                                                          << "  " << n_curr_out(l)  
+    //    								  << "  " << n_curr_in(l) 
+    //    								  << "  " << sum_Fcurr(l)
+    //    								  << "  " << F_curr(l)
+    //    								  << "  " << delta_F_curr(l) 
+    //    								  << "\n";
+    //}
 
 
     Broyden_Norm = Norm(0);
@@ -1234,10 +1294,10 @@ c_NEGF_Common<T>:: GuessNewCharge_Broyden_FirstAlg ()
     //std::string filename = "norm_" + std::to_string(Broyden_Step) + ".dat";
     //Write_Table1D(PTD, Norm_data, filename.c_str(), 
     //              "'axial location / (nm)', 'norm");
-    //Norm_data.clear();
 
     Broyden_Step += 1;
 }
+
 
 template<typename T>
 void 
@@ -1252,19 +1312,20 @@ c_NEGF_Common<T>:: GuessNewCharge_ModifiedBroydenSecondAlg ()
     auto const& n_prev_in  = n_prev_in_data.table();
     auto const& F_curr     = F_curr_data.table();
 
+    SetVal_Table1D(Norm_data, 0.);
+    auto const& Norm       = Norm_data.table();
+
     RealTable1D sum_Fcurr_data({0},{num_field_sites}, The_Pinned_Arena());
     RealTable1D sum_deltaFcurr_data({0},{num_field_sites}, The_Pinned_Arena());
     RealTable1D delta_F_curr_data({0},{num_field_sites}, The_Pinned_Arena());
     RealTable1D W_curr_data({0},{num_field_sites}, The_Pinned_Arena());
     RealTable1D V_curr_data({0},{num_field_sites}, The_Pinned_Arena());
-    RealTable1D Norm_data({0},{num_field_sites}, The_Pinned_Arena());
 
     auto const& sum_Fcurr      = sum_Fcurr_data.table();
     auto const& sum_deltaFcurr = sum_deltaFcurr_data.table();
     auto const& delta_F_curr   = delta_F_curr_data.table();
     auto const& W_curr   = W_curr_data.table();
     auto const& V_curr   = V_curr_data.table();
-    auto const& Norm     = Norm_data.table();
 
     amrex::Real denom = 0.;
     amrex::Real total_diff = 0.;
@@ -1390,22 +1451,22 @@ c_NEGF_Common<T>:: GuessNewCharge_ModifiedBroydenSecondAlg ()
     W_curr_data.clear();
     V_curr_data.clear();
     
-    for(int l=0; l < 1; ++l) 
-    {
-        amrex::Print() << "Qm_in, Qm_out, Qm+1_in, F_curr: " << l << " "  << n_prev_in(l) 
-		                                                  << "  " << n_curr_out(l)  
-								  << "  " << n_curr_in(l) 
-								  << "  " << F_curr(l)
-								  << "\n";
-    }
-    for(int l=num_field_sites-1; l < num_field_sites; ++l) 
-    {
-        amrex::Print() << "Qm_in, Qm_out, Qm+1_in, F_curr: " << l << " "  << n_prev_in(l) 
-		                                                  << "  " << n_curr_out(l)  
-								  << "  " << n_curr_in(l) 
-								  << "  " << F_curr(l)
-								  << "\n";
-    }
+    //for(int l=0; l < 1; ++l) 
+    //{
+    //    amrex::Print() << "Qm_in, Qm_out, Qm+1_in, F_curr: " << l << " "  << n_prev_in(l) 
+    //    	                                                  << "  " << n_curr_out(l)  
+    //    							  << "  " << n_curr_in(l) 
+    //    							  << "  " << F_curr(l)
+    //    							  << "\n";
+    //}
+    //for(int l=num_field_sites-1; l < num_field_sites; ++l) 
+    //{
+    //    amrex::Print() << "Qm_in, Qm_out, Qm+1_in, F_curr: " << l << " "  << n_prev_in(l) 
+    //    	                                                  << "  " << n_curr_out(l)  
+    //    							  << "  " << n_curr_in(l) 
+    //    							  << "  " << F_curr(l)
+    //    							  << "\n";
+    //}
 
 
     Broyden_Norm = Norm(0);
@@ -1421,14 +1482,27 @@ c_NEGF_Common<T>:: GuessNewCharge_ModifiedBroydenSecondAlg ()
 
     amrex::Print() << "\nL2 norm: " << total_diff << " Max norm: " << Broyden_Norm << " location: " <<  norm_index << "\n";
 
-    std::string filename = "norm_" + std::to_string(Broyden_Step) + ".dat";
-    Write_Table1D(PTD, Norm_data, filename.c_str(), 
-                  "'axial location / (nm)', 'norm");
-    Norm_data.clear();
-
     Broyden_Step += 1;
 
 }
+
+
+template<typename T>
+void 
+c_NEGF_Common<T>:: Write_ChargeNorm (const std::string filename_prefix)
+{
+
+    if (ParallelDescriptor::IOProcessor())
+    {
+        std::string filename = filename_prefix + "_norm.dat";
+
+        Write_Table1D(PTD, Norm_data, filename.c_str(), 
+                      "'axial location / (nm)', 'norm");
+    }
+
+}
+
+
 
 template<typename T>
 void 
@@ -1443,15 +1517,16 @@ c_NEGF_Common<T>:: GuessNewCharge_SimpleMixingAlg ()
     auto const& n_prev_in  = n_prev_in_data.table();
     auto const& F_curr     = F_curr_data.table();
 
+    SetVal_Table1D(Norm_data, 0.);
+    auto const& Norm       = Norm_data.table();
+
     RealTable1D sum_Fcurr_data({0},{num_field_sites}, The_Pinned_Arena());
     RealTable1D sum_deltaFcurr_data({0},{num_field_sites}, The_Pinned_Arena());
     RealTable1D delta_F_curr_data({0},{num_field_sites}, The_Pinned_Arena());
-    RealTable1D Norm_data({0},{num_field_sites}, The_Pinned_Arena());
 
     auto const& sum_Fcurr      = sum_Fcurr_data.table();
     auto const& sum_deltaFcurr = sum_deltaFcurr_data.table();
     auto const& delta_F_curr   = delta_F_curr_data.table();
-    auto const& Norm     = Norm_data.table();
 
     amrex::Real denom = 0.;
     amrex::Real total_diff = 0.;
@@ -1530,11 +1605,6 @@ c_NEGF_Common<T>:: GuessNewCharge_SimpleMixingAlg ()
     }
 
     amrex::Print() << "\nL2 norm: " << total_diff << " Max norm: " << Broyden_Norm << " location: " <<  norm_index << "\n";
-
-    std::string filename = "norm_" + std::to_string(Broyden_Step) + ".dat";
-    Write_Table1D(PTD, Norm_data, filename.c_str(), 
-                  "'axial location / (nm)', 'norm");
-    Norm_data.clear();
 
     Broyden_Step += 1;
 
@@ -2465,16 +2535,8 @@ c_NEGF_Common<T>:: Compute_Current ()
 
     Allocate_TemporaryArraysForGFComputation();
 
-    RealTable1D h_Current_loc_data({0},{NUM_CONTACTS},The_Pinned_Arena());
-    //ComplexType zero(0.,0.);
-    SetVal_Table1D(h_Current_loc_data,0.);
+    SetVal_Table1D(h_Current_loc_data, 0.);
     auto const& h_Current_loc   = h_Current_loc_data.table();
-    auto const& h_Current_root  = h_Current_root_data.table();
-    SetVal_Table1D(h_Current_root_data, 0.);
-
-    //if(ParallelDescriptor::IOProcessor())
-    //{
-    //}
 
     auto const& h_Alpha_loc = h_Alpha_loc_data.table();
     auto const& h_Alpha_glo = h_Alpha_glo_data.table();
@@ -2752,14 +2814,13 @@ c_NEGF_Common<T>:: Compute_Current ()
 
     if(ParallelDescriptor::IOProcessor())
     {
-        amrex::Print() << "Current: \n";
+        amrex::Print() << "\nCurrent: \n";
         for (int k=0; k <NUM_CONTACTS; ++k)
         {
-            amrex::Print() << " contact, current, total current: "
+            amrex::Print() << " contact, total current: "
 		           << k 
 		           << std::setprecision(5)  
-		           << std::setw(15) << h_Current_loc(k) 
-		           << std::setw(15) << h_Current_root(k) << "\n";
+		           << std::setw(15) << h_Current_loc(k) << "\n";
         }
     }
 
@@ -2768,6 +2829,25 @@ c_NEGF_Common<T>:: Compute_Current ()
 }
 
 
+template<typename T>
+void 
+c_NEGF_Common<T>:: Write_Current (const int step)
+{
+
+    if (ParallelDescriptor::IOProcessor())
+    {
+        auto const& h_Current_loc   = h_Current_loc_data.table();
+
+        outfile_I << std::setw(10) << step;
+        for (int k=0; k <NUM_CONTACTS; ++k)
+        {
+		outfile_I << std::setw(20) << h_Current_loc(k);
+	}
+	outfile_I << "\n";
+
+    }
+
+}
 
 
 //template<typename T>

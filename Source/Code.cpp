@@ -337,7 +337,7 @@ c_Code::Solve_PostProcess_Output()
                        << time << std::setw(15) << "\n";
 
         #ifdef USE_TRANSPORT
-        if(use_transport) m_pTransportSolver->Solve();
+        if(use_transport) m_pTransportSolver->Solve(step, time);
         if(use_electrostatic) 
         {
             m_pPostProcessor->Compute(); 

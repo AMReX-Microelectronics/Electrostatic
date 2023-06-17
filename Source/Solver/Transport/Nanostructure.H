@@ -122,8 +122,8 @@ public:
                      const std::string NS_deposit_str,
                      const amrex::Real NS_initial_deposit_value,
                      const amrex::Real NS_Broyden_frac,
-                     const int use_selfconsistent_potential,
-                     const int use_negf    );
+                     const int use_negf,
+		     const std::string negf_foldername_str    );
 
     virtual void ReadNanostructureProperties () override;
 
@@ -132,8 +132,9 @@ public:
     void Gather_MeshAttributeAtAtoms();
     void Deposit_AtomAttributeToMesh();
     void Obtain_PotentialAtSites();
-    void Write_PotentialAtSites();
+    void Write_PotentialAtSites(const std::string filename_prefix);
     void Solve_NEGF();
+    void Write_Data (const std::string filename_prefix);
     void Reset();
 
 //    const amrex::Vector<amrex::Real>* get_avg_gatherField() { &avg_gatherField };
@@ -152,7 +153,6 @@ private:
     //amrex::Vector<amrex::Real> avg_gatherField;
 
     int _use_electrostatic=0;
-    int _use_selfconsistent_potential=0;
     int _use_negf=0;
     amrex::Vector<s_Position3D> pos_vec;
 

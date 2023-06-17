@@ -318,16 +318,11 @@ c_MacroscopicProperties::ReInitializeMacroparam(std::string macro_str)
     auto Nghost = map_num_ghostcell[macro_str];
     auto Ncomp = 1;
 
-    m_p_mf[macro_num] -> setVal(0.);
-
-    amrex::Print()  << " Initializing macro_str: " << macro_str << " macro_num: " << macro_num << " macro_type: " << m_macro_type[macro_num] << "\n";
-
-    if (m_macro_type[macro_num] == "constant") {
-        amrex::Print()  << "##### " << macro_str << " initialized with a constant value: " << m_macro_value[macro_num] << "\n";
+    if (m_macro_type[macro_num] == "constant") 
+    {
         m_p_mf[macro_num] -> setVal(m_macro_value[macro_num]);
-
-    } else if (m_macro_type[macro_num] == "parse_" + macro_str + "_function") {
-        amrex::Print() << "##### " << macro_str << " initialized with a parser function with name: " << m_macro_type[macro_num] << "\n";
+    } else 
+    if (m_macro_type[macro_num] == "parse_" + macro_str + "_function") {
 
         auto& rCode = c_Code::GetInstance();
         const amrex::Real time = rCode.get_time();
@@ -338,4 +333,6 @@ c_MacroscopicProperties::ReInitializeMacroparam(std::string macro_str)
            Multifab_Manipulation::InitializeMacroMultiFabUsingParser_3vars(m_p_mf[macro_num].get(), m_p_macro_parser[macro_num]->compile<3>(), geom);
        #endif 
     }
+
+    m_p_mf[macro_num] -> FillBoundary(geom.periodicity());
 }
