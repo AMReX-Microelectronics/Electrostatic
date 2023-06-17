@@ -236,11 +236,13 @@ c_TransportSolver::Solve(const int step, const amrex::Real time)
    if(rCode.use_electrostatic) 
    {	   
 
+       bool update_surface_soln_flag = true;	   
+
        do 
        {
            amrex::Print() << "\n\nBroyden iteration: " << max_iter << "\n";
 
-           rMLMG.UpdateBoundaryConditions();
+           rMLMG.UpdateBoundaryConditions(update_surface_soln_flag);
 
            rMprop.ReInitializeMacroparam(NS_gather_field_str);
 
@@ -277,6 +279,7 @@ c_TransportSolver::Solve(const int step, const amrex::Real time)
                max_iter = vp_CNT[c]->Broyden_Step;
 
            }
+           update_surface_soln_flag = false;
 
        } while(max_norm > Broyden_max_norm);    
 

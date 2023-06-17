@@ -532,7 +532,7 @@ c_MLMGSolver:: Setup_MLABecLaplacian_ForPoissonEqn()
 
 
 void
-c_MLMGSolver:: UpdateBoundaryConditions()
+c_MLMGSolver:: UpdateBoundaryConditions(bool update_surface_soln)
 {
 
     auto& rCode = c_Code::GetInstance();
@@ -568,14 +568,17 @@ c_MLMGSolver:: UpdateBoundaryConditions()
             p_mlebabec->setLevelBC(amrlev, soln);
         }
 
-        const amrex::Real time = rCode.get_time();
+	if(update_surface_soln) 
+	{
+            const amrex::Real time = rCode.get_time();
 
-        rGprop.pEB->Update_SurfaceSolution(time);
+            rGprop.pEB->Update_SurfaceSolution(time);
 
-        if(rGprop.pEB->specify_inhomogeneous_dirichlet != 0) 
-        {
-            p_mlebabec->setEBDirichlet(amrlev, *rGprop.pEB->p_surf_soln_union, *beta);
-        }
+            if(rGprop.pEB->specify_inhomogeneous_dirichlet != 0) 
+            {
+                p_mlebabec->setEBDirichlet(amrlev, *rGprop.pEB->p_surf_soln_union, *beta);
+            }
+	}
     }
     #endif
     if(!rGprop.embedded_boundary_flag) 

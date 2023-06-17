@@ -345,7 +345,8 @@ c_Code::Solve_PostProcess_Output()
 	#else
         if(use_electrostatic) 
         {
-            m_pMLMGSolver->UpdateBoundaryConditions();
+	    bool update_surface_soln_flag = true; 
+            m_pMLMGSolver->UpdateBoundaryConditions(update_surface_soln_flag);
             auto mlmg_solve_time = m_pMLMGSolver->Solve_PoissonEqn();
             avg_mlmg_solve_time += mlmg_solve_time;
 
