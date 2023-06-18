@@ -371,9 +371,6 @@ c_Nanostructure<NSType>::Deposit_AtomAttributeToMesh()
     #endif
 
 
-    //p_mf_deposit->setVal(0.);
-    //p_mf_deposit->FillBoundary(_geom->periodicity());
-
     for (MyParIter pti(*this, lev); pti.isValid(); ++pti) 
     { 
         auto np = pti.numParticles();

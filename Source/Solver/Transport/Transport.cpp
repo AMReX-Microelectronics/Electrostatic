@@ -262,7 +262,7 @@ c_TransportSolver::Solve(const int step, const amrex::Real time)
 
                vp_CNT[c]->Solve_NEGF();
 
-	       //vp_CNT[c]->GuessNewCharge_SimpleMixingAlg();
+               //vp_CNT[c]->GuessNewCharge_SimpleMixingAlg();
 	       vp_CNT[c]->GuessNewCharge_ModifiedBroydenSecondAlg();
 
 	       if(vp_CNT[c]->write_at_iter) 
@@ -295,7 +295,6 @@ c_TransportSolver::Solve(const int step, const amrex::Real time)
            vp_CNT[c]->Reset();
 
            //rMprop.ReInitializeMacroparam(NS_deposit_field_str);
-
        }
 
        amrex::Print() << "\nAverage mlmg time for self-consistency (s): " << total_mlmg_solve_time / max_iter << "\n";
