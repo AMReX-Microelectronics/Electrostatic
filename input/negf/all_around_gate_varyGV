@@ -55,6 +55,7 @@ my_constants.dx = Lx/nx
 my_constants.dy = Ly/ny
 my_constants.dz = Lz/nz
 
+my_constants.grid_factor = 2.
 ### Carbon nanotube ###
 #######################
 
@@ -153,8 +154,8 @@ Gate.surf_soln_function = "SV + Vgs_max - (Vgs_max-Vgs_min) * t"
 ###### GEOMETRY PROPERTIES ######
 #################################
 domain.n_cell = nx ny nz
-domain.max_grid_size = nx ny nz
-domain.blocking_factor = nx ny nz
+domain.max_grid_size   = nx/grid_factor ny/grid_factor nz/grid_factor
+domain.blocking_factor = nx/grid_factor ny/grid_factor nz/grid_factor
 
 domain.prob_lo = -Lx/2. -Ly/2.  -Lz/2.
 domain.prob_hi =  Lx/2.  Ly/2.   Lz/2.
