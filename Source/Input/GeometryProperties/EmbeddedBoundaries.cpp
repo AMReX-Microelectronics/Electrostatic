@@ -760,12 +760,15 @@ c_EmbeddedBoundaries::Specify_SurfSolnOnCutcells(amrex::MultiFab& mf, const std:
     if(map_basic_objects_soln_parser_flag[name]) /*specify value using parser*/
     {
         #ifdef TIME_DEPENDENT
-        Multifab_Manipulation::SpecifyValueOnlyOnCutcells_UsingParser_4vars(mf,
-			                                                    map_basic_objects_soln_parser[name]->compile<4>(),
-									    *geom,
-									    time);
+        //Multifab_Manipulation::SpecifyValueOnlyOnCutcells_UsingParser_4vars(mf,
+	//		                                                    map_basic_objects_soln_parser[name]->compile<4>(),
+	//								    *geom,
+	//								    time);
 	amrex::ParserExecutor<4> const&  macro_parser = map_basic_objects_soln_parser[name]->compile<4>();
-	amrex::Print() << "Surface solution: " << macro_parser(0.,0.,0.,time);
+
+	amrex::Print() << "Surface solution: " << macro_parser(0.,0.,0.,time) << "\n";
+        Multifab_Manipulation::SpecifyValueOnlyOnCutcells(mf, macro_parser(0.,0.,0.,time));
+
         #else
         Multifab_Manipulation::SpecifyValueOnlyOnCutcells_UsingParser_3vars(mf,
 			                                                    map_basic_objects_soln_parser[name]->compile<3>(),
@@ -775,6 +778,7 @@ c_EmbeddedBoundaries::Specify_SurfSolnOnCutcells(amrex::MultiFab& mf, const std:
     else /*specify constant value*/
     {    
         Multifab_Manipulation::SpecifyValueOnlyOnCutcells(mf, map_basic_objects_soln[name]);
+	amrex::Print() << "Surface solution: " << map_basic_objects_soln[name] << "\n";
     }
 
 }
@@ -812,12 +816,11 @@ c_EmbeddedBoundaries::Update_SurfaceSolution(const amrex::Real time)
                     std::string name = it.first; 
                       
 	            amrex::Print() << "\nResetting field on, name: " << name << "\n";
-	            amrex::Print() << "\nSoln: "<< map_basic_objects_soln[name] << "\n";
 	               	
 	            m_p_soln_mf[c] = std::make_unique<amrex::MultiFab>(*ba, *dm, 1, 0, MFInfo(), *m_p_factory[c]); 
 
                     (*m_p_soln_mf[c]).setVal(0.); 
-		    Specify_SurfSolnOnCutcells(*p_surf_soln_union, it.first, time);
+		    Specify_SurfSolnOnCutcells(*m_p_soln_mf[c], it.first, time);
                     ++c;
                 }
     	

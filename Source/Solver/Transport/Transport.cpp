@@ -259,7 +259,6 @@ c_TransportSolver::Solve(const int step, const amrex::Real time)
 
 	       vp_CNT[c]->Gather_MeshAttributeAtAtoms();  
 
-               //rOutput.WriteOutput(step, time);
 
                vp_CNT[c]->Solve_NEGF();
 
@@ -284,8 +283,6 @@ c_TransportSolver::Solve(const int step, const amrex::Real time)
        } while(max_norm > Broyden_max_norm);    
 
 
-
-       amrex::Print() << "Compute current: \n";
        for (int c=0; c < vp_CNT.size(); ++c)
        {
 

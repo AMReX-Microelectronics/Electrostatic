@@ -24,8 +24,8 @@ my_constants.epsilon_CM     = epsilon_0 #Palladium
 my_constants.SV = 0.      #source voltage [V]
 my_constants.Vds = -0.1   #Drain-Source voltage [V]
 my_constants.Vgs_min = -0.3
-my_constants.Vgs_max =  0.9
-my_constants.Nsteps =  13
+my_constants.Vgs_max = 1.0
+my_constants.Nsteps =  27
 my_constants.dt = 1./(Nsteps-1)
 
 
@@ -146,7 +146,8 @@ Gate.center         = CN_x CN_y CN_z
 Gate.height         = drain_lo_y - source_hi_y
 Gate.direction      = 1
 Gate.surf_soln_parser   = 1
-Gate.surf_soln_function = "SV + Vgs_min + (Vgs_max-Vgs_min) * t"
+#Gate.surf_soln_function = "SV + Vgs_min + (Vgs_max-Vgs_min) * t"
+Gate.surf_soln_function = "SV + Vgs_max - (Vgs_max-Vgs_min) * t"
 
 #################################
 ###### GEOMETRY PROPERTIES ######

@@ -370,6 +370,10 @@ c_Nanostructure<NSType>::Deposit_AtomAttributeToMesh()
     auto const& n_curr_in = NSType::h_n_curr_in_data.table();
     #endif
 
+
+    //p_mf_deposit->setVal(0.);
+    //p_mf_deposit->FillBoundary(_geom->periodicity());
+
     for (MyParIter pti(*this, lev); pti.isValid(); ++pti) 
     { 
         auto np = pti.numParticles();

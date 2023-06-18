@@ -2836,6 +2836,7 @@ c_NEGF_Common<T>:: Write_Current (const int step)
 
     if (ParallelDescriptor::IOProcessor())
     {
+        amrex::Print() << "Root writing current\n";    
         auto const& h_Current_loc   = h_Current_loc_data.table();
 
         outfile_I << std::setw(10) << step;
