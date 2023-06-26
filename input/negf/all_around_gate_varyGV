@@ -23,9 +23,9 @@ my_constants.epsilon_CM     = epsilon_0 #Palladium
 
 my_constants.SV = 0.      #source voltage [V]
 my_constants.Vds = -0.1   #Drain-Source voltage [V]
-my_constants.Vgs_min = -0.3
-my_constants.Vgs_max = 1.0
-my_constants.Nsteps =  27
+my_constants.Vgs_min = 0.15
+my_constants.Vgs_max = 0.2
+my_constants.Nsteps =  3
 my_constants.dt = 1./(Nsteps-1)
 
 
@@ -55,7 +55,6 @@ my_constants.dx = Lx/nx
 my_constants.dy = Ly/ny
 my_constants.dz = Lz/nz
 
-my_constants.grid_factor = 2.
 ### Carbon nanotube ###
 #######################
 
@@ -154,8 +153,8 @@ Gate.surf_soln_function = "SV + Vgs_max - (Vgs_max-Vgs_min) * t"
 ###### GEOMETRY PROPERTIES ######
 #################################
 domain.n_cell = nx ny nz
-domain.max_grid_size   = nx/grid_factor ny/grid_factor nz/grid_factor
-domain.blocking_factor = nx/grid_factor ny/grid_factor nz/grid_factor
+domain.max_grid_size = nx ny nz
+domain.blocking_factor = nx ny nz
 
 domain.prob_lo = -Lx/2. -Ly/2.  -Lz/2.
 domain.prob_hi =  Lx/2.  Ly/2.   Lz/2.
@@ -253,7 +252,7 @@ transport.use_negf = 1
 transport.NS_gather_field = phi            
 transport.NS_deposit_field  = charge_density 
 transport.NS_initial_deposit_value  = 1e-2
-transport.Broyden_fraction = 1e-1
+transport.Broyden_fraction = 0.003
 transport.Broyden_max_norm = 1.e-6
 
 cnt.type = CNT
