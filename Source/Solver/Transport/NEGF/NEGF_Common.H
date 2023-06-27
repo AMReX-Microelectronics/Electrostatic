@@ -176,6 +176,8 @@ public:
     amrex::Vector<ComplexType> E_f_vec;
     int num_enclosed_poles = 0.;
     amrex::Vector<ComplexType> E_poles_vec;
+    amrex::Vector<int> eq_integration_pts;
+    amrex::Vector<int> noneq_integration_pts;
     amrex::Real Fermi_tail_factor = 20.;
 
     amrex::Real Contact_Temperature[NUM_CONTACTS] = {298., 298.};
