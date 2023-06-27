@@ -244,7 +244,7 @@ public:
     virtual void ReadNanostructureProperties();
     virtual int get_Hsize() {return 0;}
     virtual int get_offDiag_repeatBlkSize() {return 0;}
-    virtual void set_material_specific_parameters();
+    virtual void Set_Material_Specific_Parameters();
     virtual void Generate_AtomLocations(amrex::Vector<s_Position3D>& pos);
     virtual void Define_PotentialProfile();
 
@@ -275,7 +275,12 @@ public:
     void GuessNewCharge_SimpleMixingAlg();
     void GuessNewCharge_ModifiedBroydenSecondAlg();
     void GuessNewCharge_Broyden_FirstAlg();
+    
     void Reset_Broyden();
+    void Set_Broyden();
+
+    void Set_Arrays_OfSize_NumFieldSites();
+
     //virtual void ComputeChargeDensity();
     //virtual void DeallocateArrays();
 

@@ -61,7 +61,7 @@ public:
     void Define_SortedModeVector();
     virtual int get_Hsize() override { return rings_per_unitcell*num_unitcells; }
     virtual int get_offDiag_repeatBlkSize() override { return 2; }
-    virtual void set_material_specific_parameters() override;
+    virtual void Set_Material_Specific_Parameters() override;
     virtual void Define_PotentialProfile() override;
     virtual void Generate_AtomLocations(amrex::Vector<s_Position3D>& pos) override;
     s_Position3D get_AtomPosition_ZigZag_CNT(int ring_id, int atom_id);

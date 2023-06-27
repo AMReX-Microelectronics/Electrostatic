@@ -85,11 +85,52 @@ c_NEGF_Common<T>:: Initialize_ChargeAtFieldSites(const amrex::Real value)
 
 }
 
+
+template<typename T>
+void
+c_NEGF_Common<T>:: Set_Broyden ()
+{
+
+    h_n_curr_in_data.resize({0},{num_field_sites}, The_Pinned_Arena());
+    SetVal_Table1D(h_n_curr_in_data,0.);
+
+    #if AMREX_USE_GPU
+    d_n_curr_in_data.resize({0},{num_field_sites}, The_Arena());
+    d_n_curr_in_data.copy(h_n_curr_in_data);
+    #endif 
+    n_curr_out_data.resize({0},{num_field_sites}, The_Pinned_Arena());
+    SetVal_Table1D(n_curr_out_data,0.);
+
+    if (ParallelDescriptor::IOProcessor())
+    {
+        Broyden_Step = 1;
+
+        n_prev_in_data.resize({0},{num_field_sites}, The_Pinned_Arena());
+        F_curr_data.resize({0},{num_field_sites}, The_Pinned_Arena());
+        Norm_data.resize({0},{num_field_sites}, The_Pinned_Arena());
+
+        SetVal_Table1D(n_prev_in_data,0.);
+        SetVal_Table1D(F_curr_data,0.);
+        SetVal_Table1D(Norm_data, 0.);
+
+        //Jinv_curr_data.resize({0,0},{num_field_sites, num_field_sites}, The_Pinned_Arena());
+        //SetVal_Table2D(Jinv_curr_data,0.);
+
+        //auto const& Jinv_curr    = Jinv_curr_data.table();
+        //for(int a=0; a < num_field_sites; ++a) 
+        //{
+        //    Jinv_curr(a,a) = Broyden_fraction;
+        //}
+    }
+
+}
+
 template<typename T>
 void
 c_NEGF_Common<T>:: Reset_Broyden ()
 {
     /* At present, we set n_curr_in as the converged charge density for previous gate voltage*/
+
     /* That is why the following is commented in*/
     //SetVal_Table1D(h_n_curr_in_data, 0.);
     //#if AMREX_USE_GPU
@@ -114,7 +155,7 @@ c_NEGF_Common<T>:: Reset_Broyden ()
         SetVal_Table1D(F_curr_data, 0.);
         SetVal_Table1D(Norm_data, 0.);
 
-        SetVal_Table2D(Jinv_curr_data,0.);
+        //SetVal_Table2D(Jinv_curr_data,0.);
 
         Broyden_Step = 1;
         Broyden_Norm = 1;
@@ -199,7 +240,7 @@ c_NEGF_Common<T>:: ReadNanostructureProperties ()
     write_at_iter = 0;
     queryWithParser(pp_ns,"write_at_iter", write_at_iter);
     
-    set_material_specific_parameters();
+    Set_Material_Specific_Parameters();
 
     amrex::Print() << "\n#####* num_atoms: "                << num_atoms                  << "\n";
     amrex::Print() << "#####* num_atoms_per_unitcell: "   << num_atoms_per_unitcell     << "\n";
@@ -233,42 +274,19 @@ c_NEGF_Common<T>:: ReadNanostructureProperties ()
     }
     amrex::Print() << "\n";
 
+    
+    Set_Arrays_OfSize_NumFieldSites();
+    Set_Broyden();
+}
+
+
+template<typename T>
+void 
+c_NEGF_Common<T>::Set_Arrays_OfSize_NumFieldSites() 
+{
 
     Potential.resize(num_field_sites);
     PTD.resize(num_field_sites);
-
-    /*Broyden*/
-
-    h_n_curr_in_data.resize({0},{num_field_sites}, The_Pinned_Arena());
-    SetVal_Table1D(h_n_curr_in_data,0.);
-
-    #if AMREX_USE_GPU
-    d_n_curr_in_data.resize({0},{num_field_sites}, The_Arena());
-    d_n_curr_in_data.copy(h_n_curr_in_data);
-    #endif 
-    n_curr_out_data.resize({0},{num_field_sites}, The_Pinned_Arena());
-    SetVal_Table1D(n_curr_out_data,0.);
-
-    if (ParallelDescriptor::IOProcessor())
-    {
-        Broyden_Step = 1;
-        n_prev_in_data.resize({0},{num_field_sites}, The_Pinned_Arena());
-        F_curr_data.resize({0},{num_field_sites}, The_Pinned_Arena());
-        Norm_data.resize({0},{num_field_sites}, The_Pinned_Arena());
-
-        SetVal_Table1D(n_prev_in_data,0.);
-        SetVal_Table1D(F_curr_data,0.);
-        SetVal_Table1D(Norm_data, 0.);
-
-        Jinv_curr_data.resize({0,0},{num_field_sites, num_field_sites}, The_Pinned_Arena());
-        SetVal_Table2D(Jinv_curr_data,0.);
-
-        auto const& Jinv_curr    = Jinv_curr_data.table();
-        for(int a=0; a < num_field_sites; ++a) 
-        {
-            Jinv_curr(a,a) = Broyden_fraction;
-        }
-    }
 
     for(int l=0; l < num_field_sites; ++l) 
     {
@@ -281,7 +299,7 @@ c_NEGF_Common<T>:: ReadNanostructureProperties ()
 
 template<typename T>
 void 
-c_NEGF_Common<T>::set_material_specific_parameters() 
+c_NEGF_Common<T>::Set_Material_Specific_Parameters() 
 {
     /*set the following in the specialization*/
     /*num_atoms: number of total atoms*/
