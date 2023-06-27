@@ -55,9 +55,9 @@ my_constants.dx = Lx/nx
 my_constants.dy = Ly/ny
 my_constants.dz = Lz/nz
 
-my_constants.gx = 2
-my_constants.gy = 2
-my_constants.gz = 2
+my_constants.gx = 4
+my_constants.gy = 4
+my_constants.gz = 4
 
 ### Carbon nanotube ###
 #######################
