@@ -248,6 +248,7 @@ c_TransportSolver::Solve(const int step, const amrex::Real time)
 
            auto mlmg_solve_time = rMLMG.Solve_PoissonEqn();
            total_mlmg_solve_time += mlmg_solve_time;
+           amrex::Print() << "\nmlmg_solve_time: " << mlmg_solve_time << "\n";
 
            rPostPro.Compute();
 
