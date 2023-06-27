@@ -223,5 +223,8 @@ cnt.contact_T  = 298. 298.
 cnt.contact_Fermi_level = Ef
 cnt.E_valence_min = -10
 cnt.E_pole_max    = 3
+cnt.eq_integration_pts = 30 30 30
+cnt.noneq_integration_pts = 100
+
 cnt.write_at_iter = 1
 #####################################

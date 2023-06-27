@@ -1030,6 +1030,7 @@ c_NEGF_Common<T>:: Compute_DensityOfStates ()
 
             GR_loc(n_glo,n) =  one/(Alpha(n) - X(n) - Y(n));
 
+            #ifdef COMPUTE_GREENS_FUNCTION_OFFDIAG_ELEMS
             for (int m = n_glo; m > 0; m--)
             {
                 GR_loc(m-1,n) =  -1*Ytil_glo(m)*GR_loc(m,n);
@@ -1038,6 +1039,7 @@ c_NEGF_Common<T>:: Compute_DensityOfStates ()
             {
                 GR_loc(m+1,n) = -1*Xtil_glo(m)*GR_loc(m,n);
             }
+            #endif	
 
             MatrixBlock<T> A_tk[NUM_CONTACTS];
             MatrixBlock<T> Gamma[NUM_CONTACTS];
@@ -1082,6 +1084,7 @@ c_NEGF_Common<T>:: Compute_DensityOfStates ()
                 {
                     A_tk[k] = A_kn;
                 }
+
             }
 
             /*LDOS*/ 
@@ -2771,6 +2774,7 @@ c_NEGF_Common<T>:: Compute_Current ()
 
                 GR_loc(n_glo,n) =  one/(Alpha(n) - X(n) - Y(n));
 
+                #ifdef COMPUTE_GREENS_FUNCTION_OFFDIAG_ELEMS
                 for (int m = n_glo; m > 0; m--)
                 {
                     GR_loc(m-1,n) =  -1*Ytil_glo(m)*GR_loc(m,n);
@@ -2779,6 +2783,7 @@ c_NEGF_Common<T>:: Compute_Current ()
                 {
                     GR_loc(m+1,n) = -1*Xtil_glo(m)*GR_loc(m,n);
                 }
+                #endif 
 
                 MatrixBlock<T> A_tk[NUM_CONTACTS];
                 MatrixBlock<T> Gamma[NUM_CONTACTS];
@@ -2807,8 +2812,9 @@ c_NEGF_Common<T>:: Compute_Current ()
 
                     Gamma[k] = imag*(Sigma_contact(k) - Sigma_contact(k).Dagger());
 
-
                     MatrixBlock<T> A_nn  = G_contact_nk * Gamma[k] *  G_contact_nk.Dagger();
+
+                    #ifdef COMPUTE_SPECTRAL_FUNCTION_OFFDIAG_ELEMS
                     MatrixBlock<T> A_kn  = G_contact_kk * Gamma[k] *  G_contact_nk.Dagger();
 
                     A_loc(k_glo, n) = A_loc(k_glo, n) + A_kn;
@@ -2822,11 +2828,15 @@ c_NEGF_Common<T>:: Compute_Current ()
                         A_kn = -1*Ytil_glo(m+1)*A_kn;
                         A_loc(m,n) = A_loc(m,n) + A_kn;
                     }
+
                     A_tk[k] = 0.;
                     if(n_glo == CT_ID[k])
                     {
                         A_tk[k] = A_kn;
                     }
+                    #else 
+                    A_loc(n_glo,n) = A_loc(n_glo,n) + A_nn;
+                    #endif 
 
                     Gn_nn  = Gn_nn + A_nn*Fermi_contact(k);
 

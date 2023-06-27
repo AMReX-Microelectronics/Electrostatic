@@ -236,6 +236,8 @@ cnt.offset = 0. 0. CN_h
 cnt.E_f = -1
 cnt.E_valence_min = -10
 cnt.E_pole_max    = 3
+cnt.eq_integration_pts = 30 30 30
+cnt.noneq_integration_pts = 100
 
 #graphene.type = Graphene
 ######################################
