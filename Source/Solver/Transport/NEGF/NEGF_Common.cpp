@@ -1508,7 +1508,7 @@ c_NEGF_Common<T>:: GuessNewCharge_ModifiedBroydenSecondAlg_WithCorrection ()
         for(int l=0; l < num_field_sites; ++l) 
         {
             n_prev_in(l) = n_curr_in(l); 
-            n_curr_in(l) = n_prev_in(l) - Broyden_Scalar * (Broyden_fraction*F_curr(l) - sum_Fcurr(l));
+            n_curr_in(l) = n_prev_in(l) - Broyden_Scalar * Broyden_fraction*F_curr(l) - Broyden_Scalar * sum_Fcurr(l);
         }
 
         sum_Fcurr_data.clear();
