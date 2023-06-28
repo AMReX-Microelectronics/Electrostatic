@@ -1435,6 +1435,7 @@ c_NEGF_Common<T>:: GuessNewCharge_ModifiedBroydenSecondAlg_WithCorrection ()
             {
                 n_curr_in(l) = n_prev_in(l);		
 	        n_prev_in(l) = n_curr_in(l) - delta_n_curr(l);
+                denom += pow(delta_F_curr(l),2.);
             }
 	    Broyden_Scalar = Broyden_Scalar/2.;
 	    Broyden_Step -= 1;
@@ -1455,6 +1456,9 @@ c_NEGF_Common<T>:: GuessNewCharge_ModifiedBroydenSecondAlg_WithCorrection ()
             V_Broyden.push_back(new RealTable1D({0},{num_field_sites}, The_Pinned_Arena()));
 
 	}
+	amrex::Print() << "n_curr_in, n_prev_in: " << n_curr_in(152) << " " << n_prev_in(152) << "\n";
+	amrex::Print() << "Broyden_Scalar: " << Broyden_Scalar << "\n";
+	amrex::Print() << "m: " << Broyden_Step - 1 << "\n";
 
         int m = Broyden_Step-1;
         if(m > 0) 
@@ -1510,6 +1514,7 @@ c_NEGF_Common<T>:: GuessNewCharge_ModifiedBroydenSecondAlg_WithCorrection ()
             n_prev_in(l) = n_curr_in(l); 
             n_curr_in(l) = n_prev_in(l) - Broyden_Scalar * Broyden_fraction*F_curr(l) - Broyden_Scalar * sum_Fcurr(l);
         }
+	amrex::Print() << "n_new_in: " << n_curr_in(152) << "\n";
 
         sum_Fcurr_data.clear();
         sum_deltaFcurr_data.clear();
