@@ -121,7 +121,6 @@ c_NEGF_Common<T>:: Set_Broyden ()
         SetVal_Table1D(n_prev_in_data,0.);
         SetVal_Table1D(F_curr_data,0.);
         SetVal_Table1D(Norm_data, 0.);
-	
         SetVal_Table1D(delta_F_curr_data, 0.);
         SetVal_Table1D(delta_n_curr_data, 0.);
 
@@ -166,7 +165,6 @@ c_NEGF_Common<T>:: Reset_Broyden ()
         SetVal_Table1D(n_prev_in_data, 0.);
         SetVal_Table1D(F_curr_data, 0.);
         SetVal_Table1D(Norm_data, 0.);
-
         SetVal_Table1D(delta_F_curr_data, 0.);
         SetVal_Table1D(delta_n_curr_data, 0.);
 
@@ -1428,10 +1426,12 @@ c_NEGF_Common<T>:: GuessNewCharge_ModifiedBroydenSecondAlg_WithCorrection ()
                 norm_index = l;
             }
         }
-        amrex::Print() << "\nL2 norm: " << total_diff << " Max norm: " << Broyden_Norm << " location: " <<  norm_index << "\n";
+        amrex::Print() << "\nL2 norm: " << total_diff << " Broyden max norm: " << Broyden_Norm 
+		                                      << " at location: " <<  norm_index 
+						      << " Prev_Norm: " << Prev_Broyden_Norm << "\n";
 
 	bool compute_new_vector = false;
-	if (Broyden_Norm > Prev_Broyden_Norm) 
+	if ((Broyden_Norm - Prev_Broyden_Norm) > 0.) 
 	{
             for(int l=0; l < num_field_sites; ++l) 
             {
@@ -1450,6 +1450,8 @@ c_NEGF_Common<T>:: GuessNewCharge_ModifiedBroydenSecondAlg_WithCorrection ()
 	        Reset_Broyden();
 		Broyden_fraction = Broyden_fraction/2.;
                 amrex::Print() << "\nResetting Broyden with a new fraction: " << Broyden_fraction << "\n";
+                W_Broyden.push_back(new RealTable1D({0},{num_field_sites}, The_Pinned_Arena()));
+                V_Broyden.push_back(new RealTable1D({0},{num_field_sites}, The_Pinned_Arena()));
 	    } 
 	}
 	else 
