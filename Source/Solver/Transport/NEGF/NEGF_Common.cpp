@@ -1428,12 +1428,16 @@ c_NEGF_Common<T>:: GuessNewCharge_ModifiedBroydenSecondAlg_WithCorrection ()
 	bool compute_new_vector = false;
 	if (Broyden_Norm > Prev_Broyden_Norm) 
 	{
-            amrex::Print() << "\nReducing delta_F by a factor of two!\n";
+            amrex::Print() << "\nReducing step size by a factor of two!\n";
 	    /*reduce step size by 2*/
             for(int l=0; l < num_field_sites; ++l) 
             {
+                n_curr_in(l) = n_prev_in(l);		
+	        n_prev_in(l) = n_curr_in(l) - delta_n_curr(l);
+
 		n_curr_in(l) = (n_prev_in(l) + n_curr_in(l))/2.;
             }
+	    Broyden_Step -= 1;
 	}
 	else 
 	{
