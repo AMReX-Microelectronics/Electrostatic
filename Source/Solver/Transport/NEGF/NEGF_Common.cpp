@@ -1432,11 +1432,8 @@ c_NEGF_Common<T>:: GuessNewCharge_ModifiedBroydenSecondAlg_WithCorrection ()
 	    /*reduce step size by 2*/
             for(int l=0; l < num_field_sites; ++l) 
             {
-                delta_F_curr(l) = delta_F_curr(l)/2.;
-                denom += pow(delta_F_curr(l),2.);
-		n_curr_in(l) = n_prev_in(l);
+		n_curr_in(l) = (n_prev_in(l) + n_curr_in(l))/2.;
             }
-            Broyden_Step -= 1;
 	}
 	else 
 	{
@@ -1453,70 +1450,70 @@ c_NEGF_Common<T>:: GuessNewCharge_ModifiedBroydenSecondAlg_WithCorrection ()
             }
             W_Broyden.push_back(new RealTable1D({0},{num_field_sites}, The_Pinned_Arena()));
             V_Broyden.push_back(new RealTable1D({0},{num_field_sites}, The_Pinned_Arena()));
-	}
 
-        int m = Broyden_Step-1;
-        if(m > 0) 
-        {
-            for(int j=1; j <= m-1; ++j) 
+            int m = Broyden_Step-1;
+            if(m > 0) 
             {
-                auto const& W_j = W_Broyden[j]->table();
-                auto const& V_j = V_Broyden[j]->table();
-
-                for(int a=0; a < num_field_sites; ++a) 
+                for(int j=1; j <= m-1; ++j) 
                 {
-                    amrex::Real sum = 0.;		
-                    for(int b=0; b < num_field_sites; ++b) 
+                    auto const& W_j = W_Broyden[j]->table();
+                    auto const& V_j = V_Broyden[j]->table();
+
+                    for(int a=0; a < num_field_sites; ++a) 
                     {
-                	sum += W_j(a)*V_j(b)*delta_F_curr(b);
-                    }	
-                    sum_deltaFcurr(a) += sum;
+                        amrex::Real sum = 0.;		
+                        for(int b=0; b < num_field_sites; ++b) 
+                        {
+                    	sum += W_j(a)*V_j(b)*delta_F_curr(b);
+                        }	
+                        sum_deltaFcurr(a) += sum;
+                    }
+                }
+
+                for(int l=0; l < num_field_sites; ++l) 
+                {
+
+                      V_curr(l) = delta_F_curr(l)/denom;
+                      W_curr(l) = -Broyden_fraction*delta_F_curr(l) + delta_n_curr(l) - sum_deltaFcurr(l);
+                }
+            
+                W_Broyden[m]->copy(W_curr_data);
+                V_Broyden[m]->copy(V_curr_data);
+                
+                auto const& W_m = W_Broyden[m]->table();
+                auto const& V_m = V_Broyden[m]->table();
+
+                for(int j=1; j <= m; ++j) 
+                {
+                    auto const& W_j = W_Broyden[j]->table();
+                    auto const& V_j = V_Broyden[j]->table();
+
+                    for(int a=0; a < num_field_sites; ++a) 
+                    {
+                        amrex::Real sum = 0.;		
+                        for(int b=0; b < num_field_sites; ++b) 
+                        {
+                            sum += W_j(a)*V_j(b)*F_curr(b);
+                        }	
+                        sum_Fcurr(a) += sum;
+                    }
                 }
             }
 
             for(int l=0; l < num_field_sites; ++l) 
             {
-
-                  V_curr(l) = delta_F_curr(l)/denom;
-                  W_curr(l) = -Broyden_fraction*delta_F_curr(l) + delta_n_curr(l) - sum_deltaFcurr(l);
+                n_prev_in(l) = n_curr_in(l); 
+                n_curr_in(l) = n_prev_in(l) - Broyden_fraction*F_curr(l) - sum_Fcurr(l);
             }
-        
-            W_Broyden[m]->copy(W_curr_data);
-            V_Broyden[m]->copy(V_curr_data);
-            
-            auto const& W_m = W_Broyden[m]->table();
-            auto const& V_m = V_Broyden[m]->table();
 
-            for(int j=1; j <= m; ++j) 
-            {
-                auto const& W_j = W_Broyden[j]->table();
-                auto const& V_j = V_Broyden[j]->table();
+            sum_Fcurr_data.clear();
+            sum_deltaFcurr_data.clear();
+            W_curr_data.clear();
+            V_curr_data.clear();
 
-                for(int a=0; a < num_field_sites; ++a) 
-                {
-                    amrex::Real sum = 0.;		
-                    for(int b=0; b < num_field_sites; ++b) 
-                    {
-                        sum += W_j(a)*V_j(b)*F_curr(b);
-                    }	
-                    sum_Fcurr(a) += sum;
-                }
-            }
-        }
-
-        for(int l=0; l < num_field_sites; ++l) 
-        {
-            n_prev_in(l) = n_curr_in(l); 
-            n_curr_in(l) = n_prev_in(l) - Broyden_fraction*F_curr(l) - sum_Fcurr(l);
-        }
-
-        sum_Fcurr_data.clear();
-        sum_deltaFcurr_data.clear();
-        W_curr_data.clear();
-        V_curr_data.clear();
-
-        Broyden_Step += 1;
-    } 
+            Broyden_Step += 1;
+	}
+    }
     
     MPI_Bcast(&n_curr_in(0),
                Hsize_glo,
