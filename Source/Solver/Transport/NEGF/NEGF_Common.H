@@ -211,6 +211,7 @@ public:
     int Broyden_Step = 1;
     amrex::Real Broyden_fraction = 0.1;
     amrex::Real Broyden_Norm = 1.0;
+    amrex::Real Broyden_Scalar = 1.0;
     amrex::Real Prev_Broyden_Norm = 100.0;
     RealTable1D h_n_curr_in_data;
     RealTable1D d_n_curr_in_data;
