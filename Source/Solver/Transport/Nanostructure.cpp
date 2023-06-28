@@ -540,7 +540,7 @@ c_Nanostructure<NSType>::Write_PotentialAtSites(const std::string filename_prefi
 
         outfile.open(filename);
 
-        amrex::Print() << "Root Writing " << filename << "\n";
+        //amrex::Print() << "Root Writing " << filename << "\n";
         
         for (int l=0; l<NSType::num_field_sites; ++l)
         {

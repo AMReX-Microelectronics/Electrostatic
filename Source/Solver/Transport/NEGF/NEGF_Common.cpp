@@ -109,6 +109,7 @@ c_NEGF_Common<T>:: Set_Broyden ()
         Broyden_Step = 1;
         Broyden_Norm = 1.;
 	Broyden_Scalar = 1.;
+	Broyden_Correction_Step = 0;
         Prev_Broyden_Norm = 100;
 
         n_prev_in_data.resize({0},{num_field_sites}, The_Pinned_Arena());
@@ -174,9 +175,11 @@ c_NEGF_Common<T>:: Reset_Broyden ()
         Broyden_Step = 1;
         Broyden_Norm = 1;
 	Broyden_Scalar = 1.;
+	Broyden_Correction_Step = 0;
         Prev_Broyden_Norm = 100;
     }
 }
+
 
 template<typename T>
 void
@@ -1430,7 +1433,6 @@ c_NEGF_Common<T>:: GuessNewCharge_ModifiedBroydenSecondAlg_WithCorrection ()
 	bool compute_new_vector = false;
 	if (Broyden_Norm > Prev_Broyden_Norm) 
 	{
-            amrex::Print() << "\nReducing step size by a factor of two!\n";
             for(int l=0; l < num_field_sites; ++l) 
             {
                 n_curr_in(l) = n_prev_in(l);		
@@ -1438,10 +1440,21 @@ c_NEGF_Common<T>:: GuessNewCharge_ModifiedBroydenSecondAlg_WithCorrection ()
                 denom += pow(delta_F_curr(l),2.);
             }
 	    Broyden_Scalar = Broyden_Scalar/2.;
+	    amrex::Print() << "\nReducing Broyden scalar to: " << Broyden_Scalar << "\n";
 	    Broyden_Step -= 1;
+
+	    Broyden_Correction_Step += 1;
+
+	    if(Broyden_Correction_Step > 5) 
+	    {
+	        Reset_Broyden();
+		Broyden_fraction = Broyden_fraction/2.;
+                amrex::Print() << "\nResetting Broyden with a new fraction: " << Broyden_fraction << "\n";
+	    } 
 	}
 	else 
 	{
+            Broyden_Correction_Step = 0;		
 	    Prev_Broyden_Norm = Broyden_Norm;	
             compute_new_vector = true;
             for(int l=0; l < num_field_sites; ++l) 
@@ -1457,7 +1470,6 @@ c_NEGF_Common<T>:: GuessNewCharge_ModifiedBroydenSecondAlg_WithCorrection ()
 
 	}
 	amrex::Print() << "n_curr_in, n_prev_in: " << n_curr_in(152) << " " << n_prev_in(152) << "\n";
-	amrex::Print() << "Broyden_Scalar: " << Broyden_Scalar << "\n";
 	amrex::Print() << "m: " << Broyden_Step - 1 << "\n";
 
         int m = Broyden_Step-1;
@@ -2635,7 +2647,7 @@ c_NEGF_Common<T>::Write_BlkTable1D_asaf_E(const amrex::Vector<ComplexType>& E_ve
 {
     if (amrex::ParallelDescriptor::IOProcessor())
     {
-        amrex::Print() << "Root Writing " << filename << "\n";
+        //amrex::Print() << "Root Writing " << filename << "\n";
         std::ofstream outfile;
         outfile.open(filename.c_str());
 
@@ -2668,7 +2680,7 @@ c_NEGF_Common<T>::Write_Table1D(const amrex::Vector<VectorType>& Vec,
 { 
     if (amrex::ParallelDescriptor::IOProcessor())
     {
-        amrex::Print() << "\nRoot Writing " << filename << "\n";
+        //amrex::Print() << "\nRoot Writing " << filename << "\n";
         std::ofstream outfile;
         outfile.open(filename.c_str());
 
@@ -2699,7 +2711,7 @@ c_NEGF_Common<T>::Write_BlkTable2D_asaf_E(const BlkTable2D& Arr_data,
 {
     if (amrex::ParallelDescriptor::IOProcessor())
     {
-        amrex::Print() << "\n Root Writing " << filename << "\n";
+        //amrex::Print() << "\n Root Writing " << filename << "\n";
         std::ofstream outfile;
         outfile.open(filename.c_str());
 
