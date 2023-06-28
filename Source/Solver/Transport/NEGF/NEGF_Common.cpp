@@ -31,6 +31,9 @@ c_NEGF_Common<T>:: Deallocate ()
         n_prev_in_data.clear();
         F_curr_data.clear();
         Norm_data.clear();
+
+        delta_F_curr_data.clear();
+        delta_n_curr_data.clear();
     }
     eq_integration_pts.clear();
     noneq_integration_pts.clear();
@@ -110,10 +113,15 @@ c_NEGF_Common<T>:: Set_Broyden ()
         n_prev_in_data.resize({0},{num_field_sites}, The_Pinned_Arena());
         F_curr_data.resize({0},{num_field_sites}, The_Pinned_Arena());
         Norm_data.resize({0},{num_field_sites}, The_Pinned_Arena());
+        delta_F_curr_data.resize({0},{num_field_sites}, The_Pinned_Arena());
+        delta_n_curr_data.resize({0},{num_field_sites}, The_Pinned_Arena());
 
         SetVal_Table1D(n_prev_in_data,0.);
         SetVal_Table1D(F_curr_data,0.);
         SetVal_Table1D(Norm_data, 0.);
+	
+        SetVal_Table1D(delta_F_curr_data, 0.);
+        SetVal_Table1D(delta_n_curr_data, 0.);
 
         //Jinv_curr_data.resize({0,0},{num_field_sites, num_field_sites}, The_Pinned_Arena());
         //SetVal_Table2D(Jinv_curr_data,0.);
@@ -156,6 +164,9 @@ c_NEGF_Common<T>:: Reset_Broyden ()
         SetVal_Table1D(n_prev_in_data, 0.);
         SetVal_Table1D(F_curr_data, 0.);
         SetVal_Table1D(Norm_data, 0.);
+
+        SetVal_Table1D(delta_F_curr_data, 0.);
+        SetVal_Table1D(delta_n_curr_data, 0.);
 
         //SetVal_Table2D(Jinv_curr_data,0.);
 
@@ -1370,19 +1381,19 @@ c_NEGF_Common<T>:: GuessNewCharge_ModifiedBroydenSecondAlg_WithCorrection ()
         auto const& n_curr_out = n_curr_out_data.table();
         auto const& n_prev_in  = n_prev_in_data.table();
         auto const& F_curr     = F_curr_data.table();
+        auto const& delta_F_curr   = delta_F_curr_data.table();
+        auto const& delta_n_curr   = delta_n_curr_data.table();
 
         SetVal_Table1D(Norm_data, 0.);
         auto const& Norm       = Norm_data.table();
 
         RealTable1D sum_Fcurr_data({0},{num_field_sites}, The_Pinned_Arena());
         RealTable1D sum_deltaFcurr_data({0},{num_field_sites}, The_Pinned_Arena());
-        RealTable1D delta_F_curr_data({0},{num_field_sites}, The_Pinned_Arena());
         RealTable1D W_curr_data({0},{num_field_sites}, The_Pinned_Arena());
         RealTable1D V_curr_data({0},{num_field_sites}, The_Pinned_Arena());
 
         auto const& sum_Fcurr      = sum_Fcurr_data.table();
         auto const& sum_deltaFcurr = sum_deltaFcurr_data.table();
-        auto const& delta_F_curr   = delta_F_curr_data.table();
         auto const& W_curr   = W_curr_data.table();
         auto const& V_curr   = V_curr_data.table();
 
@@ -1423,6 +1434,7 @@ c_NEGF_Common<T>:: GuessNewCharge_ModifiedBroydenSecondAlg_WithCorrection ()
             {
                 delta_F_curr(l) = delta_F_curr(l)/2.;
                 denom += pow(delta_F_curr(l),2.);
+		n_curr_in(l) = n_prev_in(l);
             }
             Broyden_Step -= 1;
 	}
@@ -1437,6 +1449,7 @@ c_NEGF_Common<T>:: GuessNewCharge_ModifiedBroydenSecondAlg_WithCorrection ()
                 delta_F_curr(l) = Fcurr - F_curr(l);    
                 F_curr(l) = Fcurr;
                 denom += pow(delta_F_curr(l),2.);
+                delta_n_curr(l) = n_curr_in(l) - n_prev_in(l);
             }
             W_Broyden.push_back(new RealTable1D({0},{num_field_sites}, The_Pinned_Arena()));
             V_Broyden.push_back(new RealTable1D({0},{num_field_sites}, The_Pinned_Arena()));
@@ -1463,10 +1476,9 @@ c_NEGF_Common<T>:: GuessNewCharge_ModifiedBroydenSecondAlg_WithCorrection ()
 
             for(int l=0; l < num_field_sites; ++l) 
             {
-                amrex::Real delta_n = n_curr_in(l) - n_prev_in(l);
 
                   V_curr(l) = delta_F_curr(l)/denom;
-                  W_curr(l) = -Broyden_fraction*delta_F_curr(l) + delta_n - sum_deltaFcurr(l);
+                  W_curr(l) = -Broyden_fraction*delta_F_curr(l) + delta_n_curr(l) - sum_deltaFcurr(l);
             }
         
             W_Broyden[m]->copy(W_curr_data);
@@ -1500,7 +1512,6 @@ c_NEGF_Common<T>:: GuessNewCharge_ModifiedBroydenSecondAlg_WithCorrection ()
 
         sum_Fcurr_data.clear();
         sum_deltaFcurr_data.clear();
-        delta_F_curr_data.clear();
         W_curr_data.clear();
         V_curr_data.clear();
 
@@ -1529,19 +1540,18 @@ c_NEGF_Common<T>:: GuessNewCharge_ModifiedBroydenSecondAlg ()
         auto const& n_curr_out = n_curr_out_data.table();
         auto const& n_prev_in  = n_prev_in_data.table();
         auto const& F_curr     = F_curr_data.table();
+        auto const& delta_F_curr   = delta_F_curr_data.table();
 
         SetVal_Table1D(Norm_data, 0.);
         auto const& Norm       = Norm_data.table();
 
         RealTable1D sum_Fcurr_data({0},{num_field_sites}, The_Pinned_Arena());
         RealTable1D sum_deltaFcurr_data({0},{num_field_sites}, The_Pinned_Arena());
-        RealTable1D delta_F_curr_data({0},{num_field_sites}, The_Pinned_Arena());
         RealTable1D W_curr_data({0},{num_field_sites}, The_Pinned_Arena());
         RealTable1D V_curr_data({0},{num_field_sites}, The_Pinned_Arena());
 
         auto const& sum_Fcurr      = sum_Fcurr_data.table();
         auto const& sum_deltaFcurr = sum_deltaFcurr_data.table();
-        auto const& delta_F_curr   = delta_F_curr_data.table();
         auto const& W_curr   = W_curr_data.table();
         auto const& V_curr   = V_curr_data.table();
 
@@ -1665,7 +1675,6 @@ c_NEGF_Common<T>:: GuessNewCharge_ModifiedBroydenSecondAlg ()
         
         sum_Fcurr_data.clear();
         sum_deltaFcurr_data.clear();
-        delta_F_curr_data.clear();
         W_curr_data.clear();
         V_curr_data.clear();
         

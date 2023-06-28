@@ -219,6 +219,10 @@ public:
     RealTable1D n_prev_in_data;
     RealTable1D F_curr_data;
     RealTable1D Norm_data;
+
+    RealTable1D delta_F_curr_data;
+    RealTable1D delta_n_curr_data;
+
     RealTable2D Jinv_curr_data;
 
     amrex::Vector<RealTable1D*> W_Broyden;
