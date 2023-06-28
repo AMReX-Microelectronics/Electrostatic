@@ -240,7 +240,7 @@ c_TransportSolver::Solve(const int step, const amrex::Real time)
 
        do 
        {
-           amrex::Print() << "\n\nBroyden iteration: " << max_iter << "\n";
+           amrex::Print() << "\n\nSelf-consistent iteration: " << max_iter << "\n";
 
            rMLMG.UpdateBoundaryConditions(update_surface_soln_flag);
 
@@ -264,7 +264,7 @@ c_TransportSolver::Solve(const int step, const amrex::Real time)
                vp_CNT[c]->Solve_NEGF();
 
                //vp_CNT[c]->GuessNewCharge_SimpleMixingAlg();
-	       vp_CNT[c]->GuessNewCharge_ModifiedBroydenSecondAlg();
+	       vp_CNT[c]->GuessNewCharge_ModifiedBroydenSecondAlg_WithCorrection();
 
 	       if(vp_CNT[c]->write_at_iter) 
 	       {
@@ -276,10 +276,11 @@ c_TransportSolver::Solve(const int step, const amrex::Real time)
                vp_CNT[c]->Deposit_AtomAttributeToMesh();
 
                max_norm = vp_CNT[c]->Broyden_Norm;
-               max_iter = vp_CNT[c]->Broyden_Step;
+               //max_iter = vp_CNT[c]->Broyden_Step;
 
            }
            update_surface_soln_flag = false;
+           max_iter += 1;
 
        } while(max_norm > Broyden_max_norm);    
 

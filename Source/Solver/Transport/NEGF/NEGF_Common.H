@@ -209,8 +209,9 @@ public:
 
     /*For Broyden*/
     int Broyden_Step = 1;
-    amrex::Real Broyden_fraction = 0.5;
+    amrex::Real Broyden_fraction = 0.1;
     amrex::Real Broyden_Norm = 1.0;
+    amrex::Real Prev_Broyden_Norm = 100.0;
     RealTable1D h_n_curr_in_data;
     RealTable1D d_n_curr_in_data;
 
@@ -274,6 +275,7 @@ public:
     //void Compute_ChargeDensity();
     void GuessNewCharge_SimpleMixingAlg();
     void GuessNewCharge_ModifiedBroydenSecondAlg();
+    void GuessNewCharge_ModifiedBroydenSecondAlg_WithCorrection();
     void GuessNewCharge_Broyden_FirstAlg();
     
     void Reset_Broyden();
