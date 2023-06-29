@@ -1471,27 +1471,27 @@ c_NEGF_Common<T>:: GuessNewCharge_ModifiedBroydenSecondAlg_WithCorrection ()
 
 	if (Broyden_NormSumIsIncreasing_Step > 5) 
 	{
-            for(int l=0; l < num_field_sites; ++l) 
-            {
-                n_curr_in(l) = n_prev_in(l);		
-	        n_prev_in(l) = n_curr_in(l) - delta_n_curr(l);
-                denom += pow(delta_F_curr(l),2.);
-            }
-	    Broyden_Scalar = Broyden_Scalar/2.;
-	    amrex::Print() << "\n**********************************Reducing Broyden scalar to: " << Broyden_Scalar << "\n";
-	    Broyden_Step -= 1;
+            //for(int l=0; l < num_field_sites; ++l) 
+            //{
+            //    n_curr_in(l) = n_prev_in(l);		
+	    //    n_prev_in(l) = n_curr_in(l) - delta_n_curr(l);
+            //    denom += pow(delta_F_curr(l),2.);
+            //}
+	    //Broyden_Scalar = Broyden_Scalar/2.;
+	    //amrex::Print() << "\n**********************************Reducing Broyden scalar to: " << Broyden_Scalar << "\n";
+	    //Broyden_Step -= 1;
 
-	    Broyden_Correction_Step += 1;
+	    //Broyden_Correction_Step += 1;
 
-	    if(Broyden_Correction_Step > 10) 
-	    {
+	    //if(Broyden_Correction_Step > 10) 
+	    //{
 		Broyden_Reset_Step += 1;
 		Broyden_fraction = Broyden_Original_Fraction/std::pow(2.,Broyden_Reset_Step);
 	        Reset_Broyden();
 
                 W_Broyden.push_back(new RealTable1D({0},{num_field_sites}, The_Pinned_Arena()));
                 V_Broyden.push_back(new RealTable1D({0},{num_field_sites}, The_Pinned_Arena()));
-	    } 
+	    //} 
 	}
 	else 
 	{
