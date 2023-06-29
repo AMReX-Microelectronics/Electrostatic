@@ -1535,8 +1535,9 @@ c_NEGF_Common<T>:: GuessNewCharge_ModifiedBroydenSecondAlg_WithCorrection ()
             for(int l=0; l < num_field_sites; ++l) 
             {
 
+                  amrex::Real delta_n = n_curr_in(l) - n_prev_in(l);
                   V_curr(l) = delta_F_curr(l)/denom;
-                  W_curr(l) = -Broyden_fraction*delta_F_curr(l) + delta_n_curr(l) - sum_deltaFcurr(l);
+                  W_curr(l) = -Broyden_fraction*delta_F_curr(l) + delta_n - sum_deltaFcurr(l);
             }
         
             W_Broyden[m]->copy(W_curr_data);
