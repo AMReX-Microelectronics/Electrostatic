@@ -110,6 +110,7 @@ c_NEGF_Common<T>:: Set_Broyden ()
         Broyden_Norm = 1.;
 	Broyden_Scalar = 1.;
 	Broyden_Correction_Step = 0;
+        Broyden_NormSumIsIncreasing_Step = 0;
         Broyden_Reset_Step   = 1;
 	Broyden_NormSum_Curr = 1.e10;
 	Broyden_NormSum_Prev = 1.e10;
@@ -140,6 +141,7 @@ c_NEGF_Common<T>:: Set_Broyden ()
           amrex::Print() << " Broyden_Scalar: "    << Broyden_Scalar << "\n";
           amrex::Print() << " Broyden_fraction: "  << Broyden_fraction << "\n";
           amrex::Print() << " Broyden_Correction_Step: "  << Broyden_Correction_Step << "\n";
+          amrex::Print() << " Broyden_NormSumIsIncreasing_Step: "  << Broyden_NormSumIsIncreasing_Step << "\n";
           amrex::Print() << " Broyden_Reset_Step: "       << Broyden_Reset_Step << "\n";
           amrex::Print() << " Broyden_NormSum_Curr: "     << Broyden_NormSum_Curr << "\n";
           amrex::Print() << " Broyden_NormSum_Prev: "     << Broyden_NormSum_Prev << "\n";
@@ -186,6 +188,7 @@ c_NEGF_Common<T>:: Reset_Broyden ()
         Broyden_Norm = 1;
 	Broyden_Scalar          = 1.;
 	Broyden_Correction_Step = 0;
+        Broyden_NormSumIsIncreasing_Step = 0;
 	Broyden_NormSum_Curr    = 1.e10;
 	Broyden_NormSum_Prev    = 1.e10;
 
@@ -194,6 +197,7 @@ c_NEGF_Common<T>:: Reset_Broyden ()
         amrex::Print() << " Broyden_Scalar: "    << Broyden_Scalar << "\n";
         amrex::Print() << " Broyden_fraction: "  << Broyden_fraction << "\n";
         amrex::Print() << " Broyden_Correction_Step: "  << Broyden_Correction_Step << "\n";
+        amrex::Print() << " Broyden_NormSumIsIncreasing_Step: "  << Broyden_NormSumIsIncreasing_Step << "\n";
         amrex::Print() << " Broyden_Reset_Step: "       << Broyden_Reset_Step << "\n";
         amrex::Print() << " Broyden_NormSum_Curr: "     << Broyden_NormSum_Curr << "\n";
         amrex::Print() << " Broyden_NormSum_Prev: "     << Broyden_NormSum_Prev << "\n";
@@ -1455,8 +1459,17 @@ c_NEGF_Common<T>:: GuessNewCharge_ModifiedBroydenSecondAlg_WithCorrection ()
         amrex::Print() << "Broyden max norm: " << Broyden_Norm << " at location: " <<  norm_index << "\n\n";
 
 
-	bool compute_new_vector = false;
 	if ((Broyden_NormSum_Curr - Broyden_NormSum_Prev) > 1.e-6) 
+	{
+	    Broyden_NormSumIsIncreasing_Step +=1;
+	    amrex::Print() << "\nBroyden_NormSumIsIncreasing_Step: " << Broyden_NormSumIsIncreasing_Step << "\n";
+	}
+	else 
+	{
+	    Broyden_NormSumIsIncreasing_Step = 0;
+	}
+
+	if (Broyden_NormSumIsIncreasing_Step > 5) 
 	{
             for(int l=0; l < num_field_sites; ++l) 
             {
@@ -1486,7 +1499,6 @@ c_NEGF_Common<T>:: GuessNewCharge_ModifiedBroydenSecondAlg_WithCorrection ()
 	    Broyden_Scalar = 1.;
 	    Broyden_NormSum_Prev = Broyden_NormSum_Curr;	
 
-            compute_new_vector = true;
             for(int l=0; l < num_field_sites; ++l) 
             {
                 amrex::Real Fcurr = n_curr_in(l) - n_curr_out(l);
