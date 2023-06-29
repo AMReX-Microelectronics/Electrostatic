@@ -1445,7 +1445,7 @@ c_NEGF_Common<T>:: GuessNewCharge_ModifiedBroydenSecondAlg_WithCorrection ()
 
 	    Broyden_Correction_Step += 1;
 
-	    if(Broyden_Correction_Step > 5) 
+	    if(Broyden_Correction_Step > 20) 
 	    {
 	        Reset_Broyden();
 		Broyden_fraction = Broyden_fraction/2.;
