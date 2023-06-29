@@ -166,7 +166,7 @@ c_NEGF_Common<T>:: Reset_Broyden ()
 
     if (ParallelDescriptor::IOProcessor())
     {
-        amrex::Print() << "\n\n\n\nResetting Broyden\n";	
+        amrex::Print() << "\n\n\n\n**********************************Resetting Broyden**********************************\n";	
         int size = W_Broyden.size();	
         for(int j=0; j<size; ++j) 
         {
@@ -1478,7 +1478,7 @@ c_NEGF_Common<T>:: GuessNewCharge_ModifiedBroydenSecondAlg_WithCorrection ()
                 denom += pow(delta_F_curr(l),2.);
             }
 	    Broyden_Scalar = Broyden_Scalar/2.;
-	    amrex::Print() << "\nReducing Broyden scalar to: " << Broyden_Scalar << "\n";
+	    amrex::Print() << "\n**********************************Reducing Broyden scalar to: " << Broyden_Scalar << "\n";
 	    Broyden_Step -= 1;
 
 	    Broyden_Correction_Step += 1;
