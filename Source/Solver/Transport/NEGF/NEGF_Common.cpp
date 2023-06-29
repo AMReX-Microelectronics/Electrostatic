@@ -1431,7 +1431,7 @@ c_NEGF_Common<T>:: GuessNewCharge_ModifiedBroydenSecondAlg_WithCorrection ()
 						      << " Prev_Norm: " << Prev_Broyden_Norm << "\n";
 
 	bool compute_new_vector = false;
-	if ((Broyden_Norm - Prev_Broyden_Norm) > 0.) 
+	if ((Broyden_Norm - Prev_Broyden_Norm) > 1e-5) 
 	{
             for(int l=0; l < num_field_sites; ++l) 
             {
