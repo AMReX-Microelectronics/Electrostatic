@@ -1733,11 +1733,20 @@ c_NEGF_Common<T>:: GuessNewCharge_ModifiedBroydenSecondAlg ()
         Broyden_Step += 1;
     }
 
+    MPI_Bcast(&Broyden_Norm,
+               1,
+               MPI_DOUBLE,
+	       ParallelDescriptor::IOProcessorNumber(),
+               ParallelDescriptor::Communicator());
+
     MPI_Bcast(&n_curr_in(0),
                Hsize_glo,
                MPI_DOUBLE,
 	       ParallelDescriptor::IOProcessorNumber(),
                ParallelDescriptor::Communicator());
+
+    //ParallelDescriptor::ReduceLongMin(min_fab_megabytes, IOProc);
+
 }
 
 
