@@ -210,10 +210,13 @@ public:
     /*For Broyden*/
     int Broyden_Step = 1;
     amrex::Real Broyden_fraction = 0.1;
+    amrex::Real Broyden_Original_Fraction = 0.1;
     amrex::Real Broyden_Norm = 1.0;
+    int Broyden_Correction_Step = 1;
+    int Broyden_Reset_Step = 1;
     amrex::Real Broyden_Scalar = 1.0;
-    int Broyden_Correction_Step = 0;
-    amrex::Real Prev_Broyden_Norm = 100.0;
+    amrex::Real Broyden_NormSum_Curr = 1.e10;
+    amrex::Real Broyden_NormSum_Prev = 1.e100;
     RealTable1D h_n_curr_in_data;
     RealTable1D d_n_curr_in_data;
 

@@ -264,8 +264,8 @@ c_TransportSolver::Solve(const int step, const amrex::Real time)
                vp_CNT[c]->Solve_NEGF();
 
                //vp_CNT[c]->GuessNewCharge_SimpleMixingAlg();
-	       //vp_CNT[c]->GuessNewCharge_ModifiedBroydenSecondAlg_WithCorrection();
-	       vp_CNT[c]->GuessNewCharge_ModifiedBroydenSecondAlg();
+	       vp_CNT[c]->GuessNewCharge_ModifiedBroydenSecondAlg_WithCorrection();
+	       //vp_CNT[c]->GuessNewCharge_ModifiedBroydenSecondAlg();
 
 	       if(vp_CNT[c]->write_at_iter) 
 	       {

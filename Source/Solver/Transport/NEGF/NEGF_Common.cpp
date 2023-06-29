@@ -110,7 +110,10 @@ c_NEGF_Common<T>:: Set_Broyden ()
         Broyden_Norm = 1.;
 	Broyden_Scalar = 1.;
 	Broyden_Correction_Step = 0;
-        Prev_Broyden_Norm = 100;
+        Broyden_Reset_Step   = 1;
+	Broyden_NormSum_Curr = 1.e10;
+	Broyden_NormSum_Prev = 1.e10;
+	Broyden_fraction = Broyden_Original_Fraction;
 
         n_prev_in_data.resize({0},{num_field_sites}, The_Pinned_Arena());
         F_curr_data.resize({0},{num_field_sites}, The_Pinned_Arena());
@@ -132,6 +135,15 @@ c_NEGF_Common<T>:: Set_Broyden ()
         //{
         //    Jinv_curr(a,a) = Broyden_fraction;
         //}
+          amrex::Print() << "\nBroyden parameters are set to the following: \n";
+          amrex::Print() << " Broyden_Step: "      << Broyden_Step << "\n";
+          amrex::Print() << " Broyden_Scalar: "    << Broyden_Scalar << "\n";
+          amrex::Print() << " Broyden_fraction: "  << Broyden_fraction << "\n";
+          amrex::Print() << " Broyden_Correction_Step: "  << Broyden_Correction_Step << "\n";
+          amrex::Print() << " Broyden_Reset_Step: "       << Broyden_Reset_Step << "\n";
+          amrex::Print() << " Broyden_NormSum_Curr: "     << Broyden_NormSum_Curr << "\n";
+          amrex::Print() << " Broyden_NormSum_Prev: "     << Broyden_NormSum_Prev << "\n";
+          amrex::Print() << " Broyden_Max_Norm: "         << Broyden_Norm << "\n\n";
     }
 
 }
@@ -172,9 +184,20 @@ c_NEGF_Common<T>:: Reset_Broyden ()
 
         Broyden_Step = 1;
         Broyden_Norm = 1;
-	Broyden_Scalar = 1.;
+	Broyden_Scalar          = 1.;
 	Broyden_Correction_Step = 0;
-        Prev_Broyden_Norm = 100;
+	Broyden_NormSum_Curr    = 1.e10;
+	Broyden_NormSum_Prev    = 1.e10;
+
+        amrex::Print() << "\nBroyden parameters are reset to the following: \n";
+        amrex::Print() << " Broyden_Step: "      << Broyden_Step << "\n";
+        amrex::Print() << " Broyden_Scalar: "    << Broyden_Scalar << "\n";
+        amrex::Print() << " Broyden_fraction: "  << Broyden_fraction << "\n";
+        amrex::Print() << " Broyden_Correction_Step: "  << Broyden_Correction_Step << "\n";
+        amrex::Print() << " Broyden_Reset_Step: "       << Broyden_Reset_Step << "\n";
+        amrex::Print() << " Broyden_NormSum_Curr: "     << Broyden_NormSum_Curr << "\n";
+        amrex::Print() << " Broyden_NormSum_Prev: "     << Broyden_NormSum_Prev << "\n";
+        amrex::Print() << " Broyden_Max_Norm: "         << Broyden_Norm << "\n\n";
     }
 }
 
@@ -260,14 +283,14 @@ c_NEGF_Common<T>:: ReadNanostructureProperties ()
     Set_Material_Specific_Parameters();
 
     amrex::Print() << "\n#####* num_atoms: "                << num_atoms                  << "\n";
-    amrex::Print() << "#####* num_atoms_per_unitcell: "   << num_atoms_per_unitcell     << "\n";
-    amrex::Print() << "#####* num_unitcells: "            << num_unitcells              << "\n";
-    amrex::Print() << "#####* num_field_sites: "          << num_field_sites            << "\n";
-    amrex::Print() << "#####* average_field_flag: "       << average_field_flag         << "\n";
-    amrex::Print() << "#####* num_atoms_per_field_site: " << num_atoms_per_field_site   << "\n";
-    amrex::Print() << "#####* num_atoms_to_avg_over: "    << num_atoms_to_avg_over      << "\n";
-    amrex::Print() << "#####* primary_transport_dir: "    << primary_transport_dir      << "\n";
-    amrex::Print() << "#####* Broyden_fraction: "         << Broyden_fraction           << "\n";
+    amrex::Print() << "#####* num_atoms_per_unitcell: "     << num_atoms_per_unitcell     << "\n";
+    amrex::Print() << "#####* num_unitcells: "              << num_unitcells              << "\n";
+    amrex::Print() << "#####* num_field_sites: "            << num_field_sites            << "\n";
+    amrex::Print() << "#####* average_field_flag: "         << average_field_flag         << "\n";
+    amrex::Print() << "#####* num_atoms_per_field_site: "   << num_atoms_per_field_site   << "\n";
+    amrex::Print() << "#####* num_atoms_to_avg_over: "      << num_atoms_to_avg_over      << "\n";
+    amrex::Print() << "#####* primary_transport_dir: "      << primary_transport_dir      << "\n";
+    amrex::Print() << "#####* Broyden_Original_Fraction: "  << Broyden_Original_Fraction  << "\n";
     amrex::Print() << "#####* Contact_Temperatures, T / [K]: \n";
     for(int c=0; c<NUM_CONTACTS; ++c) {
         amrex::Print() << "#####*   contact, T: " << c << "  " << Contact_Temperature[c] <<"\n";
@@ -1240,7 +1263,7 @@ void
 c_NEGF_Common<T>:: GuessNewCharge_Broyden_FirstAlg ()
 {
 
-    amrex::Print() << "BroydenStep: " << Broyden_Step << "\n";
+    amrex::Print() << "\nBroydenStep: " << Broyden_Step << "\n";
     auto const& n_curr_in  = h_n_curr_in_data.table();
     auto const& n_curr_out = n_curr_out_data.table();
     auto const& n_prev_in  = n_prev_in_data.table();
@@ -1379,7 +1402,7 @@ c_NEGF_Common<T>:: GuessNewCharge_ModifiedBroydenSecondAlg_WithCorrection ()
 
     if (ParallelDescriptor::IOProcessor())
     {
-        amrex::Print() << "BroydenStep: " << Broyden_Step << "\n";
+        amrex::Print() << "\nBroydenStep: " << Broyden_Step << "\n";
 
         auto const& n_curr_out = n_curr_out_data.table();
         auto const& n_prev_in  = n_prev_in_data.table();
@@ -1401,20 +1424,20 @@ c_NEGF_Common<T>:: GuessNewCharge_ModifiedBroydenSecondAlg_WithCorrection ()
         auto const& V_curr   = V_curr_data.table();
 
         amrex::Real denom = 0.;
-        amrex::Real total_diff = 0.;
-        
+        Broyden_NormSum_Curr = 0.;    
         for(int l=0; l < num_field_sites; ++l) 
         {
             amrex::Real Fcurr = n_curr_in(l) - n_curr_out(l);
             Norm(l) = fabs(Fcurr);
-            total_diff += pow(Fcurr,2);
+
+            Broyden_NormSum_Curr += pow(Fcurr,2);
 
             sum_deltaFcurr(l) = 0;		 
             sum_Fcurr(l) = 0;		 
             W_curr(l) = 0;
             V_curr(l) = 0;
         }
-        total_diff = sqrt(total_diff);
+        Broyden_NormSum_Curr = sqrt(Broyden_NormSum_Curr);
 
         Broyden_Norm = Norm(0);
         int norm_index = 0;
@@ -1426,12 +1449,14 @@ c_NEGF_Common<T>:: GuessNewCharge_ModifiedBroydenSecondAlg_WithCorrection ()
                 norm_index = l;
             }
         }
-        amrex::Print() << "\nL2 norm: " << total_diff << " Broyden max norm: " << Broyden_Norm 
-		                                      << " at location: " <<  norm_index 
-						      << " Prev_Norm: " << Prev_Broyden_Norm << "\n";
+        amrex::Print() << "\nBroyden_NormSum_Curr: " << std::setw(20) << Broyden_NormSum_Curr << "\n";
+	amrex::Print() <<   "Broyden_NormSum_Prev: " << std::setw(20) << Broyden_NormSum_Prev 
+		       << ",   Difference: " << (Broyden_NormSum_Curr - Broyden_NormSum_Prev) << "\n";
+        amrex::Print() << "Broyden max norm: " << Broyden_Norm << " at location: " <<  norm_index << "\n\n";
+
 
 	bool compute_new_vector = false;
-	if ((Broyden_Norm - Prev_Broyden_Norm) > 1e-5) 
+	if ((Broyden_NormSum_Curr - Broyden_NormSum_Prev) > 1.e-6) 
 	{
             for(int l=0; l < num_field_sites; ++l) 
             {
@@ -1445,11 +1470,12 @@ c_NEGF_Common<T>:: GuessNewCharge_ModifiedBroydenSecondAlg_WithCorrection ()
 
 	    Broyden_Correction_Step += 1;
 
-	    if(Broyden_Correction_Step > 20) 
+	    if(Broyden_Correction_Step > 10) 
 	    {
+		Broyden_Reset_Step += 1;
+		Broyden_fraction = Broyden_Original_Fraction/std::pow(2.,Broyden_Reset_Step);
 	        Reset_Broyden();
-		Broyden_fraction = Broyden_fraction/2.;
-                amrex::Print() << "\nResetting Broyden with a new fraction: " << Broyden_fraction << "\n";
+
                 W_Broyden.push_back(new RealTable1D({0},{num_field_sites}, The_Pinned_Arena()));
                 V_Broyden.push_back(new RealTable1D({0},{num_field_sites}, The_Pinned_Arena()));
 	    } 
@@ -1458,7 +1484,8 @@ c_NEGF_Common<T>:: GuessNewCharge_ModifiedBroydenSecondAlg_WithCorrection ()
 	{
             Broyden_Correction_Step = 0;		
 	    Broyden_Scalar = 1.;
-	    Prev_Broyden_Norm = Broyden_Norm;	
+	    Broyden_NormSum_Prev = Broyden_NormSum_Curr;	
+
             compute_new_vector = true;
             for(int l=0; l < num_field_sites; ++l) 
             {
@@ -1472,8 +1499,7 @@ c_NEGF_Common<T>:: GuessNewCharge_ModifiedBroydenSecondAlg_WithCorrection ()
             V_Broyden.push_back(new RealTable1D({0},{num_field_sites}, The_Pinned_Arena()));
 
 	}
-	amrex::Print() << "n_curr_in, n_prev_in: " << n_curr_in(152) << " " << n_prev_in(152) << "\n";
-	amrex::Print() << "m: " << Broyden_Step - 1 << "\n";
+	amrex::Print() << "n_curr_in, n_prev_in: " << n_curr_in(norm_index-1) << " " << n_prev_in(norm_index-1) << "\n";
 
         int m = Broyden_Step-1;
         if(m > 0) 
@@ -1529,7 +1555,7 @@ c_NEGF_Common<T>:: GuessNewCharge_ModifiedBroydenSecondAlg_WithCorrection ()
             n_prev_in(l) = n_curr_in(l); 
             n_curr_in(l) = n_prev_in(l) - Broyden_Scalar * Broyden_fraction*F_curr(l) - Broyden_Scalar * sum_Fcurr(l);
         }
-	amrex::Print() << "n_new_in: " << n_curr_in(152) << "\n";
+	amrex::Print() << "n_new_in: " << n_curr_in(norm_index-1) << "\n";
 
         sum_Fcurr_data.clear();
         sum_deltaFcurr_data.clear();
@@ -1538,6 +1564,12 @@ c_NEGF_Common<T>:: GuessNewCharge_ModifiedBroydenSecondAlg_WithCorrection ()
 
         Broyden_Step += 1;
     }
+
+    MPI_Bcast(&Broyden_Norm,
+               1,
+               MPI_DOUBLE,
+	       ParallelDescriptor::IOProcessorNumber(),
+               ParallelDescriptor::Communicator());
     
     MPI_Bcast(&n_curr_in(0),
                Hsize_glo,
@@ -1556,7 +1588,7 @@ c_NEGF_Common<T>:: GuessNewCharge_ModifiedBroydenSecondAlg ()
 
     if (ParallelDescriptor::IOProcessor())
     {
-        amrex::Print() << "BroydenStep: " << Broyden_Step << "\n";
+        amrex::Print() << "\nBroydenStep: " << Broyden_Step << "\n";
 
         auto const& n_curr_out = n_curr_out_data.table();
         auto const& n_prev_in  = n_prev_in_data.table();
@@ -1577,7 +1609,7 @@ c_NEGF_Common<T>:: GuessNewCharge_ModifiedBroydenSecondAlg ()
         auto const& V_curr   = V_curr_data.table();
 
         amrex::Real denom = 0.;
-        amrex::Real total_diff = 0.;
+        Broyden_NormSum_Curr = 0.;
         int m = Broyden_Step-1;
         
 
@@ -1606,7 +1638,7 @@ c_NEGF_Common<T>:: GuessNewCharge_ModifiedBroydenSecondAlg ()
 
             Norm(l) = fabs(Fcurr);
 
-            total_diff += pow(Fcurr,2);
+            Broyden_NormSum_Curr += pow(Fcurr,2);
 
             sum_deltaFcurr(l) = 0;		 
             sum_Fcurr(l) = 0;		 
@@ -1614,7 +1646,25 @@ c_NEGF_Common<T>:: GuessNewCharge_ModifiedBroydenSecondAlg ()
             V_curr(l) = 0;
 
         }
-        total_diff = sqrt(total_diff);
+        Broyden_NormSum_Curr = sqrt(Broyden_NormSum_Curr);
+
+        Broyden_Norm = Norm(0);
+        int norm_index = 0;
+        for(int l=1; l < num_field_sites; ++l)
+        {
+            if(Broyden_Norm < Norm(l))
+            {
+                Broyden_Norm = Norm(l);
+                norm_index = l;
+            }
+        }
+
+        amrex::Print() << "\nBroyden_NormSum_Curr: " << std::setw(20) << Broyden_NormSum_Curr << "\n";
+	amrex::Print() <<   "Broyden_NormSum_Prev: " << std::setw(20) << Broyden_NormSum_Prev 
+		       << ",   Difference: " << (Broyden_NormSum_Curr - Broyden_NormSum_Prev) << "\n";
+        amrex::Print() <<   "Broyden max norm: " << Broyden_Norm << " at location: " <<  norm_index << "\n\n";
+	Broyden_NormSum_Prev = Broyden_NormSum_Curr;
+
 
         //if(m<4) {
         //    for(int l=0; l < 4; ++l) 
@@ -1716,19 +1766,6 @@ c_NEGF_Common<T>:: GuessNewCharge_ModifiedBroydenSecondAlg ()
         //    							  << "\n";
         //}
 
-
-        Broyden_Norm = Norm(0);
-        int norm_index = 0;
-        for(int l=1; l < num_field_sites; ++l)
-        {
-            if(Broyden_Norm < Norm(l))
-            {
-                Broyden_Norm = Norm(l);
-                norm_index = l;
-            }
-        }
-
-        amrex::Print() << "\nL2 norm: " << total_diff << " Max norm: " << Broyden_Norm << " location: " <<  norm_index << "\n";
 
         Broyden_Step += 1;
     }

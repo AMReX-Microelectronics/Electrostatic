@@ -73,7 +73,7 @@ c_Nanostructure<NSType>::c_Nanostructure (const amrex::Geometry            & geo
 
     if(_use_negf) 
     {
-        NSType::Broyden_fraction = NS_Broyden_frac;
+        NSType::Broyden_Original_Fraction = NS_Broyden_frac;
 
         ReadNanostructureProperties();
 
@@ -634,6 +634,8 @@ c_Nanostructure<NSType>:: Reset ()
 {
     if(_use_electrostatic) 
     {
+	NSType::Broyden_Reset_Step = 1;
+	NSType::Broyden_fraction = NSType::Broyden_Original_Fraction;
         NSType::Reset_Broyden();
     }
 }
