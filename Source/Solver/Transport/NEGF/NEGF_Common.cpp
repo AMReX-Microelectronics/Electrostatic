@@ -86,6 +86,11 @@ c_NEGF_Common<T>:: Initialize_ChargeAtFieldSites(const amrex::Real value)
 
     SetVal_Table1D(h_n_curr_in_data, value);
 
+    if (ParallelDescriptor::IOProcessor())
+    {
+        n_start_in_data.copy(h_n_curr_in_data);
+    }
+
 }
 
 
@@ -116,12 +121,14 @@ c_NEGF_Common<T>:: Set_Broyden ()
 	Broyden_NormSum_Prev = 1.e10;
 	Broyden_fraction = Broyden_Original_Fraction;
 
+        n_start_in_data.resize({0},{num_field_sites}, The_Pinned_Arena());
         n_prev_in_data.resize({0},{num_field_sites}, The_Pinned_Arena());
         F_curr_data.resize({0},{num_field_sites}, The_Pinned_Arena());
         Norm_data.resize({0},{num_field_sites}, The_Pinned_Arena());
         delta_F_curr_data.resize({0},{num_field_sites}, The_Pinned_Arena());
         delta_n_curr_data.resize({0},{num_field_sites}, The_Pinned_Arena());
 
+        SetVal_Table1D(n_start_in_data,0.);
         SetVal_Table1D(n_prev_in_data,0.);
         SetVal_Table1D(F_curr_data,0.);
         SetVal_Table1D(Norm_data, 0.);
@@ -192,6 +199,11 @@ c_NEGF_Common<T>:: Reset_Broyden ()
 	Broyden_NormSum_Curr    = 1.e10;
 	Broyden_NormSum_Prev    = 1.e10;
 
+	/*Part that is different from Restart_Broyden*/
+        Broyden_Reset_Step = 0;
+        Broyden_fraction = Broyden_Original_Fraction;
+	n_start_in_data.copy(h_n_curr_in_data);
+
         amrex::Print() << "\nBroyden parameters are reset to the following: \n";
         amrex::Print() << " Broyden_Step: "      << Broyden_Step << "\n";
         amrex::Print() << " Broyden_Scalar: "    << Broyden_Scalar << "\n";
@@ -202,6 +214,61 @@ c_NEGF_Common<T>:: Reset_Broyden ()
         amrex::Print() << " Broyden_NormSum_Curr: "     << Broyden_NormSum_Curr << "\n";
         amrex::Print() << " Broyden_NormSum_Prev: "     << Broyden_NormSum_Prev << "\n";
         amrex::Print() << " Broyden_Max_Norm: "         << Broyden_Norm << "\n\n";
+
+    }
+}
+
+
+template<typename T>
+void
+c_NEGF_Common<T>:: Restart_Broyden ()
+{
+    SetVal_Table1D(n_curr_out_data, 0.);
+
+    if (ParallelDescriptor::IOProcessor())
+    {
+        amrex::Print() << "\n\n\n\n**********************************Restarting Broyden**********************************\n";	
+        int size = W_Broyden.size();	
+        for(int j=0; j<size; ++j) 
+        {
+            W_Broyden[j]->clear();    
+            V_Broyden[j]->clear();    
+        }
+        W_Broyden.clear();
+        V_Broyden.clear();
+
+        SetVal_Table1D(n_prev_in_data, 0.);
+        SetVal_Table1D(F_curr_data, 0.);
+        SetVal_Table1D(Norm_data, 0.);
+        SetVal_Table1D(delta_F_curr_data, 0.);
+        SetVal_Table1D(delta_n_curr_data, 0.);
+
+
+        Broyden_Step = 1;
+        Broyden_Norm = 1;
+	Broyden_Scalar          = 1.;
+	Broyden_Correction_Step = 0;
+        Broyden_NormSumIsIncreasing_Step = 0;
+	Broyden_NormSum_Curr    = 1.e10;
+	Broyden_NormSum_Prev    = 1.e10;
+
+	/*Part that is different from Reset_Broyden*/
+        SetVal_Table1D(h_n_curr_in_data, 0.);
+	h_n_curr_in_data.copy(n_start_in_data);
+        Broyden_Reset_Step += 1;
+	Broyden_fraction = Broyden_Original_Fraction/std::pow(5.,Broyden_Reset_Step);
+
+        amrex::Print() << "\nBroyden parameters are reset to the following: \n";
+        amrex::Print() << " Broyden_Step: "      << Broyden_Step << "\n";
+        amrex::Print() << " Broyden_Scalar: "    << Broyden_Scalar << "\n";
+        amrex::Print() << " Broyden_fraction: "  << Broyden_fraction << "\n";
+        amrex::Print() << " Broyden_Correction_Step: "  << Broyden_Correction_Step << "\n";
+        amrex::Print() << " Broyden_NormSumIsIncreasing_Step: "  << Broyden_NormSumIsIncreasing_Step << "\n";
+        amrex::Print() << " Broyden_Reset_Step: "       << Broyden_Reset_Step << "\n";
+        amrex::Print() << " Broyden_NormSum_Curr: "     << Broyden_NormSum_Curr << "\n";
+        amrex::Print() << " Broyden_NormSum_Prev: "     << Broyden_NormSum_Prev << "\n";
+        amrex::Print() << " Broyden_Max_Norm: "         << Broyden_Norm << "\n\n";
+
     }
 }
 
@@ -1471,27 +1538,27 @@ c_NEGF_Common<T>:: GuessNewCharge_ModifiedBroydenSecondAlg_WithCorrection ()
 
 	if (Broyden_NormSumIsIncreasing_Step > 4) 
 	{
-            //for(int l=0; l < num_field_sites; ++l) 
-            //{
-            //    n_curr_in(l) = n_prev_in(l);		
-	    //    n_prev_in(l) = n_curr_in(l) - delta_n_curr(l);
-            //    denom += pow(delta_F_curr(l),2.);
-            //}
-	    //Broyden_Scalar = Broyden_Scalar/2.;
-	    //amrex::Print() << "\n**********************************Reducing Broyden scalar to: " << Broyden_Scalar << "\n";
-	    //Broyden_Step -= 1;
+            for(int l=0; l < num_field_sites; ++l) 
+            {
+                n_curr_in(l) = n_prev_in(l);		
+	        n_prev_in(l) = n_curr_in(l) - delta_n_curr(l);
+                denom += pow(delta_F_curr(l),2.);
+            }
+	    Broyden_Scalar = Broyden_Scalar/2.;
+	    amrex::Print() << "\n**********************************Reducing Broyden scalar to: " << Broyden_Scalar << "\n";
+	    Broyden_Step -= 1;
 
-	    //Broyden_Correction_Step += 1;
+	    Broyden_NormSumIsIncreasing_Step = 0;
+	    Broyden_Correction_Step += 1;
 
-	    //if(Broyden_Correction_Step > 10) 
-	    //{
-		Broyden_Reset_Step += 1;
-		Broyden_fraction = Broyden_Original_Fraction/std::pow(5.,Broyden_Reset_Step);
-	        Reset_Broyden();
+	    if(Broyden_Correction_Step > 2) 
+	    {
+	      Restart_Broyden();
 
-                W_Broyden.push_back(new RealTable1D({0},{num_field_sites}, The_Pinned_Arena()));
-                V_Broyden.push_back(new RealTable1D({0},{num_field_sites}, The_Pinned_Arena()));
-	    //} 
+              W_Broyden.push_back(new RealTable1D({0},{num_field_sites}, The_Pinned_Arena()));
+              V_Broyden.push_back(new RealTable1D({0},{num_field_sites}, The_Pinned_Arena()));
+	    } 
+
 	}
 	else 
 	{

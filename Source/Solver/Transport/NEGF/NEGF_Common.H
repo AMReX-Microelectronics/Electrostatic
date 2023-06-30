@@ -221,6 +221,7 @@ public:
     RealTable1D h_n_curr_in_data;
     RealTable1D d_n_curr_in_data;
 
+    RealTable1D n_start_in_data;
     RealTable1D n_curr_out_data;
     RealTable1D n_prev_in_data;
     RealTable1D F_curr_data;
@@ -233,6 +234,11 @@ public:
 
     amrex::Vector<RealTable1D*> W_Broyden;
     amrex::Vector<RealTable1D*> V_Broyden;
+
+
+    void Set_Broyden();
+    void Reset_Broyden();
+    void Restart_Broyden();
 
     /*For Output*/
     const int negf_plt_name_digits = 4;
@@ -288,8 +294,6 @@ public:
     void GuessNewCharge_ModifiedBroydenSecondAlg_WithCorrection();
     void GuessNewCharge_Broyden_FirstAlg();
     
-    void Reset_Broyden();
-    void Set_Broyden();
 
     void Set_Arrays_OfSize_NumFieldSites();
 
