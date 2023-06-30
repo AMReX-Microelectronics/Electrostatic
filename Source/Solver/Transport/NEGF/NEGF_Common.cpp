@@ -111,7 +111,7 @@ c_NEGF_Common<T>:: Set_Broyden ()
 	Broyden_Scalar = 1.;
 	Broyden_Correction_Step = 0;
         Broyden_NormSumIsIncreasing_Step = 0;
-        Broyden_Reset_Step   = 1;
+        Broyden_Reset_Step   = 0;
 	Broyden_NormSum_Curr = 1.e10;
 	Broyden_NormSum_Prev = 1.e10;
 	Broyden_fraction = Broyden_Original_Fraction;
@@ -1469,7 +1469,7 @@ c_NEGF_Common<T>:: GuessNewCharge_ModifiedBroydenSecondAlg_WithCorrection ()
 	    Broyden_NormSumIsIncreasing_Step = 0;
 	}
 
-	if (Broyden_NormSumIsIncreasing_Step > 5) 
+	if (Broyden_NormSumIsIncreasing_Step > 4) 
 	{
             //for(int l=0; l < num_field_sites; ++l) 
             //{
@@ -1486,7 +1486,7 @@ c_NEGF_Common<T>:: GuessNewCharge_ModifiedBroydenSecondAlg_WithCorrection ()
 	    //if(Broyden_Correction_Step > 10) 
 	    //{
 		Broyden_Reset_Step += 1;
-		Broyden_fraction = Broyden_Original_Fraction/std::pow(2.,Broyden_Reset_Step);
+		Broyden_fraction = Broyden_Original_Fraction/std::pow(5.,Broyden_Reset_Step);
 	        Reset_Broyden();
 
                 W_Broyden.push_back(new RealTable1D({0},{num_field_sites}, The_Pinned_Arena()));

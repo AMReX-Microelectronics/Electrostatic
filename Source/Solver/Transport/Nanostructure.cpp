@@ -634,7 +634,7 @@ c_Nanostructure<NSType>:: Reset ()
 {
     if(_use_electrostatic) 
     {
-	NSType::Broyden_Reset_Step = 1;
+	NSType::Broyden_Reset_Step = 0;
 	NSType::Broyden_fraction = NSType::Broyden_Original_Fraction;
         NSType::Reset_Broyden();
     }

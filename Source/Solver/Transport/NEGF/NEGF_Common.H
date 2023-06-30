@@ -214,7 +214,7 @@ public:
     amrex::Real Broyden_Norm = 1.0;
     int Broyden_Correction_Step = 0;
     int Broyden_NormSumIsIncreasing_Step = 0;
-    int Broyden_Reset_Step = 1;
+    int Broyden_Reset_Step = 0;
     amrex::Real Broyden_Scalar = 1.0;
     amrex::Real Broyden_NormSum_Curr = 1.e10;
     amrex::Real Broyden_NormSum_Prev = 1.e100;
