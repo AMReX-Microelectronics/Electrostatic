@@ -23,9 +23,9 @@ my_constants.epsilon_CM     = epsilon_0 #Palladium
 
 my_constants.SV = 0.      #source voltage [V]
 my_constants.Vds = -0.1   #Drain-Source voltage [V]
-my_constants.Vgs_min = 0.2
-my_constants.Vgs_max = 0.2
-my_constants.Nsteps =  2
+my_constants.Vgs_min = -0.3
+my_constants.Vgs_max = 1.0
+my_constants.Nsteps =  14
 my_constants.dt = 1./(Nsteps-1)
 
 
@@ -55,9 +55,9 @@ my_constants.dx = Lx/nx
 my_constants.dy = Ly/ny
 my_constants.dz = Lz/nz
 
-my_constants.gx = 4
-my_constants.gy = 4
-my_constants.gz = 4
+my_constants.gx = 8
+my_constants.gy = 8
+my_constants.gz = 8
 
 ### Carbon nanotube ###
 #######################
@@ -257,7 +257,7 @@ transport.use_negf = 1
 transport.NS_gather_field = phi            
 transport.NS_deposit_field  = charge_density 
 transport.NS_initial_deposit_value  = 1e-2
-transport.Broyden_fraction = 0.003
+transport.Broyden_fraction = 0.1
 transport.Broyden_max_norm = 1.e-6
 
 cnt.type = CNT
