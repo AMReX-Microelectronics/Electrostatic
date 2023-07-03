@@ -216,8 +216,8 @@ public:
     int Broyden_NormSumIsIncreasing_Step = 0;
     int Broyden_Reset_Step = 0;
     
-    int Broyden_Threshold_MaxStep = 400;
-    int Broyden_Threshold_NormSumIncreaseStep = 4;
+    int Broyden_Threshold_MaxStep = 200;
+    int Broyden_Threshold_NormSumIncreaseStep = 3;
     int Broyden_Threshold_CorrectionStep = 2;
     amrex::Real Broyden_Threshold_MinFraction = 5.e-4;
     amrex::Real Broyden_Fraction_Decrease_Factor = 5.;
@@ -262,7 +262,7 @@ public:
     int write_at_iter = 0;
 
     void Set_StepFilenameString(const int step);
-    void Set_IterationFilenameString();
+    void Set_IterationFilenameString(const int iter);
 
 
     void Initialize_ChargeAtFieldSites(const amrex::Real value);

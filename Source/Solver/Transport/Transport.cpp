@@ -255,7 +255,7 @@ c_TransportSolver::Solve(const int step, const amrex::Real time)
            for (int c=0; c < vp_CNT.size(); ++c)
            {
 
-	       vp_CNT[c]->Set_IterationFilenameString();
+	       vp_CNT[c]->Set_IterationFilenameString(max_iter);
 
 
 	       vp_CNT[c]->Gather_MeshAttributeAtAtoms();  

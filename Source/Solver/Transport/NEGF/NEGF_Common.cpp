@@ -68,11 +68,11 @@ c_NEGF_Common<T>:: Set_StepFilenameString(const int step)
 
 template<typename T>
 void
-c_NEGF_Common<T>:: Set_IterationFilenameString()
+c_NEGF_Common<T>:: Set_IterationFilenameString(const int iter)
 {
     if(write_at_iter) 
     {
-        iter_filename_str  = amrex::Concatenate(iter_filename_prefix_str, Broyden_Step, negf_plt_name_digits);
+        iter_filename_str  = amrex::Concatenate(iter_filename_prefix_str, iter, negf_plt_name_digits);
         /*eg. output/negf/cnt/step0001_iter/iter0001  for iteration 1*/
         amrex::Print() << "iter_filename_str: " << iter_filename_str << "\n";
     }
@@ -259,6 +259,7 @@ c_NEGF_Common<T>:: Restart_Broyden ()
 
         SetVal_Table1D(h_n_curr_in_data, 0.);
 	h_n_curr_in_data.copy(n_start_in_data);
+
         Broyden_Reset_Step += 1;
 	Broyden_fraction = Broyden_Original_Fraction/std::pow(Broyden_Fraction_Decrease_Factor,Broyden_Reset_Step);
 
@@ -1481,7 +1482,7 @@ c_NEGF_Common<T>:: GuessNewCharge_ModifiedBroydenSecondAlg_WithCorrection ()
 
     if (ParallelDescriptor::IOProcessor())
     {
-        amrex::Print() << "\nBroydenStep: " << Broyden_Step << "\n";
+        amrex::Print() << "\nBroydenStep: " << Broyden_Step  << ",  fraction: " << Broyden_fraction << ",  scalar: " << Broyden_Scalar<< "\n";
 
         auto const& n_curr_out = n_curr_out_data.table();
         auto const& n_prev_in  = n_prev_in_data.table();
@@ -1552,14 +1553,10 @@ c_NEGF_Common<T>:: GuessNewCharge_ModifiedBroydenSecondAlg_WithCorrection ()
 	        n_prev_in(l) = n_curr_in(l) - delta_n_curr(l);
                 denom += pow(delta_F_curr(l),2.);
             }
-	    amrex::Print() << "\n**********************************Reducing Broyden scalar to: " << Broyden_Scalar << "\n";
 	    
 	    Broyden_NormSumIsIncreasing_Step = 0;
 	    Broyden_Correction_Step += 1;
 
-	    Broyden_Scalar = Broyden_Scalar/std::pow(Broyden_Scalar_Decrease_Factor,Broyden_Correction_Step);
-
-	    Broyden_Step -= 1;
 
 	    if(Broyden_Correction_Step > Broyden_Threshold_CorrectionStep) 
 	    {
@@ -1568,6 +1565,12 @@ c_NEGF_Common<T>:: GuessNewCharge_ModifiedBroydenSecondAlg_WithCorrection ()
               W_Broyden.push_back(new RealTable1D({0},{num_field_sites}, The_Pinned_Arena()));
               V_Broyden.push_back(new RealTable1D({0},{num_field_sites}, The_Pinned_Arena()));
 	    } 
+	    else 
+	    {
+	        Broyden_Scalar = Broyden_Scalar/std::pow(Broyden_Scalar_Decrease_Factor,Broyden_Correction_Step);
+	        Broyden_Step -= 1;
+	        amrex::Print() << "\n****************************************************Reducing Broyden scalar to: " << Broyden_Scalar << "\n";
+	    }
 
 	}
 	else if (Broyden_Step > Broyden_Threshold_MaxStep) 
