@@ -131,6 +131,7 @@ c_EmbeddedBoundaries::ReadGeometry()
                 pp_object.get("geom_type", map_basic_objects_type[it]);
                 ReadObjectInfo(it, map_basic_objects_type[it], pp_object);
 
+
                 if(specify_inhomogeneous_dirichlet == 1) 
                 {
 	            map_basic_objects_soln_parser_flag[it] = 0;
@@ -147,11 +148,15 @@ c_EmbeddedBoundaries::ReadGeometry()
                         map_basic_objects_soln_parser[it] = std::make_unique<amrex::Parser>(
                                            makeParser(surf_soln_function_str, m_parser_varname_vector));
 
+                        map_SurfSoln_Name_Value[it] = 0.; /*This value will be updated with time in Specify_SurfSolnOnCutcells*/
+
 	            }
                     else 
 		    {		    
                         getWithParser(pp_object,"surf_soln", map_basic_objects_soln[it]);
                         amrex::Print()  << "##### surf_soln: " << map_basic_objects_soln[it] << "\n";
+
+			map_SurfSoln_Name_Value[it] = map_basic_objects_soln[it];
 		    }
                 } 
 
@@ -753,6 +758,19 @@ c_EmbeddedBoundaries::BuildGeometry(const amrex::Geometry* GEOM, const amrex::Bo
 }
 
 
+amrex::Real
+c_EmbeddedBoundaries::Read_SurfSoln(const std::string name) 
+{
+    auto it_default = map_SurfSoln_Name_Value.find(name);
+
+    if (it_default == map_SurfSoln_Name_Value.end()) 
+    {
+        amrex::Abort("Surface name " + name + " is not defined, yet queried in Read_SurfSoln!");	    
+    }
+
+    return map_SurfSoln_Name_Value[name];
+}
+
 void
 c_EmbeddedBoundaries::Specify_SurfSolnOnCutcells(amrex::MultiFab& mf, const std::string name, const amrex::Real time) 
 {
@@ -768,6 +786,8 @@ c_EmbeddedBoundaries::Specify_SurfSolnOnCutcells(amrex::MultiFab& mf, const std:
 
 	amrex::Print() << "Surface solution: " << macro_parser(0.,0.,0.,time) << "\n";
         Multifab_Manipulation::SpecifyValueOnlyOnCutcells(mf, macro_parser(0.,0.,0.,time));
+        
+        map_SurfSoln_Name_Value[name] = macro_parser(0.,0.,0.,time);
 
         #else
         Multifab_Manipulation::SpecifyValueOnlyOnCutcells_UsingParser_3vars(mf,

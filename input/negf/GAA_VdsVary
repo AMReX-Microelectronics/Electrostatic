@@ -22,8 +22,12 @@ my_constants.epsilon_domain = epsilon_0 #air
 my_constants.epsilon_CM     = epsilon_0 #Palladium
 
 my_constants.SV = 0.      #source voltage [V]
-my_constants.Vds = -0.2   #Drain-Source voltage [V]
-my_constants.Vgs = 0.8     #Gate-Source voltage [V]
+my_constants.Vgs = 0.67   #Drain-Source voltage [V]
+my_constants.Vds_min = -0.4
+my_constants.Vds_max = 0.0
+my_constants.Nsteps =  9
+my_constants.dt = 1./(Nsteps-1)
+
 
 my_constants.Ef = -1.       #Palladium Contact Fermi level [eV] 
 
@@ -31,16 +35,16 @@ my_constants.Ef = -1.       #Palladium Contact Fermi level [eV]
 ###############################
 my_constants.Ly_offset_unitcells = 0
 
-my_constants.cells_per_unitcell = 14 #cell_size = 0.030428571 nm
+my_constants.cells_per_unitcell = 16 #cell_size = 0.030428571 nm
 
 my_constants.unitcells_per_D_CN = ceil((R_CN*2)/(L_unitcell)) #unitcells per diameter
 
-my_constants.width_factor  = 5
-my_constants.height_factor = 5
+my_constants.width_factor  = 8
+my_constants.height_factor = 8
 
-my_constants.ny = (N_unitcells + Ly_offset_unitcells) * cells_per_unitcell  
-my_constants.nx =  width_factor  * unitcells_per_D_CN * cells_per_unitcell  
-my_constants.nz =  height_factor * unitcells_per_D_CN * cells_per_unitcell  
+my_constants.ny = (N_unitcells + Ly_offset_unitcells) * cells_per_unitcell/2
+my_constants.nx =  width_factor  * unitcells_per_D_CN * cells_per_unitcell/2
+my_constants.nz =  height_factor * unitcells_per_D_CN * cells_per_unitcell/2  
 
 my_constants.Ly = (N_unitcells + Ly_offset_unitcells) * L_unitcell 
 my_constants.Lx = width_factor  * unitcells_per_D_CN  * L_unitcell 
@@ -51,14 +55,18 @@ my_constants.dx = Lx/nx
 my_constants.dy = Ly/ny
 my_constants.dz = Lz/nz
 
+my_constants.gx = 8
+my_constants.gy = 8
+my_constants.gz = 8
+
 ### Carbon nanotube ###
 #######################
 
 my_constants.m_index = 17
 my_constants.n_index = 0
 
-my_constants.Channel_unitcells = 23 
-my_constants.Overlap_unitcells = 10 
+my_constants.Channel_unitcells = 46 
+my_constants.Overlap_unitcells = 9 
 my_constants.N_unitcells = Channel_unitcells + 2*Overlap_unitcells 
 
 my_constants.bond_length = 0.142e-9
@@ -133,7 +141,8 @@ Drain.thickness     = CM_thickness
 Drain.center        = CN_x drain_center_y CN_z
 Drain.height        = drain_hi_y - drain_lo_y
 Drain.direction     = 1
-Drain.surf_soln     = Vds + SV 
+Drain.surf_soln_parser   = 1
+Drain.surf_soln_function = "SV + Vds_max - (Vds_max-Vds_min) * t"
 
 Gate.geom_type      = cntfet_contact_cyl
 Gate.inner_radius   = G_inner_rad
@@ -141,14 +150,15 @@ Gate.thickness      = G_thickness
 Gate.center         = CN_x CN_y CN_z
 Gate.height         = drain_lo_y - source_hi_y
 Gate.direction      = 1
-Gate.surf_soln      = Vgs + SV
+Drain.surf_soln     = Vgs + SV 
 
 #################################
 ###### GEOMETRY PROPERTIES ######
 #################################
 domain.n_cell = nx ny nz
-domain.max_grid_size = nx ny nz
-domain.blocking_factor = nx ny nz
+domain.max_grid_size = nx/gx ny/gy nz/gz
+domain.blocking_factor = nx/gx ny/gy nz/gz
+
 
 domain.prob_lo = -Lx/2. -Ly/2.  -Lz/2.
 domain.prob_hi =  Lx/2.  Ly/2.   Lz/2.
@@ -198,7 +208,7 @@ macroscopic.atom_locations = 0.
 ###### OUTPUT ######
 ####################
 
-plot.folder_name = all_around_gate
+plot.folder_name = GAA_VdsVary
 plot.fields_to_plot = epsilon.1 charge_density.1 phi.1 atom_locations #vecField 
 plot.write_after_init = 1
 plot.write_interval = 1
@@ -246,7 +256,7 @@ transport.use_negf = 1
 transport.NS_gather_field = phi            
 transport.NS_deposit_field  = charge_density 
 transport.NS_initial_deposit_value  = 1e-2
-transport.Broyden_fraction = 1e-1
+transport.Broyden_fraction = 0.1
 transport.Broyden_max_norm = 1.e-6
 
 cnt.type = CNT
@@ -255,8 +265,9 @@ cnt.acc = bond_length
 cnt.gamma = 2.5       #coupling strength (eV)
 cnt.num_unitcells = N_unitcells
 cnt.offset = CN_x CN_y CN_z
-cnt.contact_mu = Ef (Ef - Vds)
 cnt.contact_T  = 298. 298.
+cnt.contact_mu_specified = 0
+cnt.contact_parser_string = Source Drain
 
 cnt.contact_Fermi_level = Ef
 cnt.E_valence_min = -10

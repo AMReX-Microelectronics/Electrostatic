@@ -181,7 +181,10 @@ public:
     amrex::Real Fermi_tail_factor = 20.;
 
     amrex::Real Contact_Temperature[NUM_CONTACTS] = {298., 298.};
+
+    int flag_contact_mu_specified = 1;
     amrex::Real Contact_Electrochemical_Potential[NUM_CONTACTS] = {0., 0.};
+    std::string Contact_Parser_String[NUM_CONTACTS];
 
     int flag_impose_potential = 0;
     std::string potential_profile_type_str = "constant";

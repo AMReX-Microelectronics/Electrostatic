@@ -337,16 +337,32 @@ c_NEGF_Common<T>:: ReadNanostructureProperties ()
         }
     }
 
-    amrex::Vector<amrex::Real> vec_mu;
-    is_specified = queryArrWithParser(pp_ns, "contact_mu", vec_mu, 0, NUM_CONTACTS);
-    if(is_specified) {
-        for(int c=0; c<NUM_CONTACTS; ++c) {
-            Contact_Electrochemical_Potential[c] = vec_mu[c];
-        }
-    }
-
     E_f = 0.;
     queryWithParser(pp_ns,"contact_Fermi_level", E_f);
+
+    flag_contact_mu_specified = 1;
+    pp_ns.query("impose_potential", flag_contact_mu_specified);
+
+    if(flag_contact_mu_specified) 
+    {
+        amrex::Vector<amrex::Real> vec_mu;
+        getArrWithParser(pp_ns, "contact_mu", vec_mu, 0, NUM_CONTACTS);
+        for(int c=0; c<NUM_CONTACTS; ++c) 
+	{
+            Contact_Electrochemical_Potential[c] = vec_mu[c];
+        }
+	vec_mu.clear();
+    }
+    else 
+    {
+        amrex::Vector<std::string> temp_vec;
+        pp_ns.getarr("contact_parser_string", temp_vec);
+        for(int c=0; c<NUM_CONTACTS; ++c) 
+	{
+            Contact_Parser_String[c] = temp_vec[c];
+        }
+	temp_vec.clear();
+    }
 
     pp_ns.query("impose_potential", flag_impose_potential);
     if(flag_impose_potential) 
@@ -375,9 +391,20 @@ c_NEGF_Common<T>:: ReadNanostructureProperties ()
     for(int c=0; c<NUM_CONTACTS; ++c) {
         amrex::Print() << "#####*   contact, T: " << c << "  " << Contact_Temperature[c] <<"\n";
     }
-    amrex::Print() << "#####* Contact_Electrochemical_Potentials, mu / [eV]: \n";
-    for(int c=0; c<NUM_CONTACTS; ++c) {
-        amrex::Print() << "#####*   contact, mu: " << c << "  " << Contact_Electrochemical_Potential[c] <<"\n";
+    amrex::Print() << "#####* contact_mu_specified: " <<  flag_contact_mu_specified <<"\n";
+    if(flag_contact_mu_specified) 
+    { 
+        amrex::Print() << "#####* Contact_Electrochemical_Potentials, mu / [eV]: \n";
+        for(int c=0; c<NUM_CONTACTS; ++c) {
+            amrex::Print() << "#####*   contact, mu: " << c << "  " << Contact_Electrochemical_Potential[c] <<"\n";
+        }
+    }
+    else 
+    {
+        amrex::Print() << "#####* Contact_Parser_String: \n";
+        for(int c=0; c<NUM_CONTACTS; ++c) {
+            amrex::Print() << "#####*   contact, mu: " << c << "  " << Contact_Parser_String[c] <<"\n";
+        }
     }
     amrex::Print() << "#####* contact_Fermi_level, E_f / [eV]: " << E_f << "\n";
     amrex::Print() << "##### flag_impose_potential: " << flag_impose_potential << "\n";

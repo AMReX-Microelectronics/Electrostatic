@@ -217,6 +217,7 @@ cnt.gamma = 2.5        #coupling strength (eV)
 cnt.num_unitcells = N_unitcells
 cnt.offset = CN_x CN_y CN_z
 
+cnt.contact_mu_specified = 1
 cnt.contact_mu = Ef Ef
 cnt.contact_T  = 298. 298.
 

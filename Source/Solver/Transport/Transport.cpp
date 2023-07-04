@@ -216,6 +216,7 @@ c_TransportSolver::Solve(const int step, const amrex::Real time)
 {
 
    auto& rCode    = c_Code::GetInstance();
+   auto& rGprop = rCode.get_GeometryProperties();
    auto& rMprop = rCode.get_MacroscopicProperties();
    auto& rMLMG    = rCode.get_MLMGSolver();
    auto& rOutput  = rCode.get_Output();
@@ -259,6 +260,19 @@ c_TransportSolver::Solve(const int step, const amrex::Real time)
 
 
 	       vp_CNT[c]->Gather_MeshAttributeAtAtoms();  
+               
+
+	       if(update_surface_soln_flag && vp_CNT[c]->flag_contact_mu_specified == 0) 
+	       {
+		   for(int k=0; k<NUM_CONTACTS; ++k) 
+		   {    
+                       amrex::Real terminal_voltage = rGprop.pEB->Read_SurfSoln(vp_CNT[c]->Contact_Parser_String[k]);
+
+		       amrex::Print() << "Updated terminal voltage: " << k << "  " << terminal_voltage << "\n";
+
+		       vp_CNT[c]->Contact_Electrochemical_Potential[k] = vp_CNT[c]->E_f - terminal_voltage;
+		   }
+	       }
 
 
                vp_CNT[c]->Solve_NEGF();

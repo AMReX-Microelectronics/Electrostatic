@@ -84,6 +84,7 @@ public:
 
     void Update_SurfaceSolution(const amrex::Real time);
 
+    amrex::Real Read_SurfSoln(const std::string name);
 
 private:
     amrex::Vector< std::string > vec_object_names;
@@ -136,6 +137,8 @@ private:
                          {"Basic" , amrex::EBSupport::basic},
                  	     {"Volume", amrex::EBSupport::volume},
                      };
+
+    std::map<std::string, amrex::Real> map_SurfSoln_Name_Value;
 
     void ReadGeometry();
 
