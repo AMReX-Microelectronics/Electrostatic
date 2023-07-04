@@ -249,7 +249,7 @@ c_NEGF_Common<T>:: Restart_Broyden ()
         SetVal_Table1D(delta_n_curr_data, 0.);
 
 
-        Broyden_Step = 1;
+        Broyden_Step = 0;
         Broyden_Norm = 1;
 	Broyden_Scalar          = 1.;
 	Broyden_Correction_Step = 0;
@@ -1589,8 +1589,8 @@ c_NEGF_Common<T>:: GuessNewCharge_ModifiedBroydenSecondAlg_WithCorrection ()
 	    {
 	      Restart_Broyden();
 
-              W_Broyden.push_back(new RealTable1D({0},{num_field_sites}, The_Pinned_Arena()));
-              V_Broyden.push_back(new RealTable1D({0},{num_field_sites}, The_Pinned_Arena()));
+              //W_Broyden.push_back(new RealTable1D({0},{num_field_sites}, The_Pinned_Arena()));
+              //V_Broyden.push_back(new RealTable1D({0},{num_field_sites}, The_Pinned_Arena()));
 	    } 
 	    else 
 	    {

@@ -25,7 +25,7 @@ my_constants.SV = 0.      #source voltage [V]
 my_constants.Vds = -0.1   #Drain-Source voltage [V]
 my_constants.Vgs_min = -0.3
 my_constants.Vgs_max = 1.0
-my_constants.Nsteps =  14
+my_constants.Nsteps =  65
 my_constants.dt = 1./(Nsteps-1)
 
 
@@ -209,7 +209,7 @@ macroscopic.atom_locations = 0.
 ###### OUTPUT ######
 ####################
 
-plot.folder_name = all_around_gate_Vds_mdot1
+plot.folder_name = GAA_VgsVary
 plot.fields_to_plot = epsilon.1 charge_density.1 phi.1 atom_locations #vecField 
 plot.write_after_init = 1
 plot.write_interval = 1

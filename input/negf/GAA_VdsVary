@@ -25,7 +25,7 @@ my_constants.SV = 0.      #source voltage [V]
 my_constants.Vgs = 0.67   #Drain-Source voltage [V]
 my_constants.Vds_min = -0.4
 my_constants.Vds_max = 0.0
-my_constants.Nsteps =  9
+my_constants.Nsteps =  21
 my_constants.dt = 1./(Nsteps-1)
 
 
