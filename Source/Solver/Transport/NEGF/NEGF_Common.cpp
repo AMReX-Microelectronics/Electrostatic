@@ -387,6 +387,7 @@ c_NEGF_Common<T>:: ReadNanostructureProperties ()
     amrex::Print() << "#####* num_atoms_to_avg_over: "      << num_atoms_to_avg_over      << "\n";
     amrex::Print() << "#####* primary_transport_dir: "      << primary_transport_dir      << "\n";
     amrex::Print() << "#####* Broyden_Original_Fraction: "  << Broyden_Original_Fraction  << "\n";
+    amrex::Print() << "#####* Broyden_Norm_Type: "          << Broyden_Norm_Type          << "\n";
     amrex::Print() << "#####* Contact_Temperatures, T / [K]: \n";
     for(int c=0; c<NUM_CONTACTS; ++c) {
         amrex::Print() << "#####*   contact, T: " << c << "  " << Contact_Temperature[c] <<"\n";
@@ -1532,18 +1533,43 @@ c_NEGF_Common<T>:: GuessNewCharge_ModifiedBroydenSecondAlg_WithCorrection ()
 
         amrex::Real denom = 0.;
         Broyden_NormSum_Curr = 0.;    
+
         for(int l=0; l < num_field_sites; ++l) 
         {
-            amrex::Real Fcurr = n_curr_in(l) - n_curr_out(l);
-            Norm(l) = fabs(Fcurr);
-
-            Broyden_NormSum_Curr += pow(Fcurr,2);
-
             sum_deltaFcurr(l) = 0;		 
             sum_Fcurr(l) = 0;		 
             W_curr(l) = 0;
             V_curr(l) = 0;
         }
+
+        switch(map_NormType[Broyden_Norm_Type])
+        {
+            case s_Norm::Type::Absolute:
+            {
+                for(int l=0; l < num_field_sites; ++l) 
+                {
+                    amrex::Real Fcurr = n_curr_in(l) - n_curr_out(l);
+                    Norm(l) = fabs(Fcurr);
+                    Broyden_NormSum_Curr += pow(Fcurr,2);
+		}
+	        break;
+            }
+            case s_Norm::Type::Relative:
+            {
+                for(int l=0; l < num_field_sites; ++l) 
+                {
+                    amrex::Real Fcurr = n_curr_in(l) - n_curr_out(l);
+	            Norm(l) = fabs(Fcurr/(n_curr_in(l) + n_curr_out(l)));
+                    Broyden_NormSum_Curr += pow(Norm(l),2);
+		}
+	        break;
+            }
+            default:
+            {
+                amrex::Abort("Norm Type " + Broyden_Norm_Type + " is not yet defined.");
+	    }
+        }
+
         Broyden_NormSum_Curr = sqrt(Broyden_NormSum_Curr);
 
         Broyden_Norm = Norm(0);

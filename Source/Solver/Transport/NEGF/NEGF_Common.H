@@ -29,6 +29,10 @@ struct s_Potential_Profile
     };
 };
 
+struct s_Norm {
+    enum Type { Absolute, Relative };
+};
+
 struct s_Position3D
 {
    amrex::Array<amrex::Real,AMREX_SPACEDIM> dir = {AMREX_D_DECL(0.,0.,0.)};
@@ -225,6 +229,17 @@ public:
     amrex::Real Broyden_Threshold_MinFraction = 5.e-4;
     amrex::Real Broyden_Fraction_Decrease_Factor = 5.;
     amrex::Real Broyden_Scalar_Decrease_Factor   = 2.;
+
+    std::string Broyden_Norm_Type = "relative";
+    std::map<std::string, s_Norm::Type>
+    map_NormType =
+        {
+           {"absolute"        , s_Norm::Type::Absolute},
+           {"relative"        , s_Norm::Type::Relative},
+           {"Absolute"        , s_Norm::Type::Absolute},
+           {"Relative"        , s_Norm::Type::Relative}
+        };
+
 
     amrex::Real Broyden_Scalar = 1.0;
     amrex::Real Broyden_NormSum_Curr = 1.e10;

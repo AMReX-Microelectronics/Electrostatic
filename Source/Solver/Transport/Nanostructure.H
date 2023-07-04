@@ -122,6 +122,7 @@ public:
                      const std::string NS_deposit_str,
                      const amrex::Real NS_initial_deposit_value,
                      const amrex::Real NS_Broyden_frac,
+                     const std::string NS_Broyden_norm_type,
                      const int use_negf,
 		     const std::string negf_foldername_str    );
 

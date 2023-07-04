@@ -103,6 +103,7 @@ c_TransportSolver::InitData()
     amrex::Real NS_initial_deposit_value = 0.;
 
     amrex::Real NS_Broyden_frac = 0.1;
+    std::string NS_Broyden_norm_type = "relative";
 
     auto& rCode    = c_Code::GetInstance();
 
@@ -147,10 +148,13 @@ c_TransportSolver::InitData()
         amrex::Print() << "##### transport.NS_initial_deposit_value: " << NS_initial_deposit_value << "\n";
 
         queryWithParser(pp_transport,"Broyden_fraction", NS_Broyden_frac);
-        amrex::Print() << "#####* Broyden_fraction: " << NS_Broyden_frac << "\n";
+        amrex::Print() << "##### Broyden_fraction: " << NS_Broyden_frac << "\n";
 
         queryWithParser(pp_transport,"Broyden_max_norm", Broyden_max_norm);
-        amrex::Print() << "#####* Broyden_max_norm: " << Broyden_max_norm << "\n";
+        amrex::Print() << "##### Broyden_max_norm: " << Broyden_max_norm << "\n";
+
+        pp_transport.query("Broyden_norm_type", NS_Broyden_norm_type);
+        amrex::Print() << "##### Broyden_norm_type: " << NS_Broyden_norm_type << "\n";
 
     }
 
@@ -176,6 +180,7 @@ c_TransportSolver::InitData()
                                                                        NS_deposit_field_str, 
                                                                        NS_initial_deposit_value,
                                                                        NS_Broyden_frac,
+                                                                       NS_Broyden_norm_type,
                                                                        use_negf,
 								       negf_foldername_str
                                                                       ));
@@ -191,6 +196,7 @@ c_TransportSolver::InitData()
                                                                             NS_deposit_field_str, 
                                                                             NS_initial_deposit_value,
                                                                             NS_Broyden_frac,
+                                                                            NS_Broyden_norm_type,
                                                                             use_negf,
 									    negf_foldername_str
                                                                            ));

@@ -28,6 +28,7 @@ c_Nanostructure<NSType>::c_Nanostructure (const amrex::Geometry            & geo
                                   const std::string NS_deposit_str,
                                   const amrex::Real NS_initial_deposit_value,
                                   const amrex::Real NS_Broyden_frac,
+                                  const std::string NS_Broyden_norm_type,
                                   const int use_negf,
 				  const std::string negf_foldername_str
 				  )
@@ -74,6 +75,7 @@ c_Nanostructure<NSType>::c_Nanostructure (const amrex::Geometry            & geo
     if(_use_negf) 
     {
         NSType::Broyden_Original_Fraction = NS_Broyden_frac;
+        NSType::Broyden_Norm_Type         = NS_Broyden_norm_type;
 
         ReadNanostructureProperties();
 
