@@ -232,6 +232,7 @@ c_TransportSolver::Solve(const int step, const amrex::Real time)
 
    amrex::Real max_norm = 1.;
    int max_iter = 1;
+   int MAX_ITER_THRESHOLD = 800;
 
 
    for (int c=0; c < vp_CNT.size(); ++c)
@@ -247,6 +248,8 @@ c_TransportSolver::Solve(const int step, const amrex::Real time)
 
        do 
        {
+	   if(max_iter > MAX_ITER_THRESHOLD) amrex::Abort("Iteration step is GREATER than the THRESHOLD" + MAX_ITER_THRESHOLD);
+
            amrex::Print() << "\n\nSelf-consistent iteration: " << max_iter << "\n";
 
            rMLMG.UpdateBoundaryConditions(update_surface_soln_flag);
@@ -313,7 +316,7 @@ c_TransportSolver::Solve(const int step, const amrex::Real time)
 
            vp_CNT[c]->Compute_Current();
 
-           vp_CNT[c]->Write_Current(step);
+           vp_CNT[c]->Write_Current(step, max_iter);
 
            vp_CNT[c]->Reset();
 
@@ -333,7 +336,7 @@ c_TransportSolver::Solve(const int step, const amrex::Real time)
 
            vp_CNT[c]->Compute_Current();
 
-           vp_CNT[c]->Write_Current(step);
+           vp_CNT[c]->Write_Current(step, max_iter);
        }
    }
 

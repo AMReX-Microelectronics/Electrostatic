@@ -138,11 +138,26 @@ c_Code::ReadData ()
 
     m_timestep = 0;
     m_total_steps = 1;
+    m_flag_restart = 0;
+    m_restart_step = 0;
     amrex::ParmParse pp;
 
     #ifdef TIME_DEPENDENT
         queryWithParser(pp,"timestep", m_timestep);
-        queryWithParser(pp,"steps", m_total_steps);
+	queryWithParser(pp,"steps", m_total_steps);
+        pp.query("restart", m_flag_restart);
+
+
+        amrex::Print() << "##### timestep: " << m_timestep << "\n";
+        amrex::Print() << "##### steps: " << m_total_steps << "\n";
+        amrex::Print() << "##### flag restart: " << m_flag_restart << "\n";
+
+	if(m_flag_restart) 
+	{
+	    getWithParser(pp,"restart_step", m_restart_step);
+            amrex::Print() << "##### restart_step: " << m_restart_step << "\n";
+	}
+
     #endif
     use_electrostatic = 0;
     pp.query("use_electrostatic", use_electrostatic);
@@ -328,7 +343,7 @@ c_Code::Solve_PostProcess_Output()
 #endif
 
     amrex::Real avg_mlmg_solve_time = 0.;
-    for(int step=0; step < m_total_steps; ++step) 
+    for(int step=m_restart_step; step < m_total_steps; ++step) 
     {
         auto time = set_time(step);
         amrex::Print() << "step: "  << std::setw(5) 

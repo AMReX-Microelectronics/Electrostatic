@@ -213,6 +213,9 @@ public:
     amrex::Vector<c_IntegrationPath> ContourPath_RhoNonEq;
     c_IntegrationPath ContourPath_DOS;
 
+    /*For Restart*/
+    int flag_specify_charge_distribution=0;
+    std::string charge_distribution_file;
 
     /*For Broyden*/
     int Broyden_Step = 1;
@@ -224,10 +227,10 @@ public:
     int Broyden_Reset_Step = 0;
     
     int Broyden_Threshold_MaxStep = 200;
-    int Broyden_Threshold_NormSumIncreaseStep = 3;
-    int Broyden_Threshold_CorrectionStep = 2;
-    amrex::Real Broyden_Threshold_MinFraction = 5.e-4;
-    amrex::Real Broyden_Fraction_Decrease_Factor = 5.;
+    int Broyden_Threshold_NormSumIncreaseStep = 8;
+    int Broyden_Threshold_CorrectionStep = 1;
+    amrex::Real Broyden_Threshold_MinFraction = 0.01;
+    amrex::Real Broyden_Fraction_Decrease_Factor = 4.;
     amrex::Real Broyden_Scalar_Decrease_Factor   = 2.;
 
     std::string Broyden_Norm_Type = "relative";
@@ -282,8 +285,9 @@ public:
     void Set_StepFilenameString(const int step);
     void Set_IterationFilenameString(const int iter);
 
+    amrex::Real initial_charge = 1e-3;
 
-    void Initialize_ChargeAtFieldSites(const amrex::Real value);
+    void Initialize_ChargeAtFieldSites();
     virtual void ReadNanostructureProperties();
     virtual int get_Hsize() {return 0;}
     virtual int get_offDiag_repeatBlkSize() {return 0;}
@@ -357,7 +361,7 @@ public:
 
     void Write_InducedCharge (const std::string filename_prefix);
     void Write_ChargeNorm(const std::string filename_prefix);
-    void Write_Current (const int step);
+    void Write_Current (const int step, const int max_iter);
 
     template<typename U> 
     void Print_Table1D_loc(const U& Tab1D_data);

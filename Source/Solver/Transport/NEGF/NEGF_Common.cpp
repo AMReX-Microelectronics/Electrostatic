@@ -81,10 +81,56 @@ c_NEGF_Common<T>:: Set_IterationFilenameString(const int iter)
 
 template<typename T>
 void
-c_NEGF_Common<T>:: Initialize_ChargeAtFieldSites(const amrex::Real value)
+c_NEGF_Common<T>:: Initialize_ChargeAtFieldSites()
 {
 
-    SetVal_Table1D(h_n_curr_in_data, value);
+    if(flag_specify_charge_distribution) 
+    {
+        auto const& n_curr_in  = h_n_curr_in_data.table();
+	    
+        std::ifstream infile;
+        infile.open(charge_distribution_file.c_str());
+
+        if(infile.fail())
+        {
+            amrex::Abort("Failed to read file " + charge_distribution_file);
+        }
+        else
+        {
+            int filesize=0;
+            std::string line;
+            while(infile.peek()!=EOF)
+            {
+                std::getline(infile, line);
+                filesize++;
+            }
+            WARPX_ALWAYS_ASSERT_WITH_MESSAGE(filesize-1 == num_field_sites,
+            "Number of fieldsites, " + std::to_string(num_field_sites)
+             + ", are not equal to the filesize-1, " + std::to_string(filesize-1) + " !");
+
+            amrex::Print() << "filename: " << charge_distribution_file<< "\n";
+            amrex::Print() << "filesize: " << filesize << "\n";
+
+            infile.seekg(0, std::ios_base::beg);
+
+	    std::getline(infile, line);
+            amrex::Print() << "file header: " << line << "\n";
+            
+	    amrex::Real position, value;
+            for(int l=0; l < num_field_sites; ++l)
+            {
+                infile >> position >> value;
+		n_curr_in(l) = value;
+		amrex::Print() << "position/value: " << position << "    " << value << "\n";
+            }
+            infile.close();
+         }
+
+    }
+    else 
+    {    
+        SetVal_Table1D(h_n_curr_in_data, initial_charge);
+    }
 
     if (ParallelDescriptor::IOProcessor())
     {
@@ -241,6 +287,7 @@ c_NEGF_Common<T>:: Restart_Broyden ()
         }
         W_Broyden.clear();
         V_Broyden.clear();
+        amrex::Print() << " W&V sizes before/after: " << size << ", "<< W_Broyden.size() << "\n";
 
         SetVal_Table1D(n_prev_in_data, 0.);
         SetVal_Table1D(F_curr_data, 0.);
@@ -263,6 +310,19 @@ c_NEGF_Common<T>:: Restart_Broyden ()
         Broyden_Reset_Step += 1;
 	Broyden_fraction = Broyden_Original_Fraction/std::pow(Broyden_Fraction_Decrease_Factor,Broyden_Reset_Step);
 
+	if(Broyden_fraction < Broyden_Threshold_MinFraction) 
+	{
+            amrex::Print() << "*Broyden_fraction is less than the threshold: " << Broyden_Threshold_MinFraction << "\n";
+            amrex::Print() << "*Charge density is reset to: " << initial_charge << "\n";
+
+            Broyden_fraction = Broyden_Original_Fraction;
+            Broyden_Reset_Step = 0;
+
+            SetVal_Table1D(h_n_curr_in_data, initial_charge);
+            SetVal_Table1D(n_start_in_data, initial_charge);
+       	    
+	}
+
         amrex::Print() << "\nBroyden parameters are reset to the following: \n";
         amrex::Print() << " Broyden_Step: "      << Broyden_Step << "\n";
         amrex::Print() << " Broyden_Scalar: "    << Broyden_Scalar << "\n";
@@ -274,10 +334,6 @@ c_NEGF_Common<T>:: Restart_Broyden ()
         amrex::Print() << " Broyden_NormSum_Prev: "     << Broyden_NormSum_Prev << "\n";
         amrex::Print() << " Broyden_Max_Norm: "         << Broyden_Norm << "\n\n";
 
-	if(Broyden_fraction < Broyden_Threshold_MinFraction) 
-	{
-            amrex::Abort("Broyden_fraction is below the threshold Broyden_Threshold_MinFraction!");
-	}
     }
 }
 
@@ -341,7 +397,7 @@ c_NEGF_Common<T>:: ReadNanostructureProperties ()
     queryWithParser(pp_ns,"contact_Fermi_level", E_f);
 
     flag_contact_mu_specified = 1;
-    pp_ns.query("impose_potential", flag_contact_mu_specified);
+    pp_ns.query("contact_mu_specified", flag_contact_mu_specified);
 
     if(flag_contact_mu_specified) 
     {
@@ -375,6 +431,34 @@ c_NEGF_Common<T>:: ReadNanostructureProperties ()
 
     write_at_iter = 0;
     queryWithParser(pp_ns,"write_at_iter", write_at_iter);
+
+    pp_ns.query("specify_charge_distribution", flag_specify_charge_distribution);
+    if(flag_specify_charge_distribution) 
+    {
+        amrex::ParmParse pp;
+
+	int flag_restart = 0;
+        pp.query("restart", flag_restart);
+
+        if(flag_restart)
+        {
+            int restart_step = 0;	
+            getWithParser(pp,"restart_step", restart_step);
+
+            std::string step_filename_str  = amrex::Concatenate(step_filename_prefix_str, restart_step-1, negf_plt_name_digits);
+            /*eg. output/negf/cnt/step0007_Qout.dat for step 1*/
+
+	    charge_distribution_file = step_filename_str + "_Qout.dat";
+
+	    pp_ns.query("charge_distribution_file", charge_distribution_file);
+        }
+        else 
+	{
+	    pp_ns.get("charge_distribution_file", charge_distribution_file);
+	}
+    }
+    amrex::Print() << "##### flag_specify_charge_distribution: "     << flag_specify_charge_distribution     << "\n";
+    amrex::Print() << "##### charge_distribution_file: "             << charge_distribution_file        << "\n";
     
     Set_Material_Specific_Parameters();
 
@@ -410,6 +494,7 @@ c_NEGF_Common<T>:: ReadNanostructureProperties ()
     amrex::Print() << "#####* contact_Fermi_level, E_f / [eV]: " << E_f << "\n";
     amrex::Print() << "##### flag_impose_potential: " << flag_impose_potential << "\n";
     amrex::Print() << "##### potential_profile_type: " << potential_profile_type_str << "\n";
+
 
     amrex::Print() << "##### Equilibrium contour integration points: ";
     for(int c=0; c < 3; ++c) {
@@ -1598,7 +1683,11 @@ c_NEGF_Common<T>:: GuessNewCharge_ModifiedBroydenSecondAlg_WithCorrection ()
 	    Broyden_NormSumIsIncreasing_Step = 0;
 	}
 
-	if (Broyden_NormSumIsIncreasing_Step > Broyden_Threshold_NormSumIncreaseStep) 
+	if (Broyden_Step > Broyden_Threshold_MaxStep) 
+	{
+	      Restart_Broyden();
+	}
+	else if (Broyden_NormSumIsIncreasing_Step > Broyden_Threshold_NormSumIncreaseStep) 
 	{
             for(int l=0; l < num_field_sites; ++l) 
             {
@@ -1607,31 +1696,19 @@ c_NEGF_Common<T>:: GuessNewCharge_ModifiedBroydenSecondAlg_WithCorrection ()
                 denom += pow(delta_F_curr(l),2.);
             }
 	    
-	    Broyden_NormSumIsIncreasing_Step = 0;
 	    Broyden_Correction_Step += 1;
-
 
 	    if(Broyden_Correction_Step > Broyden_Threshold_CorrectionStep) 
 	    {
 	      Restart_Broyden();
-
-              //W_Broyden.push_back(new RealTable1D({0},{num_field_sites}, The_Pinned_Arena()));
-              //V_Broyden.push_back(new RealTable1D({0},{num_field_sites}, The_Pinned_Arena()));
 	    } 
 	    else 
 	    {
 	        Broyden_Scalar = Broyden_Scalar/std::pow(Broyden_Scalar_Decrease_Factor,Broyden_Correction_Step);
 	        Broyden_Step -= 1;
-	        amrex::Print() << "\n****************************************************Reducing Broyden scalar to: " << Broyden_Scalar << "\n";
+	        Broyden_NormSumIsIncreasing_Step = 0;
+	        amrex::Print() << "\n******Reducing Broyden scalar to: " << Broyden_Scalar << "\n";
 	    }
-
-	}
-	else if (Broyden_Step > Broyden_Threshold_MaxStep) 
-	{
-	      Restart_Broyden();
-
-              W_Broyden.push_back(new RealTable1D({0},{num_field_sites}, The_Pinned_Arena()));
-              V_Broyden.push_back(new RealTable1D({0},{num_field_sites}, The_Pinned_Arena()));
 	}
 	else 
 	{
@@ -1649,7 +1726,8 @@ c_NEGF_Common<T>:: GuessNewCharge_ModifiedBroydenSecondAlg_WithCorrection ()
             V_Broyden.push_back(new RealTable1D({0},{num_field_sites}, The_Pinned_Arena()));
 
 	}
-	amrex::Print() << "n_curr_in, n_prev_in: " << n_curr_in(norm_index-1) << " " << n_prev_in(norm_index-1) << "\n";
+        amrex::Print() << "W&V size: " << W_Broyden.size() << "\n";
+	amrex::Print() << "n_curr_in, n_prev_in: " << n_curr_in(0) << " " << n_prev_in(0) << "\n";
 
         int m = Broyden_Step-1;
         if(m > 0) 
@@ -1706,7 +1784,7 @@ c_NEGF_Common<T>:: GuessNewCharge_ModifiedBroydenSecondAlg_WithCorrection ()
             n_prev_in(l) = n_curr_in(l); 
             n_curr_in(l) = n_prev_in(l) - Broyden_Scalar * Broyden_fraction*F_curr(l) - Broyden_Scalar * sum_Fcurr(l);
         }
-	amrex::Print() << "n_new_in: " << n_curr_in(norm_index-1) << "\n";
+	amrex::Print() << "n_new_in: " << n_curr_in(0) << "\n";
 
         sum_Fcurr_data.clear();
         sum_deltaFcurr_data.clear();
@@ -3291,7 +3369,7 @@ c_NEGF_Common<T>:: Compute_Current ()
 
 template<typename T>
 void 
-c_NEGF_Common<T>:: Write_Current (const int step)
+c_NEGF_Common<T>:: Write_Current (const int step, const int max_iter)
 {
 
     if (ParallelDescriptor::IOProcessor())
@@ -3299,12 +3377,19 @@ c_NEGF_Common<T>:: Write_Current (const int step)
         amrex::Print() << "Root writing current\n";    
         auto const& h_Current_loc   = h_Current_loc_data.table();
 
+        outfile_I.open(current_filename_str.c_str(), std::ios_base::app);
+
         outfile_I << std::setw(10) << step;
         for (int k=0; k <NUM_CONTACTS; ++k)
         {
 		outfile_I << std::setw(20) << h_Current_loc(k);
 	}
-	outfile_I << "\n";
+		outfile_I << std::setw(10) << Broyden_Step 
+			  << std::setw(10) << max_iter 
+			  << std::setw(10) << Broyden_fraction
+			  << std::setw(10) << Broyden_Scalar
+			  << "\n";
+	outfile_I.close();
 
     }
 

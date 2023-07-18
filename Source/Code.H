@@ -142,6 +142,8 @@ private:
     amrex::Real m_time_instant = 0;
     amrex::Real m_timestep;
     int m_total_steps;
+    int m_flag_restart;
+    int m_restart_step;
 
     std::unique_ptr<c_GeometryProperties> m_pGeometryProperties;
     std::unique_ptr<c_BoundaryConditions> m_pBoundaryConditions;

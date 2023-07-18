@@ -52,13 +52,14 @@ c_Nanostructure<NSType>::c_Nanostructure (const amrex::Geometry            & geo
 
         NSType::current_filename_str = NSType::step_foldername_str + "/I.dat";  /*current here means charge current, I */
 
-        NSType::outfile_I.open(NSType::current_filename_str.c_str()); /*file is closed in ~c_Nanostructure ()*/
+        NSType::outfile_I.open(NSType::current_filename_str.c_str()); 
 	NSType::outfile_I << "'step'";
         for (int k=0; k <NUM_CONTACTS; ++k)
         {
-		NSType::outfile_I << ", 'contact_" << k+1 << "'";
+		NSType::outfile_I << ", 'I at contact_" << k+1 << "',";
         }
-	NSType::outfile_I << "\n";
+	NSType::outfile_I << "'Broyden_Step', 'Max_Iter', 'Broyden_Fraction', 'Broyden_Scalar'" << "\n";
+	NSType::outfile_I.close();
 
     }
 
@@ -76,6 +77,7 @@ c_Nanostructure<NSType>::c_Nanostructure (const amrex::Geometry            & geo
     {
         NSType::Broyden_Original_Fraction = NS_Broyden_frac;
         NSType::Broyden_Norm_Type         = NS_Broyden_norm_type;
+        NSType::initial_charge            = NS_initial_deposit_value;
 
         ReadNanostructureProperties();
 
@@ -104,7 +106,7 @@ c_Nanostructure<NSType>::c_Nanostructure (const amrex::Geometry            & geo
 
         MarkCellsWithAtoms();
 
-        NSType::Initialize_ChargeAtFieldSites(NS_initial_deposit_value);
+        NSType::Initialize_ChargeAtFieldSites();
         Deposit_AtomAttributeToMesh();
     }
     else 
