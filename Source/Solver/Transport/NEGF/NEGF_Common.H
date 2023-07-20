@@ -316,7 +316,7 @@ public:
                         const amrex::Real Vgs,
                         const int Broyden_Step,
                         const int max_iter,
-                        const int Broyden_fraction,
+                        const amrex::Real Broyden_fraction,
                         const int Broyden_Scalar);
 
     template<typename U> 

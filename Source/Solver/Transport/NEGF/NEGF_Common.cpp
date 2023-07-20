@@ -2636,7 +2636,7 @@ c_NEGF_Common<T>:: Write_Current (const int step,
 		                  const amrex::Real Vgs,
 		                  const int Broyden_Step,
 				  const int max_iter,
-				  const int Broyden_fraction,
+				  const amrex::Real Broyden_fraction,
 				  const int Broyden_Scalar)
 {
 
