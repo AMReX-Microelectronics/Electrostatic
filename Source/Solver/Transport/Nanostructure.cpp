@@ -53,7 +53,7 @@ c_Nanostructure<NSType>::c_Nanostructure (const amrex::Geometry            & geo
         NSType::current_filename_str = NSType::step_foldername_str + "/I.dat";  /*current here means charge current, I */
 
         NSType::outfile_I.open(NSType::current_filename_str.c_str()); 
-	NSType::outfile_I << "'step'";
+	NSType::outfile_I << "'step', 'Vds' , 'Vgs', ";
         for (int k=0; k <NUM_CONTACTS; ++k)
         {
 		NSType::outfile_I << ", 'I at contact_" << k+1 << "',";

@@ -262,7 +262,8 @@ c_TransportSolver::Solve(const int step, const amrex::Real time)
        vp_CNT[c]->Set_StepFilenameString(step);
    }
 
-
+   amrex::Real Vds = 0.;
+   amrex::Real Vgs = 0.;
    if(rCode.use_electrostatic) 
    {	   
 
@@ -295,14 +296,22 @@ c_TransportSolver::Solve(const int step, const amrex::Real time)
 
 	       if(update_surface_soln_flag && vp_CNT[c]->flag_contact_mu_specified == 0) 
 	       {
+                   amrex::Real V_contact[NUM_CONTACTS] = {0., 0.};
+
 		   for(int k=0; k<NUM_CONTACTS; ++k) 
 		   {    
-                       amrex::Real terminal_voltage = rGprop.pEB->Read_SurfSoln(vp_CNT[c]->Contact_Parser_String[k]);
+                       V_contact[k] = rGprop.pEB->Read_SurfSoln(vp_CNT[c]->Contact_Parser_String[k]);
+                       
+		       amrex::Print() << "Updated terminal voltage: " << k << "  " << V_contact[k] << "\n";
 
-		       amrex::Print() << "Updated terminal voltage: " << k << "  " << terminal_voltage << "\n";
-
-		       vp_CNT[c]->Contact_Electrochemical_Potential[k] = vp_CNT[c]->E_f - terminal_voltage;
+		       vp_CNT[c]->Contact_Electrochemical_Potential[k] = vp_CNT[c]->E_f - V_contact[k];
 		   }
+
+		   Vds = V_contact[1] - V_contact[0];
+
+                   Vgs = rGprop.pEB->Read_SurfSoln(vp_CNT[c]->Gate_String) - V_contact[0];
+
+		   amrex::Print() << "Vds, Vgs: " << Vds << "  " << Vgs << "\n";
 	       }
 
                vp_CNT[c]->Solve_NEGF();
@@ -344,7 +353,7 @@ c_TransportSolver::Solve(const int step, const amrex::Real time)
 
            vp_CNT[c]->Compute_Current();
 
-           vp_CNT[c]->Write_Current(step, Broyden_Step, max_iter, Broyden_fraction, Broyden_Scalar);
+           vp_CNT[c]->Write_Current(step, Vds, Vgs, Broyden_Step, max_iter, Broyden_fraction, Broyden_Scalar);
 
            if(rCode.use_electrostatic)
            {
@@ -367,7 +376,7 @@ c_TransportSolver::Solve(const int step, const amrex::Real time)
 
            vp_CNT[c]->Compute_Current();
 
-           vp_CNT[c]->Write_Current(step, Broyden_Step, max_iter, Broyden_fraction, Broyden_Scalar);
+           vp_CNT[c]->Write_Current(step, Vds, Vgs, Broyden_Step, max_iter, Broyden_fraction, Broyden_Scalar);
        }
    }
 

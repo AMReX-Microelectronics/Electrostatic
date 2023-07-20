@@ -193,6 +193,7 @@ public:
     int flag_contact_mu_specified = 1;
     amrex::Real Contact_Electrochemical_Potential[NUM_CONTACTS] = {0., 0.};
     std::string Contact_Parser_String[NUM_CONTACTS];
+    std::string Gate_String = "Gate";
 
     int flag_impose_potential = 0;
     std::string potential_profile_type_str = "constant";
@@ -311,10 +312,12 @@ public:
     void Write_InducedCharge (const std::string filename_prefix, RealTable1D& n_curr_out_data);
     void Write_ChargeNorm(const std::string filename_prefix, RealTable1D& Norm_data);
     void Write_Current (const int step, 
-                                      const int Broyden_Step,
-                                      const int max_iter,
-                                      const int Broyden_fraction,
-                                      const int Broyden_Scalar);
+                        const amrex::Real Vds,
+                        const amrex::Real Vgs,
+                        const int Broyden_Step,
+                        const int max_iter,
+                        const int Broyden_fraction,
+                        const int Broyden_Scalar);
 
     template<typename U> 
     void Print_Table1D_loc(const U& Tab1D_data);

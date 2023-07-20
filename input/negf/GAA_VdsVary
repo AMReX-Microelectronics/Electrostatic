@@ -272,7 +272,9 @@ cnt.num_unitcells = N_unitcells
 cnt.offset = CN_x CN_y CN_z
 cnt.contact_T  = 298. 298.
 cnt.contact_mu_specified = 0
+
 cnt.contact_parser_string = Source Drain
+cnt.gate_string = Gate
 
 cnt.contact_Fermi_level = Ef
 cnt.E_valence_min = -10

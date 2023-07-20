@@ -205,6 +205,7 @@ c_NEGF_Common<T>:: ReadNanostructureProperties ()
         }
 	temp_vec.clear();
     }
+    pp_ns.query("gate_string", Gate_String);
 
     pp_ns.query("impose_potential", flag_impose_potential);
     if(flag_impose_potential) 
@@ -2630,6 +2631,8 @@ c_NEGF_Common<T>:: Compute_Current ()
 template<typename T>
 void 
 c_NEGF_Common<T>:: Write_Current (const int step, 
+		                  const amrex::Real Vds,
+		                  const amrex::Real Vgs,
 		                  const int Broyden_Step,
 				  const int max_iter,
 				  const int Broyden_fraction,
@@ -2643,7 +2646,7 @@ c_NEGF_Common<T>:: Write_Current (const int step,
 
         outfile_I.open(current_filename_str.c_str(), std::ios_base::app);
 
-        outfile_I << std::setw(10) << step;
+        outfile_I << std::setw(10) << step << std::setw(10) << Vds << std::setw(10) << Vgs;
         for (int k=0; k <NUM_CONTACTS; ++k)
         {
 		outfile_I << std::setw(20) << h_Current_loc(k);
