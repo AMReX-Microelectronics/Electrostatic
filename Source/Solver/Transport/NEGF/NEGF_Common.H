@@ -219,7 +219,7 @@ public:
     c_IntegrationPath ContourPath_DOS;
 
     /*For Restart*/
-    int flag_specify_charge_distribution=0;
+    int flag_initialize_with_charge_distribution=0;
     std::string charge_distribution_file;
 
     /*For Output*/

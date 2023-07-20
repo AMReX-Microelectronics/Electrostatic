@@ -70,8 +70,7 @@ private:
 
     std::string negf_foldername_str = "output/negf";
 
-
-
+    int flag_reset_with_previous_charge_distribution=0;
 
     /*For Broyden*/
     int num_field_sites_all_NS = 0;

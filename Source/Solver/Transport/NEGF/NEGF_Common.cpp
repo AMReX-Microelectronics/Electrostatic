@@ -73,7 +73,7 @@ void
 c_NEGF_Common<T>:: Initialize_ChargeAtFieldSites()
 {
 
-    if(flag_specify_charge_distribution) 
+    if(flag_initialize_with_charge_distribution) 
     {
         auto const& n_curr_in  = h_n_curr_in_data.table();
 	    
@@ -219,8 +219,8 @@ c_NEGF_Common<T>:: ReadNanostructureProperties ()
     write_at_iter = 0;
     queryWithParser(pp_ns,"write_at_iter", write_at_iter);
 
-    pp_ns.query("specify_charge_distribution", flag_specify_charge_distribution);
-    if(flag_specify_charge_distribution) 
+    pp_ns.query("initialize_with_charge_distribution", flag_initialize_with_charge_distribution);
+    if(flag_initialize_with_charge_distribution) 
     {
         amrex::ParmParse pp;
 
@@ -244,8 +244,9 @@ c_NEGF_Common<T>:: ReadNanostructureProperties ()
 	    pp_ns.get("charge_distribution_file", charge_distribution_file);
 	}
     }
-    amrex::Print() << "##### flag_specify_charge_distribution: "     << flag_specify_charge_distribution     << "\n";
-    amrex::Print() << "##### charge_distribution_file: "             << charge_distribution_file        << "\n";
+    amrex::Print() << "##### flag_initialize_with_charge_distribution: " << flag_initialize_with_charge_distribution  << "\n";
+    amrex::Print() << "##### charge_distribution_file: "             << charge_distribution_file              << "\n";
+
     
     Set_Material_Specific_Parameters();
 

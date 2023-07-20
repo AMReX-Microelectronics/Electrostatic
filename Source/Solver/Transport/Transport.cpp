@@ -159,6 +159,10 @@ c_TransportSolver::InitData()
 
         pp_transport.query("selfconsistency_algorithm", Algorithm_Type);
         amrex::Print() << "##### selfconsistency_algorithm: " << Algorithm_Type << "\n";
+
+        pp_transport.query("reset_with_previous_charge_distribution", flag_reset_with_previous_charge_distribution);
+        amrex::Print() << "##### reset_with_previous_charge_distribution: " << flag_reset_with_previous_charge_distribution  << "\n";
+
     }
 
     std::string type;
@@ -459,14 +463,14 @@ c_TransportSolver:: Set_Broyden ()
 void
 c_TransportSolver:: Reset_Broyden ()
 {
-    /* At present, we set n_curr_in as the converged charge density for previous gate voltage*/
-
-    /* That is why the following is commented in*/
-    //SetVal_RealTable1D(n_curr_in_data, 0.);
-    //#if AMREX_USE_GPU
-    //d_n_curr_in_data.copy(n_curr_in_data);
-    //#endif
-
+    if(flag_reset_with_previous_charge_distribution == 0) 
+    {
+        SetVal_RealTable1D(n_curr_in_data, NS_initial_deposit_value);
+        #if AMREX_USE_GPU
+        d_n_curr_in_data.copy(n_curr_in_data);
+        #endif
+	amrex::Print() << "Input charge distribution is reset to: " << NS_initial_deposit_value << "\n";
+    }
 
     if (ParallelDescriptor::IOProcessor())
     {

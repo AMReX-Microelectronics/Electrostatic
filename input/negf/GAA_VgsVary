@@ -265,6 +265,11 @@ transport.Broyden_max_norm = 1.e-5
 transport.Broyden_norm_type = relative
 transport.selfconsistency_algorithm = broyden_second
 
+transport.reset_with_previous_charge_distribution = 1
+
+cnt.initialize_with_charge_distribution = 0
+
+
 cnt.type = CNT
 cnt.type_id = m_index n_index     #m n
 cnt.acc = bond_length
