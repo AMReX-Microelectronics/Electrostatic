@@ -15,6 +15,10 @@ struct s_NS {
     enum Type { CNT, Graphene, Silicon };
 };
 
+struct s_Algorithm { 
+    enum Type { broyden_second, simple_mixing };
+};
+
 class 
 c_TransportSolver
 {
@@ -92,6 +96,15 @@ private:
     amrex::Real Broyden_Threshold_MinFraction = 0.01;
     amrex::Real Broyden_Fraction_Decrease_Factor = 4.;
     amrex::Real Broyden_Scalar_Decrease_Factor   = 2.;
+
+    std::string Algorithm_Type = "broyden_second";
+    std::map<std::string, s_Algorithm::Type>
+    map_AlgorithmType =
+        {
+           {"broyden_second"        , s_Algorithm::Type::broyden_second},
+           {"Broyden_second"        , s_Algorithm::Type::broyden_second},
+           {"simple_mixing"         , s_Algorithm::Type::simple_mixing},
+        };
     
     std::string Broyden_Norm_Type = "relative";
     std::map<std::string, s_Norm::Type>

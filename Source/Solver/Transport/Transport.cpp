@@ -157,6 +157,8 @@ c_TransportSolver::InitData()
         pp_transport.query("Broyden_norm_type", NS_Broyden_norm_type);
         amrex::Print() << "##### Broyden_norm_type: " << NS_Broyden_norm_type << "\n";
 
+        pp_transport.query("selfconsistency_algorithm", Algorithm_Type);
+        amrex::Print() << "##### selfconsistency_algorithm: " << Algorithm_Type << "\n";
     }
 
     std::string type;
@@ -320,8 +322,23 @@ c_TransportSolver::Solve(const int step, const amrex::Real time)
 
            }
 
-	   //Execute_Broyden_Modified_Second_Algorithm(); 
-	   Execute_Simple_Mixing_Algorithm(); 
+            switch(map_AlgorithmType[Algorithm_Type])
+            {
+                case s_Algorithm::Type::broyden_second:
+                {
+	            Execute_Broyden_Modified_Second_Algorithm(); 
+                    break;
+                }
+                case s_Algorithm::Type::simple_mixing:
+                {
+	            Execute_Simple_Mixing_Algorithm(); 
+                    break;
+                }
+                default:
+                {
+                    amrex::Abort("selfconsistency_algorithm, " + Algorithm_Type + ", is not yet defined.");
+                }
+            }
 
            rMprop.ReInitializeMacroparam(NS_deposit_field_str);
 

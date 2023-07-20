@@ -259,6 +259,7 @@ transport.NS_initial_deposit_value  = 1e-2
 transport.Broyden_fraction = 0.005
 transport.Broyden_max_norm = 1.e-6
 transport.Broyden_norm_type = absolute
+transport.selfconsistency_algorithm = broyden_second
 
 cnt.type = CNT
 cnt.type_id = m_index n_index     #m n

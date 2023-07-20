@@ -261,6 +261,7 @@ transport.NS_initial_deposit_value  = 1e-3
 transport.Broyden_fraction = 0.1
 transport.Broyden_max_norm = 1.e-10
 transport.Broyden_norm_type = relative
+transport.selfconsistency_algorithm = broyden_second
 
 cnt.specify_charge_distribution = 0
 
