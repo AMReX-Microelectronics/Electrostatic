@@ -2646,7 +2646,7 @@ c_NEGF_Common<T>:: Write_Current (const int step,
 
         outfile_I.open(current_filename_str.c_str(), std::ios_base::app);
 
-        outfile_I << std::setw(10) << step << std::setw(10) << Vds << std::setw(10) << Vgs;
+        outfile_I << std::setw(10) << step << std::setw(15) << Vds << std::setw(15) << Vgs;
         for (int k=0; k <NUM_CONTACTS; ++k)
         {
 		outfile_I << std::setw(20) << h_Current_loc(k);
