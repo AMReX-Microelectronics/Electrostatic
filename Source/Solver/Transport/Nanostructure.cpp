@@ -75,8 +75,6 @@ c_Nanostructure<NSType>::c_Nanostructure (const amrex::Geometry            & geo
 
     if(_use_negf) 
     {
-        NSType::Broyden_Original_Fraction = NS_Broyden_frac;
-        NSType::Broyden_Norm_Type         = NS_Broyden_norm_type;
         NSType::initial_charge            = NS_initial_deposit_value;
 
         ReadNanostructureProperties();
@@ -616,28 +614,17 @@ c_Nanostructure<NSType>:: Solve_NEGF ()
 
 template<typename NSType>
 void
-c_Nanostructure<NSType>:: Write_Data (const std::string filename_prefix)
+c_Nanostructure<NSType>:: Write_Data (const std::string filename_prefix, RealTable1D& n_curr_out_data, RealTable1D& Norm_data)
 {
 
     BL_PROFILE_VAR("Write_Data", compute_write_data);
 
     Write_PotentialAtSites(filename_prefix);
 
-    NSType::Write_InducedCharge(filename_prefix);
+    NSType::Write_InducedCharge(filename_prefix, n_curr_out_data);
 
-    NSType::Write_ChargeNorm(filename_prefix);
+    NSType::Write_ChargeNorm(filename_prefix, Norm_data);
 
     BL_PROFILE_VAR_STOP(compute_write_data);
 
-}
-
-
-template<typename NSType>
-void
-c_Nanostructure<NSType>:: Reset ()
-{
-    if(_use_electrostatic) 
-    {
-        NSType::Reset_Broyden();
-    }
 }

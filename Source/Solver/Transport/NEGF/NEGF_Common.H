@@ -110,8 +110,12 @@ public:
     BlkTable1D  h_GR_atPoles_loc_data;
     BlkTable1D  h_RhoEq_loc_data;
     BlkTable1D  h_RhoNonEq_loc_data;
-    RealTable1D h_Current_loc_data;
 
+    RealTable1D h_RhoInduced_loc_data;
+    RealTable1D h_n_curr_in_data;
+    RealTable1D d_n_curr_in_data;
+
+    RealTable1D h_Current_loc_data;
 
     /*Tables required to compute Green and Spectral Functions */
     BlkTable1D h_Alpha_loc_data;
@@ -217,58 +221,6 @@ public:
     int flag_specify_charge_distribution=0;
     std::string charge_distribution_file;
 
-    /*For Broyden*/
-    int Broyden_Step = 1;
-    amrex::Real Broyden_fraction = 0.1;
-    amrex::Real Broyden_Original_Fraction = 0.1;
-    amrex::Real Broyden_Norm = 1.0;
-    int Broyden_Correction_Step = 0;
-    int Broyden_NormSumIsIncreasing_Step = 0;
-    int Broyden_Reset_Step = 0;
-    
-    int Broyden_Threshold_MaxStep = 200;
-    int Broyden_Threshold_NormSumIncreaseStep = 8;
-    int Broyden_Threshold_CorrectionStep = 1;
-    amrex::Real Broyden_Threshold_MinFraction = 0.01;
-    amrex::Real Broyden_Fraction_Decrease_Factor = 4.;
-    amrex::Real Broyden_Scalar_Decrease_Factor   = 2.;
-
-    std::string Broyden_Norm_Type = "relative";
-    std::map<std::string, s_Norm::Type>
-    map_NormType =
-        {
-           {"absolute"        , s_Norm::Type::Absolute},
-           {"relative"        , s_Norm::Type::Relative},
-           {"Absolute"        , s_Norm::Type::Absolute},
-           {"Relative"        , s_Norm::Type::Relative}
-        };
-
-
-    amrex::Real Broyden_Scalar = 1.0;
-    amrex::Real Broyden_NormSum_Curr = 1.e10;
-    amrex::Real Broyden_NormSum_Prev = 1.e100;
-    RealTable1D h_n_curr_in_data;
-    RealTable1D d_n_curr_in_data;
-
-    RealTable1D n_start_in_data;
-    RealTable1D n_curr_out_data;
-    RealTable1D n_prev_in_data;
-    RealTable1D F_curr_data;
-    RealTable1D Norm_data;
-
-    RealTable1D delta_F_curr_data;
-    RealTable1D delta_n_curr_data;
-
-    RealTable2D Jinv_curr_data;
-
-    amrex::Vector<RealTable1D*> W_Broyden;
-    amrex::Vector<RealTable1D*> V_Broyden;
-
-
-    void Set_Broyden();
-    void Reset_Broyden();
-    void Restart_Broyden();
-
     /*For Output*/
     const int negf_plt_name_digits = 4;
     std::string step_foldername_str;
@@ -318,16 +270,13 @@ public:
     void Compute_RhoNonEq();
     void Compute_InducedCharge();
     void Compute_Current();
-    //void Compute_ChargeDensity();
-    void GuessNewCharge_SimpleMixingAlg();
-    void GuessNewCharge_ModifiedBroydenSecondAlg();
-    void GuessNewCharge_ModifiedBroydenSecondAlg_WithCorrection();
-    void GuessNewCharge_Broyden_FirstAlg();
+    //void GuessNewCharge_SimpleMixingAlg();
     
+    void Gather_NEGFComputed_Charge(RealTable1D& n_curr_out_data);
+    void Broadcast_BroydenPredicted_Charge();
 
     void Set_Arrays_OfSize_NumFieldSites();
 
-    //virtual void ComputeChargeDensity();
     //virtual void DeallocateArrays();
 
     AMREX_GPU_HOST_DEVICE
@@ -359,9 +308,13 @@ public:
                                  std::string filename,
                                  std::string header);
 
-    void Write_InducedCharge (const std::string filename_prefix);
-    void Write_ChargeNorm(const std::string filename_prefix);
-    void Write_Current (const int step, const int max_iter);
+    void Write_InducedCharge (const std::string filename_prefix, RealTable1D& n_curr_out_data);
+    void Write_ChargeNorm(const std::string filename_prefix, RealTable1D& Norm_data);
+    void Write_Current (const int step, 
+                                      const int Broyden_Step,
+                                      const int max_iter,
+                                      const int Broyden_fraction,
+                                      const int Broyden_Scalar);
 
     template<typename U> 
     void Print_Table1D_loc(const U& Tab1D_data);

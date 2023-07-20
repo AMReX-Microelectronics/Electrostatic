@@ -7,6 +7,8 @@
 #include <AMReX_BoxArray.H>
 #include <AMReX_Geometry.H>
 
+#include<AMReX_TableData.H>
+
 #include <string>
 
 struct s_NS {
@@ -63,6 +65,64 @@ private:
     int use_negf;
 
     std::string negf_foldername_str = "output/negf";
+
+
+
+
+    /*For Broyden*/
+    int num_field_sites_all_NS = 0;
+
+    using RealTable1D    = TableData<amrex::Real, 1>;
+
+    int Broyden_Step = 1;
+    amrex::Real Broyden_fraction = 0.1;
+    amrex::Real Broyden_Original_Fraction = 0.1;
+    amrex::Real Broyden_Norm = 1.0;
+    int Broyden_Correction_Step = 0;
+    int Broyden_NormSumIsIncreasing_Step = 0;
+    int Broyden_Reset_Step = 0;
+    amrex::Real Broyden_Scalar = 1.0;
+    amrex::Real Broyden_NormSum_Curr = 1.e10;
+    amrex::Real Broyden_NormSum_Prev = 1.e100;
+
+
+    int Broyden_Threshold_MaxStep = 200;
+    int Broyden_Threshold_NormSumIncreaseStep = 8;
+    int Broyden_Threshold_CorrectionStep = 1;
+    amrex::Real Broyden_Threshold_MinFraction = 0.01;
+    amrex::Real Broyden_Fraction_Decrease_Factor = 4.;
+    amrex::Real Broyden_Scalar_Decrease_Factor   = 2.;
+    
+    std::string Broyden_Norm_Type = "relative";
+    std::map<std::string, s_Norm::Type>
+    map_NormType =
+        {
+           {"absolute"        , s_Norm::Type::Absolute},
+           {"relative"        , s_Norm::Type::Relative},
+           {"Absolute"        , s_Norm::Type::Absolute},
+           {"Relative"        , s_Norm::Type::Relative}
+        };
+    
+    RealTable1D n_curr_in_data;
+    RealTable1D n_start_in_data;
+    RealTable1D n_curr_out_data;
+    RealTable1D n_prev_in_data;
+    RealTable1D F_curr_data;
+    RealTable1D Norm_data;
+
+    RealTable1D delta_F_curr_data;
+    RealTable1D delta_n_curr_data;
+
+    amrex::Vector<RealTable1D*> W_Broyden;
+    amrex::Vector<RealTable1D*> V_Broyden;
+
+    void Set_Broyden();
+    void Reset_Broyden();
+    void Restart_Broyden();
+    void Execute_Broyden();
+    void Deallocate_Broyden();
+
+    void SetVal_RealTable1D (RealTable1D& Tab1D_data, amrex::Real val);    
 
 };
 
