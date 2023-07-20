@@ -119,7 +119,8 @@ private:
     void Set_Broyden();
     void Reset_Broyden();
     void Restart_Broyden();
-    void Execute_Broyden();
+    void Execute_Broyden_Modified_Second_Algorithm();
+    void Execute_Simple_Mixing_Algorithm();
     void Deallocate_Broyden();
 
     void SetVal_RealTable1D (RealTable1D& Tab1D_data, amrex::Real val);    
