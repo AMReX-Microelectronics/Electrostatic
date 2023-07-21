@@ -16,7 +16,7 @@ struct s_NS {
 };
 
 struct s_Algorithm { 
-    enum Type { broyden_second, simple_mixing };
+    enum Type { broyden_first, broyden_second, simple_mixing };
 };
 
 class 
@@ -76,6 +76,7 @@ private:
     int num_field_sites_all_NS = 0;
 
     using RealTable1D    = TableData<amrex::Real, 1>;
+    using RealTable2D    = TableData<amrex::Real, 2>;
 
     int Broyden_Step = 1;
     amrex::Real Broyden_fraction = 0.1;
@@ -100,6 +101,8 @@ private:
     std::map<std::string, s_Algorithm::Type>
     map_AlgorithmType =
         {
+           {"broyden_first"        , s_Algorithm::Type::broyden_first},
+           {"Broyden_first"        , s_Algorithm::Type::broyden_first},
            {"broyden_second"        , s_Algorithm::Type::broyden_second},
            {"Broyden_second"        , s_Algorithm::Type::broyden_second},
            {"simple_mixing"         , s_Algorithm::Type::simple_mixing},
@@ -125,17 +128,21 @@ private:
     RealTable1D delta_F_curr_data;
     RealTable1D delta_n_curr_data;
 
+    RealTable2D Jinv_curr_data;
+
     amrex::Vector<RealTable1D*> W_Broyden;
     amrex::Vector<RealTable1D*> V_Broyden;
 
     void Set_Broyden();
     void Reset_Broyden();
     void Restart_Broyden();
+    void Execute_Broyden_First_Algorithm();
     void Execute_Broyden_Modified_Second_Algorithm();
     void Execute_Simple_Mixing_Algorithm();
     void Deallocate_Broyden();
 
     void SetVal_RealTable1D (RealTable1D& Tab1D_data, amrex::Real val);    
+    void SetVal_RealTable2D(RealTable2D& Tab2D_data, amrex::Real val);
 
 };
 
