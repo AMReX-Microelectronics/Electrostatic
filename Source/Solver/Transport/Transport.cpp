@@ -533,7 +533,7 @@ c_TransportSolver:: Reset_Broyden ()
                 //SetVal_RealTable2D(Jinv_curr_data,0.);
 
                 //auto const& Jinv_curr    = Jinv_curr_data.table();
-                //for(int a=0; a < num_field_sites; ++a) 
+                //for(int a=0; a < num_field_sites_all_NS; ++a) 
                 //{
                 //    Jinv_curr(a,a) = Broyden_fraction;
                 //}
