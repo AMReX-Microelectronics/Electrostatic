@@ -88,6 +88,8 @@ my_constants.epsilon_domain = epsilon_0 #air
 
 timestep = dt
 steps = Nsteps
+restart = 0
+restart_step = 0
 
 ####################################
 ###### EMBEDDED BOUNDARIES ######
@@ -210,8 +212,11 @@ transport.NS_initial_deposit_value  = 0.
 transport.Broyden_fraction = 1e-1
 transport.Broyden_max_norm = 1.e-6
 transport.Broyden_norm_type = absolute
-transport.selfconsistency_algorithm = broyden_second
+transport.selfconsistency_algorithm = broyden_first
 transport.reset_with_previous_charge_distribution = 1
+
+transport.initialize_inverse_jacobian = 0
+cnt.initialize_charge_distribution = 0
 
 cnt.initialize_with_charge_distribution = 0
 

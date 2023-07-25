@@ -219,8 +219,8 @@ public:
     c_IntegrationPath ContourPath_DOS;
 
     /*For Restart*/
-    int flag_initialize_with_charge_distribution=0;
-    std::string charge_distribution_file;
+    int flag_initialize_charge_distribution=0;
+    std::string charge_distribution_filename;
 
     /*For Output*/
     const int negf_plt_name_digits = 4;
@@ -323,6 +323,11 @@ public:
     void Print_Table1D_loc(const U& Tab1D_data);
     template<typename U> 
     void Print_Table2D_loc(const U& Tab2D_data);
+
+    template<typename TableType>
+    void Read_Table1D(int assert_size,
+                      TableType& Tab1D_data,
+                      std::string filename);
 
     template<typename U, typename V> 
     void SetVal_Table1D (U& Tab1D_data, V val);

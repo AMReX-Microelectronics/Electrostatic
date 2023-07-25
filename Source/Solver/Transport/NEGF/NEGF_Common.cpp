@@ -73,54 +73,68 @@ void
 c_NEGF_Common<T>:: Initialize_ChargeAtFieldSites()
 {
 
-    if(flag_initialize_with_charge_distribution) 
+    if(flag_initialize_charge_distribution) 
     {
-        auto const& n_curr_in  = h_n_curr_in_data.table();
-	    
-        std::ifstream infile;
-        infile.open(charge_distribution_file.c_str());
-
-        if(infile.fail())
-        {
-            amrex::Abort("Failed to read file " + charge_distribution_file);
-        }
-        else
-        {
-            int filesize=0;
-            std::string line;
-            while(infile.peek()!=EOF)
-            {
-                std::getline(infile, line);
-                filesize++;
-            }
-            WARPX_ALWAYS_ASSERT_WITH_MESSAGE(filesize-1 == num_field_sites,
-            "Number of fieldsites, " + std::to_string(num_field_sites)
-             + ", are not equal to the filesize-1, " + std::to_string(filesize-1) + " !");
-
-            amrex::Print() << "filename: " << charge_distribution_file<< "\n";
-            amrex::Print() << "filesize: " << filesize << "\n";
-
-            infile.seekg(0, std::ios_base::beg);
-
-	    std::getline(infile, line);
-            amrex::Print() << "file header: " << line << "\n";
-            
-	    amrex::Real position, value;
-            for(int l=0; l < num_field_sites; ++l)
-            {
-                infile >> position >> value;
-		n_curr_in(l) = value;
-		amrex::Print() << "position/value: " << position << "    " << value << "\n";
-            }
-            infile.close();
-         }
-
+        Read_Table1D(num_field_sites, h_n_curr_in_data, charge_distribution_filename); 
     }
     else 
     {    
         SetVal_Table1D(h_n_curr_in_data, initial_charge);
     }
 
+}
+
+
+template<typename T>
+template<typename TableType>
+void
+c_NEGF_Common<T>::Read_Table1D(int assert_size,
+                               TableType& Tab1D_data, 
+                               std::string filename)
+{ 
+
+    amrex::Print() << "Reading Table1D. filename: " << filename << "\n";
+
+    std::ifstream infile;
+    infile.open(filename.c_str());
+
+    if(infile.fail())
+    {
+        amrex::Abort("Failed to read file " + filename);
+    }
+    else
+    {
+        auto const& Tab1D = Tab1D_data.table();
+        auto thi = Tab1D_data.hi();
+        auto tlo = Tab1D_data.lo();
+
+        int filesize=0;
+        std::string line;
+        while(infile.peek()!=EOF)
+        {
+            std::getline(infile, line);
+            filesize++;
+        }
+        amrex::Print() << "filesize: " << filesize << "\n";
+
+        WARPX_ALWAYS_ASSERT_WITH_MESSAGE(filesize-1 == assert_size,
+        "Assert size, " + std::to_string(assert_size)
+         + ", is not equal to the filesize-1, " + std::to_string(filesize-1) + " !");
+
+        infile.seekg(0, std::ios_base::beg);
+
+        std::getline(infile, line);
+        amrex::Print() << "file header: " << line << "\n";
+        
+        amrex::Real position, value;
+        for(int l=tlo[0]; l < thi[0]; ++l)
+        {
+            infile >> position >> value;
+	    Tab1D(l) = value;
+            amrex::Print() << "position/value: " << position << "    " << Tab1D(l) << "\n";
+        }
+        infile.close();
+    }
 }
 
 
@@ -219,8 +233,10 @@ c_NEGF_Common<T>:: ReadNanostructureProperties ()
     write_at_iter = 0;
     queryWithParser(pp_ns,"write_at_iter", write_at_iter);
 
-    pp_ns.query("initialize_with_charge_distribution", flag_initialize_with_charge_distribution);
-    if(flag_initialize_with_charge_distribution) 
+    pp_ns.query("initialize_charge_distribution", flag_initialize_charge_distribution);
+    amrex::Print() << "##### flag_initialize_charge_distribution: " << flag_initialize_charge_distribution  << "\n";
+
+    if(flag_initialize_charge_distribution) 
     {
         amrex::ParmParse pp;
 
@@ -235,17 +251,18 @@ c_NEGF_Common<T>:: ReadNanostructureProperties ()
             std::string step_filename_str  = amrex::Concatenate(step_filename_prefix_str, restart_step-1, negf_plt_name_digits);
             /*eg. output/negf/cnt/step0007_Qout.dat for step 1*/
 
-	    charge_distribution_file = step_filename_str + "_Qout.dat";
+	    charge_distribution_filename = step_filename_str + "_Qout.dat";
 
-	    pp_ns.query("charge_distribution_file", charge_distribution_file);
+	    pp_ns.query("charge_distribution_filename", charge_distribution_filename);
+
+            amrex::Print() << "##### charge_distribution_filename: "             << charge_distribution_filename              << "\n";
         }
         else 
 	{
-	    pp_ns.get("charge_distribution_file", charge_distribution_file);
+	    pp_ns.get("charge_distribution_filename", charge_distribution_filename);
+            amrex::Print() << "##### charge_distribution_filename: "             << charge_distribution_filename              << "\n";
 	}
     }
-    amrex::Print() << "##### flag_initialize_with_charge_distribution: " << flag_initialize_with_charge_distribution  << "\n";
-    amrex::Print() << "##### charge_distribution_file: "             << charge_distribution_file              << "\n";
 
     
     Set_Material_Specific_Parameters();
@@ -2231,8 +2248,9 @@ c_NEGF_Common<T>::Write_Table1D(const amrex::Vector<VectorType>& Vec,
         if(Vec.size() == thi[0]) {   
             for (int e=0; e< thi[0]; ++e)
             {
-                outfile << std::setw(10) << Vec[e] 
-                        << std::setw(15) << Arr(e) << "\n";
+                outfile << std::setprecision(15) 
+			<< std::setw(20) << Vec[e] 
+                        << std::setw(20) << Arr(e) << "\n";
             }
         }
         else {

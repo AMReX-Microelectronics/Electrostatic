@@ -1,6 +1,8 @@
 #include "Transport.H"
 
 #include "../../Utils/SelectWarpXUtils/WarpXConst.H"
+#include "../../Utils/SelectWarpXUtils/TextMsg.H"
+
 #include "../../Utils/CodeUtils/CodeUtil.H"
 #include "../../Code.H"
 #include "../../Input/GeometryProperties/GeometryProperties.H"
@@ -112,9 +114,11 @@ c_TransportSolver::InitData()
     std::string foldername_str = "output";
     pp_plot.query("folder_name", foldername_str);
     negf_foldername_str = foldername_str + "/negf";
+    common_foldername_str = negf_foldername_str + "/transport_common";
 
     CreateDirectory(foldername_str);
     CreateDirectory(negf_foldername_str);
+    CreateDirectory(common_foldername_str);
     
 
     if(rCode.use_electrostatic)
@@ -162,6 +166,34 @@ c_TransportSolver::InitData()
 
         pp_transport.query("reset_with_previous_charge_distribution", flag_reset_with_previous_charge_distribution);
         amrex::Print() << "##### reset_with_previous_charge_distribution: " << flag_reset_with_previous_charge_distribution  << "\n";
+
+	flag_initialize_inverse_jacobian = 0;
+        pp_transport.query("initialize_inverse_jacobian", flag_initialize_inverse_jacobian);
+        amrex::Print() << "##### flag_initialize_inverse_jacobian: " << flag_initialize_inverse_jacobian  << "\n";
+
+	if(flag_initialize_inverse_jacobian) 
+	{
+            amrex::ParmParse pp;
+            int flag_restart = 0;
+            pp.query("restart", flag_restart);
+
+	    if(flag_restart) 
+	    {		    
+                int restart_step = 0;       
+                getWithParser(pp,"restart_step", restart_step);
+
+                std::string restart_folder_str  = amrex::Concatenate(common_foldername_str + "/step", restart_step-1, negf_plt_name_digits);
+                /*eg. output/negf/transport_common/step0001 for step 1*/
+
+                inverse_jacobian_filename  = restart_folder_str + "/Jinv.dat";
+                pp_transport.query("inverse_jacobian_filename", inverse_jacobian_filename);
+	    }	
+	    else 
+	    {
+                pp_transport.get("inverse_jacobian_filename", inverse_jacobian_filename);
+	    }
+            amrex::Print() << "##### inverse_jacobian_filename: " << inverse_jacobian_filename << "\n";
+        }
 
     }
 
@@ -221,6 +253,7 @@ c_TransportSolver::InitData()
         }
     }
 
+
     num_field_sites_all_NS = 0;
     for (int c=0; c < vp_CNT.size(); ++c)
     {
@@ -234,6 +267,7 @@ c_TransportSolver::InitData()
     amrex::Print() << "#####* Broyden_Original_Fraction: "  << Broyden_Original_Fraction  << "\n";
     amrex::Print() << "#####* Broyden_Norm_Type: "          << Broyden_Norm_Type          << "\n";
     
+
     Set_Broyden();
 
     if (ParallelDescriptor::IOProcessor())
@@ -244,6 +278,19 @@ c_TransportSolver::InitData()
 	}
         n_start_in_data.copy(n_curr_in_data);
     }
+}
+
+
+void
+c_TransportSolver::Set_CommonStepFolder(const int step)
+{
+
+    common_step_folder_str  = amrex::Concatenate(common_foldername_str + "/step", step, negf_plt_name_digits);
+    amrex::Print() << "common_step_folder_str: " << common_step_folder_str << "\n";
+   
+    CreateDirectory(common_step_folder_str);
+    /*eg. output/negf/common/step0001 for step 1*/
+
 }
 
 void 
@@ -266,13 +313,14 @@ c_TransportSolver::Solve(const int step, const amrex::Real time)
    for (int c=0; c < vp_CNT.size(); ++c)
    {
        vp_CNT[c]->Set_StepFilenameString(step);
+       Set_CommonStepFolder(step);
    }
 
    amrex::Real Vds = 0.;
    amrex::Real Vgs = 0.;
    if(rCode.use_electrostatic) 
-   {	   
-
+   {	
+	   
        bool update_surface_soln_flag = true;	   
 
        do 
@@ -378,6 +426,11 @@ c_TransportSolver::Solve(const int step, const amrex::Real time)
 
            vp_CNT[c]->Write_Data(vp_CNT[c]->step_filename_str, n_curr_out_data, Norm_data);
 
+           if(map_AlgorithmType[Algorithm_Type] == s_Algorithm::Type::broyden_first) 
+	   {
+               Write_Table2D(Jinv_curr_data, common_step_folder_str + "/Jinv.dat", "Jinv");
+	   }
+
            vp_CNT[c]->Compute_Current();
 
            vp_CNT[c]->Write_Current(step, Vds, Vgs, Broyden_Step, max_iter, Broyden_fraction, Broyden_Scalar);
@@ -416,6 +469,7 @@ c_TransportSolver:: Set_Broyden ()
 
     if (ParallelDescriptor::IOProcessor())
     {
+
         Broyden_Step = 1;
         Broyden_Norm = 1.;
         Broyden_Scalar = 1.;
@@ -453,10 +507,21 @@ c_TransportSolver:: Set_Broyden ()
                 SetVal_RealTable2D(Jinv_curr_data,0.);
 
                 auto const& Jinv_curr    = Jinv_curr_data.table();
-                for(int a=0; a < num_field_sites_all_NS; ++a) 
-                {
-                    Jinv_curr(a,a) = Broyden_fraction;
-                }
+
+
+		if(flag_initialize_inverse_jacobian) 
+		{
+		    int assert_size = std::pow(num_field_sites_all_NS, 2);
+
+                    Read_Table2D(assert_size, Jinv_curr_data, inverse_jacobian_filename);
+		}
+		else 
+		{
+                    for(int a=0; a < num_field_sites_all_NS; ++a) 
+                    {
+                        Jinv_curr(a,a) = Broyden_fraction;
+                    }
+		}
                 break;
             }
             case s_Algorithm::Type::broyden_second:
@@ -1172,4 +1237,173 @@ c_TransportSolver:: SetVal_RealTable2D (RealTable2D& Tab2D_data, amrex::Real val
             Tab2D(i,j) = val;
         }
     }
-}  
+}
+
+
+template<typename TableType>
+void
+c_TransportSolver::Read_Table1D(int assert_size,
+                               TableType& Tab1D_data,
+                               std::string filename)
+{
+
+    amrex::Print() << "Reading Table1D. filename: " << filename << "\n";
+
+    std::ifstream infile;
+    infile.open(filename.c_str());
+
+    if(infile.fail())
+    {
+        amrex::Abort("Failed to read file " + filename);
+    }
+    else
+    {
+        auto const& Tab1D = Tab1D_data.table();
+        auto thi = Tab1D_data.hi();
+        auto tlo = Tab1D_data.lo();
+
+        int filesize=0;
+        std::string line;
+        while(infile.peek()!=EOF)
+        {
+            std::getline(infile, line);
+            filesize++;
+        }
+        amrex::Print() << "filesize: " << filesize << "\n";
+
+        WARPX_ALWAYS_ASSERT_WITH_MESSAGE(filesize-1 == assert_size,
+        "Assert size, " + std::to_string(assert_size)
+         + ", is not equal to the filesize-1, " + std::to_string(filesize-1) + " !");
+
+        infile.seekg(0, std::ios_base::beg);
+
+        std::getline(infile, line);
+        amrex::Print() << "file header: " << line << "\n";
+
+        amrex::Real position, value;
+        for(int l=tlo[0]; l < thi[0]; ++l)
+        {
+            infile >> position >> value;
+            Tab1D(l) = value;
+            amrex::Print() << "position/value: " << position << "    " << Tab1D(l) << "\n";
+        }
+        infile.close();
+    }
+}
+
+
+
+template<typename TableType>
+void
+c_TransportSolver::Read_Table2D(int assert_size,
+                               TableType& Tab2D_data,
+                               std::string filename)
+{
+
+    amrex::Print() << "Reading Table2D. filename: " << filename << "\n";
+
+    std::ifstream infile;
+    infile.open(filename.c_str());
+
+    if(infile.fail())
+    {
+        amrex::Abort("Failed to read file " + filename);
+    }
+    else
+    {
+        auto const& Tab2D = Tab2D_data.table();
+        auto thi = Tab2D_data.hi();
+        auto tlo = Tab2D_data.lo();
+
+        int filesize=0;
+        std::string line;
+        while(infile.peek()!=EOF)
+        {
+            std::getline(infile, line);
+            filesize++;
+        }
+        amrex::Print() << "filesize: " << filesize << "\n";
+
+        WARPX_ALWAYS_ASSERT_WITH_MESSAGE(filesize-1 == assert_size,
+        "Assert size, " + std::to_string(assert_size)
+         + ", is not equal to the filesize-1, " + std::to_string(filesize-1) + " !");
+
+        infile.seekg(0, std::ios_base::beg);
+
+        std::getline(infile, line);
+        amrex::Print() << "file header: " << line << "\n";
+
+	amrex::Real value;
+        for (int j = tlo[1]; j < thi[1]; ++j) //slow moving index.
+        {
+            for (int i = tlo[0]; i < thi[0]; ++i)
+            {
+                infile >> value;
+		Tab2D(i,j) = value;
+            }
+        }
+        infile.close();
+    }
+}
+
+
+template<typename VectorType, typename TableType>
+void
+c_TransportSolver::Write_Table1D(const amrex::Vector<VectorType>& Vec,
+                                const TableType& Arr_data,
+                                std::string filename,
+                                std::string header)
+{
+    if (amrex::ParallelDescriptor::IOProcessor())
+    {
+        //amrex::Print() << "\nRoot Writing " << filename << "\n";
+        std::ofstream outfile;
+        outfile.open(filename.c_str());
+
+        auto const& Arr = Arr_data.const_table();
+        auto thi = Arr_data.hi();
+
+        outfile << header  << "\n";
+        if(Vec.size() == thi[0]) {
+            for (int e=0; e< thi[0]; ++e)
+            {
+                outfile << std::setprecision(15)
+                        << std::setw(20) << Vec[e]
+                        << std::setw(20) << Arr(e) << "\n";
+            }
+        }
+        else {
+            outfile << "Mismatch in the size of Vec and Table1D_data!"  << "\n";
+        }
+        outfile.close();
+    }
+}
+
+
+template<typename TableType>
+void
+c_TransportSolver::Write_Table2D(const TableData<TableType, 2>& Tab_data,
+                                 std::string filename,
+                                 std::string header)
+{
+    if (amrex::ParallelDescriptor::IOProcessor())
+    {
+        //amrex::Print() << "\nRoot Writing " << filename << "\n";
+        std::ofstream outfile;
+        outfile.open(filename.c_str());
+
+        auto const& Tab2D = Tab_data.const_table();
+        auto thi = Tab_data.hi();
+        auto tlo = Tab_data.lo();
+
+        outfile << header  << "\n";
+        for (int j = tlo[1]; j < thi[1]; ++j) //slow moving index.
+        {
+            for (int i = tlo[0]; i < thi[0]; ++i)
+            {
+                outfile  << std::setprecision(15) << Tab2D(i,j) << "\n";
+            }
+        }
+        outfile.close();
+    }
+}

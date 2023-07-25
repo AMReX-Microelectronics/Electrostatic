@@ -67,10 +67,17 @@ private:
 
     int use_selfconsistent_potential;
     int use_negf;
+    const int negf_plt_name_digits = 4;
 
     std::string negf_foldername_str = "output/negf";
+    std::string common_foldername_str = "output/negf/transport_common";
+    std::string common_step_folder_str;
+    std::string inverse_jacobian_filename;
+
+    void Set_CommonStepFolder(const int step);
 
     int flag_reset_with_previous_charge_distribution=0;
+    int flag_initialize_inverse_jacobian = 0;
 
     /*For Broyden*/
     int num_field_sites_all_NS = 0;
@@ -143,6 +150,28 @@ private:
 
     void SetVal_RealTable1D (RealTable1D& Tab1D_data, amrex::Real val);    
     void SetVal_RealTable2D(RealTable2D& Tab2D_data, amrex::Real val);
+
+    template<typename TableType>
+    void Read_Table1D(int assert_size,
+                      TableType& Tab1D_data,
+                      std::string filename);
+    
+    template<typename TableType>
+    void Read_Table2D(int assert_size,
+                      TableType& Tab2D_data,
+                      std::string filename);
+
+    template<typename VectorType, typename TableType>
+    void Write_Table1D(const amrex::Vector<VectorType>& Vec,
+                       const TableType& Arr_data,
+                       std::string filename,
+                       std::string header);
+
+    template<typename TableType>
+    void Write_Table2D(const TableData<TableType, 2>& Arr_data,
+                       std::string filename,
+                       std::string header);
+
 
 };
 
