@@ -161,6 +161,9 @@ c_TransportSolver::InitData()
         pp_transport.query("Broyden_norm_type", NS_Broyden_norm_type);
         amrex::Print() << "##### Broyden_norm_type: " << NS_Broyden_norm_type << "\n";
 
+        pp_transport.query("Broyden_threshold_maxstep", Broyden_Threshold_MaxStep);
+        amrex::Print() << "##### Broyden_Threshold_MaxStep: " << Broyden_Threshold_MaxStep << "\n";
+
         pp_transport.query("selfconsistency_algorithm", Algorithm_Type);
         amrex::Print() << "##### selfconsistency_algorithm: " << Algorithm_Type << "\n";
 
@@ -373,6 +376,11 @@ c_TransportSolver::Solve(const int step, const amrex::Real time)
 	       vp_CNT[c]->Gather_NEGFComputed_Charge(n_curr_out_data); /*Need a strategy to gather data for multiple CNTs*/
 
            }
+
+            if (Broyden_Step > Broyden_Threshold_MaxStep)
+            {
+                amrex::Abort("Broyden_Step has exceeded the Broyden_Threshold_MaxStep!");
+            }
 
             switch(map_AlgorithmType[Algorithm_Type])
             {

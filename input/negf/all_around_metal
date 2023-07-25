@@ -218,7 +218,7 @@ transport.reset_with_previous_charge_distribution = 1
 transport.initialize_inverse_jacobian = 0
 cnt.initialize_charge_distribution = 0
 
-cnt.initialize_with_charge_distribution = 0
+cnt.initialize_charge_distribution = 0
 
 
 cnt.type = CNT
