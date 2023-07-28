@@ -784,7 +784,7 @@ c_EmbeddedBoundaries::Specify_SurfSolnOnCutcells(amrex::MultiFab& mf, const std:
 	//								    time);
 	amrex::ParserExecutor<4> const&  macro_parser = map_basic_objects_soln_parser[name]->compile<4>();
 
-	amrex::Print() << "Surface solution: " << macro_parser(0.,0.,0.,time) << "\n";
+	amrex::Print() << "Surface name: " << name << ", solution: " << macro_parser(0.,0.,0.,time) << "\n";
         Multifab_Manipulation::SpecifyValueOnlyOnCutcells(mf, macro_parser(0.,0.,0.,time));
         
         map_SurfSoln_Name_Value[name] = macro_parser(0.,0.,0.,time);
@@ -798,7 +798,7 @@ c_EmbeddedBoundaries::Specify_SurfSolnOnCutcells(amrex::MultiFab& mf, const std:
     else /*specify constant value*/
     {    
         Multifab_Manipulation::SpecifyValueOnlyOnCutcells(mf, map_basic_objects_soln[name]);
-	amrex::Print() << "Surface solution: " << map_basic_objects_soln[name] << "\n";
+	amrex::Print() << "Surface name: " << name << ", solution: " << map_basic_objects_soln[name] << "\n";
     }
 
 }

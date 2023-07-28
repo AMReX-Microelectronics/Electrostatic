@@ -339,7 +339,11 @@ c_TransportSolver::Solve(const int step, const amrex::Real time)
            total_mlmg_solve_time += mlmg_solve_time;
            amrex::Print() << "\nmlmg_solve_time: " << mlmg_solve_time << "\n";
 
+
+
            rPostPro.Compute();
+
+           rOutput.WriteOutput(max_iter+1000, time);
 
            for (int c=0; c < vp_CNT.size(); ++c)
            {
