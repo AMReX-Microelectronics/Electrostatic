@@ -332,9 +332,8 @@ c_TransportSolver::Solve(const int step, const amrex::Real time)
 
            amrex::Print() << "\n\nSelf-consistent iteration: " << max_iter << "\n";
 
-           rMLMG.UpdateBoundaryConditions(update_surface_soln_flag);
-
            rMprop.ReInitializeMacroparam(NS_gather_field_str);
+           rMLMG.UpdateBoundaryConditions(update_surface_soln_flag);
 
            auto mlmg_solve_time = rMLMG.Solve_PoissonEqn();
            total_mlmg_solve_time += mlmg_solve_time;
