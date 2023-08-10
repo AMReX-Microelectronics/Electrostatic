@@ -309,6 +309,7 @@ public:
                                  std::string filename,
                                  std::string header);
 
+    void Write_InputInducedCharge (const std::string filename_prefix, RealTable1D& n_curr_in_data);
     void Write_InducedCharge (const std::string filename_prefix, RealTable1D& n_curr_out_data);
     void Write_ChargeNorm(const std::string filename_prefix, RealTable1D& Norm_data);
     void Write_Current (const int step, 

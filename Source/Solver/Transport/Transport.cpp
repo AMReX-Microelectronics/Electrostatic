@@ -343,13 +343,14 @@ c_TransportSolver::Solve(const int step, const amrex::Real time)
 
            rPostPro.Compute();
 
-           rOutput.WriteOutput(max_iter+1000, time);
+           //rOutput.WriteOutput(max_iter+1000, time);
 
            for (int c=0; c < vp_CNT.size(); ++c)
            {
 
 	       vp_CNT[c]->Set_IterationFilenameString(max_iter);
 
+	       vp_CNT[c]->Write_InputInducedCharge(vp_CNT[c]->iter_filename_str, n_curr_in_data);  
 
 	       vp_CNT[c]->Gather_MeshAttributeAtAtoms();  
                

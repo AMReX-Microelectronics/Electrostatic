@@ -546,7 +546,7 @@ c_Nanostructure<NSType>::Write_PotentialAtSites(const std::string filename_prefi
         
         for (int l=0; l<NSType::num_field_sites; ++l)
         {
-            outfile << l << std::setw(15) << NSType::PTD[l] << std::setw(15) << NSType::Potential[l] << "\n";
+            outfile << l << std::setw(35) << NSType::PTD[l] << std::setw(35) << NSType::Potential[l] << "\n";
         }  
 
         outfile.close();

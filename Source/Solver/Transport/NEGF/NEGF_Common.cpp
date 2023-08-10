@@ -674,6 +674,8 @@ c_NEGF_Common<T>:: Define_EnergyLimits ()
     E_contour_left  = E_valence_min + E_zPlus; /*set in the input*/
     E_rightmost = mu_max + Fermi_tail_factor*kT_max + E_zPlus;
 
+    int num_poles = int((E_pole_max-MathConst::pi*kT_max)/(2.*MathConst::pi*kT_max) + 1);
+
     if(flag_noneq_exists)
     {
         amrex::Print() << "\nnonequilibrium exists between terminals\n";
@@ -683,18 +685,18 @@ c_NEGF_Common<T>:: Define_EnergyLimits ()
     else
     {
         E_contour_right = E_rightmost;
-        num_enclosed_poles = int((E_pole_max-MathConst::pi*kT_min)/(2.*MathConst::pi*kT_min) + 1);
+        num_enclosed_poles = num_poles;
         E_poles_vec.resize(num_enclosed_poles);
 
         for(int p=0; p<num_enclosed_poles; ++p) 
         {
-            ComplexType pole(mu_min, MathConst::pi*kT_min*(2*p+1));
+            ComplexType pole(mu_min, MathConst::pi*kT_max*(2*p+1));
             E_poles_vec[p] = pole;
         }
     }
-    ComplexType val2(E_contour_right.real(), 2*num_enclosed_poles*MathConst::pi*kT_max);
+    ComplexType val2(E_contour_right.real(), 2*num_poles*MathConst::pi*kT_max);
     E_zeta = val2;
-    ComplexType val3(mu_max - Fermi_tail_factor*kT_max, E_zeta.imag());
+    ComplexType val3(E_contour_right.real() - 2*Fermi_tail_factor*kT_max, E_zeta.imag());
     E_eta =  val3;
 
     //amrex::Print() << "U_contact: ";
@@ -702,17 +704,17 @@ c_NEGF_Common<T>:: Define_EnergyLimits ()
     //{
     //    amrex::Print() <<  U_contact[c] << " ";
     //}
-    //amrex::Print() << "\n";
-    //amrex::Print() << "\nE_f: " << E_f << "\n";
-    //amrex::Print() << "mu_min/max: " << mu_min << " " << mu_max << "\n";
-    //amrex::Print() << "kT_min/max: " << kT_min << " " << kT_max << "\n";
-    //amrex::Print() << "E_zPlus: "  << E_zPlus << "\n";
-    //amrex::Print() << "E_contour_left/E_contour_right/E_rightmost: " << E_contour_left      <<  "  "
-    //                                                                 << E_contour_right << "  "
-    //                                                                 << E_rightmost     << "\n";
-    //amrex::Print() << "E_pole_max: " << E_pole_max << ", number of poles: " << num_enclosed_poles << "\n";
-    //amrex::Print() << "E_zeta: " << E_zeta << "\n";
-    //amrex::Print() << "E_eta: "  << E_eta << "\n";
+    amrex::Print() << "\n";
+    amrex::Print() << "\nE_f: " << E_f << "\n";
+    amrex::Print() << "mu_min/max: " << mu_min << " " << mu_max << "\n";
+    amrex::Print() << "kT_min/max: " << kT_min << " " << kT_max << "\n";
+    amrex::Print() << "E_zPlus: "  << E_zPlus << "\n";
+    amrex::Print() << "E_contour_left/E_contour_right/E_rightmost: " << E_contour_left      <<  "  "
+                                                                     << E_contour_right << "  "
+                                                                     << E_rightmost     << "\n";
+    amrex::Print() << "E_pole_max: " << E_pole_max << ", number of poles: " << num_enclosed_poles << "\n";
+    amrex::Print() << "E_zeta: " << E_zeta << "\n";
+    amrex::Print() << "E_eta: "  << E_eta << "\n";
 
 }
 
@@ -1274,6 +1276,23 @@ c_NEGF_Common<T>:: Broadcast_BroydenPredicted_Charge ()
            MPI_DOUBLE,
            ParallelDescriptor::IOProcessorNumber(),
            ParallelDescriptor::Communicator());
+
+}
+
+
+template<typename T>
+void 
+c_NEGF_Common<T>:: Write_InputInducedCharge (const std::string filename_prefix, RealTable1D& n_curr_in_data)
+{
+
+    if (ParallelDescriptor::IOProcessor())
+    {
+
+        std::string filename = filename_prefix + "_Qin.dat";
+
+        Write_Table1D(PTD, n_curr_in_data, filename.c_str(), 
+                      "'axial location / (nm)', 'Induced charge per site / (e)'");
+    }
 
 }
 
@@ -2249,8 +2268,8 @@ c_NEGF_Common<T>::Write_Table1D(const amrex::Vector<VectorType>& Vec,
             for (int e=0; e< thi[0]; ++e)
             {
                 outfile << std::setprecision(15) 
-			<< std::setw(20) << Vec[e] 
-                        << std::setw(20) << Arr(e) << "\n";
+			<< std::setw(35) << Vec[e] 
+                        << std::setw(35) << Arr(e) << "\n";
             }
         }
         else {

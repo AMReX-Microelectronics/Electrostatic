@@ -24,10 +24,12 @@ my_constants.epsilon_CM     = epsilon_0 #Palladium
 my_constants.SV = 0.      #source voltage [V]
 my_constants.Vgs = 0.67   #Drain-Source voltage [V]
 my_constants.Vds_min = -0.4
-my_constants.Vds_max = 0.0
-my_constants.Nsteps = 33
+my_constants.Vds_max = 0.
+my_constants.Nsteps= 41
 my_constants.dt = 1./(Nsteps-1)
 
+restart = 1
+my_constants.RESTART_STEP = 16
 
 my_constants.Ef = -1.       #Palladium Contact Fermi level [eV] 
 
@@ -92,7 +94,7 @@ my_constants.drain_lo_y =  drain_hi_y - CN_co_l
 my_constants.source_center_y = (source_lo_y + source_hi_y)/2 
 my_constants.drain_center_y = (drain_lo_y + drain_hi_y)/2  
 
-my_constants.CM_thickness = 50*dz
+my_constants.CM_thickness = 30*dz
 
 ### gate ###
 ############
@@ -116,8 +118,7 @@ my_constants.length_scale_lattice_const = 8.5e-12
 
 timestep = dt
 steps = Nsteps
-restart = 0
-restart_step = 0
+restart_step = RESTART_STEP
 
 ####################################
 ###### EMBEDDED BOUNDARIES #########
@@ -145,6 +146,7 @@ Drain.height        = drain_hi_y - drain_lo_y
 Drain.direction     = 1
 Drain.surf_soln_parser   = 1
 Drain.surf_soln_function = "SV + Vds_max - (Vds_max-Vds_min) * t"
+#Drain.surf_soln_function = "SV + Vds_min + (Vds_max-Vds_min) * t"
 
 Gate.geom_type      = cntfet_contact_cyl
 Gate.inner_radius   = G_inner_rad
@@ -210,7 +212,7 @@ macroscopic.atom_locations = 0.
 ###### OUTPUT ######
 ####################
 
-plot.folder_name = /global/cfs/projectdirs/m3766/SaurabhTests/eXstatic_Run/GAA_VdsVary_Run2
+plot.folder_name = /global/cfs/projectdirs/m3766/SaurabhTests/eXstatic_Run/GAA_Vds_New_Run8
 plot.fields_to_plot = epsilon.1 charge_density.1 phi.1 atom_locations #vecField 
 plot.write_after_init = 1
 plot.write_interval = 1
@@ -257,15 +259,16 @@ transport.NS_names = cnt
 transport.use_negf = 1
 transport.NS_gather_field = phi            
 transport.NS_deposit_field  = charge_density 
-transport.NS_initial_deposit_value  = 1e-3
+transport.NS_initial_deposit_value  = 1e-2
 transport.Broyden_fraction = 0.1
-transport.Broyden_max_norm = 1.e-10
+transport.Broyden_max_norm = 1.e-5
+transport.Broyden_threshold_maxstep = 200
 transport.Broyden_norm_type = relative
-transport.selfconsistency_algorithm = broyden_second
+transport.selfconsistency_algorithm = broyden_first
 transport.reset_with_previous_charge_distribution = 1
-transport.initialize_inverse_jacobian = 0
-
-cnt.initialize_charge_distribution = 0
+transport.initialize_inverse_jacobian = 1
+cnt.initialize_charge_distribution = 1
+#cnt.charge_distribution_file = /global/cfs/projectdirs/m3766/SaurabhTests/eXstatic_Run/GAA_VdsVary_First_Run11/negf/cnt/step0025_Qout.dat
 
 cnt.type = CNT
 cnt.type_id = m_index n_index     #m n
@@ -275,15 +278,13 @@ cnt.num_unitcells = N_unitcells
 cnt.offset = CN_x CN_y CN_z
 cnt.contact_T  = 298. 298.
 cnt.contact_mu_specified = 0
-
 cnt.contact_parser_string = Source Drain
-cnt.gate_string = Gate
 
 cnt.contact_Fermi_level = Ef
 cnt.E_valence_min = -10
 cnt.E_pole_max    = 3
 cnt.eq_integration_pts = 30 30 30
-cnt.noneq_integration_pts = 100
+cnt.noneq_integration_pts = 300
 
 cnt.write_at_iter = 1
 #####################################
