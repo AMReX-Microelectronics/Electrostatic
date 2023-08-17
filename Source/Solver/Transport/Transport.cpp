@@ -256,31 +256,17 @@ c_TransportSolver::InitData()
         }
     }
 
-
-    num_field_sites_all_NS = 0;
-    for (int c=0; c < vp_CNT.size(); ++c)
-    {
-	num_field_sites_all_NS += vp_CNT[c]->num_field_sites;
-    }	
-    /*Here add field sites from all other nanostructures*/
-    amrex::Print() << "Number of field_sites at all nanostructures, num_field_sites_all_NS: " << num_field_sites_all_NS << "\n";
-
     Broyden_Original_Fraction = NS_Broyden_frac;
     Broyden_Norm_Type         = NS_Broyden_norm_type;
     amrex::Print() << "#####* Broyden_Original_Fraction: "  << Broyden_Original_Fraction  << "\n";
     amrex::Print() << "#####* Broyden_Norm_Type: "          << Broyden_Norm_Type          << "\n";
-    
 
+    #ifdef BROYDEN_PARALLEL
+    Set_Broyden_Parallel();
+    #else
     Set_Broyden();
+    #endif
 
-    if (ParallelDescriptor::IOProcessor())
-    {
-        for (int c=0; c < vp_CNT.size(); ++c)
-        {
-            n_curr_in_data.copy(vp_CNT[c]->h_n_curr_in_data); /*Need generalization for multiple CNTs*/
-	}
-        n_start_in_data.copy(n_curr_in_data);
-    }
 }
 
 
@@ -300,41 +286,38 @@ void
 c_TransportSolver::Solve(const int step, const amrex::Real time) 
 {
 
-   auto& rCode    = c_Code::GetInstance();
-   auto& rGprop = rCode.get_GeometryProperties();
-   auto& rMprop = rCode.get_MacroscopicProperties();
-   auto& rMLMG    = rCode.get_MLMGSolver();
-   auto& rOutput  = rCode.get_Output();
-   auto& rPostPro = rCode.get_PostProcessor();
+    auto& rCode    = c_Code::GetInstance();
+    auto& rGprop = rCode.get_GeometryProperties();
+    auto& rMprop = rCode.get_MacroscopicProperties();
+    auto& rMLMG    = rCode.get_MLMGSolver();
+    auto& rOutput  = rCode.get_Output();
+    auto& rPostPro = rCode.get_PostProcessor();
 
-   amrex::Real total_mlmg_solve_time = 0.;
+    amrex::Real total_mlmg_solve_time = 0.;
 
-   int max_iter = 1;
-   int MAX_ITER_THRESHOLD = 800;
+    int max_iter = 1;
+    int MAX_ITER_THRESHOLD = 800;
 
-
-   for (int c=0; c < vp_CNT.size(); ++c)
-   {
+    for (int c=0; c < vp_CNT.size(); ++c)
+    {
        vp_CNT[c]->Set_StepFilenameString(step);
        Set_CommonStepFolder(step);
-   }
+    }
 
-   amrex::Real Vds = 0.;
-   amrex::Real Vgs = 0.;
-   if(rCode.use_electrostatic) 
-   {	
+    amrex::Real Vds = 0.;
+    amrex::Real Vgs = 0.;
+    if(rCode.use_electrostatic) 
+    {	
 	   
-       bool update_surface_soln_flag = true;	   
-
-       do 
-       {
-	   if(max_iter > MAX_ITER_THRESHOLD) amrex::Abort("Iteration step is GREATER than the THRESHOLD" + MAX_ITER_THRESHOLD);
+        bool update_surface_soln_flag = true;	   
+        do 
+        {
+	    if(max_iter > MAX_ITER_THRESHOLD) amrex::Abort("Iteration step is GREATER than the THRESHOLD" + MAX_ITER_THRESHOLD);
 
            amrex::Print() << "\n\nSelf-consistent iteration: " << max_iter << "\n";
 
            rMprop.ReInitializeMacroparam(NS_gather_field_str);
            rMLMG.UpdateBoundaryConditions(update_surface_soln_flag);
-
            auto mlmg_solve_time = rMLMG.Solve_PoissonEqn();
            total_mlmg_solve_time += mlmg_solve_time;
            amrex::Print() << "\nmlmg_solve_time: " << mlmg_solve_time << "\n";
@@ -348,38 +331,43 @@ c_TransportSolver::Solve(const int step, const amrex::Real time)
            for (int c=0; c < vp_CNT.size(); ++c)
            {
 
-	       vp_CNT[c]->Set_IterationFilenameString(max_iter);
+	           vp_CNT[c]->Set_IterationFilenameString(max_iter);
 
-	       vp_CNT[c]->Write_InputInducedCharge(vp_CNT[c]->iter_filename_str, n_curr_in_data);  
+	           vp_CNT[c]->Write_InputInducedCharge(vp_CNT[c]->iter_filename_str, n_curr_in_data);  
 
-	       vp_CNT[c]->Gather_MeshAttributeAtAtoms();  
-               
+	           vp_CNT[c]->Gather_MeshAttributeAtAtoms();  
+                   
 
-	       if(update_surface_soln_flag && vp_CNT[c]->flag_contact_mu_specified == 0) 
-	       {
-                   amrex::Real V_contact[NUM_CONTACTS] = {0., 0.};
+	           if(update_surface_soln_flag && vp_CNT[c]->flag_contact_mu_specified == 0) 
+	           {
+                    amrex::Real V_contact[NUM_CONTACTS] = {0., 0.};
 
-		   for(int k=0; k<NUM_CONTACTS; ++k) 
-		   {    
-                       V_contact[k] = rGprop.pEB->Read_SurfSoln(vp_CNT[c]->Contact_Parser_String[k]);
-                       
-		       amrex::Print() << "Updated terminal voltage: " << k << "  " << V_contact[k] << "\n";
+                    for(int k=0; k<NUM_CONTACTS; ++k) 
+		            {    
+                        V_contact[k] = rGprop.pEB->Read_SurfSoln(vp_CNT[c]->Contact_Parser_String[k]);
+                           
+		                 amrex::Print() << "Updated terminal voltage: " << k << "  " << V_contact[k] << "\n";
 
-		       vp_CNT[c]->Contact_Electrochemical_Potential[k] = vp_CNT[c]->E_f - V_contact[k];
-		   }
+		                vp_CNT[c]->Contact_Electrochemical_Potential[k] = vp_CNT[c]->E_f - V_contact[k];
+                    }
 
-		   Vds = V_contact[1] - V_contact[0];
+		            Vds = V_contact[1] - V_contact[0];
 
-                   Vgs = rGprop.pEB->Read_SurfSoln(vp_CNT[c]->Gate_String) - V_contact[0];
+                    Vgs = rGprop.pEB->Read_SurfSoln(vp_CNT[c]->Gate_String) - V_contact[0];
 
-		   amrex::Print() << "Vds, Vgs: " << Vds << "  " << Vgs << "\n";
-	       }
+    	            amrex::Print() << "Vds, Vgs: " << Vds << "  " << Vgs << "\n";
+	           }
 
                vp_CNT[c]->Solve_NEGF();
 
-	       vp_CNT[c]->Gather_NEGFComputed_Charge(n_curr_out_data); /*Need a strategy to gather data for multiple CNTs*/
-
-           }
+               /*Need a strategy to gather data for multiple CNTs*/
+               #ifdef BROYDEN_PARALLEL
+               /*some if condition to check if processor was used for charge computation of this nanostructure*/
+               n_curr_out.copy(vp_CNT[c]->h_RhoInduced_loc(0));
+               #else
+	           vp_CNT[c]->Gather_NEGFComputed_Charge(n_curr_out_data); 
+               #endif
+            }
 
             if (Broyden_Step > Broyden_Threshold_MaxStep)
             {
@@ -390,17 +378,21 @@ c_TransportSolver::Solve(const int step, const amrex::Real time)
             {
                 case s_Algorithm::Type::broyden_first:
                 {
-	            Execute_Broyden_First_Algorithm(); 
+	                Execute_Broyden_First_Algorithm(); 
                     break;
                 }
                 case s_Algorithm::Type::broyden_second:
                 {
-	            Execute_Broyden_Modified_Second_Algorithm(); 
+		            #ifdef BROYDEN_PARALLEL	
+	                Execute_Broyden_Modified_Second_Algorithm_Parallel(); 
+                    #else
+    	            Execute_Broyden_Modified_Second_Algorithm(); 
+                    #endif
                     break;
                 }
                 case s_Algorithm::Type::simple_mixing:
                 {
-	            Execute_Simple_Mixing_Algorithm(); 
+	                Execute_Simple_Mixing_Algorithm(); 
                     break;
                 }
                 default:
@@ -413,50 +405,57 @@ c_TransportSolver::Solve(const int step, const amrex::Real time)
 
            for (int c=0; c < vp_CNT.size(); ++c)
            {
+		       #ifdef BROYDEN_PARALLEL	
+               /*if condition to check if processor was used for charge computation of this nanostructure*/
+               vp_CNT[c]->h_n_curr_in_data.copy(n_curr_in_glo_data); 
+               #else
                if (ParallelDescriptor::IOProcessor())
                {
                    vp_CNT[c]->h_n_curr_in_data.copy(n_curr_in_data); /*Need generalization for multiple CNTs*/
-	       }
+	           }
+    	       vp_CNT[c]->Broadcast_BroydenPredicted_Charge();
+               #endif
 
-	       vp_CNT[c]->Broadcast_BroydenPredicted_Charge();
-
-	       if(vp_CNT[c]->write_at_iter) 
-	       {
+	           if(vp_CNT[c]->write_at_iter) 
+	           {
                    vp_CNT[c]->Write_Data(vp_CNT[c]->iter_filename_str, n_curr_out_data, Norm_data);
-	       }
+    	       }
 
                vp_CNT[c]->Deposit_AtomAttributeToMesh();
-	   }
-           update_surface_soln_flag = false;
-           max_iter += 1;
+	        }
+            update_surface_soln_flag = false;
+            max_iter += 1;
 
-       } while(Broyden_Norm > Broyden_max_norm);    
+        } while(Broyden_Norm > Broyden_max_norm);    
 
 
-       for (int c=0; c < vp_CNT.size(); ++c)
-       {
+        for (int c=0; c < vp_CNT.size(); ++c)
+        {
 
-           vp_CNT[c]->Write_Data(vp_CNT[c]->step_filename_str, n_curr_out_data, Norm_data);
+            vp_CNT[c]->Write_Data(vp_CNT[c]->step_filename_str, n_curr_out_data, Norm_data);
 
-           if(map_AlgorithmType[Algorithm_Type] == s_Algorithm::Type::broyden_first) 
-	   {
-               Write_Table2D(Jinv_curr_data, common_step_folder_str + "/Jinv.dat", "Jinv");
-	   }
+            if(map_AlgorithmType[Algorithm_Type] == s_Algorithm::Type::broyden_first) 
+	        {
+                Write_Table2D(Jinv_curr_data, common_step_folder_str + "/Jinv.dat", "Jinv");
+	        }
 
-           vp_CNT[c]->Compute_Current();
+            vp_CNT[c]->Compute_Current();
 
-           vp_CNT[c]->Write_Current(step, Vds, Vgs, Broyden_Step, max_iter, Broyden_fraction, Broyden_Scalar);
+            vp_CNT[c]->Write_Current(step, Vds, Vgs, Broyden_Step, max_iter, Broyden_fraction, Broyden_Scalar);
 
-           if(rCode.use_electrostatic)
-           {
-               Reset_Broyden();
-           }
+            if(rCode.use_electrostatic)
+            {
+                #ifdef BROYDEN_PARALLEL
+                Reset_Broyden_Parallel();
+                #else
+                Reset_Broyden();
+                #endif
+            }
 
            //rMprop.ReInitializeMacroparam(NS_deposit_field_str);
-       }
+        }
 
-       amrex::Print() << "\nAverage mlmg time for self-consistency (s): " << total_mlmg_solve_time / max_iter << "\n";
-
+        amrex::Print() << "\nAverage mlmg time for self-consistency (s): " << total_mlmg_solve_time / max_iter << "\n";
    }
    else 
    {
@@ -474,14 +473,276 @@ c_TransportSolver::Solve(const int step, const amrex::Real time)
 
 }
 
+void
+c_TransportSolver::Define_MPI_Vector_Type_and_MPI_Vector_Sum ()
+{
+
+    MPI_Type_vector(Broyden_Threshold_MaxStep, 1, 1, MPI_DOUBLE_COMPLEX, &MPI_Vector_Type);
+    MPI_Type_commit(&MPI_Vector_Type);
+
+    /* Note:  https://www.mpich.org/static/docs/v3.2/www3/MPI_Op_create.html
+     *
+     * int MPI_Op_create(MPI_User_function *user_fn, int commute, MPI_Op *op)
+     * user_fn: user defined function
+     * commute: true if commutative
+     * op: operation (handle)
+     *
+     * Also, note: https://stackoverflow.com/questions/29285883/mpi-allreduce-sum-over-a-derived-datatype-vector
+     */
+
+    MPI_Op_create((MPI_User_function *) Vector_Add_Func_wrapper, 1, &Vector_Add);
+
+}
+
+void
+c_TransportSolver::Free_MPI_Vector_Type_and_MPI_Vector_Sum ()
+{
+
+    MPI_Type_free(&MPI_Vector_Type);
+    MPI_Op_free(&Vector_Add);
+
+}
+
+void
+c_TransportSolver::Define_Broyden_Partition()
+{
+    /* Note: Each process executes this function.
+     *
+     * Create the following:
+     * num_field_sites_all_NS
+     * my_rank
+     * total_proc
+     *
+     * MPI_recv_count
+     * MPI_disp
+     *
+     * site_size_loc
+     * num_procs_with_sites
+     */
+
+    num_field_sites_all_NS = 0;
+    total_proc = amrex::ParallelDescriptor::NProcs();
+    my_rank = amrex::ParallelDescriptor::MyProc();
+
+    MPI_recv_count.resize(total_proc);
+    MPI_disp.resize(total_proc);
+    num_procs_with_sites=total_proc;
+
+    int g=0;
+    for (int c=0; c < vp_CNT.size(); ++c)
+    {
+	    num_field_sites_all_NS += vp_CNT[c]->num_field_sites;
+
+	    /*We assume that only a subset of procs work on each nanostructure.*/
+	    for(int i=0; i < vp_CNT[c]->num_proc; ++i) 
+	    {
+            int recv_count    = vp_CNT[c]->MPI_recv_count[i];
+	        if(recv_count == 0) num_procs_with_sites--;
+
+	        MPI_recv_count[g] = recv_count;
+	        MPI_disp[g]       = vp_CNT[c]->MPI_disp[i];
+
+	        g++;
+	    }
+	    site_size_loc = MPI_recv_count[my_rank];
+    }
+    amrex::Print() << "Number of field_sites at all nanostructures, num_field_sites_all_NS: " 
+                   << num_field_sites_all_NS << "\n";
+}
+
+void
+c_TransportSolver:: Set_Broyden_Parallel ()
+{
+        Define_Broyden_Partition();
+
+        Broyden_Step = 1;
+        Broyden_Norm = 1.;
+        Broyden_Scalar = 1.;
+        Broyden_Correction_Step = 0;
+        Broyden_NormSumIsIncreasing_Step = 0;
+        Broyden_Reset_Step   = 0;
+        Broyden_NormSum_Curr = 1.e10;
+        Broyden_NormSum_Prev = 1.e10;
+        Broyden_fraction = Broyden_Original_Fraction;
+
+        n_curr_in_data.resize({0}, {site_size_loc}, The_Pinned_Arena());
+        n_curr_out_data.resize({0}, {site_size_loc}, The_Pinned_Arena());
+        n_prev_in_data.resize({0}, {site_size_loc}, The_Pinned_Arena());
+        n_curr_in_glo_data.resize({0},{num_field_sites_all_NS}, The_Pinned_Arena());
+
+        //n_start_in_data.resize({0}, {site_size_loc}, The_Pinned_Arena());
+        /* Note that n_start_in_data is only useful if we want to restart Broyden in the middle of iterations, 
+         * which we won't be doing in this parallel algorithm*/
+
+        F_curr_data.resize({0}, {site_size_loc}, The_Pinned_Arena());
+        delta_F_curr_data.resize({0}, {site_size_loc}, The_Pinned_Arena());
+        Norm_data.resize({0}, {site_size_loc}, The_Pinned_Arena());
+
+        SetVal_RealTable1D(n_curr_in_data,0.);
+        SetVal_RealTable1D(n_curr_out_data,0.);
+        SetVal_RealTable1D(n_prev_in_data,0.);
+        //SetVal_RealTable1D(n_start_in_data,0.);
+        SetVal_RealTable1D(n_curr_in_glo_data,0.);
+
+        SetVal_RealTable1D(F_curr_data,0.);
+        SetVal_RealTable1D(delta_F_curr_data, 0.);
+        SetVal_RealTable1D(Norm_data, 0.);
+
+
+        /*Need generalization for multiple CNTs*/
+        for (int c=0; c < vp_CNT.size(); ++c)
+        {
+            n_curr_in_glo_data.copy(vp_CNT[c]->h_n_curr_in_data); 
+	    }
+        /*fill n_curr_in (need to test this)*/
+        auto const& n_curr_in      = n_curr_in_data.table();
+        auto const& n_curr_in_glo  = n_curr_in_glo_data.table();
+        for(int i=0; i < site_size_loc; ++i) 
+        {
+            int gid = MPI_disp[my_rank] + i;
+            n_curr_in(i) = n_curr_in_glo(gid);
+        }
+
+        switch(map_AlgorithmType[Algorithm_Type])
+        {
+            case s_Algorithm::Type::broyden_first:
+            {
+                amrex::Abort("Algorithm, broyden_first is not parallelized. Compile with preprocessor directive, BROYDEN_PARALLEL=False, or use broyden_second algorithm.");
+                break;
+            }
+            case s_Algorithm::Type::broyden_second:
+            {
+	            // We would like to compute: VmatTran (i.e. V^T) x delta_F_curr
+	        	//
+		        // delta_F_curr is a vector of size num_field_sites_all_NS.
+	        	//
+	        	// VmatTran is a matrix of size (rows x columns): (number of iterations x num_field_sites_all_NS)
+        		// We set a limit on number of iterations using input parameter, 'Broyden_Threshold_MaxStep'.
+		        // Note that locally, each process stores only 'site_size_loc' portion out of num_field_sites_all_NS.
+	        	//
+        		// (VmatTran x delta_F_curr) is a vector of size Broyden_Threshold_MaxStep.
+	        	//
+        		// For RealTable2D inner index is the fast moving index.
+		        // So the multiplication VmatTran x delta_F_curr is  going to be fast 
+        		// if we do: VmatTran(*,iteration)*delta_F_curr(*)
+		
+                VmatTran_data.resize({0,0},{site_size_loc, Broyden_Threshold_MaxStep}, The_Pinned_Arena());
+
+	            // Similar considerations went into storing W, which is used in the multiplication,
+	        	// W(*,site)*VmatTran_DeltaF(*), where VmatTran_DeltaF is a vector of size Broyden_Threshold_MaxStep.  		
+                Wmat_data.resize({0,0},{Broyden_Threshold_MaxStep, site_size_loc}, The_Pinned_Arena());
+
+                SetVal_RealTable2D(VmatTran_data,0.);
+                SetVal_RealTable2D(Wmat_data,0.);
+
+                Define_MPI_Vector_Type_and_MPI_Vector_Sum();
+
+                break;
+            }
+            case s_Algorithm::Type::simple_mixing:
+            {
+                amrex::Abort("Algorithm, simple_Mixing is not parallelized. Compile with preprocessor directive, BROYDEN_PARALLEL=False, or use broyden_second algorithm.");
+                break;
+            }
+            default:
+            {
+                amrex::Abort("In Set_Broyden: selfconsistency_algorithm, " + Algorithm_Type + ", is not yet defined.");
+            }
+        }
+	
+        amrex::Print() << "\nBroyden parameters are set to the following: \n";
+        amrex::Print() << " Broyden_Step: "                          << Broyden_Step                          << "\n";
+        amrex::Print() << " Broyden_Scalar: "                        << Broyden_Scalar                        << "\n";
+        amrex::Print() << " Broyden_fraction: "                      << Broyden_fraction                      << "\n";
+        amrex::Print() << " Broyden_Max_Norm: "                      << Broyden_Norm                          << "\n";
+        amrex::Print() << " Broyden_NormSumIsIncreasing_Step: "      << Broyden_NormSumIsIncreasing_Step      << "\n";
+        amrex::Print() << " Broyden_NormSum_Curr: "                  << Broyden_NormSum_Curr                  << "\n";
+        amrex::Print() << " Broyden_NormSum_Prev: "                  << Broyden_NormSum_Prev                  << "\n";
+        amrex::Print() << " Broyden_Threshold_MaxStep: "             << Broyden_Threshold_MaxStep             << "\n";
+
+}
+
+
+void
+c_TransportSolver:: Reset_Broyden_Parallel ()
+{
+    amrex::Print() <<"\n\n\n\n**********************************Resetting Broyden**********************************\n";
+
+    if(flag_reset_with_previous_charge_distribution == 0) 
+    {
+        SetVal_RealTable1D(n_curr_in_data, NS_initial_deposit_value);
+        #if AMREX_USE_GPU
+        d_n_curr_in_data.copy(n_curr_in_data);
+        #endif
+    	amrex::Print() << "Input charge distribution is reset to: " << NS_initial_deposit_value << "\n";
+    }
+    /*else n_curr_in from previous iteration is used*/
+
+    SetVal_RealTable1D(n_curr_out_data, 0.);
+    SetVal_RealTable1D(n_prev_in_data, 0.);
+
+    SetVal_RealTable1D(F_curr_data, 0.);
+    SetVal_RealTable1D(delta_F_curr_data, 0.);
+    SetVal_RealTable1D(Norm_data, 0.);
+
+    switch(map_AlgorithmType[Algorithm_Type])
+    {
+        case s_Algorithm::Type::broyden_first:
+        {
+            break;
+        }
+        case s_Algorithm::Type::broyden_second:
+        {
+            SetVal_RealTable2D(VmatTran_data,0.);
+            SetVal_RealTable2D(Wmat_data,0.);
+            break;
+        }
+        case s_Algorithm::Type::simple_mixing:
+        {
+            break;
+        }
+        default:
+        {
+            amrex::Abort("In Reset_Broyden: selfconsistency_algorithm, " + Algorithm_Type + ", is not yet defined.");
+        }
+    }
+
+    Broyden_Step   = 1;
+    Broyden_Norm   = 1;
+    Broyden_Scalar = 1.;
+    Broyden_NormSumIsIncreasing_Step = 0;
+    Broyden_NormSum_Curr    = 1.e10;
+    Broyden_NormSum_Prev    = 1.e10;
+    Broyden_fraction = Broyden_Original_Fraction;
+
+    //n_start_in_data.copy(n_curr_in_data); 
+
+    amrex::Print() << "\nBroyden parameters are reset to the following: \n";
+    amrex::Print() << " Broyden_Step: "      << Broyden_Step     << "\n";
+    amrex::Print() << " Broyden_Scalar: "    << Broyden_Scalar   << "\n";
+    amrex::Print() << " Broyden_fraction: "  << Broyden_fraction << "\n";
+    amrex::Print() << " Broyden_Max_Norm: "  << Broyden_Norm     << "\n";
+    amrex::Print() << " Broyden_NormSumIsIncreasing_Step: "  << Broyden_NormSumIsIncreasing_Step << "\n";
+    amrex::Print() << " Broyden_NormSum_Curr: "              << Broyden_NormSum_Curr << "\n";
+    amrex::Print() << " Broyden_NormSum_Prev: "              << Broyden_NormSum_Prev << "\n";
+
+}
+
 
 void
 c_TransportSolver:: Set_Broyden ()
 {
 
+    num_field_sites_all_NS = 0;
+    for (int c=0; c < vp_CNT.size(); ++c)
+    {
+	    num_field_sites_all_NS += vp_CNT[c]->num_field_sites;
+    }	
+    amrex::Print() << "Number of field_sites at all nanostructures, num_field_sites_all_NS: " 
+                   << num_field_sites_all_NS << "\n";
+
     if (ParallelDescriptor::IOProcessor())
     {
-
         Broyden_Step = 1;
         Broyden_Norm = 1.;
         Broyden_Scalar = 1.;
@@ -511,6 +772,14 @@ c_TransportSolver:: Set_Broyden ()
         SetVal_RealTable1D(delta_n_curr_data, 0.);
 
 
+        /*Need generalization for multiple CNTs*/
+        for (int c=0; c < vp_CNT.size(); ++c)
+        {
+            n_curr_in_data.copy(vp_CNT[c]->h_n_curr_in_data); 
+        }
+        n_start_in_data.copy(n_curr_in_data);
+
+
         switch(map_AlgorithmType[Algorithm_Type])
         {
             case s_Algorithm::Type::broyden_first:
@@ -521,19 +790,19 @@ c_TransportSolver:: Set_Broyden ()
                 auto const& Jinv_curr    = Jinv_curr_data.table();
 
 
-		if(flag_initialize_inverse_jacobian) 
-		{
-		    int assert_size = std::pow(num_field_sites_all_NS, 2);
+		        if(flag_initialize_inverse_jacobian) 
+    	    	{
+    		    int assert_size = std::pow(num_field_sites_all_NS, 2);
 
                     Read_Table2D(assert_size, Jinv_curr_data, inverse_jacobian_filename);
-		}
-		else 
-		{
+		        }
+        		else 
+		        {
                     for(int a=0; a < num_field_sites_all_NS; ++a) 
                     {
                         Jinv_curr(a,a) = Broyden_fraction;
                     }
-		}
+        		}
                 break;
             }
             case s_Algorithm::Type::broyden_second:
@@ -986,6 +1255,235 @@ c_TransportSolver:: Execute_Simple_Mixing_Algorithm ()
 }
 
 
+void 
+c_TransportSolver::Execute_Broyden_Modified_Second_Algorithm_Parallel()
+{
+
+        amrex::Print() << "\nBroydenStep: " << Broyden_Step  
+		       << ",  fraction: "   << Broyden_fraction 
+		       << ",  scalar: " << Broyden_Scalar<< "\n";
+
+        /*vectors*/
+        auto const& n_curr_in      = n_curr_in_data.table();
+        auto const& n_curr_in_glo  = n_curr_in_glo_data.table();
+        auto const& n_curr_out     = n_curr_out_data.table();
+        auto const& n_prev_in      = n_prev_in_data.table();
+        
+        auto const& F_curr         = F_curr_data.table();
+        auto const& delta_F_curr   = delta_F_curr_data.table();
+        auto const& Norm           = Norm_data.table();
+
+        /*matrices*/
+        auto const& VmatTran       = VmatTran_data.table();
+        auto const& Wmat           = Wmat_data.table();
+
+        /*temp vectors*/
+        RealTable1D sum_vector_data({0}, {site_size_loc}, The_Pinned_Arena());
+        auto const& sum_vector = sum_vector_data.table();
+
+        RealTable1D intermed_vector_data({0}, {Broyden_Threshold_MaxStep}, The_Pinned_Arena());
+        auto const& intermed_vector = intermed_vector_data.table();
+
+        /*Initialize*/
+        SetVal_RealTable1D(Norm_data, 0.);
+        SetVal_RealTable1D(sum_vector_data, 0.);
+        SetVal_RealTable1D(intermed_vector_data, 0.);
+
+        /*Evaluate local (absolute or relative) and L2 norms*/
+        Broyden_NormSum_Curr = 0.; 
+        switch(map_NormType[Broyden_Norm_Type])
+        {
+            case s_Norm::Type::Absolute:
+            {
+                for(int site=0; site < site_size_loc; ++site)
+                {
+                    amrex::Real Fcurr = n_curr_in(site) - n_curr_out(site);
+                    Norm(site) = fabs(Fcurr);
+                    Broyden_NormSum_Curr += pow(Fcurr,2);
+                }
+                break;
+            }
+            case s_Norm::Type::Relative:
+            {
+                for(int site=0; site < site_size_loc; ++site)
+                {
+                    amrex::Real Fcurr = n_curr_in(site) - n_curr_out(site);
+
+                    Norm(site) = fabs(Fcurr/(n_curr_in(site) + n_curr_out(site)));
+
+                    Broyden_NormSum_Curr += pow(Norm(site),2);
+                }
+                break;
+            }
+            default:
+            {
+                amrex::Abort("Norm Type " + Broyden_Norm_Type + " is not yet defined.");
+            }
+        }
+
+        amrex::ParallelDescriptor::ReduceRealSum(Broyden_NormSum_Curr); /*check if it is all_reduce*/
+        Broyden_NormSum_Curr = sqrt(Broyden_NormSum_Curr);
+
+        /*find maximum local norm*/
+        Broyden_Norm = Norm(0);
+        //int norm_index = 0;
+        for(int site=1; site < site_size_loc; ++site)
+        {
+            if(Broyden_Norm < Norm(site))
+            {
+                Broyden_Norm = Norm(site);
+                //norm_index = site;
+            }
+        }
+        amrex::ParallelDescriptor::ReduceRealMax(Broyden_Norm); 
+
+        amrex::Print() << "\nBroyden_NormSum_Curr: " << std::setw(20) << Broyden_NormSum_Curr << "\n";
+        amrex::Print() <<   "Broyden_NormSum_Prev: " << std::setw(20) << Broyden_NormSum_Prev
+                       << ",   Difference: " << (Broyden_NormSum_Curr - Broyden_NormSum_Prev) << "\n";
+        //amrex::Print() << "Broyden max norm: " << Broyden_Norm << " at location: " <<  norm_index << "\n\n";
+        amrex::Print() << "Broyden max norm: " << Broyden_Norm << "\n\n";
+
+        /*extra info*/
+        if ((Broyden_NormSum_Curr - Broyden_NormSum_Prev) > 1.e-6)
+        {
+            Broyden_NormSumIsIncreasing_Step +=1;
+            amrex::Print() << "\nBroyden_NormSumIsIncreasing_Step: " << Broyden_NormSumIsIncreasing_Step << "\n";
+        }
+        else
+        {
+            Broyden_NormSumIsIncreasing_Step = 0;
+        }
+
+        /*Swap L2 norms*/
+        Broyden_NormSum_Prev = Broyden_NormSum_Curr; 
+
+        /*Evaluate denom = delta_F_curr^T * delta_F_curr */
+        amrex::Real denom = 0.;
+        for(int site=0; site < site_size_loc; ++site)
+        {
+            amrex::Real Fcurr = n_curr_in(site) - n_curr_out(site);
+            delta_F_curr(site) = Fcurr - F_curr(site);
+            F_curr(site) = Fcurr;
+            denom += pow(delta_F_curr(site),2.);
+        }
+        amrex::ParallelDescriptor::ReduceRealSum(denom); /*Allreduce*/
+
+        amrex::Print() << "n_curr_in, n_prev_in: " << n_curr_in(0) << " " << n_prev_in(0) << "\n";
+
+        int m = Broyden_Step-1;
+        if(m > 0)
+        {
+            /*First, evaluate W*(V^T*deltaF), i.e. Wmat*(VmatTran*delta_F_curr)*/
+            /*Use intermed_vector to temporarily store vector (VmatTran*delta_F_curr)*/
+
+            for(int iter=1; iter <= m-1; ++iter)
+            {
+                amrex::Real sum = 0.;   
+                for(int site=0; site < site_size_loc; ++site)
+                {
+	                sum += VmatTran(site,iter) * delta_F_curr(site);  		
+	            }
+		        intermed_vector(iter) = sum;
+            }
+
+            /*Allreduce intermed_vector for complete matrix-vector multiplication*/
+            MPI_Allreduce(MPI_IN_PLACE,
+	            		 &intermed_vector(0),
+	            		  1,
+                          MPI_Vector_Type,
+			              Vector_Add,
+                          ParallelDescriptor::Communicator());
+
+	        /*Use sum_vector to temporarily store Wmat*intermed_vector */
+            for(int site=0; site < site_size_loc; ++site)
+            {
+        		amrex::Real sum = 0.;   
+                for(int iter=1; iter <= m-1; ++iter)
+                {
+	                sum += Wmat(iter,site) * intermed_vector(iter);  		
+	            }
+                sum_vector(site) = sum;
+	        }
+
+            /*Evaluate Wmat and VmatTran at iteration m*/
+            for(int site=0; site < site_size_loc; ++site)
+            {
+                amrex::Real delta_n = n_curr_in(site) - n_prev_in(site);
+
+                VmatTran(site,m) = delta_F_curr(site)/denom;
+
+        		/*Access to (m,site) will be slower*/
+                Wmat(m, site)  = - Broyden_fraction*delta_F_curr(site) 
+		                         + delta_n 
+		                         - sum_vector(site); 
+            }
+
+            /*Next, evaluate W*(V^T*F_curr), i.e. Wmat*(VmatTran*F_curr)*/
+            /*Reuse intermed_vector to temporarily store vector (VmatTran*F_curr)*/
+
+            SetVal_RealTable1D(intermed_vector_data, 0.);
+
+            for(int iter=1; iter <= m; ++iter)
+            {
+        		amrex::Real sum = 0.;   
+                for(int site=0; site < site_size_loc; ++site)
+                {
+	                sum += VmatTran(site, iter) * F_curr(site);  		
+	            }
+		        intermed_vector(iter) = sum;
+            }
+
+            /*Allreduce intermed_vector for complete matrix-vector multiplication*/
+            MPI_Allreduce(MPI_IN_PLACE,
+			             &intermed_vector(0),
+            			  1,
+                          MPI_Vector_Type,
+			              Vector_Add,
+                          ParallelDescriptor::Communicator());
+
+    	    /*Reuse sum_vector to temporarily store Wmat*intermed_vector */
+            SetVal_RealTable1D(sum_vector_data, 0.);
+
+            for(int site=0; site < site_size_loc; ++site)
+            {
+	        	amrex::Real sum = 0.;   
+                for(int iter=1; iter <= m; ++iter)
+                {
+	                sum += Wmat(iter, site) * intermed_vector(iter);  		
+	            }
+                sum_vector(site) = sum;
+    	    }
+        } /*end of if(m > 0) */
+
+        /*Store current n in previous n, predict next n and store it in current n*/
+        for(int site=0; site < site_size_loc; ++site)
+        {
+            n_prev_in(site) = n_curr_in(site);
+
+            n_curr_in(site) =  n_prev_in(site) 
+		                     - Broyden_Scalar * Broyden_fraction * F_curr(site) 
+                			 - Broyden_Scalar * sum_vector(site);
+        }
+        amrex::Print() << "n_new_in: " << n_curr_in(0) << "\n";
+
+        /*Clear vectors*/
+        sum_vector_data.clear();
+        intermed_vector_data.clear();
+
+        /*Increment Broyden_Step*/
+        Broyden_Step += 1;
+
+
+        MPI_Allgatherv(&n_curr_in(0),
+                        site_size_loc,
+                        MPI_DOUBLE,
+                       &n_curr_in_glo(0),
+                        MPI_recv_count.data(),
+                        MPI_disp.data(),
+                        MPI_DOUBLE,
+                        ParallelDescriptor::Communicator());
+}
+
 
 void 
 c_TransportSolver::Execute_Broyden_Modified_Second_Algorithm()
@@ -1208,6 +1706,22 @@ c_TransportSolver::Execute_Broyden_Modified_Second_Algorithm()
 void
 c_TransportSolver::Deallocate_Broyden ()
 {
+    #ifdef BROYDEN_PARALLEL
+       n_curr_in_data.clear();
+      n_curr_out_data.clear();
+       n_prev_in_data.clear();
+   n_curr_in_glo_data.clear();
+
+          F_curr_data.clear();
+    delta_F_curr_data.clear();
+            Norm_data.clear();
+
+        VmatTran_data.clear();
+            Wmat_data.clear();
+
+    Free_MPI_Vector_Type_and_MPI_Vector_Sum();
+
+    #else
     if (ParallelDescriptor::IOProcessor())
     {
         n_curr_in_data.clear();
@@ -1218,6 +1732,7 @@ c_TransportSolver::Deallocate_Broyden ()
         delta_F_curr_data.clear();
         delta_n_curr_data.clear();
     }
+    #endif
 }
 
 void

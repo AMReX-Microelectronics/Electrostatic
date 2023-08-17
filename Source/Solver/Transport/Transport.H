@@ -173,6 +173,51 @@ private:
                        std::string header);
 
 
+    int total_proc;
+    int my_rank;
+    int num_procs_with_sites;
+    int site_size_loc;
+    amrex::Vector<int> MPI_recv_count;
+    amrex::Vector<int> MPI_disp;
+    RealTable2D Wmat_data;
+    RealTable2D VmatTran_data;
+    RealTable1D n_curr_in_glo_data;
+
+    MPI_Datatype MPI_Vector_Type;
+    MPI_Op Vector_Add;
+
+    void Set_Broyden_Parallel();
+    void Reset_Broyden_Parallel();
+    void Define_Broyden_Partition();
+    void Define_MPI_Vector_Type_and_MPI_Vector_Sum();
+    void Free_MPI_Vector_Type_and_MPI_Vector_Sum();
+
+    static void Vector_Add_Func_wrapper(double* A, double* B, int* veclen, MPI_Datatype* dtype) 
+    {
+        reinterpret_cast<c_TransportSolver*>(A,B,veclen,dtype)->Vector_Add_Func(A,B,veclen,dtype);
+    }
+
+    void Vector_Add_Func(double* A, double* B, int* veclen, MPI_Datatype* dtype)
+    {
+        /* Note: https://www.mpich.org/static/docs/v3.2/www3/MPI_Op_create.html
+         *
+         * The calling list for the user function type is
+         * typedef void (MPI_User_function) ( void * A, void * B, int * veclen, MPI_Datatype * ); 
+         * where the operation is B[i] = A[i] op B[i], for i=0,...,veclen-1. 
+         * A pointer to the datatype given to the MPI collective computation routine (i.e., MPI_Reduce, MPI_Allreduce, 
+         * MPI_Scan, or MPI_Reduce_scatter) is also passed to the user-specified routine. 
+         *
+         */
+        double* Avec = A;
+        double* Bvec = B;
+        for (int i=0; i<*veclen; ++i)
+        {
+            Bvec[i] += Avec[i];
+        }
+
+    }
+    void Execute_Broyden_Modified_Second_Algorithm_Parallel();
+
 };
 
 #endif

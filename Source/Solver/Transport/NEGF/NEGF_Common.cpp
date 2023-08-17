@@ -1256,7 +1256,7 @@ c_NEGF_Common<T>:: Gather_NEGFComputed_Charge (RealTable1D& n_curr_out_data)
                     MPI_recv_count.data(),
                     MPI_disp.data(),
                     MPI_DOUBLE,
-		    ParallelDescriptor::IOProcessorNumber(),
+        		    ParallelDescriptor::IOProcessorNumber(),
                     ParallelDescriptor::Communicator());
 
     MPI_Barrier(ParallelDescriptor::Communicator());

@@ -400,12 +400,12 @@ c_Nanostructure<NSType>::Deposit_AtomAttributeToMesh()
 
 
             amrex::Real lx = (p_par[p].pos(0) - plo[0] - dx[0]*0.5)/dx[0];
-	    amrex::Real ly = (p_par[p].pos(1) - plo[1] - dx[1]*0.5)/dx[1];
-	    amrex::Real lz = (p_par[p].pos(2) - plo[2] - dx[2]*0.5)/dx[2];
+    	    amrex::Real ly = (p_par[p].pos(1) - plo[1] - dx[1]*0.5)/dx[1];
+	        amrex::Real lz = (p_par[p].pos(2) - plo[2] - dx[2]*0.5)/dx[2];
 
-	    int i = static_cast<int>(amrex::Math::floor(lx)); 
-	    int j = static_cast<int>(amrex::Math::floor(ly)); 
-	    int k = static_cast<int>(amrex::Math::floor(lz));
+	        int i = static_cast<int>(amrex::Math::floor(lx)); 
+    	    int j = static_cast<int>(amrex::Math::floor(ly)); 
+	        int k = static_cast<int>(amrex::Math::floor(lz));
 
             amrex::Real wx_hi = lx - i;
             amrex::Real wy_hi = ly - j;
