@@ -262,8 +262,10 @@ c_TransportSolver::InitData()
     amrex::Print() << "#####* Broyden_Norm_Type: "          << Broyden_Norm_Type          << "\n";
 
     #ifdef BROYDEN_PARALLEL
+    amrex::Print() << "Setting Broyden PARALLEL\n";
     Set_Broyden_Parallel();
     #else
+    amrex::Print() << "Setting Broyden SERIAL\n";
     Set_Broyden();
     #endif
 
@@ -363,7 +365,7 @@ c_TransportSolver::Solve(const int step, const amrex::Real time)
                /*Need a strategy to gather data for multiple CNTs*/
                #ifdef BROYDEN_PARALLEL
                /*some if condition to check if processor was used for charge computation of this nanostructure*/
-               n_curr_out.copy(vp_CNT[c]->h_RhoInduced_loc(0));
+               n_curr_out_data.copy(vp_CNT[c]->h_RhoInduced_loc_data);
                #else
 	           vp_CNT[c]->Gather_NEGFComputed_Charge(n_curr_out_data); 
                #endif

@@ -30,6 +30,12 @@ ifeq ($(USE_TRANSPORT),TRUE)
   DEFINES += -DUSE_TRANSPORT
 endif
 
+
+ifeq ($(BROYDEN_PARALLEL),TRUE)
+  USERSuffix := $(USERSuffix).BROYPRLL
+  DEFINES += -DBROYDEN_PARALLEL
+endif
+
 AMREX_pack   += $(foreach dir, $(AMREX_dirs), $(AMREX_HOME)/Src/$(dir)/Make.package)
 include $(AMREX_pack)
 
