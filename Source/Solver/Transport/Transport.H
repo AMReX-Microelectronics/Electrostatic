@@ -183,6 +183,11 @@ private:
     RealTable2D VmatTran_data;
     RealTable1D n_curr_in_glo_data;
 
+    RealTable1D n_curr_out_glo_data;
+    RealTable1D Norm_glo_data;
+    void Create_Global_Output_Data();
+    void Clear_Global_Output_Data();
+
     MPI_Datatype MPI_Vector_Type;
     MPI_Op Vector_Add;
 
@@ -208,15 +213,16 @@ private:
          * MPI_Scan, or MPI_Reduce_scatter) is also passed to the user-specified routine. 
          *
          */
-        double* Avec = A;
-        double* Bvec = B;
-        for (int i=0; i<*veclen; ++i)
+        //double* Avec = A;
+        //double* Bvec = B;
+        for (int i=0; i < *veclen; ++i)
         {
-            Bvec[i] += Avec[i];
+            B[i] += A[i];
         }
 
     }
     void Execute_Broyden_Modified_Second_Algorithm_Parallel();
+    void Execute_Broyden_Modified_Second_Algorithm_Parallel_PllFor();
 
 };
 

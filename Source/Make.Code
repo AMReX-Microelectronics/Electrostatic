@@ -36,6 +36,10 @@ ifeq ($(BROYDEN_PARALLEL),TRUE)
   DEFINES += -DBROYDEN_PARALLEL
 endif
 
+ifeq ($(BROYDEN_SKIP_GPU_OPTIMIZATION),TRUE)
+  DEFINES += -DBROYDEN_SKIP_GPU_OPTIMIZATION
+endif
+
 AMREX_pack   += $(foreach dir, $(AMREX_dirs), $(AMREX_HOME)/Src/$(dir)/Make.package)
 include $(AMREX_pack)
 

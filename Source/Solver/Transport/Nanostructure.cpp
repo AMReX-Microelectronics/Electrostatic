@@ -533,25 +533,20 @@ template<typename NSType>
 void 
 c_Nanostructure<NSType>::Write_PotentialAtSites(const std::string filename_prefix) 
 {
+    std::ofstream outfile;
 
-    if (ParallelDescriptor::IOProcessor()) 
+    std::string filename = filename_prefix + "_U.dat";
+
+    outfile.open(filename);
+
+    //amrex::Print() << "Root Writing " << filename << "\n";
+    
+    for (int l=0; l<NSType::num_field_sites; ++l)
     {
-        std::ofstream outfile;
+        outfile << l << std::setw(35) << NSType::PTD[l] << std::setw(35) << NSType::Potential[l] << "\n";
+    }  
 
-        std::string filename = filename_prefix + "_U.dat";
-
-        outfile.open(filename);
-
-        //amrex::Print() << "Root Writing " << filename << "\n";
-        
-        for (int l=0; l<NSType::num_field_sites; ++l)
-        {
-            outfile << l << std::setw(35) << NSType::PTD[l] << std::setw(35) << NSType::Potential[l] << "\n";
-        }  
-
-        outfile.close();
-    }
-
+    outfile.close();
 }
 
 
@@ -619,11 +614,12 @@ c_Nanostructure<NSType>:: Write_Data (const std::string filename_prefix, RealTab
 
     BL_PROFILE_VAR("Write_Data", compute_write_data);
 
-    Write_PotentialAtSites(filename_prefix);
-
-    NSType::Write_InducedCharge(filename_prefix, n_curr_out_data);
-
-    NSType::Write_ChargeNorm(filename_prefix, Norm_data);
+    if (ParallelDescriptor::IOProcessor())
+    {
+        Write_PotentialAtSites(filename_prefix);
+        NSType::Write_InducedCharge(filename_prefix, n_curr_out_data);
+        NSType::Write_ChargeNorm(filename_prefix, Norm_data);
+    }
 
     BL_PROFILE_VAR_STOP(compute_write_data);
 

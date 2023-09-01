@@ -1302,15 +1302,10 @@ void
 c_NEGF_Common<T>:: Write_InducedCharge (const std::string filename_prefix, RealTable1D& n_curr_out_data)
 {
 
-    if (ParallelDescriptor::IOProcessor())
-    {
+    std::string filename = filename_prefix + "_Qout.dat";
 
-        std::string filename = filename_prefix + "_Qout.dat";
-
-        Write_Table1D(PTD, n_curr_out_data, filename.c_str(), 
+    Write_Table1D(PTD, n_curr_out_data, filename.c_str(), 
                       "'axial location / (nm)', 'Induced charge per site / (e)'");
-    }
-
 }
 
 
@@ -1319,13 +1314,10 @@ void
 c_NEGF_Common<T>:: Write_ChargeNorm (const std::string filename_prefix, RealTable1D& Norm_data)
 {
 
-    if (ParallelDescriptor::IOProcessor())
-    {
-        std::string filename = filename_prefix + "_norm.dat";
+    std::string filename = filename_prefix + "_norm.dat";
 
-        Write_Table1D(PTD, Norm_data, filename.c_str(), 
-                      "'axial location / (nm)', 'norm");
-    }
+    Write_Table1D(PTD, Norm_data, filename.c_str(), 
+                  "'axial location / (nm)', 'norm");
 
 }
 
