@@ -88,16 +88,17 @@ private:
     int Broyden_Step = 1;
     amrex::Real Broyden_fraction = 0.1;
     amrex::Real Broyden_Original_Fraction = 0.1;
-    AMREX_GPU_MANAGED amrex::Real Broyden_Norm = 1.0;
     int Broyden_Correction_Step = 0;
     int Broyden_NormSumIsIncreasing_Step = 0;
     int Broyden_Reset_Step = 0;
     amrex::Real Broyden_Scalar = 1.0;
-    AMREX_GPU_MANAGED amrex::Real Broyden_NormSum_Curr = 1.e10;
     amrex::Real Broyden_NormSum_Prev = 1.e100;
 
+    AMREX_GPU_MANAGED amrex::Real Broyden_Norm = 1.0;
+    AMREX_GPU_MANAGED amrex::Real Broyden_NormSum_Curr = 1.e10;
+    AMREX_GPU_MANAGED amrex::Real Broyden_Denom;
+    AMREX_GPU_MANAGED int Broyden_Threshold_MaxStep = 200;
 
-    int Broyden_Threshold_MaxStep = 200;
     int Broyden_Threshold_NormSumIncreaseStep = 8;
     int Broyden_Threshold_CorrectionStep = 1;
     amrex::Real Broyden_Threshold_MinFraction = 0.01;
@@ -125,17 +126,35 @@ private:
            {"Relative"        , s_Norm::Type::Relative}
         };
     
-    RealTable1D n_curr_in_data;
-    RealTable1D n_start_in_data;
-    RealTable1D n_curr_out_data;
-    RealTable1D n_prev_in_data;
-    RealTable1D F_curr_data;
-    RealTable1D Norm_data;
+    RealTable1D h_n_curr_in_data;
+    RealTable1D h_intermed_vector_data;
+    #ifdef AMREX_USE_GPU
+    RealTable1D d_n_curr_in_data;
+    RealTable1D d_n_curr_out_data;
+    RealTable1D d_n_prev_in_data;
+    RealTable1D d_F_curr_data;
+    RealTable1D d_delta_F_curr_data;
+    RealTable1D d_Norm_data;
+    RealTable1D d_sum_vector_data;
+    RealTable1D d_intermed_vector_data;
 
-    RealTable1D delta_F_curr_data;
-    RealTable1D delta_n_curr_data;
+    RealTable2D d_Wmat_data;
+    RealTable2D d_VmatTran_data;
+    #else
+    RealTable1D h_n_curr_out_data;
+    RealTable1D h_n_prev_in_data;
+    RealTable1D h_F_curr_data;
+    RealTable1D h_delta_F_curr_data;
+    RealTable1D h_Norm_data;
+    RealTable1D h_sum_vector_data;
 
-    RealTable2D Jinv_curr_data;
+    RealTable2D h_Wmat_data;
+    RealTable2D h_VmatTran_data;
+    #endif
+
+    RealTable1D h_n_start_in_data;
+    RealTable1D h_delta_n_curr_data;
+    RealTable2D h_Jinv_curr_data;
 
     amrex::Vector<RealTable1D*> W_Broyden;
     amrex::Vector<RealTable1D*> V_Broyden;
@@ -179,12 +198,11 @@ private:
     int site_size_loc;
     amrex::Vector<int> MPI_recv_count;
     amrex::Vector<int> MPI_disp;
-    RealTable2D Wmat_data;
-    RealTable2D VmatTran_data;
-    RealTable1D n_curr_in_glo_data;
 
+    RealTable1D n_curr_in_glo_data;
     RealTable1D n_curr_out_glo_data;
     RealTable1D Norm_glo_data;
+
     void Create_Global_Output_Data();
     void Clear_Global_Output_Data();
 

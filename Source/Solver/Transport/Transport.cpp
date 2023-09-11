@@ -365,8 +365,14 @@ c_TransportSolver::Solve(const int step, const amrex::Real time)
 
                /*Need a strategy to gather data for multiple CNTs*/
                #ifdef BROYDEN_PARALLEL
-               /*some if condition to check if processor was used for charge computation of this nanostructure*/
-               n_curr_out_data.copy(vp_CNT[c]->h_RhoInduced_loc_data);
+               /* (?) Future: if condition to check if proc was used for charge computation of this nanostructure*/
+               /* (?) Future: for multiple nanotubes, then gather the data into a global array and then partition */
+               #ifdef AMREX_USE_GPU
+               d_n_curr_out_data.copy(vp_CNT[c]->h_RhoInduced_loc_data); 
+               #else
+               n_curr_out_data.copy(vp_CNT[c]->h_RhoInduced_loc_data); 
+               #endif
+
                #else
 	           vp_CNT[c]->Gather_NEGFComputed_Charge(n_curr_out_data); 
                #endif
@@ -387,11 +393,13 @@ c_TransportSolver::Solve(const int step, const amrex::Real time)
                 case s_Algorithm::Type::broyden_second:
                 {
 		            #ifdef BROYDEN_PARALLEL	
-		                #ifdef BROYDEN_SKIP_GPU_OPTIMIZATION	
-	                    Execute_Broyden_Modified_Second_Algorithm_Parallel(); 
-                        #else
-	                    Execute_Broyden_Modified_Second_Algorithm_Parallel_PllFor(); 
-                        #endif
+
+		            #ifdef BROYDEN_SKIP_GPU_OPTIMIZATION	
+	                Execute_Broyden_Modified_Second_Algorithm_Parallel(); 
+                    #else
+	                Execute_Broyden_Modified_Second_Algorithm_Parallel_PllFor(); 
+                    #endif
+
                     #else
     	            Execute_Broyden_Modified_Second_Algorithm(); 
                     #endif
@@ -413,12 +421,13 @@ c_TransportSolver::Solve(const int step, const amrex::Real time)
            for (int c=0; c < vp_CNT.size(); ++c)
            {
 		       #ifdef BROYDEN_PARALLEL	
-               /*if condition to check if processor was used for charge computation of this nanostructure*/
-               vp_CNT[c]->h_n_curr_in_data.copy(n_curr_in_glo_data); 
+               /*(?) Future: if condition to check if proc was used for charge computation of this nanostructure*/
+               vp_CNT[c]->h_n_curr_in_data.copy(n_curr_in_glo_data); /*?*/
                #else
                if (ParallelDescriptor::IOProcessor())
                {
-                   vp_CNT[c]->h_n_curr_in_data.copy(n_curr_in_data); /*Need generalization for multiple CNTs*/
+                   vp_CNT[c]->h_n_curr_in_data.copy(h_n_curr_in_data); 
+                   /*(?) Future: Need generalization for multiple CNTs*/
 	           }
     	       vp_CNT[c]->Broadcast_BroydenPredicted_Charge();
                #endif
@@ -426,7 +435,7 @@ c_TransportSolver::Solve(const int step, const amrex::Real time)
 	           if(vp_CNT[c]->write_at_iter) 
 	           {
                    #ifdef BROYDEN_PARALLEL
-                   Create_Global_Output_Data();
+                   Create_Global_Output_Data(); /*?*/
                    vp_CNT[c]->Write_Data(vp_CNT[c]->iter_filename_str, n_curr_out_glo_data, Norm_glo_data);
                    #else
                    vp_CNT[c]->Write_Data(vp_CNT[c]->iter_filename_str, n_curr_out_data, Norm_data);
@@ -446,7 +455,7 @@ c_TransportSolver::Solve(const int step, const amrex::Real time)
         for (int c=0; c < vp_CNT.size(); ++c)
         {
             #ifdef BROYDEN_PARALLEL
-            vp_CNT[c]->Write_Data(vp_CNT[c]->step_filename_str, n_curr_out_glo_data, Norm_glo_data);
+            vp_CNT[c]->Write_Data(vp_CNT[c]->step_filename_str, n_curr_out_glo_data, Norm_glo_data); /*?*/
             #else
             vp_CNT[c]->Write_Data(vp_CNT[c]->step_filename_str, n_curr_out_data, Norm_data);
             #endif
@@ -640,29 +649,17 @@ c_TransportSolver:: Set_Broyden_Parallel ()
         Broyden_NormSum_Prev = 1.e10;
         Broyden_fraction = Broyden_Original_Fraction;
 
-        n_curr_in_data.resize({0}, {site_size_loc}, The_Pinned_Arena());
-        n_curr_out_data.resize({0}, {site_size_loc}, The_Pinned_Arena());
-        n_prev_in_data.resize({0}, {site_size_loc}, The_Pinned_Arena());
         n_curr_in_glo_data.resize({0},{num_field_sites_all_NS}, The_Pinned_Arena());
-
-        //n_start_in_data.resize({0}, {site_size_loc}, The_Pinned_Arena());
-        /* Note that n_start_in_data is only useful if we want to restart Broyden in the middle of iterations, 
-         * which we won't be doing in this parallel algorithm*/
-
-        F_curr_data.resize({0}, {site_size_loc}, The_Pinned_Arena());
-        delta_F_curr_data.resize({0}, {site_size_loc}, The_Pinned_Arena());
-        Norm_data.resize({0}, {site_size_loc}, The_Pinned_Arena());
-
-        SetVal_RealTable1D(n_curr_in_data,0.);
-        SetVal_RealTable1D(n_curr_out_data,0.);
-        SetVal_RealTable1D(n_prev_in_data,0.);
-        //SetVal_RealTable1D(n_start_in_data,0.);
         SetVal_RealTable1D(n_curr_in_glo_data,0.);
 
-        SetVal_RealTable1D(F_curr_data,0.);
-        SetVal_RealTable1D(delta_F_curr_data, 0.);
-        SetVal_RealTable1D(Norm_data, 0.);
+        h_n_curr_in_data.resize({0}, {site_size_loc}, The_Pinned_Arena());
+        SetVal_RealTable1D(h_n_curr_in_data,0.);
 
+        n_curr_out_data.resize({0}, {site_size_loc}, The_Pinned_Arena());
+        SetVal_RealTable1D(n_curr_out_data,0.);
+
+        auto const& h_n_curr_in    = h_n_curr_in_data.table();
+        auto const& n_curr_in_glo  = n_curr_in_glo_data.table();
 
         /*Need generalization for multiple CNTs*/
         for (int c=0; c < vp_CNT.size(); ++c)
@@ -670,13 +667,49 @@ c_TransportSolver:: Set_Broyden_Parallel ()
             n_curr_in_glo_data.copy(vp_CNT[c]->h_n_curr_in_data); 
 	    }
         /*fill n_curr_in (need to test this)*/
-        auto const& n_curr_in      = n_curr_in_data.table();
-        auto const& n_curr_in_glo  = n_curr_in_glo_data.table();
         for(int i=0; i < site_size_loc; ++i) 
         {
             int gid = MPI_disp[my_rank] + i;
-            n_curr_in(i) = n_curr_in_glo(gid);
+            h_n_curr_in(i) = n_curr_in_glo(gid);
         }
+
+#ifdef AMREX_USE_GPU
+        d_n_curr_in_data.resize({0}, {site_size_loc}, The_Arena());
+        d_n_curr_in_data.copy(h_n_curr_in_data);
+
+        d_n_curr_out_data.resize({0}, {site_size_loc}, The_Arena());
+        d_n_prev_in_data.resize({0}, {site_size_loc}, The_Arena());
+        d_F_curr_data.resize({0}, {site_size_loc}, The_Arena());
+        d_delta_F_curr_data.resize({0}, {site_size_loc}, The_Arena());
+        d_Norm_data.resize({0}, {site_size_loc}, The_Arena());
+
+        auto const& n_curr_out      = d_n_curr_out_data.table();
+        auto const& n_prev_in       = d_n_prev_in_data.table();
+        auto const& F_curr          = d_F_curr_data.table();
+        auto const& delta_F_curr    = d_delta_F_curr_data.table();
+        auto const& Norm            = d_Norm_data.table();
+
+        amrex::ParallelFor(site_size_loc, [=] AMREX_GPU_DEVICE (int site) noexcept
+        {
+            n_curr_out(site)   = 0.;
+            n_prev_in(site)    = 0.;
+            F_curr(site)       = 0.;
+            delta_F_curr(site) = 0.;
+            Norm(site)         = 0.;
+        });
+
+        amrex::Gpu::streamSynchronize();
+#else 
+        n_prev_in_data.resize({0}, {site_size_loc}, The_Pinned_Arena());
+        F_curr_data.resize({0}, {site_size_loc}, The_Pinned_Arena());
+        delta_F_curr_data.resize({0}, {site_size_loc}, The_Pinned_Arena());
+        Norm_data.resize({0}, {site_size_loc}, The_Pinned_Arena());
+
+        SetVal_RealTable1D(n_prev_in_data,0.);
+        SetVal_RealTable1D(F_curr_data,0.);
+        SetVal_RealTable1D(delta_F_curr_data, 0.);
+        SetVal_RealTable1D(Norm_data, 0.);
+#endif
 
         switch(map_AlgorithmType[Algorithm_Type])
         {
@@ -687,6 +720,7 @@ c_TransportSolver:: Set_Broyden_Parallel ()
             }
             case s_Algorithm::Type::broyden_second:
             {
+                /*Matrices*/
 	            // We would like to compute: VmatTran (i.e. V^T) x delta_F_curr
 	        	//
 		        // delta_F_curr is a vector of size num_field_sites_all_NS.
@@ -700,18 +734,51 @@ c_TransportSolver:: Set_Broyden_Parallel ()
         		// For RealTable2D inner index is the fast moving index.
 		        // So the multiplication VmatTran x delta_F_curr is  going to be fast 
         		// if we do: VmatTran(*,iteration)*delta_F_curr(*)
-		
-                VmatTran_data.resize({0,0},{site_size_loc, Broyden_Threshold_MaxStep}, The_Pinned_Arena());
-
 	            // Similar considerations went into storing W, which is used in the multiplication,
 	        	// W(*,site)*VmatTran_DeltaF(*), where VmatTran_DeltaF is a vector of size Broyden_Threshold_MaxStep.  		
+                #ifdef AMREX_USE_GPU
+                d_sum_vector_data.resize({0}, {site_size_loc}, The_Arena());
+                d_intermed_vector_data.resize({0}, {Broyden_Threshold_MaxStep}, The_Arena());
+
+                d_VmatTran_data.resize({0,0},{site_size_loc, Broyden_Threshold_MaxStep}, The_Arena());
+                d_Wmat_data.resize({0,0},{Broyden_Threshold_MaxStep, site_size_loc}, The_Arena());
+
+                auto const& sum_vector      = d_sum_vector_data.table();
+                auto const& intermed_vector = d_intermed_vector_data.table();
+                auto const& VmatTran       = d_VmatTran_data.table();
+                auto const& Wmat           = d_Wmat_data.table();
+
+                amrex::ParallelFor(site_size_loc, [=] AMREX_GPU_DEVICE (int site) noexcept
+                {
+                    for(int iter=0; iter < Broyden_Threshold_MaxStep; ++iter) 
+                    {
+                        VmatTran(site,iter) = 0.;
+                        Wmat(iter,site)     = 0.;
+                    }
+                    sum_vector(site)   = 0.;
+                    for(int iter=site; iter < Broyden_Threshold_MaxStep; iter += site_size_loc) 
+                    {
+                        itermed_vector(iter) = 0.;
+                    }
+                });
+                amrex::Gpu::streamSynchronize();
+                #else
+                sum_vector_data.resize({0}, {site_size_loc}, The_Pinned_Arena());
+
+                VmatTran_data.resize({0,0},{site_size_loc, Broyden_Threshold_MaxStep}, The_Pinned_Arena());
                 Wmat_data.resize({0,0},{Broyden_Threshold_MaxStep, site_size_loc}, The_Pinned_Arena());
+
+                SetVal_RealTable1D(sum_vector_data, 0.);
 
                 SetVal_RealTable2D(VmatTran_data,0.);
                 SetVal_RealTable2D(Wmat_data,0.);
+                #endif 
+
+                h_intermed_vector_data.resize({0}, {Broyden_Threshold_MaxStep}, The_Pinned_Arena());
+                SetVal_RealTable1D(intermed_vector_data, 0.);
+
 
                 Define_MPI_Vector_Type_and_MPI_Vector_Sum();
-
                 break;
             }
             case s_Algorithm::Type::simple_mixing:
@@ -745,20 +812,38 @@ c_TransportSolver:: Reset_Broyden_Parallel ()
 
     if(flag_reset_with_previous_charge_distribution == 0) 
     {
-        SetVal_RealTable1D(n_curr_in_data, NS_initial_deposit_value);
+        SetVal_RealTable1D(h_n_curr_in_data, NS_initial_deposit_value);
         #if AMREX_USE_GPU
-        d_n_curr_in_data.copy(n_curr_in_data);
+        d_n_curr_in_data.copy(h_n_curr_in_data);
         #endif
     	amrex::Print() << "Input charge distribution is reset to: " << NS_initial_deposit_value << "\n";
     }
     /*else n_curr_in from previous iteration is used*/
 
+
+    #ifdef AMREX_USE_GPU
+    auto const& n_curr_out      = d_n_curr_out_data.table();
+    auto const& n_prev_in       = d_n_prev_in_data.table();
+    auto const& F_curr          = d_F_curr_data.table();
+    auto const& delta_F_curr    = d_delta_F_curr_data.table();
+    auto const& Norm            = d_Norm_data.table();
+
+    amrex::ParallelFor(site_size_loc, [=] AMREX_GPU_DEVICE (int site) noexcept
+    {
+        n_curr_out(site)   = 0.;
+        n_prev_in(site)    = 0.;
+        F_curr(site)       = 0.;
+        delta_F_curr(site) = 0.;
+        Norm(site)         = 0.;
+    });
+    amrex::Gpu::streamSynchronize();
+    #else
     SetVal_RealTable1D(n_curr_out_data, 0.);
     SetVal_RealTable1D(n_prev_in_data, 0.);
-
     SetVal_RealTable1D(F_curr_data, 0.);
     SetVal_RealTable1D(delta_F_curr_data, 0.);
     SetVal_RealTable1D(Norm_data, 0.);
+    #endif
 
     switch(map_AlgorithmType[Algorithm_Type])
     {
@@ -768,8 +853,35 @@ c_TransportSolver:: Reset_Broyden_Parallel ()
         }
         case s_Algorithm::Type::broyden_second:
         {
+            #ifdef AMREX_USE_GPU
+            auto const& sum_vector      = d_sum_vector_data.table();
+            auto const& intermed_vector = d_intermed_vector_data.table();
+
+            auto const& VmatTran       = d_VmatTran_data.table();
+            auto const& Wmat           = d_Wmat_data.table();
+
+            amrex::ParallelFor(site_size_loc, [=] AMREX_GPU_DEVICE (int site) noexcept
+            {
+                for(int iter=0; iter < Broyden_Threshold_MaxStep; ++iter) 
+                {
+                    VmatTran(site,iter) = 0.;
+                    Wmat(iter,site)     = 0.;
+                }
+                sum_vector(site)   = 0.;
+                for(int iter=site; iter < Broyden_Threshold_MaxStep; iter += site_size_loc) 
+                {
+                    itermed_vector(iter) = 0.;
+                }
+            });
+            amrex::Gpu::streamSynchronize();
+            #else
+            SetVal_RealTable1D(sum_vector_data, 0.);
             SetVal_RealTable2D(VmatTran_data,0.);
             SetVal_RealTable2D(Wmat_data,0.);
+            #endif 
+
+            SetVal_RealTable1D(h_intermed_vector_data, 0.);
+
             break;
         }
         case s_Algorithm::Type::simple_mixing:
@@ -789,8 +901,6 @@ c_TransportSolver:: Reset_Broyden_Parallel ()
     Broyden_NormSum_Curr    = 1.e10;
     Broyden_NormSum_Prev    = 1.e10;
     Broyden_fraction = Broyden_Original_Fraction;
-
-    //n_start_in_data.copy(n_curr_in_data); 
 
     amrex::Print() << "\nBroyden parameters are reset to the following: \n";
     amrex::Print() << " Broyden_Step: "      << Broyden_Step     << "\n";
@@ -828,32 +938,30 @@ c_TransportSolver:: Set_Broyden ()
         Broyden_NormSum_Prev = 1.e10;
         Broyden_fraction = Broyden_Original_Fraction;
 
-        n_curr_in_data.resize({0},{num_field_sites_all_NS}, The_Pinned_Arena());
-        n_curr_out_data.resize({0},{num_field_sites_all_NS}, The_Pinned_Arena());
-        n_start_in_data.resize({0},{num_field_sites_all_NS}, The_Pinned_Arena());
-        n_prev_in_data.resize({0},{num_field_sites_all_NS}, The_Pinned_Arena());
-        F_curr_data.resize({0},{num_field_sites_all_NS}, The_Pinned_Arena());
-        Norm_data.resize({0},{num_field_sites_all_NS}, The_Pinned_Arena());
-        delta_F_curr_data.resize({0},{num_field_sites_all_NS}, The_Pinned_Arena());
-        delta_n_curr_data.resize({0},{num_field_sites_all_NS}, The_Pinned_Arena());
+        h_n_curr_in_data.resize({0},{num_field_sites_all_NS}, The_Pinned_Arena());
+        h_n_curr_out_data.resize({0},{num_field_sites_all_NS}, The_Pinned_Arena());
+        h_n_start_in_data.resize({0},{num_field_sites_all_NS}, The_Pinned_Arena());
+        h_n_prev_in_data.resize({0},{num_field_sites_all_NS}, The_Pinned_Arena());
+        h_F_curr_data.resize({0},{num_field_sites_all_NS}, The_Pinned_Arena());
+        h_Norm_data.resize({0},{num_field_sites_all_NS}, The_Pinned_Arena());
+        h_delta_F_curr_data.resize({0},{num_field_sites_all_NS}, The_Pinned_Arena());
+        h_delta_n_curr_data.resize({0},{num_field_sites_all_NS}, The_Pinned_Arena());
 
-        SetVal_RealTable1D(n_curr_in_data,0.);
-        SetVal_RealTable1D(n_curr_out_data,0.);
-        SetVal_RealTable1D(n_start_in_data,0.);
-        SetVal_RealTable1D(n_prev_in_data,0.);
-        SetVal_RealTable1D(F_curr_data,0.);
-        SetVal_RealTable1D(Norm_data, 0.);
-        SetVal_RealTable1D(delta_F_curr_data, 0.);
-        SetVal_RealTable1D(delta_n_curr_data, 0.);
-
+        SetVal_RealTable1D(h_n_curr_in_data,0.);
+        SetVal_RealTable1D(h_n_curr_out_data,0.);
+        SetVal_RealTable1D(h_n_start_in_data,0.);
+        SetVal_RealTable1D(h_n_prev_in_data,0.);
+        SetVal_RealTable1D(h_F_curr_data,0.);
+        SetVal_RealTable1D(h_Norm_data, 0.);
+        SetVal_RealTable1D(h_delta_F_curr_data, 0.);
+        SetVal_RealTable1D(h_delta_n_curr_data, 0.);
 
         /*Need generalization for multiple CNTs*/
         for (int c=0; c < vp_CNT.size(); ++c)
         {
-            n_curr_in_data.copy(vp_CNT[c]->h_n_curr_in_data); 
+            h_n_curr_in_data.copy(vp_CNT[c]->h_n_curr_in_data); 
         }
-        n_start_in_data.copy(n_curr_in_data);
-
+        n_start_in_data.copy(h_n_curr_in_data);
 
         switch(map_AlgorithmType[Algorithm_Type])
         {
@@ -921,9 +1029,9 @@ c_TransportSolver:: Reset_Broyden ()
 {
     if(flag_reset_with_previous_charge_distribution == 0) 
     {
-        SetVal_RealTable1D(n_curr_in_data, NS_initial_deposit_value);
+        SetVal_RealTable1D(h_n_curr_in_data, NS_initial_deposit_value);
         #if AMREX_USE_GPU
-        d_n_curr_in_data.copy(n_curr_in_data);
+        d_n_curr_in_data.copy(h_n_curr_in_data);
         #endif
 	amrex::Print() << "Input charge distribution is reset to: " << NS_initial_deposit_value << "\n";
     }
@@ -984,7 +1092,7 @@ c_TransportSolver:: Reset_Broyden ()
 
         Broyden_Reset_Step = 0;
         Broyden_fraction = Broyden_Original_Fraction;
-        n_start_in_data.copy(n_curr_in_data);
+        n_start_in_data.copy(h_n_curr_in_data);
 
         amrex::Print() << "\nBroyden parameters are reset to the following: \n";
         amrex::Print() << " Broyden_Step: "      << Broyden_Step << "\n";
@@ -1076,25 +1184,24 @@ c_TransportSolver:: Execute_Broyden_First_Algorithm ()
     {
         amrex::Print() << "\nBroydenStep: " << Broyden_Step  << ",  fraction: " << Broyden_fraction << ",  scalar: " << Broyden_Scalar<< "\n";
 	
-        auto const& n_curr_in  = n_curr_in_data.table();
-        auto const& n_curr_out = n_curr_out_data.table();
-        auto const& n_prev_in  = n_prev_in_data.table();
-        auto const& F_curr     = F_curr_data.table();
-        auto const& delta_F_curr  = delta_F_curr_data.table();
-        auto const& delta_n_curr   = delta_n_curr_data.table();
-        auto const& Jinv_curr    = Jinv_curr_data.table();
+        auto const& n_curr_in     = h_n_curr_in_data.table();
+        auto const& n_curr_out    = h_n_curr_out_data.table();
+        auto const& n_prev_in     = h_n_prev_in_data.table();
+        auto const& F_curr        = h_F_curr_data.table();
+        auto const& delta_F_curr  = h_delta_F_curr_data.table();
+        auto const& delta_n_curr  = h_delta_n_curr_data.table();
+        auto const& Jinv_curr     = h_Jinv_curr_data.table();
+        auto const& Norm          = h_Norm_data.table();
 
-        RealTable1D sum_Fcurr_data({0},{num_field_sites_all_NS}, The_Pinned_Arena());
-        RealTable1D sum_deltaFcurr_data({0},{num_field_sites_all_NS}, The_Pinned_Arena());
-        RealTable1D delta_n_Jinv_data({0},{num_field_sites_all_NS}, The_Pinned_Arena());
+        RealTable1D h_sum_Fcurr_data({0},{num_field_sites_all_NS}, The_Pinned_Arena());
+        RealTable1D h_sum_deltaFcurr_data({0},{num_field_sites_all_NS}, The_Pinned_Arena());
+        RealTable1D h_delta_n_Jinv_data({0},{num_field_sites_all_NS}, The_Pinned_Arena());
 
-        auto const& sum_Fcurr      = sum_Fcurr_data.table();
-        auto const& sum_deltaFcurr = sum_deltaFcurr_data.table();
-        auto const& delta_n_Jinv   = delta_n_Jinv_data.table();
+        auto const& sum_Fcurr      = h_sum_Fcurr_data.table();
+        auto const& sum_deltaFcurr = h_sum_deltaFcurr_data.table();
+        auto const& delta_n_Jinv   = h_delta_n_Jinv_data.table();
 
-        SetVal_RealTable1D(Norm_data, 0.);
-        auto const& Norm       = Norm_data.table();
-
+        SetVal_RealTable1D(h_Norm_data, 0.);
         Broyden_NormSum_Curr = 0.;
 
         for(int l=0; l < num_field_sites_all_NS; ++l)
@@ -1215,9 +1322,9 @@ c_TransportSolver:: Execute_Broyden_First_Algorithm ()
         }
         amrex::Print() << "n_new_in: " << n_curr_in(0) << "\n";
 
-        sum_Fcurr_data.clear();
-        sum_deltaFcurr_data.clear();
-        delta_n_Jinv_data.clear();
+        h_sum_Fcurr_data.clear();
+        h_sum_deltaFcurr_data.clear();
+        h_delta_n_Jinv_data.clear();
 
         Broyden_Step += 1;
     }
@@ -1240,14 +1347,13 @@ c_TransportSolver:: Execute_Simple_Mixing_Algorithm ()
     {
         amrex::Print() << "\nBroydenStep: " << Broyden_Step  << ",  fraction: " << Broyden_fraction << ",  scalar: " << Broyden_Scalar<< "\n";
 
-        auto const& n_curr_in  = n_curr_in_data.table();
-        auto const& n_curr_out = n_curr_out_data.table();
-        auto const& n_prev_in  = n_prev_in_data.table();
-        auto const& F_curr     = F_curr_data.table();
+        auto const& n_curr_in  = h_n_curr_in_data.table();
+        auto const& n_curr_out = h_n_curr_out_data.table();
+        auto const& n_prev_in  = h_n_prev_in_data.table();
+        auto const& F_curr     = h_F_curr_data.table();
+        auto const& Norm       = h_Norm_data.table();
 
         SetVal_RealTable1D(Norm_data, 0.);
-        auto const& Norm       = Norm_data.table();
-
         amrex::Real denom = 0.;
         Broyden_NormSum_Curr = 0.;
 
@@ -1339,30 +1445,27 @@ c_TransportSolver::Execute_Broyden_Modified_Second_Algorithm_Parallel()
 		               << ",  scalar: " << Broyden_Scalar<< "\n";
 
         /*vectors*/
-        auto const& n_curr_in      = n_curr_in_data.table();
-        auto const& n_curr_in_glo  = n_curr_in_glo_data.table();
-        auto const& n_curr_out     = n_curr_out_data.table();
-        auto const& n_prev_in      = n_prev_in_data.table();
+        auto const& n_curr_in      = h_n_curr_in_data.table();
+        auto const& n_curr_in_glo  = h_n_curr_in_glo_data.table();
+        auto const& n_curr_out     = h_n_curr_out_data.table();
+        auto const& n_prev_in      = h_n_prev_in_data.table();
         
-        auto const& F_curr         = F_curr_data.table();
-        auto const& delta_F_curr   = delta_F_curr_data.table();
-        auto const& Norm           = Norm_data.table();
+        auto const& F_curr         = h_F_curr_data.table();
+        auto const& delta_F_curr   = h_delta_F_curr_data.table();
+        auto const& Norm           = h_Norm_data.table();
 
         /*matrices*/
-        auto const& VmatTran       = VmatTran_data.table();
-        auto const& Wmat           = Wmat_data.table();
+        auto const& VmatTran       = h_VmatTran_data.table();
+        auto const& Wmat           = h_Wmat_data.table();
 
         /*temp vectors*/
-        RealTable1D sum_vector_data({0}, {site_size_loc}, The_Pinned_Arena());
-        auto const& sum_vector = sum_vector_data.table();
-
-        RealTable1D intermed_vector_data({0}, {Broyden_Threshold_MaxStep}, The_Pinned_Arena());
-        auto const& intermed_vector = intermed_vector_data.table();
+        auto const& sum_vector      = h_sum_vector_data.table();
+        auto const& intermed_vector = h_intermed_vector_data.table();
 
         /*Initialize*/
-        SetVal_RealTable1D(Norm_data, 0.);
-        SetVal_RealTable1D(sum_vector_data, 0.);
-        SetVal_RealTable1D(intermed_vector_data, 0.);
+        SetVal_RealTable1D(h_Norm_data, 0.);
+        SetVal_RealTable1D(h_sum_vector_data, 0.);
+        SetVal_RealTable1D(h_intermed_vector_data, 0.);
 
         /*Evaluate local (absolute or relative) and L2 norms*/
         Broyden_NormSum_Curr = 0.; 
@@ -1514,7 +1617,7 @@ c_TransportSolver::Execute_Broyden_Modified_Second_Algorithm_Parallel()
             /*Next, evaluate W*(V^T*F_curr), i.e. Wmat*(VmatTran*F_curr)*/
             /*Reuse intermed_vector to temporarily store vector (VmatTran*F_curr)*/
 
-            SetVal_RealTable1D(intermed_vector_data, 0.);
+            SetVal_RealTable1D(h_intermed_vector_data, 0.);
             for(int iter=1; iter <= m; ++iter)
             {
         		amrex::Real sum = 0.;   
@@ -1554,7 +1657,7 @@ c_TransportSolver::Execute_Broyden_Modified_Second_Algorithm_Parallel()
             }
 
     	    /*Reuse sum_vector to temporarily store Wmat*intermed_vector */
-            SetVal_RealTable1D(sum_vector_data, 0.);
+            SetVal_RealTable1D(h_sum_vector_data, 0.);
 
 
             for(int site=0; site < site_size_loc; ++site)
@@ -1580,9 +1683,6 @@ c_TransportSolver::Execute_Broyden_Modified_Second_Algorithm_Parallel()
         }
         amrex::Print() << "n_new_in: " << n_curr_in(0) << "\n";
 
-        /*Clear vectors*/
-        sum_vector_data.clear();
-        intermed_vector_data.clear();
 
         /*Increment Broyden_Step*/
         Broyden_Step += 1;
@@ -1598,53 +1698,80 @@ c_TransportSolver::Execute_Broyden_Modified_Second_Algorithm_Parallel()
 }
 
 
-
 void 
 c_TransportSolver::Execute_Broyden_Modified_Second_Algorithm_Parallel_PllFor()
 {
 
         amrex::Print() << "\nBroydenStep: " << Broyden_Step  
-		       << ",  fraction: "   << Broyden_fraction 
-		       << ",  scalar: " << Broyden_Scalar<< "\n";
+		               << ",  fraction: "   << Broyden_fraction 
+        		       << ",  scalar: " << Broyden_Scalar<< "\n";
 
+        auto const& n_curr_in_glo   = n_curr_in_glo_data.table();
+
+        auto const& h_n_curr_in       = h_n_curr_in_data.table();
+        auto const& h_intermed_vector = h_intermed_vector_data.table();
+
+#ifdef AMREX_USE_GPU
         /*vectors*/
-        auto const& n_curr_in      = n_curr_in_data.table();
-        auto const& n_curr_in_glo  = n_curr_in_glo_data.table();
-        auto const& n_curr_out     = n_curr_out_data.table();
-        auto const& n_prev_in      = n_prev_in_data.table();
-        
-        auto const& F_curr         = F_curr_data.table();
-        auto const& delta_F_curr   = delta_F_curr_data.table();
-        auto const& Norm           = Norm_data.table();
+        auto const& n_curr_in      = d_n_curr_in_data.table();
+        auto const& n_curr_out     = d_n_curr_out_data.table();
+        auto const& n_prev_in      = d_n_prev_in_data.table();
+        auto const& F_curr         = d_F_curr_data.table();
+        auto const& delta_F_curr   = d_delta_F_curr_data.table();
+        auto const& Norm           = d_Norm_data.table();
 
         /*matrices*/
-        auto const& VmatTran       = VmatTran_data.table();
-        auto const& Wmat           = Wmat_data.table();
+        auto const& VmatTran       = d_VmatTran_data.table();
+        auto const& Wmat           = d_Wmat_data.table();
 
         /*temp vectors*/
-        RealTable1D sum_vector_data({0}, {site_size_loc}, The_Pinned_Arena());
-        auto const& sum_vector = sum_vector_data.table();
+        auto const& sum_vector     = d_sum_vector_data.table();
+        auto const& intermed_vector= d_intermed_vector_data.table();
+#else
+        auto const& n_curr_in      = h_n_curr_in_data.table();
+        auto const& n_curr_out     = h_n_curr_out_data.table();
+        auto const& n_prev_in      = h_n_prev_in_data.table();
+        auto const& F_curr         = h_F_curr_data.table();
+        auto const& delta_F_curr   = h_delta_F_curr_data.table();
+        auto const& Norm           = h_Norm_data.table();
 
-        RealTable1D intermed_vector_data({0}, {Broyden_Threshold_MaxStep}, The_Pinned_Arena());
-        auto const& intermed_vector = intermed_vector_data.table();
+        auto const& VmatTran       = h_VmatTran_data.table();
+        auto const& Wmat           = h_Wmat_data.table();
 
-        /*Initialize*/
-        SetVal_RealTable1D(Norm_data, 0.);
-        SetVal_RealTable1D(sum_vector_data, 0.);
-        SetVal_RealTable1D(intermed_vector_data, 0.);
+        auto const& sum_vector      = h_sum_vector_data.table();
+        auto const& intermed_vector = h_intermed_vector_data.table();
+#endif
+        Broyden_NormSum_Curr = 0.; 
+        Broyden_Denom = 0.;
+        Broyden_Norm = std::numeric_value<amrex::Real>::min;
+
 
         /*Evaluate local (absolute or relative) and L2 norms*/
-        Broyden_NormSum_Curr = 0.; 
         switch(map_NormType[Broyden_Norm_Type])
         {
             case s_Norm::Type::Absolute:
             {
                 amrex::ParallelFor(site_size_loc, [=] AMREX_GPU_DEVICE (int site) noexcept
                 {
+                    Norm(site) = 0.;
+                    sum_vector_data(site) = 0.;
+                    for(int iter=site; iter < Broyden_Threshold_MaxStep; iter += site_size_loc) 
+                    {
+                        itermed_vector(iter) = 0.;
+                    }
+
                     amrex::Real Fcurr = n_curr_in(site) - n_curr_out(site);
                     Norm(site) = fabs(Fcurr);
-                    amrex::Real val = pow(Fcurr,2);
-                    amrex::HostDevice::Atomic::Add(&(Broyden_NormSum_Curr), val);
+                    amrex::Real norm_sq = pow(Fcurr,2);
+
+                    delta_F_curr(site) = Fcurr - F_curr(site);
+                    F_curr(site) = Fcurr;
+                    amrex::Real deltaF_sq = pow(delta_F_curr(site),2.);
+
+                    amrex::HostDevice::Atomic::Max(&(Broyden_Norm), Norm(site));
+                    amrex::HostDevice::Atomic::Add(&(Broyden_NormSum_Curr), norm_sq);
+                    amrex::HostDevice::Atomic::Add(&(Broyden_Denom), deltaF_sq);
+                    /*Evaluate denom = delta_F_curr^T * delta_F_curr */
                 });
                 break;
             }
@@ -1652,10 +1779,25 @@ c_TransportSolver::Execute_Broyden_Modified_Second_Algorithm_Parallel_PllFor()
             {
                 amrex::ParallelFor(site_size_loc, [=] AMREX_GPU_DEVICE (int site) noexcept
                 {
+                    Norm(site) = 0.;
+                    sum_vector_data(site) = 0.;
+                    for(int iter=site; iter < Broyden_Threshold_MaxStep; iter += site_size_loc) 
+                    {
+                        itermed_vector(iter) = 0.;
+                    }
+
                     amrex::Real Fcurr = n_curr_in(site) - n_curr_out(site);
                     Norm(site) = fabs(Fcurr/(n_curr_in(site) + n_curr_out(site)));
-                    amrex::Real val = pow(Norm(site),2);
-                    amrex::HostDevice::Atomic::Add(&(Broyden_NormSum_Curr), val);
+                    amrex::Real norm_sq = pow(Norm(site),2);
+
+                    delta_F_curr(site) = Fcurr - F_curr(site);
+                    F_curr(site) = Fcurr;
+                    amrex::Real deltaF_sq = pow(delta_F_curr(site),2.);
+
+                    amrex::HostDevice::Atomic::Max(&(Broyden_Norm), Norm(site));
+                    amrex::HostDevice::Atomic::Add(&(Broyden_NormSum_Curr), norm_sq);
+                    amrex::HostDevice::Atomic::Add(&(Broyden_Denom), deltaF_sq);
+                    /*Evaluate denom = delta_F_curr^T * delta_F_curr */
                 });
                 break;
             }
@@ -1664,30 +1806,10 @@ c_TransportSolver::Execute_Broyden_Modified_Second_Algorithm_Parallel_PllFor()
                 amrex::Abort("Norm Type " + Broyden_Norm_Type + " is not yet defined.");
             }
         }
+        #ifdef AMREX_USE_GPU
+        amrex::Gpu::streamSynchronize();
+        #endif
 
-       // amrex::ParallelDescriptor::ReduceRealSum(Broyden_NormSum_Curr); /*check if it is all_reduce*/
-
-        MPI_Allreduce(MPI_IN_PLACE,
-	        		 &Broyden_NormSum_Curr,
-	        		  1,
-                      MPI_DOUBLE,
-		              MPI_SUM,
-                      ParallelDescriptor::Communicator());
-
-        Broyden_NormSum_Curr = sqrt(Broyden_NormSum_Curr);
-
-        /*find maximum local norm*/
-        Broyden_Norm = Norm(0);
-        //int norm_index = 0;
-        for(int site=1; site < site_size_loc; ++site)
-        {
-            if(Broyden_Norm < Norm(site))
-            {
-                Broyden_Norm = Norm(site);
-                //norm_index = site;
-            }
-        }
-        //amrex::ParallelDescriptor::ReduceRealMax(Broyden_Norm); 
         MPI_Allreduce(MPI_IN_PLACE,
 	        		 &Broyden_Norm,
 	        		  1,
@@ -1695,11 +1817,20 @@ c_TransportSolver::Execute_Broyden_Modified_Second_Algorithm_Parallel_PllFor()
 		              MPI_MAX,
                       ParallelDescriptor::Communicator());
 
-        amrex::Print() << "\nBroyden_NormSum_Curr: " << std::setw(20) << Broyden_NormSum_Curr << "\n";
-        amrex::Print() <<   "Broyden_NormSum_Prev: " << std::setw(20) << Broyden_NormSum_Prev
-                       << ",   Difference: " << (Broyden_NormSum_Curr - Broyden_NormSum_Prev) << "\n";
-        //amrex::Print() << "Broyden max norm: " << Broyden_Norm << " at location: " <<  norm_index << "\n\n";
-        amrex::Print() << "Broyden max norm: " << Broyden_Norm << "\n\n";
+        MPI_Allreduce(MPI_IN_PLACE,
+	        		 &Broyden_NormSum_Curr,
+	        		  1,
+                      MPI_DOUBLE,
+		              MPI_SUM,
+                      ParallelDescriptor::Communicator());
+        Broyden_NormSum_Curr = sqrt(Broyden_NormSum_Curr);
+
+        MPI_Allreduce(MPI_IN_PLACE,
+	        		 &Broyden_Denom,
+	        		  1,
+                      MPI_DOUBLE,
+		              MPI_SUM,
+                      ParallelDescriptor::Communicator());
 
         /*extra info*/
         if ((Broyden_NormSum_Curr - Broyden_NormSum_Prev) > 1.e-6)
@@ -1712,99 +1843,89 @@ c_TransportSolver::Execute_Broyden_Modified_Second_Algorithm_Parallel_PllFor()
             Broyden_NormSumIsIncreasing_Step = 0;
         }
 
+        amrex::Print() << "\nBroyden_NormSum_Curr: " << std::setw(20) << Broyden_NormSum_Curr << "\n";
+        amrex::Print() <<   "Broyden_NormSum_Prev: " << std::setw(20) << Broyden_NormSum_Prev
+                       << ",   Difference: " << (Broyden_NormSum_Curr - Broyden_NormSum_Prev) << "\n";
+        amrex::Print() << "Broyden max norm: " << Broyden_Norm << "\n\n";
+        amrex::Print() << "n_curr_in, n_prev_in: " << n_curr_in(0) << " " << n_prev_in(0) << "\n";
+        amrex::Print() << "Broyden_denom: " << Broyden_Denom << "\n";
+
         /*Swap L2 norms*/
         Broyden_NormSum_Prev = Broyden_NormSum_Curr; 
-
-        /*Evaluate denom = delta_F_curr^T * delta_F_curr */
-
-        //amrex::Real denom = 0.;
-
-        AMREX_GPU_MANAGED amrex::Real DENOM;
-        //amrex::Real& denom = DENOM;
-
-        amrex::ParallelFor(site_size_loc, [=,&DENOM] AMREX_GPU_DEVICE (int site) noexcept
-        {
-            amrex::Real Fcurr = n_curr_in(site) - n_curr_out(site);
-            delta_F_curr(site) = Fcurr - F_curr(site);
-            F_curr(site) = Fcurr;
-            amrex::Real val = pow(delta_F_curr(site),2.);
-            amrex::HostDevice::Atomic::Add(&(DENOM), val);
-        });
-
-        //amrex::ParallelDescriptor::ReduceRealSum(denom); /*Allreduce*/
-        MPI_Allreduce(MPI_IN_PLACE,
-	        		 &DENOM,
-	        		  1,
-                      MPI_DOUBLE,
-		              MPI_SUM,
-                      ParallelDescriptor::Communicator());
-
-        amrex::Print() << "n_curr_in, n_prev_in: " << n_curr_in(0) << " " << n_prev_in(0) << "\n";
-        amrex::Print() << "DENOM: " << DENOM << "\n";
 
         int m = Broyden_Step-1;
         if(m > 0)
         {
             /*First, evaluate W*(V^T*deltaF), i.e. Wmat*(VmatTran*delta_F_curr)*/
             /*Use intermed_vector to temporarily store vector (VmatTran*delta_F_curr)*/
-            for(int iter=1; iter <= m-1; ++iter)
+
+            amrex::ParallelFor(site_size_loc, [=] AMREX_GPU_DEVICE (int site) noexcept
             {
-		        intermed_vector(iter) = 0.;
-                amrex::ParallelFor(site_size_loc, [=] AMREX_GPU_DEVICE (int site) noexcept
+                for(int iter=1; iter <= m-1; ++iter)
                 {
                     amrex::Real val = VmatTran(site,iter) * delta_F_curr(site);  		
                     amrex::HostDevice::Atomic::Add(&(intermed_vector(iter)), val);
-                });
-            }
+                }
+            });
+            #ifdef AMREX_USE_GPU
+            amrex::Gpu::streamSynchronize();
+            h_intermed_vector_data.copy(d_intermed_vector_data); /*from device to host*/
+            #endif
+
             /*Allreduce intermed_vector for complete matrix-vector multiplication*/
             MPI_Allreduce(MPI_IN_PLACE,
-	            		 &intermed_vector(0),
+	            		 &h_intermed_vector(0),
 	            		  Broyden_Threshold_MaxStep,
                           MPI_Vector_Type,
 			              Vector_Add,
                           ParallelDescriptor::Communicator());
 
-	        /*Use sum_vector to temporarily store Wmat*intermed_vector */
+            #ifdef AMREX_USE_GPU
+            d_intermed_vector_data.copy(h_intermed_vector_data); /*from host to device*/
+            #endif
 
             amrex::ParallelFor(site_size_loc, [=] AMREX_GPU_DEVICE (int site) noexcept
             {
+	            /*Use sum_vector to temporarily store Wmat*intermed_vector */
         		amrex::Real sum = 0.;   
                 for(int iter=1; iter <= m-1; ++iter)
                 {
 	                sum += Wmat(iter,site) * intermed_vector(iter);  		
 	            }
                 sum_vector(site) = sum;
-            });
 
-            /*Evaluate Wmat and VmatTran at iteration m*/
-            amrex::ParallelFor(site_size_loc, [=] AMREX_GPU_DEVICE (int site) noexcept
-            {
+                /*Evaluate Wmat and VmatTran at iteration m*/
                 amrex::Real delta_n = n_curr_in(site) - n_prev_in(site);
 
-                VmatTran(site,m) = delta_F_curr(site)/DENOM;
+                VmatTran(site,m) = delta_F_curr(site)/Broyden_denom;
 
         		/*Access to (m,site) will be slower*/
                 Wmat(m, site)  = - Broyden_fraction*delta_F_curr(site) 
 		                         + delta_n 
 		                         - sum_vector(site); 
+
             });
+            SetVal_RealTable1D(h_intermed_vector_data, 0.);
+            #ifdef AMREX_USE_GPU
+            amrex::Gpu::streamSynchronize();
+            d_intermed_vector_data.copy(h_intermed_vector_data); /*from host to device*/
+            #endif
 
             /*Next, evaluate W*(V^T*F_curr), i.e. Wmat*(VmatTran*F_curr)*/
             /*Reuse intermed_vector to temporarily store vector (VmatTran*F_curr)*/
 
-            SetVal_RealTable1D(intermed_vector_data, 0.);
-
-
-            for(int iter=1; iter <= m; ++iter)
+            amrex::ParallelFor(site_size_loc, [=] AMREX_GPU_DEVICE (int site) noexcept
             {
-		        intermed_vector(iter) = 0.;
-                amrex::ParallelFor(site_size_loc, [=] AMREX_GPU_DEVICE (int site) noexcept
+                for(int iter=1; iter <= m; ++iter)
                 {
-                    amrex::Real val= VmatTran(site, iter) * F_curr(site);  		
-
+                    amrex::Real val = VmatTran(site, iter) * F_curr(site);  		
                     amrex::HostDevice::Atomic::Add(&(intermed_vector(iter)), val);
-                });
-            }
+                }
+            });
+            #ifdef AMREX_USE_GPU
+            amrex::Gpu::streamSynchronize();
+            h_intermed_vector_data.copy(d_intermed_vector_data); /*from device to host*/
+            #endif
 
             amrex::Print() << "Printing itermed_vector (all proc): \n";
             for(int iter=0; iter <= m; ++iter)
@@ -1812,32 +1933,32 @@ c_TransportSolver::Execute_Broyden_Modified_Second_Algorithm_Parallel_PllFor()
                 std::cout << "rank/iter/value: " 
                           << amrex::ParallelDescriptor::MyProc() << "  " 
                           << iter << "  " 
-                          << intermed_vector(iter) << "\n";
+                          << h_intermed_vector(iter) << "\n";
             }
-            MPI_Barrier(ParallelDescriptor::Communicator());
 
             /*Allreduce intermed_vector for complete matrix-vector multiplication*/
             MPI_Allreduce(MPI_IN_PLACE,
-			             &intermed_vector(0),
+			             &h_intermed_vector(0),
             			  Broyden_Threshold_MaxStep,
                           MPI_Vector_Type,
 			              Vector_Add,
                           ParallelDescriptor::Communicator());
 
+            #ifdef AMREX_USE_GPU
+            d_intermed_vector_data.copy(h_intermed_vector_data); /*from host to device*/
+            #endif
 
             if (ParallelDescriptor::IOProcessor())
             {
                 amrex::Print() << "Printing itermed_vector (location 2): \n";
                 for(int iter=0; iter <= m; ++iter)
                 {
-                    amrex::Print() << iter << " "<< intermed_vector(iter) << "\n";
+                    amrex::Print() << iter << " "<< h_intermed_vector(iter) << "\n";
                 }
             }
 
     	    /*Reuse sum_vector to temporarily store Wmat*intermed_vector */
-            SetVal_RealTable1D(sum_vector_data, 0.);
-
-
+            //SetVal_RealTable1D(sum_vector_data, 0.);
             amrex::ParallelFor(site_size_loc, [=] AMREX_GPU_DEVICE (int site) noexcept
             {
 	        	amrex::Real sum = 0.;   
@@ -1847,9 +1968,10 @@ c_TransportSolver::Execute_Broyden_Modified_Second_Algorithm_Parallel_PllFor()
 	            }
                 sum_vector(site) = sum;
             });
+            #ifdef AMREX_USE_GPU
+            amrex::Gpu::streamSynchronize();
+            #endif
         } /*end of if(m > 0) */
-
-
 
         /*Store current n in previous n, predict next n and store it in current n*/
         amrex::ParallelFor(site_size_loc, [=] AMREX_GPU_DEVICE (int site) noexcept
@@ -1859,17 +1981,15 @@ c_TransportSolver::Execute_Broyden_Modified_Second_Algorithm_Parallel_PllFor()
 		                     - Broyden_Scalar * Broyden_fraction * F_curr(site) 
                 			 - Broyden_Scalar * sum_vector(site);
         });
-        amrex::Print() << "n_new_in: " << n_curr_in(0) << "\n";
+        #ifdef AMREX_USE_GPU
+        amrex::Gpu::streamSynchronize();
+        h_n_curr_in_data.copy(d_n_curr_in_data); /*from device to host*/
+        #endif
+        amrex::Print() << "n_new_in: " << h_n_curr_in(0) << "\n";
 
-        /*Clear vectors*/
-        sum_vector_data.clear();
-        intermed_vector_data.clear();
-
-        /*Increment Broyden_Step*/
         Broyden_Step += 1;
 
-
-        MPI_Allgatherv(&n_curr_in(0),
+        MPI_Allgatherv(&h_n_curr_in(0),
                         site_size_loc,
                         MPI_DOUBLE,
                        &n_curr_in_glo(0),
@@ -2101,28 +2221,40 @@ void
 c_TransportSolver::Deallocate_Broyden ()
 {
     #ifdef BROYDEN_PARALLEL
-       n_curr_in_data.clear();
-      n_curr_out_data.clear();
-       n_prev_in_data.clear();
-   n_curr_in_glo_data.clear();
+    n_curr_in_glo_data.clear();
+    h_n_curr_in_data.clear();
+    h_intermed_vector_data.clear();
 
-          F_curr_data.clear();
+    #ifdef AMREX_USE_GPU
+    d_n_curr_in_data.clear();
+    d_intermed_vector_data.clear();
+
+    d_n_curr_out_data.clear();
+    d_n_prev_in_data.clear();
+    d_F_curr_data.clear();
+    d_delta_F_curr_data.clear();
+    d_Norm_data.clear();
+    d_VmatTran_data.clear();
+    d_Wmat_data.clear();
+    #else
+    n_curr_out_data.clear();
+    n_prev_in_data.clear();
+    F_curr_data.clear();
     delta_F_curr_data.clear();
-            Norm_data.clear();
-
-        VmatTran_data.clear();
-            Wmat_data.clear();
+    Norm_data.clear();
+    VmatTran_data.clear();
+    Wmat_data.clear();
+    #endif
 
     Free_MPI_Vector_Type_and_MPI_Vector_Sum();
 
     #else
     if (ParallelDescriptor::IOProcessor())
     {
-        n_curr_in_data.clear();
+        h_n_curr_in_data.clear();
         n_prev_in_data.clear();
         F_curr_data.clear();
         Norm_data.clear();
-
         delta_F_curr_data.clear();
         delta_n_curr_data.clear();
     }
