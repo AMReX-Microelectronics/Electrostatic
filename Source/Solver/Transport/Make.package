@@ -1,5 +1,4 @@
 CEXE_sources += Transport.cpp
-CEXE_sources += Broyden_Namespace.cpp
 
 CEXE_sources += Broyden_Serial_General.cpp
 CEXE_sources += Broyden_Parallel_General.cpp
@@ -11,7 +10,6 @@ CEXE_sources += Broyden_Second_Parallel.cpp
 
 CEXE_headers += Transport.H
 CEXE_headers += Transport_Table_ReadWrite.H
-CEXE_headers += Broyden_Namespace.H
 CEXE_headers += Transport_fwd.H
 
 CEXE_sources += Nanostructure.cpp

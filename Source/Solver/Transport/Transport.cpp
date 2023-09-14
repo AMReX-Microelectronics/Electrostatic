@@ -1,6 +1,5 @@
 #include "Transport.H"
 #include "Transport_Table_ReadWrite.H"
-#include "Broyden_Namespace.H"
 
 #include "../../Utils/SelectWarpXUtils/WarpXConst.H"
 #include "../../Utils/SelectWarpXUtils/TextMsg.H"
@@ -16,33 +15,16 @@
 #include <AMReX.H>
 #include <AMReX_GpuContainers.H>
 
-#include <limits>
-
 using namespace amrex;
-using namespace Broyden;
 
 c_TransportSolver::c_TransportSolver()
 {
-#ifdef PRINT_NAME
-    amrex::Print() << "\n\n\t\t\t{************************c_TransportSolver() Constructor************************\n";
-    amrex::Print() << "\t\t\tin file: " << __FILE__ << " at line: " << __LINE__ << "\n";
-#endif
-
     ReadData();
-
-#ifdef PRINT_NAME
-    amrex::Print() << "\t\t\t}************************c_TransportSolver() Constructor************************\n";
-#endif
 }
 
 
 c_TransportSolver::~c_TransportSolver()
 {
-#ifdef PRINT_NAME
-    amrex::Print() << "\n\n\t\t\t{************************c_TransportSolver() Destructor************************\n";
-    amrex::Print() << "\t\t\tin file: " << __FILE__ << " at line: " << __LINE__ << "\n";
-#endif
-
     vp_CNT.clear();
     vp_Graphene.clear();
     //vp_Silicon.clear();
@@ -52,10 +34,6 @@ c_TransportSolver::~c_TransportSolver()
     #else
     Deallocate_Broyden_Serial();
     #endif
-
-#ifdef PRINT_NAME
-    amrex::Print() << "\t\t\t}************************c_TransportSolver() Destructor************************\n";
-#endif
 }
 
 void 
@@ -391,22 +369,18 @@ c_TransportSolver::Solve(const int step, const amrex::Real time)
             {
                 case s_Algorithm::Type::broyden_first:
                 {
-		            #ifndef BROYDEN_PARALLEL	
-	                Execute_Broyden_First_Algorithm(); 
-                    #else
+		            #ifdef BROYDEN_PARALLEL	
                     amrex::Abort("At present, `Broyden's first' algorithm exists with only\
                                   serial implementation (BROYDEN_PARALLEL=FALSE).");
+                    #else
+	                Execute_Broyden_First_Algorithm(); 
                     #endif
                     break;
                 }
                 case s_Algorithm::Type::broyden_second:
                 {
 		            #ifdef BROYDEN_PARALLEL	
-		                #ifdef BROYDEN_SKIP_GPU_OPTIMIZATION	
-	                    Execute_Broyden_Modified_Second_Algorithm_Parallel(); 
-                        #else
-	                    Execute_Broyden_Modified_Second_Algorithm_Parallel_PllFor(); 
-                        #endif
+	                Execute_Broyden_Modified_Second_Algorithm_Parallel(); 
                     #else
     	            Execute_Broyden_Modified_Second_Algorithm(); 
                     #endif
@@ -414,11 +388,11 @@ c_TransportSolver::Solve(const int step, const amrex::Real time)
                 }
                 case s_Algorithm::Type::simple_mixing:
                 {
-		            #ifndef BROYDEN_PARALLEL	
-	                Execute_Simple_Mixing_Algorithm(); 
-                    #else
+		            #ifdef BROYDEN_PARALLEL	
                     amrex::Abort("At present, the `simple mixing' algorithm exists with only\
                                   serial implementation (BROYDEN_PARALLEL=FALSE).");
+                    #else
+	                Execute_Simple_Mixing_Algorithm(); 
                     #endif
                     break;
                 }

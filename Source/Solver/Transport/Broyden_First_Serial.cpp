@@ -1,8 +1,6 @@
 #include "Transport.H"
-#include "Broyden_Namespace.H"
 
 using namespace amrex;
-using namespace Broyden;
 
 #ifndef BROYDEN_PARALLEL
 void 

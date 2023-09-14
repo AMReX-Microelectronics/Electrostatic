@@ -37,7 +37,7 @@ public:
     #ifdef BROYDEN_PARALLEL
     void Set_Broyden_Parallel();
     void Reset_Broyden_Parallel();
-    void Execute_Broyden_Modified_Second_Algorithm_Parallel_PllFor();
+    void Execute_Broyden_Modified_Second_Algorithm_Parallel();
     #endif
 
 private:
@@ -116,11 +116,10 @@ private:
     amrex::Real Broyden_Original_Fraction = 0.1;
     amrex::Real Broyden_Scalar = 1.0;
     amrex::Real Broyden_NormSum_Prev = 1.e100;
-    int Broyden_Threshold_MaxStep = 200;
-    //AMREX_GPU_MANAGED amrex::Real Broyden_Norm;
-    //AMREX_GPU_MANAGED amrex::Real Broyden_NormSum_Curr;
-    //AMREX_GPU_MANAGED amrex::Real Broyden_Denom;
-    //AMREX_GPU_MANAGED         int Broyden_Threshold_MaxStep;
+    int         Broyden_Threshold_MaxStep = 200;
+    amrex::Real Broyden_Norm = 0.;
+    amrex::Real Broyden_NormSum_Curr = 0.;
+    amrex::Real Broyden_Denom = 0.;
 
     int total_proc;
     int my_rank;
@@ -141,6 +140,8 @@ private:
     RealTable1D h_intermed_vector_data;
     RealTable1D n_curr_out_glo_data;
     RealTable1D Norm_glo_data;
+    amrex::Gpu::HostVector<amrex::Real> h_Intermed_values_vec = {0., 0., 0.}; 
+    /*stores Broyden_Norm, Broyden_NormSum_Curr,  Broyden_Denom*/
         #ifdef BROYDEN_SKIP_GPU_OPTIMIZATION
         RealTable1D h_sum_vector_data;
         RealTable2D h_Wmat_data;
@@ -157,6 +158,8 @@ private:
 
         RealTable2D d_Wmat_data;
         RealTable2D d_VmatTran_data;
+        amrex::Gpu::HostVector<amrex::Real> d_Intermed_values_vec = {0., 0., 0.};
+        /*stores Broyden_Norm, Broyden_NormSum_Curr,  Broyden_Denom*/
         #endif
     #else
     RealTable2D h_Jinv_curr_data;
@@ -167,7 +170,6 @@ private:
     #endif
 
     #ifdef BROYDEN_PARALLEL
-    void Execute_Broyden_Modified_Second_Algorithm_Parallel();
     void Deallocate_Broyden_Parallel();
     void Define_Broyden_Partition();
     void Define_MPI_Vector_Type_and_MPI_Vector_Sum();
@@ -206,8 +208,6 @@ private:
     void Execute_Simple_Mixing_Algorithm();
     void Deallocate_Broyden_Serial();
     #endif
-
-
 
     void SetVal_RealTable1D (RealTable1D& Tab1D_data, amrex::Real val);    
     void SetVal_RealTable2D(RealTable2D& Tab2D_data, amrex::Real val);

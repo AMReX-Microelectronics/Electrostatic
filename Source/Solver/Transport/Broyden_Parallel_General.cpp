@@ -1,10 +1,8 @@
 #include "Transport.H"
-#include "Broyden_Namespace.H"
 
 #include <limits>
 
 using namespace amrex;
-using namespace Broyden;
 
 
 #ifdef BROYDEN_PARALLEL

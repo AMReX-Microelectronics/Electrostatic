@@ -1,11 +1,9 @@
 #include "Transport.H"
 #include "Transport_Table_ReadWrite.H"
-#include "Broyden_Namespace.H"
 
 #include "../../Utils/SelectWarpXUtils/TextMsg.H"
 
 using namespace amrex;
-using namespace Broyden;
 
 #ifndef BROYDEN_PARALLEL
 void
