@@ -136,7 +136,9 @@ public:
     void Obtain_PotentialAtSites();
     void Write_PotentialAtSites(const std::string filename_prefix);
     void Solve_NEGF();
-    void Write_Data (const std::string filename_prefix, RealTable1D& n_curr_out_data, RealTable1D& Norm_data);
+    void Write_Data (const std::string filename_prefix, 
+                     RealTable1D& n_curr_out_data, 
+                     RealTable1D& Norm_data);
 
 //    const amrex::Vector<amrex::Real>* get_avg_gatherField() { &avg_gatherField };
 

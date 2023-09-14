@@ -33,8 +33,17 @@ public:
 
     void InitData();
     void Solve(const int step, const amrex::Real time);
+    
+    #ifdef BROYDEN_PARALLEL
+    void Set_Broyden_Parallel();
+    void Reset_Broyden_Parallel();
+    void Execute_Broyden_Modified_Second_Algorithm_Parallel_PllFor();
+    #endif
 
 private:
+    using RealTable1D    = TableData<amrex::Real, 1>;
+    using RealTable2D    = TableData<amrex::Real, 2>;
+
     int num_NS=0;
     amrex::Geometry  dummy_geom;
     amrex::BoxArray  dummy_ba;
@@ -76,35 +85,10 @@ private:
 
     void Set_CommonStepFolder(const int step);
 
-    int flag_reset_with_previous_charge_distribution=0;
+    int flag_reset_with_previous_charge_distribution = 0;
     int flag_initialize_inverse_jacobian = 0;
 
     /*For Broyden*/
-    int num_field_sites_all_NS = 0;
-
-    using RealTable1D    = TableData<amrex::Real, 1>;
-    using RealTable2D    = TableData<amrex::Real, 2>;
-
-    int Broyden_Step = 1;
-    amrex::Real Broyden_fraction = 0.1;
-    amrex::Real Broyden_Original_Fraction = 0.1;
-    int Broyden_Correction_Step = 0;
-    int Broyden_NormSumIsIncreasing_Step = 0;
-    int Broyden_Reset_Step = 0;
-    amrex::Real Broyden_Scalar = 1.0;
-    amrex::Real Broyden_NormSum_Prev = 1.e100;
-
-    AMREX_GPU_MANAGED amrex::Real Broyden_Norm = 1.0;
-    AMREX_GPU_MANAGED amrex::Real Broyden_NormSum_Curr = 1.e10;
-    AMREX_GPU_MANAGED amrex::Real Broyden_Denom;
-    AMREX_GPU_MANAGED int Broyden_Threshold_MaxStep = 200;
-
-    int Broyden_Threshold_NormSumIncreaseStep = 8;
-    int Broyden_Threshold_CorrectionStep = 1;
-    amrex::Real Broyden_Threshold_MinFraction = 0.01;
-    amrex::Real Broyden_Fraction_Decrease_Factor = 4.;
-    amrex::Real Broyden_Scalar_Decrease_Factor   = 2.;
-
     std::string Algorithm_Type = "broyden_second";
     std::map<std::string, s_Algorithm::Type>
     map_AlgorithmType =
@@ -125,47 +109,105 @@ private:
            {"Absolute"        , s_Norm::Type::Absolute},
            {"Relative"        , s_Norm::Type::Relative}
         };
-    
-    RealTable1D h_n_curr_in_data;
-    RealTable1D h_intermed_vector_data;
-    #ifdef AMREX_USE_GPU
-    RealTable1D d_n_curr_in_data;
-    RealTable1D d_n_curr_out_data;
-    RealTable1D d_n_prev_in_data;
-    RealTable1D d_F_curr_data;
-    RealTable1D d_delta_F_curr_data;
-    RealTable1D d_Norm_data;
-    RealTable1D d_sum_vector_data;
-    RealTable1D d_intermed_vector_data;
 
-    RealTable2D d_Wmat_data;
-    RealTable2D d_VmatTran_data;
-    #else
-    RealTable1D h_n_curr_out_data;
+    int         num_field_sites_all_NS = 0;
+    int         Broyden_Step = 1;
+    amrex::Real Broyden_fraction = 0.1;
+    amrex::Real Broyden_Original_Fraction = 0.1;
+    amrex::Real Broyden_Scalar = 1.0;
+    amrex::Real Broyden_NormSum_Prev = 1.e100;
+
+    //AMREX_GPU_MANAGED amrex::Real Broyden_Norm;
+    //AMREX_GPU_MANAGED amrex::Real Broyden_NormSum_Curr;
+    //AMREX_GPU_MANAGED amrex::Real Broyden_Denom;
+    //AMREX_GPU_MANAGED         int Broyden_Threshold_MaxStep;
+
+    int total_proc;
+    int my_rank;
+    int num_procs_with_sites;
+    int site_size_loc;
+    amrex::Vector<int> MPI_recv_count;
+    amrex::Vector<int> MPI_disp;
+
+    RealTable1D h_n_curr_in_data; 
+    RealTable1D h_n_curr_out_data; 
     RealTable1D h_n_prev_in_data;
     RealTable1D h_F_curr_data;
     RealTable1D h_delta_F_curr_data;
     RealTable1D h_Norm_data;
-    RealTable1D h_sum_vector_data;
 
-    RealTable2D h_Wmat_data;
-    RealTable2D h_VmatTran_data;
-    #endif
+    #ifdef BROYDEN_PARALLEL
+    RealTable1D n_curr_in_glo_data;
+    RealTable1D h_intermed_vector_data;
+    RealTable1D n_curr_out_glo_data;
+    RealTable1D Norm_glo_data;
+        #ifdef BROYDEN_SKIP_GPU_OPTIMIZATION
+        RealTable1D h_sum_vector_data;
+        RealTable2D h_Wmat_data;
+        RealTable2D h_VmatTran_data;
+        #else
+        RealTable1D d_n_curr_in_data;
+        RealTable1D d_n_curr_out_data;
+        RealTable1D d_n_prev_in_data;
+        RealTable1D d_F_curr_data;
+        RealTable1D d_delta_F_curr_data;
+        RealTable1D d_Norm_data;
+        RealTable1D d_sum_vector_data;
+        RealTable1D d_intermed_vector_data;
 
+        RealTable2D d_Wmat_data;
+        RealTable2D d_VmatTran_data;
+        #endif
+    #else
+    RealTable2D h_Jinv_curr_data;
     RealTable1D h_n_start_in_data;
     RealTable1D h_delta_n_curr_data;
-    RealTable2D h_Jinv_curr_data;
-
     amrex::Vector<RealTable1D*> W_Broyden;
     amrex::Vector<RealTable1D*> V_Broyden;
+    #endif
 
+    #ifdef BROYDEN_PARALLEL
+    void Execute_Broyden_Modified_Second_Algorithm_Parallel();
+    void Deallocate_Broyden_Parallel();
+    void Define_Broyden_Partition();
+    void Define_MPI_Vector_Type_and_MPI_Vector_Sum();
+    void Free_MPI_Vector_Type_and_MPI_Vector_Sum();
+    MPI_Datatype MPI_Vector_Type;
+    MPI_Op Vector_Add;
+
+    static void Vector_Add_Func_wrapper(double* A, double* B, int* veclen, MPI_Datatype* dtype) 
+    {
+        reinterpret_cast<c_TransportSolver*>(A,B,veclen,dtype)->Vector_Add_Func(A,B,veclen,dtype);
+    }
+
+    void Vector_Add_Func(double* A, double* B, int* veclen, MPI_Datatype* dtype)
+    {
+        /* Note: https://www.mpich.org/static/docs/v3.2/www3/MPI_Op_create.html
+         * The calling list for the user function type is
+         * typedef void (MPI_User_function) ( void * A, void * B, int * veclen, MPI_Datatype * ); 
+         * where the operation is B[i] = A[i] op B[i], for i=0,...,veclen-1. 
+         * A pointer to the datatype given to the MPI collective computation routine (i.e., MPI_Reduce, MPI_Allreduce, 
+         * MPI_Scan, or MPI_Reduce_scatter) is also passed to the user-specified routine. 
+         */
+        //double* Avec = A;
+        //double* Bvec = B;
+        for (int i=0; i < *veclen; ++i)
+        {
+            B[i] += A[i];
+        }
+    }
+    void Create_Global_Output_Data();
+    void Clear_Global_Output_Data();
+    #else
     void Set_Broyden();
     void Reset_Broyden();
-    void Restart_Broyden();
     void Execute_Broyden_First_Algorithm();
     void Execute_Broyden_Modified_Second_Algorithm();
     void Execute_Simple_Mixing_Algorithm();
-    void Deallocate_Broyden();
+    void Deallocate_Broyden_Serial();
+    #endif
+
+
 
     void SetVal_RealTable1D (RealTable1D& Tab1D_data, amrex::Real val);    
     void SetVal_RealTable2D(RealTable2D& Tab2D_data, amrex::Real val);
@@ -190,58 +232,6 @@ private:
     void Write_Table2D(const TableData<TableType, 2>& Arr_data,
                        std::string filename,
                        std::string header);
-
-
-    int total_proc;
-    int my_rank;
-    int num_procs_with_sites;
-    int site_size_loc;
-    amrex::Vector<int> MPI_recv_count;
-    amrex::Vector<int> MPI_disp;
-
-    RealTable1D n_curr_in_glo_data;
-    RealTable1D n_curr_out_glo_data;
-    RealTable1D Norm_glo_data;
-
-    void Create_Global_Output_Data();
-    void Clear_Global_Output_Data();
-
-    MPI_Datatype MPI_Vector_Type;
-    MPI_Op Vector_Add;
-
-    void Set_Broyden_Parallel();
-    void Reset_Broyden_Parallel();
-    void Define_Broyden_Partition();
-    void Define_MPI_Vector_Type_and_MPI_Vector_Sum();
-    void Free_MPI_Vector_Type_and_MPI_Vector_Sum();
-
-    static void Vector_Add_Func_wrapper(double* A, double* B, int* veclen, MPI_Datatype* dtype) 
-    {
-        reinterpret_cast<c_TransportSolver*>(A,B,veclen,dtype)->Vector_Add_Func(A,B,veclen,dtype);
-    }
-
-    void Vector_Add_Func(double* A, double* B, int* veclen, MPI_Datatype* dtype)
-    {
-        /* Note: https://www.mpich.org/static/docs/v3.2/www3/MPI_Op_create.html
-         *
-         * The calling list for the user function type is
-         * typedef void (MPI_User_function) ( void * A, void * B, int * veclen, MPI_Datatype * ); 
-         * where the operation is B[i] = A[i] op B[i], for i=0,...,veclen-1. 
-         * A pointer to the datatype given to the MPI collective computation routine (i.e., MPI_Reduce, MPI_Allreduce, 
-         * MPI_Scan, or MPI_Reduce_scatter) is also passed to the user-specified routine. 
-         *
-         */
-        //double* Avec = A;
-        //double* Bvec = B;
-        for (int i=0; i < *veclen; ++i)
-        {
-            B[i] += A[i];
-        }
-
-    }
-    void Execute_Broyden_Modified_Second_Algorithm_Parallel();
-    void Execute_Broyden_Modified_Second_Algorithm_Parallel_PllFor();
-
 };
 
 #endif
