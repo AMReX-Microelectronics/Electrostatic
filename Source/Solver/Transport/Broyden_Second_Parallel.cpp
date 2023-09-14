@@ -12,7 +12,7 @@ using namespace Broyden;
     void 
     c_TransportSolver::Execute_Broyden_Modified_Second_Algorithm_Parallel()
     {
-            amrex::Print() << "Executing Broyden Parallel\n";    
+            amrex::Print() << "Execute_Broyden_Modified_Second_Algorithm_Parallel\n";    
             amrex::Print() << "\nBroydenStep: " << Broyden_Step  
     		               << ",  fraction: "   << Broyden_fraction 
     		               << ",  scalar: " << Broyden_Scalar<< "\n";
@@ -264,6 +264,8 @@ using namespace Broyden;
     void 
     c_TransportSolver::Execute_Broyden_Modified_Second_Algorithm_Parallel_PllFor()
     {
+
+            amrex::Print() << "Execute_Broyden_Modified_Second_Algorithm_Parallel_PllFor\n";    
     
             amrex::Print() << "\nBroydenStep: " << Broyden_Step  
     		               << ",  fraction: "   << Broyden_fraction 
@@ -306,20 +308,19 @@ using namespace Broyden;
 
             Broyden_NormSum_Curr = 0.; 
             Broyden_Denom = 0.;
-            //Broyden_Norm = std::numeric_limits<amrex::Real>::lowest();
             Broyden_Norm = 0.;
     
+            const int BTM = Broyden_Threshold_MaxStep;
+            const int SSL = site_size_loc;
             switch(map_NormType[Broyden_Norm_Type])
             {
                 case s_Norm::Type::Absolute:
                 {
-                    const int& rBroyden_Threshold_MaxStep = Broyden_Threshold_MaxStep;
-                    const int& rsite_size_loc = site_size_loc;
                     amrex::ParallelFor(site_size_loc, [=] AMREX_GPU_DEVICE (int site) noexcept
                     {
                         Norm(site) = 0.;
                         sum_vector(site) = 0.;
-                        for(int iter=site; iter < rBroyden_Threshold_MaxStep; iter += rsite_size_loc) 
+                        for(int iter=site; iter < BTM; iter += SSL) 
                         {
                             intermed_vector(iter) = 0.;
                         }
@@ -330,7 +331,8 @@ using namespace Broyden;
     
                         delta_F_curr(site) = Fcurr - F_curr(site);
                         F_curr(site) = Fcurr;
-                        amrex::Real deltaF_sq = pow(delta_F_curr(site),2.);
+                        //amrex::Real deltaF_sq = pow(delta_F_curr(site),2.);
+                        amrex::Real deltaF_sq = delta_F_curr(site) * delta_F_curr(site);
     
                         amrex::Gpu::Atomic::Max(&(Broyden_Norm), Norm(site));
                         amrex::HostDevice::Atomic::Add(&(Broyden_NormSum_Curr), norm_sq);
@@ -341,13 +343,11 @@ using namespace Broyden;
                 }
                 case s_Norm::Type::Relative:
                 {
-                    const int& rBroyden_Threshold_MaxStep = Broyden_Threshold_MaxStep;
-                    const int& rsite_size_loc = site_size_loc;
                     amrex::ParallelFor(site_size_loc, [=] AMREX_GPU_DEVICE (int site) noexcept
                     {
                         Norm(site) = 0.;
                         sum_vector(site) = 0.;
-                        for(int iter=site; iter < rBroyden_Threshold_MaxStep; iter += rsite_size_loc) 
+                        for(int iter=site; iter < BTM; iter += SSL) 
                         {
                             intermed_vector(iter) = 0.;
                         }
@@ -358,7 +358,8 @@ using namespace Broyden;
     
                         delta_F_curr(site) = Fcurr - F_curr(site);
                         F_curr(site) = Fcurr;
-                        amrex::Real deltaF_sq = pow(delta_F_curr(site),2.);
+                        //amrex::Real deltaF_sq = pow(delta_F_curr(site),2.);
+                        amrex::Real deltaF_sq = delta_F_curr(site) * delta_F_curr(site);
     
                         amrex::Gpu::Atomic::Max(&(Broyden_Norm), Norm(site));
                         amrex::HostDevice::Atomic::Add(&(Broyden_NormSum_Curr), norm_sq);
@@ -425,8 +426,8 @@ using namespace Broyden;
                     }
                 });
                 #ifndef BROYDEN_SKIP_GPU_OPTIMIZATION
-                amrex::Gpu::streamSynchronize();
                 h_intermed_vector_data.copy(d_intermed_vector_data); /*from device to host*/
+                amrex::Gpu::streamSynchronize();
                 #endif
     
                 /*Allreduce intermed_vector for complete matrix-vector multiplication*/
@@ -439,10 +440,10 @@ using namespace Broyden;
     
                 #ifndef BROYDEN_SKIP_GPU_OPTIMIZATION
                 d_intermed_vector_data.copy(h_intermed_vector_data); /*from host to device*/
+                amrex::Gpu::streamSynchronize();
                 #endif
     
-                const amrex::Real& rBroyden_Denom = Broyden_Denom;
-                const amrex::Real& rBroyden_fraction = Broyden_fraction;
+                const amrex::Real BF = Broyden_fraction;
                 amrex::ParallelFor(site_size_loc, [=] AMREX_GPU_DEVICE (int site) noexcept
                 {
     	            /*Use sum_vector to temporarily store Wmat*intermed_vector */
@@ -456,18 +457,18 @@ using namespace Broyden;
                     /*Evaluate Wmat and VmatTran at iteration m*/
                     amrex::Real delta_n = n_curr_in(site) - n_prev_in(site);
     
-                    VmatTran(site,m) = delta_F_curr(site)/rBroyden_Denom;
+                    VmatTran(site,m) = delta_F_curr(site)/Broyden_Denom;
     
             		/*Access to (m,site) will be slower*/
-                    Wmat(m, site)  = - rBroyden_fraction*delta_F_curr(site) 
+                    Wmat(m, site)  = - BF*delta_F_curr(site) 
     		                         + delta_n 
     		                         - sum_vector(site); 
     
                 });
                 SetVal_RealTable1D(h_intermed_vector_data, 0.);
                 #ifndef BROYDEN_SKIP_GPU_OPTIMIZATION
-                amrex::Gpu::streamSynchronize();
                 d_intermed_vector_data.copy(h_intermed_vector_data); /*from host to device*/
+                amrex::Gpu::streamSynchronize();
                 #endif
     
                 /*Next, evaluate W*(V^T*F_curr), i.e. Wmat*(VmatTran*F_curr)*/
@@ -482,8 +483,8 @@ using namespace Broyden;
                     }
                 });
                 #ifndef BROYDEN_SKIP_GPU_OPTIMIZATION
-                amrex::Gpu::streamSynchronize();
                 h_intermed_vector_data.copy(d_intermed_vector_data); /*from device to host*/
+                amrex::Gpu::streamSynchronize();
                 #endif
     
                 amrex::Print() << "Printing itermed_vector (all proc): \n";
@@ -505,6 +506,7 @@ using namespace Broyden;
     
                 #ifndef BROYDEN_SKIP_GPU_OPTIMIZATION
                 d_intermed_vector_data.copy(h_intermed_vector_data); /*from host to device*/
+                amrex::Gpu::streamSynchronize();
                 #endif
     
                 if (ParallelDescriptor::IOProcessor())
@@ -517,7 +519,6 @@ using namespace Broyden;
                 }
     
         	    /*Reuse sum_vector to temporarily store Wmat*intermed_vector */
-                //SetVal_RealTable1D(sum_vector_data, 0.);
                 amrex::ParallelFor(site_size_loc, [=] AMREX_GPU_DEVICE (int site) noexcept
                 {
     	        	amrex::Real sum = 0.;   
@@ -533,18 +534,18 @@ using namespace Broyden;
             } /*end of if(m > 0) */
     
             /*Store current n in previous n, predict next n and store it in current n*/
-            const amrex::Real& rBroyden_Scalar = Broyden_Scalar;
-            const amrex::Real& rBroyden_fraction = Broyden_fraction;
+            const amrex::Real BS = Broyden_Scalar;
+            const amrex::Real BF = Broyden_fraction;
             amrex::ParallelFor(site_size_loc, [=] AMREX_GPU_DEVICE (int site) noexcept
             {
                 n_prev_in(site) =  n_curr_in(site);
                 n_curr_in(site) =  n_prev_in(site) 
-    		                     - rBroyden_Scalar * rBroyden_fraction * F_curr(site) 
-                    			 - rBroyden_Scalar * sum_vector(site);
+    		                     - BS * BF * F_curr(site) 
+                    			 - BS * sum_vector(site);
             });
             #ifndef BROYDEN_SKIP_GPU_OPTIMIZATION
-            amrex::Gpu::streamSynchronize();
             h_n_curr_in_data.copy(d_n_curr_in_data); /*from device to host*/
+            amrex::Gpu::streamSynchronize();
             #endif
             amrex::Print() << "n_new_in: " << h_n_curr_in(0) << "\n";
     

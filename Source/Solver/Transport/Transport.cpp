@@ -534,6 +534,7 @@ c_TransportSolver:: Create_Global_Output_Data()
 
     h_n_curr_out_data.copy(d_n_curr_out_data); 
     h_Norm_data.copy(d_Norm_data); 
+    amrex::Gpu::streamSynchronize();
     #endif
  
     auto const& n_curr_out = h_n_curr_out_data.table();

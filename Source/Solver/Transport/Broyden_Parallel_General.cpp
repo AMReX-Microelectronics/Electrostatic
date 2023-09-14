@@ -212,17 +212,17 @@ c_TransportSolver:: Set_Broyden_Parallel ()
             auto const& VmatTran       = d_VmatTran_data.table();
             auto const& Wmat           = d_Wmat_data.table();
 
-            const int& rBroyden_Threshold_MaxStep = Broyden_Threshold_MaxStep;
-            const int& rsite_size_loc = site_size_loc;
+            const int BTM = Broyden_Threshold_MaxStep;
+            const int SSL = site_size_loc;
             amrex::ParallelFor(site_size_loc, [=] AMREX_GPU_DEVICE (int site) noexcept
             {
-                for(int iter=0; iter < rBroyden_Threshold_MaxStep; ++iter) 
+                for(int iter=0; iter < BTM; ++iter) 
                 {
                     VmatTran(site,iter) = 0.;
                     Wmat(iter,site)     = 0.;
                 }
                 sum_vector(site)   = 0.;
-                for(int iter=site; iter < rBroyden_Threshold_MaxStep; iter += rsite_size_loc) 
+                for(int iter=site; iter < BTM; iter += SSL) 
                 {
                     intermed_vector(iter) = 0.;
                 }
@@ -314,18 +314,17 @@ c_TransportSolver:: Reset_Broyden_Parallel ()
             auto const& VmatTran       = d_VmatTran_data.table();
             auto const& Wmat           = d_Wmat_data.table();
 
-            const int& rBroyden_Threshold_MaxStep = Broyden_Threshold_MaxStep;
-            const int& rsite_size_loc = site_size_loc;
-
+            const int BTM = Broyden_Threshold_MaxStep;
+            const int SSL = site_size_loc;
             amrex::ParallelFor(site_size_loc, [=] AMREX_GPU_DEVICE (int site) noexcept
             {
-                for(int iter=0; iter < rBroyden_Threshold_MaxStep; ++iter) 
+                for(int iter=0; iter < BTM; ++iter) 
                 {
                     VmatTran(site,iter) = 0.;
                     Wmat(iter,site)     = 0.;
                 }
                 sum_vector(site)   = 0.;
-                for(int iter=site; iter < rBroyden_Threshold_MaxStep; iter += rsite_size_loc) 
+                for(int iter=site; iter < BTM; iter += SSL) 
                 {
                     intermed_vector(iter) = 0.;
                 }

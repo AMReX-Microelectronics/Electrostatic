@@ -72,7 +72,6 @@ private:
     std::string NS_gather_field_str;
     std::string NS_deposit_field_str;
     amrex::Real NS_initial_deposit_value;
-    amrex::Real Broyden_max_norm = 1.e-5;
 
     int use_selfconsistent_potential;
     int use_negf;
@@ -113,10 +112,11 @@ private:
     int         num_field_sites_all_NS = 0;
     int         Broyden_Step = 1;
     amrex::Real Broyden_fraction = 0.1;
+    amrex::Real Broyden_max_norm = 1.e-5;
     amrex::Real Broyden_Original_Fraction = 0.1;
     amrex::Real Broyden_Scalar = 1.0;
     amrex::Real Broyden_NormSum_Prev = 1.e100;
-
+    int Broyden_Threshold_MaxStep = 200;
     //AMREX_GPU_MANAGED amrex::Real Broyden_Norm;
     //AMREX_GPU_MANAGED amrex::Real Broyden_NormSum_Curr;
     //AMREX_GPU_MANAGED amrex::Real Broyden_Denom;

@@ -7,4 +7,3 @@
 AMREX_GPU_MANAGED amrex::Real Broyden::Broyden_Norm;
 AMREX_GPU_MANAGED amrex::Real Broyden::Broyden_NormSum_Curr;
 AMREX_GPU_MANAGED amrex::Real Broyden::Broyden_Denom;
-AMREX_GPU_MANAGED         int Broyden::Broyden_Threshold_MaxStep;
