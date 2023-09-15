@@ -38,6 +38,7 @@ public:
     void Set_Broyden_Parallel();
     void Reset_Broyden_Parallel();
     void Execute_Broyden_Modified_Second_Algorithm_Parallel();
+    void Execute_Broyden_Modified_Second_Algorithm_Parallel_SkipGPU();
     #endif
 
 private:
@@ -119,7 +120,6 @@ private:
     int         Broyden_Threshold_MaxStep = 200;
     amrex::Real Broyden_Norm = 0.;
     amrex::Real Broyden_NormSum_Curr = 0.;
-    amrex::Real Broyden_Denom = 0.;
 
     int total_proc;
     int my_rank;

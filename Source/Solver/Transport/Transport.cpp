@@ -380,7 +380,11 @@ c_TransportSolver::Solve(const int step, const amrex::Real time)
                 case s_Algorithm::Type::broyden_second:
                 {
 		            #ifdef BROYDEN_PARALLEL	
-	                Execute_Broyden_Modified_Second_Algorithm_Parallel(); 
+                        #ifdef BROYDEN_SKIP_GPU_OPTIMIZATION
+                        Execute_Broyden_Modified_Second_Algorithm_Parallel_SkipGPU();
+                        #else
+	                    Execute_Broyden_Modified_Second_Algorithm_Parallel(); 
+                        #endif
                     #else
     	            Execute_Broyden_Modified_Second_Algorithm(); 
                     #endif
