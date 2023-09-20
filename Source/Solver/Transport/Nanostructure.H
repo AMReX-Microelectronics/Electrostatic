@@ -129,8 +129,6 @@ public:
 
     virtual void ReadNanostructureProperties () override;
 
-    void MarkCellsWithAtoms(); 
-
     void Gather_MeshAttributeAtAtoms();
     void Deposit_AtomAttributeToMesh();
     void Obtain_PotentialAtSites();
@@ -160,6 +158,8 @@ private:
     amrex::Vector<s_Position3D> pos_vec;
 
     void InitializeNEGF();
+    void Mark_CellsWithAtoms(); 
+    void Evaluate_LocalFieldSites();
 };
 
 #endif

@@ -227,15 +227,26 @@ using namespace amrex;
     
             /*Increment Broyden_Step*/
             Broyden_Step += 1;
+
+            MPI_Gatherv(&n_curr_in(0),
+                         site_size_loc,
+                         MPI_DOUBLE,
+                        &n_curr_in_glo(0),
+                         MPI_recv_count.data(),
+                         MPI_recv_disp.data(),
+                         MPI_DOUBLE,
+                         ParallelDescriptor::IOProcessorNumber(),
+                         ParallelDescriptor::Communicator());
+
     
-            MPI_Allgatherv(&n_curr_in(0),
-                            site_size_loc,
-                            MPI_DOUBLE,
-                           &n_curr_in_glo(0),
-                            MPI_recv_count.data(),
-                            MPI_disp.data(),
-                            MPI_DOUBLE,
-                            ParallelDescriptor::Communicator());
+            //MPI_Allgatherv(&n_curr_in(0),
+            //                site_size_loc,
+            //                MPI_DOUBLE,
+            //               &n_curr_in_glo(0),
+            //                MPI_recv_count.data(),
+            //                MPI_recv_disp.data(),
+            //                MPI_DOUBLE,
+            //                ParallelDescriptor::Communicator());
 
     }
   #else
@@ -506,15 +517,25 @@ using namespace amrex;
             amrex::Print() << "n_new_in: " << h_n_curr_in(0) << "\n";
     
             Broyden_Step += 1;
-    
-            MPI_Allgatherv(&h_n_curr_in(0),
-                            site_size_loc,
-                            MPI_DOUBLE,
-                           &n_curr_in_glo(0),
-                            MPI_recv_count.data(),
-                            MPI_disp.data(),
-                            MPI_DOUBLE,
-                            ParallelDescriptor::Communicator());
+ 
+            MPI_Gatherv(&n_curr_in(0),
+                         site_size_loc,
+                         MPI_DOUBLE,
+                        &n_curr_in_glo(0),
+                         MPI_recv_count.data(),
+                         MPI_recv_disp.data(),
+                         MPI_DOUBLE,
+                         ParallelDescriptor::IOProcessorNumber(),
+                         ParallelDescriptor::Communicator());
+
+            //MPI_Allgatherv(&h_n_curr_in(0),
+            //                site_size_loc,
+            //                MPI_DOUBLE,
+            //               &n_curr_in_glo(0),
+            //                MPI_recv_count.data(),
+            //                MPI_recv_disp.data(),
+            //                MPI_DOUBLE,
+            //                ParallelDescriptor::Communicator());
     }
   #endif
 #endif

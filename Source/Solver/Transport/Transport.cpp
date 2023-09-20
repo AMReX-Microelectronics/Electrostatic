@@ -208,7 +208,7 @@ c_TransportSolver::InitData()
                                                                        NS_Broyden_frac,
                                                                        NS_Broyden_norm_type,
                                                                        use_negf,
-								       negf_foldername_str
+								                                       negf_foldername_str
                                                                       ));
                 break;
             }
@@ -224,7 +224,7 @@ c_TransportSolver::InitData()
                                                                             NS_Broyden_frac,
                                                                             NS_Broyden_norm_type,
                                                                             use_negf,
-									    negf_foldername_str
+	                                    								    negf_foldername_str
                                                                            ));
                 amrex::Abort("NS_type " + type + " is not yet defined.");
                 break; 
@@ -299,7 +299,9 @@ c_TransportSolver::Solve(const int step, const amrex::Real time)
         do 
         {
             amrex::Print() << "Printing Broyden_Parallel Write_Data! \n";
-	       if(max_iter > MAX_ITER_THRESHOLD) amrex::Abort("Iteration step is GREATER than the THRESHOLD" + MAX_ITER_THRESHOLD);
+	       if(max_iter > MAX_ITER_THRESHOLD) {
+               amrex::Abort("Iteration step is GREATER than the THRESHOLD" + MAX_ITER_THRESHOLD);
+           }
 
            amrex::Print() << "\n\nSelf-consistent iteration: " << max_iter << "\n";
 
@@ -309,11 +311,7 @@ c_TransportSolver::Solve(const int step, const amrex::Real time)
            total_mlmg_solve_time += mlmg_solve_time;
            amrex::Print() << "\nmlmg_solve_time: " << mlmg_solve_time << "\n";
 
-
-
            rPostPro.Compute();
-
-           //rOutput.WriteOutput(max_iter+1000, time);
 
            for (int c=0; c < vp_CNT.size(); ++c)
            {
@@ -356,7 +354,7 @@ c_TransportSolver::Solve(const int step, const amrex::Real time)
                    d_n_curr_out_data.copy(vp_CNT[c]->h_RhoInduced_loc_data); 
                    #endif
                #else
-	           vp_CNT[c]->Gather_NEGFComputed_Charge(h_n_curr_out_data); 
+	           vp_CNT[c]->Gatherv_NEGFComputed_LocalCharge(h_n_curr_out_data); 
                #endif
             }
 
@@ -410,16 +408,11 @@ c_TransportSolver::Solve(const int step, const amrex::Real time)
 
            for (int c=0; c < vp_CNT.size(); ++c)
            {
+               /*(?) Future: Need generalization for multiple CNTs*/
 		       #ifdef BROYDEN_PARALLEL	
-               /*(?) Future: if condition to check if proc was used for charge computation of this nanostructure*/
-               vp_CNT[c]->h_n_curr_in_data.copy(n_curr_in_glo_data); /*?*/
+               vp_CNT[c]->Scatterv_BroydenComputed_GlobalCharge(n_curr_in_glo_data); 
                #else
-               if (ParallelDescriptor::IOProcessor())
-               {
-                   vp_CNT[c]->h_n_curr_in_data.copy(h_n_curr_in_data); 
-                   /*(?) Future: Need generalization for multiple CNTs*/
-	           }
-    	       vp_CNT[c]->Broadcast_BroydenPredicted_Charge();
+               vp_CNT[c]->Scatterv_BroydenComputed_GlobalCharge(h_n_curr_in_data);
                #endif
 
 	           if( vp_CNT[c]->write_at_iter )
@@ -450,9 +443,7 @@ c_TransportSolver::Solve(const int step, const amrex::Real time)
             {
                 #ifdef BROYDEN_PARALLEL
                 vp_CNT[c]->Write_Data(vp_CNT[c]->step_filename_str, n_curr_out_glo_data, Norm_glo_data);
-                
                 #else
-                
                 vp_CNT[c]->Write_Data(vp_CNT[c]->step_filename_str, h_n_curr_out_data, h_Norm_data);
 
                 if(map_AlgorithmType[Algorithm_Type] == s_Algorithm::Type::broyden_first) 
@@ -538,7 +529,7 @@ c_TransportSolver:: Create_Global_Output_Data()
                 MPI_DOUBLE,
                &n_curr_out_glo(0),
                 MPI_recv_count.data(),
-                MPI_disp.data(),
+                MPI_recv_disp.data(),
                 MPI_DOUBLE,
                 ParallelDescriptor::IOProcessorNumber(),
                 ParallelDescriptor::Communicator());
@@ -548,7 +539,7 @@ c_TransportSolver:: Create_Global_Output_Data()
                 MPI_DOUBLE,
                &Norm_glo(0),
                 MPI_recv_count.data(),
-                MPI_disp.data(),
+                MPI_recv_disp.data(),
                 MPI_DOUBLE,
                 ParallelDescriptor::IOProcessorNumber(),
                 ParallelDescriptor::Communicator());

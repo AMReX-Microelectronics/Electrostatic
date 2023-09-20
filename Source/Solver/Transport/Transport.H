@@ -126,7 +126,7 @@ private:
     int num_procs_with_sites;
     int site_size_loc;
     amrex::Vector<int> MPI_recv_count;
-    amrex::Vector<int> MPI_disp;
+    amrex::Vector<int> MPI_recv_disp;
 
     RealTable1D h_n_curr_in_data; 
     RealTable1D h_n_curr_out_data; 

@@ -44,7 +44,6 @@ class c_NEGF_Common: public MatrixBlock<T>,
 {
 
 public:
-    
     using ComplexTable1D = TableData<ComplexType, 1>;
     using ComplexTable2D = TableData<ComplexType, 2>;
     using RealTable1D    = TableData<amrex::Real, 1>;
@@ -52,46 +51,130 @@ public:
     using BlkTable1D     = TableData<MatrixBlock<T>, 1>;
     using BlkTable2D     = TableData<MatrixBlock<T>, 2>;
 
+    /* This is the name of the nanostructure specified by user in the input file. */
     std::string name;
+
+    /* rank number of current process */
+    int my_rank;
+
+    /* total number of processors*/
+    int num_proc;
+
+    /* Total number of atoms. 
+     * This number can be different from num_field_sites.
+     * E.g. in case of mode-space approximation for a carbon nanotube,
+     * we can treat each ring of a nanotube as a field site.
+     * So the num_atoms are m times larger than num_field_sites, 
+     * where m is the number of atoms in a ring.
+     */
     int num_atoms = 0;
+
+    /* The following two quantities are specific to material structure,
+     * and are useful in defining atom locations. 
+     */
     int num_atoms_per_unitcell = 0;
     int num_unitcells = 0;
-    int num_field_sites = 0;
-    int average_field_flag = 1;
-    int num_atoms_per_field_site = 1;
-    int num_atoms_to_avg_over = 1;
-    int primary_transport_dir = 1; /*Y*/
-    amrex::Real cell_volume = 1.;
+    
+    /*number of all sites*/
+    int num_field_sites = 0; 
 
-    amrex::RealArray offset;
+    /* number of field sites this processor gets
+     * Note: a field site can be shared by multiple processors,
+     * e.g., a ring of a carbon nanotube can be split across, 
+     * say, 4 processors, yet it can be represented as 1 field site
+     * in mode-space approximation.
+     * In this case, each of the 4 processors contain the field site 
+     * information.
+     */
+    int num_local_field_sites = 0; 
+
+    /* This is the offset of the current processors local field site id 
+     * with respect to global field site id,
+     * e.g., if a processor contains field sites [4, 5, 6, 7]
+     * their local site ids are [0, 1, 2, 3], while the site id offset is 4.
+     */
+    int site_id_offset = 0;
+
+    /* avg_type can be s_AVG_TYPE::ALL or s_AVG_TYPE::SPECIFIC */
     int avg_type;
+
+    /* The following host and device vectors represent indices of atoms to average over, while 
+     * averaging data represented on atoms of a material to corresponding field site representation, 
+     * e.g. data represented on  atoms of a ring of a nanotube to average data per ring.
+     */
     amrex::Vector<int> vec_avg_indices;
     amrex::Gpu::DeviceVector<int> gpuvec_avg_indices;
-   
-    int num_proc;
-    int my_rank;
-    int Hsize_glo=0; 
-    /*global size of the Hamiltonian (each element can be a number or a block of numbers)*/
-    int offDiag_repeatBlkSize=0;
-    /*repeated block size of offdiagonal elements of Hamiltonian*/
- 
-    int max_blkCol_perProc=0; /*maximum block columns per MPI/GPU process*/
-    int blkCol_size_loc=0; /*size of the local block of columns*/
 
+    /* whether to average over atoms to represent field sites */
+    int average_field_flag = 1;
+
+    /* This number can be > 1, e.g. a carbon ring treated as a field site in mode-space approximation, 
+     * having more than 1 atoms in a ring
+     */
+    int num_atoms_per_field_site = 1;
+
+    /* This number is > 1, if field site representation is constructed by averaging over more than 1 atoms. */
+    int num_atoms_to_avg_over = 1; 
+
+    /* 1 indicates Y*/
+    int primary_transport_dir = 1; 
+
+    /* computational cell volume */
+    amrex::Real cell_volume = 1.;
+    amrex::RealArray offset;
+   
+    /* global size of the Hamiltonian (each element can be a number or a block of numbers)*/
+    int Hsize_glo=0; 
+
+    /* repeated block size of offdiagonal elements of Hamiltonian*/
+    int offDiag_repeatBlkSize=0;
+ 
+    /* maximum block columns per MPI/GPU process*/
+    int max_blkCol_perProc=0; 
+
+    /* size of the local block of columns*/
+    int blkCol_size_loc=0; 
+
+    /* Number of processors that hold nonzero number of block columns*/
     int num_proc_with_blkCol=0;
 
-    amrex::Vector<int> MPI_recv_count;
-    amrex::Vector<int> MPI_disp;
+    /* vec of cumulative number of block column sizes*/
+    amrex::Vector<int> vec_cumu_blkCol_size; 
 
-    amrex::Vector<int> vec_cumu_blkCol_size; /*vec of cumulative number of blk column sizes*/
-    amrex::Vector<int> vec_blkCol_gids; /*vec of block column global ids*/
+    /* vec of block column global ids*/
+    amrex::Vector<int> vec_blkCol_gids; 
 
+    /* spin degeneracy */
     const int spin_degen = 2;
+
+    /* Host and device vectors of block degeneracy vectors. 
+     * This is relevant in mode-space approximation, when each block in 
+     * the Hamiltonian is not a number but an array representing distinct modes
+     * and elements of an array have degeneracy associated with it.
+     */
     amrex::Vector<int> block_degen_vec;
     amrex::Gpu::DeviceVector<int> block_degen_gpuvec;
 
+    /* Global array representing potential on the surface of the nanotube */
     amrex::Vector<amrex::Real> Potential;
-    amrex::Vector<amrex::Real> PTD; /*PTD: primary transport dir*/
+
+    /* PTD: primary transport dir*/
+    amrex::Vector<amrex::Real> PTD; 
+
+    /* MPI_recv_count stores blkCol_size_loc of each processor.
+     * MPI_recv_disp stores the offset id of block columns for each processor.
+     * These vectors are defined for each processor and are useful during
+     * MPI_Gatherv of of induced charge computed by each processor.
+     */
+    amrex::Vector<int> MPI_recv_count;
+    amrex::Vector<int> MPI_recv_disp;
+
+    /* MPI_send_count stores num_local_field_sites of each processor.
+     * MPI_send_disp stores site_id_offset of each processor.
+     * These vectors are defined only for IOProcessor.
+     */
+    amrex::Vector<int> MPI_send_count;
+    amrex::Vector<int> MPI_send_disp;
 
     /*Tables required to store Hamiltonian */
     BlkTable1D h_minusHa_loc_data;
@@ -110,11 +193,10 @@ public:
     BlkTable1D  h_GR_atPoles_loc_data;
     BlkTable1D  h_RhoEq_loc_data;
     BlkTable1D  h_RhoNonEq_loc_data;
-
     RealTable1D h_RhoInduced_loc_data;
-    RealTable1D h_n_curr_in_data;
-    RealTable1D d_n_curr_in_data;
 
+    RealTable1D h_n_curr_in_loc_data;
+    RealTable1D d_n_curr_in_loc_data;
     RealTable1D h_Current_loc_data;
 
     /*Tables required to compute Green and Spectral Functions */
@@ -160,9 +242,6 @@ public:
     amrex::Gpu::DeviceVector<amrex::Real> d_Trace_r;
     amrex::Gpu::DeviceVector<amrex::Real> d_Trace_i;
     #endif
-
-
-
 
 
     amrex::GpuArray<int,NUM_CONTACTS> global_contact_index; 
@@ -273,8 +352,9 @@ public:
     void Compute_Current();
     //void GuessNewCharge_SimpleMixingAlg();
     
-    void Gather_NEGFComputed_Charge(RealTable1D& n_curr_out_data);
-    void Broadcast_BroydenPredicted_Charge();
+    void Gatherv_NEGFComputed_LocalCharge(RealTable1D& n_curr_out_glo_data);
+    void Gatherv_Input_LocalCharge(RealTable1D& n_curr_in_glo_data);
+    void Scatterv_BroydenComputed_GlobalCharge(RealTable1D& n_curr_in_glo_data);
 
     void Set_Arrays_OfSize_NumFieldSites();
 
@@ -338,6 +418,7 @@ public:
 
     virtual void Deallocate();
 
+    void Define_MPISendCountAndDisp();
 };
 
 

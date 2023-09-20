@@ -19,9 +19,9 @@ c_NEGF_Common<T>:: Deallocate ()
     Potential.clear();
     PTD.clear();
 
-    h_n_curr_in_data.clear();
+    //h_n_curr_in_glo_data.clear();
     #if AMREX_USE_GPU
-    d_n_curr_in_data.clear();
+    d_n_curr_in_glo_data.clear();
     #endif
 
     eq_integration_pts.clear();
@@ -67,6 +67,49 @@ c_NEGF_Common<T>:: Set_IterationFilenameString(const int iter)
     }
 }
 
+template<typename T>
+void
+c_NEGF_Common<T>:: Define_MPISendCountAndDisp() 
+{
+
+    if(ParallelDescriptor::IOProcessor()) 
+    {
+        MPI_send_count.resize(num_proc);
+        MPI_send_disp.resize(num_proc);
+
+        std::fill(MPI_send_count.begin(), MPI_send_count.end(), 0);
+        std::fill(MPI_send_disp.begin(), MPI_send_disp.end(), 0);
+    }
+    MPI_Gather(&(site_id_offset),
+               1,
+               MPI_INT,
+               MPI_send_disp.data(),
+               1,
+               MPI_INT,
+               ParallelDescriptor::IOProcessorNumber(),
+               ParallelDescriptor::Communicator());
+
+    MPI_Gather(&(num_local_field_sites),
+                1,
+                MPI_INT,
+                MPI_send_count.data(),
+                1,
+                MPI_INT,
+                ParallelDescriptor::IOProcessorNumber(),
+                ParallelDescriptor::Communicator());
+
+    //if(ParallelDescriptor::IOProcessor()) 
+    //{
+    //    for(int p=0; p < num_proc; ++p)
+    //    {
+    //        amrex::Print() << " process/MPI_send_disp/count: " << p << " "
+    //                                                           << MPI_send_disp[p] << " "
+    //                                                           << MPI_send_count[p] << "\n";
+    //    }
+    //}
+    //amrex::Abort("Manually stopping for debugging");
+}
+
 
 template<typename T>
 void
@@ -75,13 +118,50 @@ c_NEGF_Common<T>:: Initialize_ChargeAtFieldSites()
 
     if(flag_initialize_charge_distribution) 
     {
-        Read_Table1D(num_field_sites, h_n_curr_in_data, charge_distribution_filename); 
+        RealTable1D h_n_curr_in_glo_data;
+
+        if(ParallelDescriptor::IOProcessor())  /*&*/
+        {
+            h_n_curr_in_glo_data.resize({0},{num_field_sites}, The_Pinned_Arena());
+            Read_Table1D(num_field_sites, h_n_curr_in_glo_data, charge_distribution_filename); 
+        }
+
+        auto const& h_n_curr_in_glo  = h_n_curr_in_glo_data.table();
+        auto const& h_n_curr_in_loc  = h_n_curr_in_loc_data.table();
+
+        MPI_Scatterv(&h_n_curr_in_glo(0),
+                     MPI_send_count.data(),
+                     MPI_send_disp.data(),
+                     MPI_DOUBLE,
+                    &h_n_curr_in_loc(0),
+                     num_local_field_sites,
+                     MPI_DOUBLE,
+                     ParallelDescriptor::IOProcessorNumber(),
+                     ParallelDescriptor::Communicator());
+
+        if(ParallelDescriptor::IOProcessor())  /*&*/
+        {
+            h_n_curr_in_glo_data.clear();
+           // bool full_match = true;
+           // for(int i=0; i < num_local_field_sites; ++i) 
+           // {
+           //     if(h_n_curr_in_loc(i) != h_n_curr_in_glo(i+site_id_offset) )
+           //     {
+           //         full_match = false;
+           //         amrex::Abort("n_curr_in_loc doesn't match with glo: " 
+           //                 + std::to_string(i) + " " + std::to_string(h_n_curr_in_loc(i)) + " " 
+           //                 + std::to_string(h_n_curr_in_glo(i+site_id_offset)));
+           //     }
+           // }
+           // std::cout << "process: " << my_rank << " full_match: " << full_match << "\n";
+        }
+
     }
     else 
     {    
-        SetVal_Table1D(h_n_curr_in_data, initial_charge);
+        //SetVal_Table1D(h_n_curr_in_glo_data, initial_charge);
+        SetVal_Table1D(h_n_curr_in_loc_data, initial_charge);
     }
-
 }
 
 
@@ -130,7 +210,7 @@ c_NEGF_Common<T>::Read_Table1D(int assert_size,
         for(int l=tlo[0]; l < thi[0]; ++l)
         {
             infile >> position >> value;
-	    Tab1D(l) = value;
+	        Tab1D(l) = value;
             amrex::Print() << "position/value: " << position << "    " << Tab1D(l) << "\n";
         }
         infile.close();
@@ -313,13 +393,13 @@ c_NEGF_Common<T>:: ReadNanostructureProperties ()
     
     Set_Arrays_OfSize_NumFieldSites();
 
-    h_n_curr_in_data.resize({0},{num_field_sites}, The_Pinned_Arena());
-    SetVal_Table1D(h_n_curr_in_data,0.);
+    //h_n_curr_in_glo_data.resize({0},{num_field_sites}, The_Pinned_Arena());
+    //SetVal_Table1D(h_n_curr_in_glo_data,0.);
 
-    #if AMREX_USE_GPU
-    d_n_curr_in_data.resize({0},{num_field_sites}, The_Arena());
-    d_n_curr_in_data.copy(h_n_curr_in_data);
-    #endif 
+    //#if AMREX_USE_GPU
+    //d_n_curr_in_glo_data.resize({0},{num_field_sites}, The_Arena());
+    //d_n_curr_in_glo_data.copy(h_n_curr_in_glo_data);
+    //#endif 
 
 }
 
@@ -489,21 +569,21 @@ c_NEGF_Common<T>::DefineMatrixPartition()
     }
 
     MPI_recv_count.resize(num_proc);
-    MPI_disp.resize(num_proc);
+    MPI_recv_disp.resize(num_proc);
 
     for(int p=0; p < num_proc; ++p) {
 
        if(p < num_proc_with_blkCol) {
           MPI_recv_count[p] = vec_cumu_blkCol_size[p+1] - vec_cumu_blkCol_size[p];
-          MPI_disp[p] = vec_cumu_blkCol_size[p];
+          MPI_recv_disp[p] = vec_cumu_blkCol_size[p];
        }
        else {
           MPI_recv_count[p] = 0;
-          MPI_disp[p] = 0;
+          MPI_recv_disp[p] = 0;
        }
        //amrex::Print() << "p,recv, disp: " << p << "  " 
        //               << MPI_recv_count[p] << "  " 
-       //               << MPI_disp[p] << "\n";
+       //               << MPI_recv_disp[p] << "\n";
     }
 
     Define_MPI_BlkType();
@@ -582,6 +662,7 @@ c_NEGF_Common<T>::AllocateArrays ()
     SetVal_Table1D(h_GR_atPoles_loc_data,zero);
 
     h_E_RealPath_data.resize({0},{NUM_ENERGY_PTS_REAL},The_Pinned_Arena());
+
 
 }
 
@@ -1000,7 +1081,7 @@ c_NEGF_Common<T>:: Compute_DensityOfStates ()
                         MPI_BlkType,
                        &h_Alpha_glo(0),
                         MPI_recv_count.data(),
-                        MPI_disp.data(),
+                        MPI_recv_disp.data(),
                         MPI_BlkType,
                         ParallelDescriptor::Communicator());
 
@@ -1235,29 +1316,20 @@ c_NEGF_Common<T>:: Compute_InducedCharge ()
 
 template<typename T>
 void 
-c_NEGF_Common<T>:: Gather_NEGFComputed_Charge (RealTable1D& n_curr_out_data)
+c_NEGF_Common<T>:: Gatherv_Input_LocalCharge (RealTable1D& n_curr_in_glo_data)
 {
-    auto const& h_RhoInduced_loc = h_RhoInduced_loc_data.table();
-    auto const& n_curr_out = n_curr_out_data.table();
+    auto const& n_curr_in_glo = n_curr_in_glo_data.table();
+    auto const& h_n_curr_in_loc = h_n_curr_in_loc_data.table();
 
-    //MPI_Allgatherv(&h_RhoInduced_loc(0),
-    //                blkCol_size_loc,
-    //                MPI_DOUBLE,
-    //               &n_curr_out(0),
-    //                MPI_recv_count.data(),
-    //                MPI_disp.data(),
-    //                MPI_DOUBLE,
-    //                ParallelDescriptor::Communicator());
-
-    MPI_Gatherv(&h_RhoInduced_loc(0),
-                    blkCol_size_loc,
-                    MPI_DOUBLE,
-                   &n_curr_out(0),
-                    MPI_recv_count.data(),
-                    MPI_disp.data(),
-                    MPI_DOUBLE,
-        		    ParallelDescriptor::IOProcessorNumber(),
-                    ParallelDescriptor::Communicator());
+    MPI_Gatherv(&h_n_curr_in_loc(0),
+                 blkCol_size_loc,
+                 MPI_DOUBLE,
+                &n_curr_in_glo(0),
+                 MPI_recv_count.data(),
+                 MPI_recv_disp.data(),
+                 MPI_DOUBLE,
+        		 ParallelDescriptor::IOProcessorNumber(),
+                 ParallelDescriptor::Communicator());
 
     MPI_Barrier(ParallelDescriptor::Communicator());
 
@@ -1266,16 +1338,44 @@ c_NEGF_Common<T>:: Gather_NEGFComputed_Charge (RealTable1D& n_curr_out_data)
 
 template<typename T>
 void 
-c_NEGF_Common<T>:: Broadcast_BroydenPredicted_Charge ()
+c_NEGF_Common<T>:: Gatherv_NEGFComputed_LocalCharge (RealTable1D& n_curr_out_glo_data)
 {
+    auto const& h_RhoInduced_loc = h_RhoInduced_loc_data.table();
+    auto const& n_curr_out_glo = n_curr_out_glo_data.table();
 
-    auto const& n_curr_in  = h_n_curr_in_data.table();
-	
-    MPI_Bcast(&n_curr_in(0),
-           num_field_sites,
-           MPI_DOUBLE,
-           ParallelDescriptor::IOProcessorNumber(),
-           ParallelDescriptor::Communicator());
+    MPI_Gatherv(&h_RhoInduced_loc(0),
+                 blkCol_size_loc,
+                 MPI_DOUBLE,
+                &n_curr_out_glo(0),
+                 MPI_recv_count.data(),
+                 MPI_recv_disp.data(),
+                 MPI_DOUBLE,
+        		 ParallelDescriptor::IOProcessorNumber(),
+                 ParallelDescriptor::Communicator());
+
+    MPI_Barrier(ParallelDescriptor::Communicator());
+
+}
+
+
+template<typename T>
+void 
+c_NEGF_Common<T>:: Scatterv_BroydenComputed_GlobalCharge (RealTable1D& n_curr_in_glo_data)
+{
+    auto const& n_curr_in_glo = n_curr_in_glo_data.table();
+    auto const& h_n_curr_in_loc = h_n_curr_in_loc_data.table();
+
+    MPI_Scatterv(&n_curr_in_glo(0),
+                 MPI_send_count.data(),
+                 MPI_send_disp.data(),
+                 MPI_DOUBLE,
+                &h_n_curr_in_loc(0),
+                 num_local_field_sites,
+                 MPI_DOUBLE,
+                 ParallelDescriptor::IOProcessorNumber(),
+                 ParallelDescriptor::Communicator());
+
+    MPI_Barrier(ParallelDescriptor::Communicator());
 
 }
 
@@ -1539,7 +1639,7 @@ c_NEGF_Common<T>:: Compute_RhoNonEq ()
                             MPI_BlkType,
                            &h_Alpha_glo(0),
                             MPI_recv_count.data(),
-                            MPI_disp.data(),
+                            MPI_recv_disp.data(),
                             MPI_BlkType,
                             ParallelDescriptor::Communicator());
 
@@ -1786,7 +1886,7 @@ c_NEGF_Common<T>:: Compute_RhoEq ()
                             MPI_BlkType,
                            &h_Alpha_glo(0),
                             MPI_recv_count.data(),
-                            MPI_disp.data(),
+                            MPI_recv_disp.data(),
                             MPI_BlkType,
                             ParallelDescriptor::Communicator());
 
@@ -1950,7 +2050,7 @@ c_NEGF_Common<T>:: Compute_GR_atPoles ()
                         MPI_BlkType,
                        &h_Alpha_glo(0),
                         MPI_recv_count.data(),
-                        MPI_disp.data(),
+                        MPI_recv_disp.data(),
                         MPI_BlkType,
                         ParallelDescriptor::Communicator());
 
@@ -2100,7 +2200,7 @@ c_NEGF_Common<T>:: Compute_Rho0 ()
                             MPI_BlkType,
                            &h_Alpha_glo(0),
                             MPI_recv_count.data(),
-                            MPI_disp.data(),
+                            MPI_recv_disp.data(),
                             MPI_BlkType,
                             ParallelDescriptor::Communicator());
 
@@ -2455,7 +2555,7 @@ c_NEGF_Common<T>:: Compute_Current ()
                             MPI_BlkType,
                            &h_Alpha_glo(0),
                             MPI_recv_count.data(),
-                            MPI_disp.data(),
+                            MPI_recv_disp.data(),
                             MPI_BlkType,
                             ParallelDescriptor::Communicator());
 

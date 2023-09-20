@@ -53,14 +53,13 @@ c_Nanostructure<NSType>::c_Nanostructure (const amrex::Geometry            & geo
         NSType::current_filename_str = NSType::step_foldername_str + "/I.dat";  /*current here means charge current, I */
 
         NSType::outfile_I.open(NSType::current_filename_str.c_str()); 
-	NSType::outfile_I << "'step', 'Vds' , 'Vgs', ";
+    	NSType::outfile_I << "'step', 'Vds' , 'Vgs', ";
         for (int k=0; k <NUM_CONTACTS; ++k)
         {
-		NSType::outfile_I << ", 'I at contact_" << k+1 << "',";
+	    	NSType::outfile_I << ", 'I at contact_" << k+1 << "',";
         }
-	NSType::outfile_I << "'Broyden_Step', 'Max_Iter', 'Broyden_Fraction', 'Broyden_Scalar'" << "\n";
-	NSType::outfile_I.close();
-
+	    NSType::outfile_I << "'Broyden_Step', 'Max_Iter', 'Broyden_Fraction', 'Broyden_Scalar'" << "\n";
+    	NSType::outfile_I.close();
     }
 
     NSType::step_filename_prefix_str = NSType::step_foldername_str + "/step"; 
@@ -75,7 +74,9 @@ c_Nanostructure<NSType>::c_Nanostructure (const amrex::Geometry            & geo
 
     if(_use_negf) 
     {
-        NSType::initial_charge            = NS_initial_deposit_value;
+        NSType::num_proc       = amrex::ParallelDescriptor::NProcs();
+        NSType::my_rank        = amrex::ParallelDescriptor::MyProc();
+        NSType::initial_charge = NS_initial_deposit_value;
 
         ReadNanostructureProperties();
 
@@ -90,29 +91,39 @@ c_Nanostructure<NSType>::c_Nanostructure (const amrex::Geometry            & geo
         _n_cell = &rGprop.n_cell;
         _geom = &geom;
         auto dx =  _geom->CellSizeArray();
-	NSType::cell_volume = 1.;
-	for (int i=0; i<AMREX_SPACEDIM; ++i) NSType::cell_volume *= dx[i];
-	amrex::Print() << "cell_volume: " << NSType::cell_volume << "\n";
+	    NSType::cell_volume = 1.;
+
+	    for (int i=0; i<AMREX_SPACEDIM; ++i) NSType::cell_volume *= dx[i];
+	    amrex::Print() << "cell_volume: " << NSType::cell_volume << "\n";
 
         auto& rMprop = rCode.get_MacroscopicProperties();
 
         p_mf_gather = rMprop.get_p_mf(NS_gather_str);  
         p_mf_deposit = rMprop.get_p_mf(NS_deposit_str);  
 
+        amrex::Print() << "Fill_AtomLocations()\n";
         Fill_AtomLocations();
-        Redistribute(); //This function is in amrex::ParticleContainer
 
-        MarkCellsWithAtoms();
+        amrex::Print() << "Evaluate_LocalFieldSites()\n";
+        Evaluate_LocalFieldSites();
 
+        amrex::Print() << "Define_MPISendCountAndDisp()\n";
+        NSType::Define_MPISendCountAndDisp();
+
+        amrex::Print() << "Mark_CellsWithAtoms()\n";
+        Mark_CellsWithAtoms();
+
+        amrex::Print() << "Initialize_ChargeAtFieldSites()\n";
         NSType::Initialize_ChargeAtFieldSites();
+
+        amrex::Print() << "Deposit_AtomAttributeToMesh()\n";
         Deposit_AtomAttributeToMesh();
     }
     else 
     {
 	    NSType::Define_PotentialProfile();
-	    //Write_PotentialAtSites();
     }
-
+        
     if(_use_negf) 
     {
         InitializeNEGF();
@@ -162,11 +173,15 @@ c_Nanostructure<NSType>::Fill_AtomLocations()
 
     if (ParallelDescriptor::IOProcessor()) 
     {
+        auto get_1D_site_id = NSType::get_1D_site_id();
+
         for(int i=0; i < NSType::num_atoms; ++i) 
         {
             ParticleType p;
             p.id() = ParticleType::NextID();
             p.cpu() = ParallelDescriptor::MyProc();
+
+            int site_id = get_1D_site_id(p.id());
 
             for(int j=0; j < AMREX_SPACEDIM; ++j) 
             {
@@ -190,8 +205,62 @@ c_Nanostructure<NSType>::Fill_AtomLocations()
         }
     }
 
+    Redistribute(); //This function is in amrex::ParticleContainer
+    
 }
 
+
+template<typename NSType>
+void 
+c_Nanostructure<NSType>::Evaluate_LocalFieldSites() 
+{
+    std::unordered_map<int, int> map;
+    int counter=0;
+    int lev=0;
+    int min_site_id = std::numeric_limits<int>::max();
+
+    int hasValidBox = false;
+    for (MyParIter pti(*this, lev); pti.isValid(); ++pti)
+    {
+        hasValidBox = true;
+        auto np = pti.numParticles();
+
+        const auto& particles = pti.GetArrayOfStructs();
+        const auto p_par = particles().data();
+        auto get_1D_site_id = NSType::get_1D_site_id();
+
+
+        for(int p=0; p < np; ++p) 
+        {   
+            int global_id = p_par[p].id();
+            int site_id   = get_1D_site_id(global_id);
+
+            if(map.find(site_id) == map.end()) 
+            {
+                map[site_id] = counter++;
+                min_site_id = std::min(min_site_id, site_id);
+            }
+        }
+    }
+
+    if(hasValidBox) {
+        NSType::site_id_offset = min_site_id;
+    } else {
+        NSType::site_id_offset = 0;   
+    }
+    NSType::num_local_field_sites = counter;
+
+    //std::cout << " process/site_id_offset/num_local_field_sites: " 
+    //          << NSType::my_rank << " " 
+    //          << NSType::site_id_offset << " "
+    //          << NSType::num_local_field_sites << "\n";
+
+    /*define local charge density 1D table, h_n_curr_in_loc_data */
+    NSType::h_n_curr_in_loc_data.resize({0},{NSType::num_local_field_sites}, The_Pinned_Arena()); 
+    #if AMREX_USE_GPU
+    NSType::d_n_curr_in_loc_data.resize({0},{NSType::num_local_field_sites}, The_Arena()); 
+    #endif
+}
 
 template<typename NSType>
 void 
@@ -252,7 +321,7 @@ c_Nanostructure<NSType>::Read_AtomLocations()
 
 template<typename NSType>
 void 
-c_Nanostructure<NSType>::MarkCellsWithAtoms() 
+c_Nanostructure<NSType>::Mark_CellsWithAtoms() 
 {
     auto& rCode = c_Code::GetInstance();
     auto& rPost = rCode.get_PostProcessor();
@@ -318,11 +387,10 @@ c_Nanostructure<NSType>::Gather_MeshAttributeAtAtoms()
         amrex::ParallelFor(np, [=] AMREX_GPU_DEVICE (int p) noexcept 
         {
             int global_id = p_par[p].id();
-            int site_id = get_1D_site_id(global_id); 
 
-	    amrex::Real lx = (p_par[p].pos(0) - plo[0] - dx[0]*0.5)/dx[0];
-	    amrex::Real ly = (p_par[p].pos(1) - plo[1] - dx[1]*0.5)/dx[1];
-	    amrex::Real lz = (p_par[p].pos(2) - plo[2] - dx[2]*0.5)/dx[2];
+	        amrex::Real lx = (p_par[p].pos(0) - plo[0] - dx[0]*0.5)/dx[0];
+	        amrex::Real ly = (p_par[p].pos(1) - plo[1] - dx[1]*0.5)/dx[1];
+	        amrex::Real lz = (p_par[p].pos(2) - plo[2] - dx[2]*0.5)/dx[2];
 
             int i = static_cast<int>(amrex::Math::floor(lx));
             int j = static_cast<int>(amrex::Math::floor(ly));
@@ -338,15 +406,15 @@ c_Nanostructure<NSType>::Gather_MeshAttributeAtAtoms()
 
             p_par_gather[p] = wx_lo*wy_lo*wz_lo*phi(i  , j  , k  , 0)
 
-		            + wx_hi*wy_lo*wz_lo*phi(i+1, j  , k  , 0)
-			    + wx_lo*wy_hi*wz_lo*phi(i  , j+1, k  , 0)
-			    + wx_lo*wy_lo*wz_hi*phi(i  , j  , k+1, 0)
+        		            + wx_hi*wy_lo*wz_lo*phi(i+1, j  , k  , 0)
+		            	    + wx_lo*wy_hi*wz_lo*phi(i  , j+1, k  , 0)
+            			    + wx_lo*wy_lo*wz_hi*phi(i  , j  , k+1, 0)
 
-		            + wx_hi*wy_hi*wz_lo*phi(i+1, j+1, k  , 0)
-			    + wx_lo*wy_hi*wz_hi*phi(i  , j+1, k+1, 0)
-			    + wx_hi*wy_lo*wz_hi*phi(i+1, j  , k+1, 0)
+		                    + wx_hi*wy_hi*wz_lo*phi(i+1, j+1, k  , 0)
+            			    + wx_lo*wy_hi*wz_hi*phi(i  , j+1, k+1, 0)
+            			    + wx_hi*wy_lo*wz_hi*phi(i+1, j  , k+1, 0)
 
-			    + wx_hi*wy_hi*wz_hi*phi(i+1, j+1, k+1, 0);
+			                + wx_hi*wy_hi*wz_hi*phi(i+1, j+1, k+1, 0);
         });
 
     }
@@ -364,12 +432,12 @@ c_Nanostructure<NSType>::Deposit_AtomAttributeToMesh()
     int lev = 0;
 
     #ifdef AMREX_USE_GPU
-    auto const& n_curr_in = NSType::d_n_curr_in_data.table();
+    NSType::d_n_curr_in_loc_data.copy(NSType::h_n_curr_in_loc_data);
+    auto const& n_curr_in_loc = NSType::d_n_curr_in_glo_data.table();
 
-    NSType::d_n_curr_in_data.copy(NSType::h_n_curr_in_data);
     amrex::Gpu::streamSynchronize();
     #else
-    auto const& n_curr_in = NSType::h_n_curr_in_data.table();
+    auto const& n_curr_in_loc = NSType::h_n_curr_in_loc_data.table();
     #endif
 
 
@@ -386,18 +454,18 @@ c_Nanostructure<NSType>::Deposit_AtomAttributeToMesh()
         auto rho = p_mf_deposit->array(pti);
         auto get_1D_site_id = NSType::get_1D_site_id();
 
-	amrex::Real unit_charge = PhysConst::q_e;
+    	amrex::Real unit_charge = PhysConst::q_e;
         int atoms_per_field_site =  NSType::num_atoms_per_field_site;
+        int SIO = NSType::site_id_offset;
 
         amrex::ParallelFor(np, [=] AMREX_GPU_DEVICE (int p) noexcept 
         {
-	    amrex::Real vol = AMREX_D_TERM(dx[0], *dx[1], *dx[2]);
+    	    amrex::Real vol = AMREX_D_TERM(dx[0], *dx[1], *dx[2]);
 
             int global_id = p_par[p].id();
-            int site_id = get_1D_site_id(global_id); 
-
-            amrex::Real qp = n_curr_in(site_id)*unit_charge/vol/atoms_per_field_site;
-
+            int site_id   = get_1D_site_id(global_id); 
+           
+            amrex::Real qp = n_curr_in_loc(site_id - SIO) * unit_charge/vol/atoms_per_field_site; 
 
             amrex::Real lx = (p_par[p].pos(0) - plo[0] - dx[0]*0.5)/dx[0];
     	    amrex::Real ly = (p_par[p].pos(1) - plo[1] - dx[1]*0.5)/dx[1];
@@ -415,15 +483,15 @@ c_Nanostructure<NSType>::Deposit_AtomAttributeToMesh()
             amrex::Real wy_lo = amrex::Real(1.0) - wy_hi;
             amrex::Real wz_lo = amrex::Real(1.0) - wz_hi;
 
-	    amrex::Gpu::Atomic::AddNoRet(&rho(i  , j  , k  , 0), wx_lo*wy_lo*wz_lo*qp);
+    	    amrex::Gpu::Atomic::AddNoRet(&rho(i  , j  , k  , 0), wx_lo*wy_lo*wz_lo*qp);
 
-	    amrex::Gpu::Atomic::AddNoRet(&rho(i+1, j  , k  , 0), wx_hi*wy_lo*wz_lo*qp);
-	    amrex::Gpu::Atomic::AddNoRet(&rho(i  , j+1, k  , 0), wx_lo*wy_hi*wz_lo*qp);
-	    amrex::Gpu::Atomic::AddNoRet(&rho(i  , j  , k+1, 0), wx_lo*wy_lo*wz_hi*qp);
+	        amrex::Gpu::Atomic::AddNoRet(&rho(i+1, j  , k  , 0), wx_hi*wy_lo*wz_lo*qp);
+	        amrex::Gpu::Atomic::AddNoRet(&rho(i  , j+1, k  , 0), wx_lo*wy_hi*wz_lo*qp);
+    	    amrex::Gpu::Atomic::AddNoRet(&rho(i  , j  , k+1, 0), wx_lo*wy_lo*wz_hi*qp);
 
-	    amrex::Gpu::Atomic::AddNoRet(&rho(i+1, j+1, k  , 0), wx_hi*wy_hi*wz_lo*qp);
-	    amrex::Gpu::Atomic::AddNoRet(&rho(i  , j+1, k+1, 0), wx_lo*wy_hi*wz_hi*qp);
-	    amrex::Gpu::Atomic::AddNoRet(&rho(i+1, j  , k+1, 0), wx_hi*wy_lo*wz_hi*qp);
+	        amrex::Gpu::Atomic::AddNoRet(&rho(i+1, j+1, k  , 0), wx_hi*wy_hi*wz_lo*qp);
+    	    amrex::Gpu::Atomic::AddNoRet(&rho(i  , j+1, k+1, 0), wx_lo*wy_hi*wz_hi*qp);
+	        amrex::Gpu::Atomic::AddNoRet(&rho(i+1, j  , k+1, 0), wx_hi*wy_lo*wz_hi*qp);
 
             amrex::Gpu::Atomic::AddNoRet(&rho(i+1, j+1, k+1, 0), wx_hi*wy_hi*wz_hi*qp);
 
@@ -473,6 +541,7 @@ c_Nanostructure<NSType>::Obtain_PotentialAtSites()
                 {
                     int global_id = p_par[p].id();
                     int site_id = get_1D_site_id(global_id); 
+
                     amrex::HostDevice::Atomic::Add(&(p_V[site_id]), p_par_gather[p]);
                 });
             }
@@ -493,10 +562,10 @@ c_Nanostructure<NSType>::Obtain_PotentialAtSites()
                     int atom_id_at_site = get_atom_id_at_site(global_id); 
                     int remainder = atom_id_at_site%num_atoms_per_field_site;
 
-	            for(int m=0; m < num_atoms_to_avg_over; ++m)
-	            {
-                        if(remainder == avg_indices_ptr[m]) 
+	                for(int m=0; m < num_atoms_to_avg_over; ++m)
 	                {
+                        if(remainder == avg_indices_ptr[m]) 
+	                    {
                             amrex::HostDevice::Atomic::Add(&(p_V[site_id]), p_par_gather[p]);
                         }
                     } 
@@ -554,9 +623,6 @@ template<typename NSType>
 void
 c_Nanostructure<NSType>:: InitializeNEGF ()
 {
-
-    NSType::num_proc = amrex::ParallelDescriptor::NProcs();
-    NSType::my_rank = amrex::ParallelDescriptor::MyProc();
 
     NSType::DefineMatrixPartition();
     NSType::AllocateArrays();
