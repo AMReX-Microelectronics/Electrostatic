@@ -19,9 +19,9 @@ c_NEGF_Common<T>:: Deallocate ()
     Potential.clear();
     PTD.clear();
 
-    //h_n_curr_in_glo_data.clear();
+    h_n_curr_in_loc_data.clear();
     #if AMREX_USE_GPU
-    d_n_curr_in_glo_data.clear();
+    d_n_curr_in_loc_data.clear();
     #endif
 
     eq_integration_pts.clear();

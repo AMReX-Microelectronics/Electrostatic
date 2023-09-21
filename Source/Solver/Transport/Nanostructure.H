@@ -132,6 +132,7 @@ public:
     void Gather_MeshAttributeAtAtoms();
     void Deposit_AtomAttributeToMesh();
     void Obtain_PotentialAtSites();
+    void Mark_CellsWithAtoms(); 
     void Write_PotentialAtSites(const std::string filename_prefix);
     void Solve_NEGF();
     void Write_Data (const std::string filename_prefix, 
@@ -158,7 +159,6 @@ private:
     amrex::Vector<s_Position3D> pos_vec;
 
     void InitializeNEGF();
-    void Mark_CellsWithAtoms(); 
     void Evaluate_LocalFieldSites();
 };
 

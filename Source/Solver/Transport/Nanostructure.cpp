@@ -433,7 +433,7 @@ c_Nanostructure<NSType>::Deposit_AtomAttributeToMesh()
 
     #ifdef AMREX_USE_GPU
     NSType::d_n_curr_in_loc_data.copy(NSType::h_n_curr_in_loc_data);
-    auto const& n_curr_in_loc = NSType::d_n_curr_in_glo_data.table();
+    auto const& n_curr_in_loc = NSType::d_n_curr_in_loc_data.table();
 
     amrex::Gpu::streamSynchronize();
     #else
