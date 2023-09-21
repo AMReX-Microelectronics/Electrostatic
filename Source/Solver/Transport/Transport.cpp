@@ -317,7 +317,11 @@ c_TransportSolver::Solve(const int step, const amrex::Real time)
            {
 	           vp_CNT[c]->Set_IterationFilenameString(max_iter);
 
-	           vp_CNT[c]->Write_InputInducedCharge(vp_CNT[c]->iter_filename_str, h_n_curr_in_data); /*?*/
+                #ifdef BROYDEN_PARALLEL
+	            vp_CNT[c]->Write_InputInducedCharge(vp_CNT[c]->iter_filename_str, n_curr_in_glo_data); 
+                #else
+	            vp_CNT[c]->Write_InputInducedCharge(vp_CNT[c]->iter_filename_str, h_n_curr_in_data); 
+                #endif  
 
 	           vp_CNT[c]->Gather_MeshAttributeAtAtoms();  
                    
