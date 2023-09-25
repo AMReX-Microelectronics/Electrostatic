@@ -194,6 +194,7 @@ public:
     BlkTable1D  h_RhoEq_loc_data;
     BlkTable1D  h_RhoNonEq_loc_data;
     RealTable1D h_RhoInduced_loc_data;
+    RealTable1D h_U_loc_data;
 
     RealTable1D h_n_curr_in_loc_data;
     RealTable1D d_n_curr_in_loc_data;

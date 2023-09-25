@@ -119,11 +119,7 @@ c_Nanostructure<NSType>::c_Nanostructure (const amrex::Geometry            & geo
         amrex::Print() << "Deposit_AtomAttributeToMesh()\n";
         Deposit_AtomAttributeToMesh();
     }
-    else 
-    {
-	    NSType::Define_PotentialProfile();
-    }
-        
+
     if(_use_negf) 
     {
         InitializeNEGF();
@@ -250,10 +246,10 @@ c_Nanostructure<NSType>::Evaluate_LocalFieldSites()
     }
     NSType::num_local_field_sites = counter;
 
-    //std::cout << " process/site_id_offset/num_local_field_sites: " 
-    //          << NSType::my_rank << " " 
-    //          << NSType::site_id_offset << " "
-    //          << NSType::num_local_field_sites << "\n";
+    std::cout << " process/site_id_offset/num_local_field_sites: " 
+              << NSType::my_rank << " " 
+              << NSType::site_id_offset << " "
+              << NSType::num_local_field_sites << "\n";
 
     /*define local charge density 1D table, h_n_curr_in_loc_data */
     NSType::h_n_curr_in_loc_data.resize({0},{NSType::num_local_field_sites}, The_Pinned_Arena()); 
@@ -511,15 +507,14 @@ c_Nanostructure<NSType>::Obtain_PotentialAtSites()
     const int num_atoms_per_field_site = NSType::num_atoms_per_field_site;
     const int num_atoms_to_avg_over    = NSType::num_atoms_to_avg_over;
     const int average_field_flag       = NSType::average_field_flag;
+    const int blkCol_size_loc          = NSType::blkCol_size_loc;
+    const int num_local_field_sites    = NSType::num_local_field_sites;
+    const int SIO                      = NSType::site_id_offset;
 
-    amrex::Gpu::DeviceVector<amrex::Real> vec_V(num_field_sites);
+    amrex::Gpu::DeviceVector<amrex::Real> d_vec_V(num_field_sites);
+    std::fill(d_vec_V.begin(), d_vec_V.end(), 0);
 
-    for (int l=0; l < num_field_sites; ++l) 
-    {
-        vec_V[l] = 0.;
-    }
-
-    amrex::Real* p_V   = vec_V.dataPtr();  
+    amrex::Real* p_V   = d_vec_V.dataPtr();  
     
     int lev = 0;
     for (MyParIter pti(*this, lev); pti.isValid(); ++pti)
@@ -529,8 +524,8 @@ c_Nanostructure<NSType>::Obtain_PotentialAtSites()
         const auto& particles = pti.GetArrayOfStructs();
         const auto p_par = particles().data();
 
-        auto& par_gather  = pti.get_realPA_comp(realPA::gather);
-        auto p_par_gather = par_gather.data();
+        auto& par_gather    = pti.get_realPA_comp(realPA::gather);
+        auto p_par_gather   = par_gather.data();
         auto get_1D_site_id = NSType::get_1D_site_id();
           
         if(average_field_flag) 
@@ -576,26 +571,218 @@ c_Nanostructure<NSType>::Obtain_PotentialAtSites()
         { 
             amrex::ParallelFor(np, [=] AMREX_GPU_DEVICE (int p) noexcept 
             {
-                int global_id  = p_par[p].id();
-                int site_id    = get_1D_site_id(global_id); 
-                p_V[site_id]   = p_par_gather[p];
+                int global_id      = p_par[p].id();
+                int site_id        = get_1D_site_id(global_id); 
+                p_V[site_id]       = p_par_gather[p];
             });
         } 
     }
+    MPI_Allreduce( MPI_IN_PLACE,
+                   &(p_V[0]),
+                   num_field_sites,
+                   MPI_DOUBLE,
+                   MPI_SUM,
+                   ParallelDescriptor::Communicator());
 
-    for (int l=0; l<num_field_sites; ++l) 
+    //for(int i=0; i < num_field_sites; ++i)
+    //{
+    //    amrex::Print() << "proc/i/h_vec_V: " << NSType::my_rank << " " << i << "  " << p_V[i] << "\n";
+    //}
+    auto const& h_U_loc = NSType::h_U_loc_data.table();
+    for (int l=0; l<num_local_field_sites; ++l) 
     {
-        ParallelDescriptor::ReduceRealSum(p_V[l]);
+        h_U_loc(l) = -p_V[SIO+l] / num_atoms_to_avg_over;
     }
-
-    for (int l=0; l<num_field_sites; ++l) 
+    for(int c=0; c < NUM_CONTACTS; ++c)
     {
-        NSType::Potential[l]   = -p_V[l] / num_atoms_to_avg_over;
-	//amrex::Print() << "site_id, avg_potential: " << l << "  " << NSType::Potential[l] << "\n";
-        /*minus because Potential is experienced by electrons*/
+        NSType::U_contact[c] = -p_V[NSType::global_contact_index[c]] / num_atoms_to_avg_over;
     }
+    bool full_match = true;
+    for(int i=0; i < num_local_field_sites; ++i)
+    {
+        if(h_U_loc(i) - (-1*p_V[i+SIO]/num_atoms_to_avg_over) > 1e-8 )
+        {
+            full_match = false;
+            amrex::Abort("h_U_loc != p_V: "
+                    + std::to_string(i) + " " + std::to_string(h_U_loc(i)) + " "
+                    + std::to_string(p_V[i+SIO]));
+        }
+    }
+    std::cout << "process: " << NSType::my_rank << " full_match: " << full_match << "\n";
 
+    //amrex::Vector<amrex::Real> h_vec_V(num_local_field_sites);
+    ////amrex::Gpu::copy(amrex::Gpu::deviceToHost, d_vec_V.begin(), d_vec_V.end(), h_vec_V.begin());
+    //std::fill(h_vec_V.begin(), h_vec_V.end(), NSType::my_rank+1);
+
+    //RealTable1D h_U_glo_data;
+    //if(ParallelDescriptor::IOProcessor())
+    //{
+    //    h_U_glo_data.resize({0},{num_field_sites}, The_Pinned_Arena());
+    //    NSType::SetVal_Table1D(h_U_glo_data, 0.);
+    //}
+    //auto const& h_U_glo = h_U_glo_data.table();
+    //auto const& h_U_loc = NSType::h_U_loc_data.table();
+
+    //MPI_Barrier(ParallelDescriptor::Communicator());
+
+    //if(ParallelDescriptor::IOProcessor())
+    //{
+    //    for(int i=0; i < num_field_sites; ++i)
+    //    {
+    //        amrex::Print() << "i/h_U_glo: " << i << "  " << h_U_glo(i) << "\n";
+    //    }
+    //}
+
+    //MPI_Scatterv(&h_U_glo(0),
+    //              NSType::MPI_recv_count.data(),
+    //              NSType::MPI_recv_disp.data(),
+    //              MPI_DOUBLE,
+    //             &h_U_loc(0),
+    //              num_local_field_sites,
+    //              MPI_DOUBLE,
+    //              ParallelDescriptor::IOProcessorNumber(),
+    //              ParallelDescriptor::Communicator());
+
+    //if(ParallelDescriptor::IOProcessor())
+    //{
+    //    for(int c=0; c < NUM_CONTACTS; ++c)
+    //    {
+    //        NSType::U_contact[c] = -h_U_glo(NSType::global_contact_index[c]) / num_atoms_to_avg_over;
+    //    }
+    //}
+    //MPI_Scatter(NSType::U_contact,
+    //            NUM_CONTACTS,
+    //            MPI_DOUBLE,
+    //            NSType::U_contact,
+    //            NUM_CONTACTS,
+    //            MPI_DOUBLE,
+    //            ParallelDescriptor::IOProcessorNumber(),
+    //            ParallelDescriptor::Communicator());
+
+    //for (int l=0; l < blkCol_size_loc; ++l) 
+    //{
+    //    /*minus because Potential is experienced by electrons*/
+    //    h_U_loc(l) = -h_U_loc(l) / num_atoms_to_avg_over;
+    //}
+
+    //MPI_Barrier(ParallelDescriptor::Communicator());
+    //if(ParallelDescriptor::IOProcessor())
+    //{
+    //    h_U_glo_data.clear();
+    //}
+
+    //if(ParallelDescriptor::IOProcessor())
+    //{
+    //    bool full_match = true;
+    //    for(int i=0; i < num_local_field_sites; ++i)
+    //    {
+    //        if(h_U_loc(i) != h_U_glo(i+SIO) )
+    //        {
+    //            full_match = false;
+    //            amrex::Abort("h_U_loc != h_U_glo: "
+    //                    + std::to_string(i) + " " + std::to_string(h_U_loc(i)) + " "
+    //                    + std::to_string(h_U_glo(i+SIO)));
+    //        }
+    //    }
+    //    std::cout << "process: " << NSType::my_rank << " full_match: " << full_match << "\n";
+    //}
+    //amrex::Abort("Manually stopping for debugging");
 }
+
+
+//template<typename NSType>
+//void 
+//c_Nanostructure<NSType>::Obtain_PotentialAtSites() 
+//{
+//    const int num_field_sites          = NSType::num_field_sites;
+//    const int num_atoms_per_field_site = NSType::num_atoms_per_field_site;
+//    const int num_atoms_to_avg_over    = NSType::num_atoms_to_avg_over;
+//    const int average_field_flag       = NSType::average_field_flag;
+//
+//    amrex::Gpu::DeviceVector<amrex::Real> vec_V(num_field_sites);
+//
+//    for (int l=0; l < num_field_sites; ++l) 
+//    {
+//        vec_V[l] = 0.;
+//    }
+//
+//    amrex::Real* p_V   = vec_V.dataPtr();  
+//    
+//    int lev = 0;
+//    for (MyParIter pti(*this, lev); pti.isValid(); ++pti)
+//    {
+//        auto np = pti.numParticles();
+//
+//        const auto& particles = pti.GetArrayOfStructs();
+//        const auto p_par = particles().data();
+//
+//        auto& par_gather  = pti.get_realPA_comp(realPA::gather);
+//        auto p_par_gather = par_gather.data();
+//        auto get_1D_site_id = NSType::get_1D_site_id();
+//          
+//        if(average_field_flag) 
+//        {
+//            if(NSType::avg_type == s_AVG_TYPE::ALL) 
+//            {
+//                amrex::ParallelFor(np, [=] AMREX_GPU_DEVICE (int p) noexcept 
+//                {
+//                    int global_id = p_par[p].id();
+//                    int site_id = get_1D_site_id(global_id); 
+//
+//                    amrex::HostDevice::Atomic::Add(&(p_V[site_id]), p_par_gather[p]);
+//                });
+//            }
+//            else if(NSType::avg_type == s_AVG_TYPE::SPECIFIC) 
+//            {
+//                auto get_atom_id_at_site = NSType::get_atom_id_at_site();
+//                #ifdef AMREX_USE_GPU
+//    	        auto avg_indices_ptr = NSType::gpuvec_avg_indices.dataPtr();
+//                #else
+//    	        auto avg_indices_ptr = NSType::vec_avg_indices.dataPtr();
+//                #endif
+//
+//                amrex::ParallelFor(np, [=] AMREX_GPU_DEVICE (int p) noexcept 
+//                {
+//                    int global_id = p_par[p].id();
+//                    int site_id = get_1D_site_id(global_id); 
+//
+//                    int atom_id_at_site = get_atom_id_at_site(global_id); 
+//                    int remainder = atom_id_at_site%num_atoms_per_field_site;
+//
+//	                for(int m=0; m < num_atoms_to_avg_over; ++m)
+//	                {
+//                        if(remainder == avg_indices_ptr[m]) 
+//	                    {
+//                            amrex::HostDevice::Atomic::Add(&(p_V[site_id]), p_par_gather[p]);
+//                        }
+//                    } 
+//                });
+//            }
+//        }
+//        else 
+//        { 
+//            amrex::ParallelFor(np, [=] AMREX_GPU_DEVICE (int p) noexcept 
+//            {
+//                int global_id  = p_par[p].id();
+//                int site_id    = get_1D_site_id(global_id); 
+//                p_V[site_id]   = p_par_gather[p];
+//            });
+//        } 
+//    }
+//
+//    for (int l=0; l<num_field_sites; ++l) 
+//    {
+//        ParallelDescriptor::ReduceRealSum(p_V[l]);
+//    }
+//
+//    for (int l=0; l<num_field_sites; ++l) 
+//    {
+//        NSType::Potential[l]   = -p_V[l] / num_atoms_to_avg_over;
+//	    //amrex::Print() << "site_id, avg_potential: " << l << "  " << NSType::Potential[l] << "\n";
+//        /*minus because Potential is experienced by electrons*/
+//    }
+//
+//}
 
 
 template<typename NSType>
@@ -626,6 +813,12 @@ c_Nanostructure<NSType>:: InitializeNEGF ()
 
     NSType::DefineMatrixPartition();
     NSType::AllocateArrays();
+
+    if(!_use_electrostatic)
+    {
+	    NSType::Define_PotentialProfile();
+    }
+        
     NSType::ConstructHamiltonian();
     NSType::Define_ContactInfo();
 

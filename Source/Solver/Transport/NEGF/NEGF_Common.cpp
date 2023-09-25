@@ -663,6 +663,8 @@ c_NEGF_Common<T>::AllocateArrays ()
 
     h_E_RealPath_data.resize({0},{NUM_ENERGY_PTS_REAL},The_Pinned_Arena());
 
+    h_U_loc_data.resize({0},{blkCol_size_loc}, The_Pinned_Arena());
+    SetVal_Table1D(h_U_loc_data,0.);
 
 }
 
@@ -677,12 +679,18 @@ void
 c_NEGF_Common<T>:: AddPotentialToHamiltonian () 
 {
     auto const& h_minusHa = h_minusHa_loc_data.table();
-    int c=0;
-    for(auto& col_gid: vec_blkCol_gids)
+    auto const& h_U_loc   = h_U_loc_data.table();
+
+    for(int c=0; c < blkCol_size_loc; ++c) 
     {
-        h_minusHa(c) = -1*(Potential[col_gid]); /*Note: Ha = H0a (=0) + U, so -Ha = -U */
-        ++c;
+        h_minusHa(c) = -1*h_U_loc(c);
     }
+    //int c=0;
+    //for(auto& col_gid: vec_blkCol_gids)
+    //{
+    //    h_minusHa(c) = -1*(Potential[col_gid]); /*Note: Ha = H0a (=0) + U, so -Ha = -U */
+    //    ++c;
+    //}
 }
 
 
@@ -690,12 +698,12 @@ template<typename T>
 void 
 c_NEGF_Common<T>:: Update_ContactPotential () 
 {
-    amrex::Print() <<  "Updated contact potential: \n";
-    for(int c=0; c < NUM_CONTACTS; ++c)
-    {
-        U_contact[c] = Potential[global_contact_index[c]];
-        amrex::Print() << "  contact, U: " <<  c << " " << U_contact[c] << "\n";
-    }
+    //amrex::Print() <<  "Updated contact potential: \n";
+    //for(int c=0; c < NUM_CONTACTS; ++c)
+    //{
+    //    U_contact[c] = Potential[global_contact_index[c]];
+    //    amrex::Print() << "  contact, U: " <<  c << " " << U_contact[c] << "\n";
+    //}
 }
 
 
