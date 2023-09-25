@@ -229,6 +229,7 @@ c_Nanostructure<NSType>::Evaluate_LocalFieldSites()
         for(int p=0; p < np; ++p) 
         {   
             int global_id = p_par[p].id();
+            amrex::Print() << "Printing global_id: " << global_id << " for p: " << p << "\n";
             int site_id   = get_1D_site_id(global_id);
 
             if(map.find(site_id) == map.end()) 
@@ -789,16 +790,17 @@ template<typename NSType>
 void 
 c_Nanostructure<NSType>::Write_PotentialAtSites(const std::string filename_prefix) 
 {
-    std::ofstream outfile;
+    RealTable1D h_U_glo_data;
 
+    std::ofstream outfile;
     std::string filename = filename_prefix + "_U.dat";
 
-    outfile.open(filename);
-
-    RealTable1D h_U_glo_data;
     if(ParallelDescriptor::IOProcessor())
     {
-        h_U_glo_data.resize({0},{NSType::num_field_sites}, The_Pinned_Arena());
+        int size = NSType::num_field_sites;
+        outfile.open(filename);
+        h_U_glo_data.resize({0}, {size}, The_Pinned_Arena());
+
     }
     auto const& h_U_glo = h_U_glo_data.table();
     auto const& h_U_loc = NSType::h_U_loc_data.table();
@@ -820,10 +822,10 @@ c_Nanostructure<NSType>::Write_PotentialAtSites(const std::string filename_prefi
         {
             outfile << l << std::setw(35) << NSType::PTD[l] << std::setw(35) << h_U_glo(l) << "\n";
         }  
-        h_U_glo_data.clear();
-    }
 
-    outfile.close();
+        h_U_glo_data.clear();
+        outfile.close();
+    }
 }
 
 
@@ -896,6 +898,7 @@ c_Nanostructure<NSType>:: Write_Data (const std::string filename_prefix,
     BL_PROFILE_VAR("Write_Data", compute_write_data);
 
     Write_PotentialAtSites(filename_prefix);
+
     if (ParallelDescriptor::IOProcessor())
     {
         NSType::Write_InducedCharge(filename_prefix, n_curr_out_data);

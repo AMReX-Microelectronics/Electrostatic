@@ -57,8 +57,8 @@ class MyParIter
 {
 public:
     using amrex::ParIter<realPD::NUM, intPD::NUM, realPA::NUM, intPA::NUM>::ParIter;
-    using RealVector = ParIter::ContainerType::RealVector;
-    using IntVector = ParIter::ContainerType::IntVector;
+    using RealVector = ParIter<realPD::NUM, intPD::NUM, realPA::NUM, intPA::NUM>::ContainerType::RealVector;
+    using IntVector = ParIter<realPD::NUM, intPD::NUM, realPA::NUM, intPA::NUM>::ContainerType::IntVector;
 
     //get realPA
     const std::array<RealVector, realPA::NUM>& get_realPA () const {
