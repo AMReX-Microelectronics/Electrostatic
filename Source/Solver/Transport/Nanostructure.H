@@ -22,7 +22,6 @@
 //real: phi, charge
 //int: 2 //cell_id, atom_id (from atom_id we can obtain (ring_number, azimuthal_number)
 
-extern AMREX_GPU_MANAGED int min_site_id;
 struct realPA //real Particle Attribute
 {
     enum { 

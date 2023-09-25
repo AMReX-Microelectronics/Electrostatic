@@ -19,8 +19,6 @@ template class c_Nanostructure<c_CNT>;
 template class c_Nanostructure<c_Graphene>; 
 //template class c_Nanostructure<c_Silicon>; 
 
-AMREX_GPU_MANAGED int min_site_id;
-
 template<typename NSType>
 c_Nanostructure<NSType>::c_Nanostructure (const amrex::Geometry            & geom,
                                   const amrex::DistributionMapping & dm,
@@ -212,10 +210,31 @@ template<typename NSType>
 void 
 c_Nanostructure<NSType>::Evaluate_LocalFieldSites() 
 {
+    int lev=0;
+    int num_field_sites = NSType::num_field_sites;
+
+    #ifdef AMREX_USE_GPU
+    amrex::Gpu::HostVector<amrex::Real> h_intermed_values_vec = {std::numeric_limits<int>::max(), 0};
+
+    amrex::Gpu::DeviceVector<amrex::Real> d_intermed_values_vec(2);
+    amrex::Gpu::copy(amrex::Gpu::hostToDevice, h_intermed_values_vec.begin(),
+                                               h_intermed_values_vec.end(),
+                                               d_intermed_values_vec.begin() );
+    amrex::Gpu::streamSynchronize();
+
+    auto* intermed_values = d_intermed_values_vec.dataPtr();
+
+    TableData<int, 1> d_site_id_vec({0}, {num_field_sites}, The_Device_Arena());
+    amrex::ParallelFor(num_field_sites, [=] AMREX_GPU_DEVICE (int s) noexcept 
+    {
+        d_site_id_vec(s) = 0;
+    });
+    amrex::Gpu::streamSynchronize();
+    #else
     std::unordered_map<int, int> map;
     int counter=0;
-    int lev=0;
-    min_site_id = std::numeric_limits<int>::max();
+    int min_site_id = std::numeric_limits<int>::max();
+    #endif
 
     int hasValidBox = false;
     for (MyParIter pti(*this, lev); pti.isValid(); ++pti)
@@ -227,35 +246,68 @@ c_Nanostructure<NSType>::Evaluate_LocalFieldSites()
         const auto p_par = particles().data();
         auto get_1D_site_id = NSType::get_1D_site_id();
 
-
-        //for(int p=0; p < np; ++p) 
-        //{   
-        //    int global_id = p_par[p].id();
-        //    amrex::Print() << "Printing global_id: " << global_id << " for p: " << p << "\n";
-        //    int site_id   = get_1D_site_id(global_id);
-
-        //    if(map.find(site_id) == map.end()) 
-        //    {
-        //        map[site_id] = counter++;
-        //        min_site_id = std::min(min_site_id, site_id);
-        //    }
-        //}
-
+        #ifdef AMREX_USE_GPU
         amrex::ParallelFor(np, [=] AMREX_GPU_DEVICE (int p) noexcept 
         {
             int global_id = p_par[p].id();
             int site_id   = get_1D_site_id(global_id);
-            amrex::Gpu::Atomic::Min(&(min_site_id), site_id);
-        });
-    }
+            amrex::Gpu::Atomic::Min(&(intermed_value[0]), site_id);
     
+            if(d_site_id_vec(site_id) == 0) 
+            {
+                amrex::HostDevice::Atomic::Add(&(d_site_id_vec(site_id)), 1);
+            }
+        });
+        amrex::Gpu::streamSynchronize();
 
+        #else
+        //hashmap solution
+        for(int p=0; p < np; ++p) 
+        {   
+            int global_id = p_par[p].id();
+            amrex::Print() << "Printing global_id: " << global_id << " for p: " << p << "\n";
+            int site_id   = get_1D_site_id(global_id);
+
+            if(map.find(site_id) == map.end()) 
+            {
+                map[site_id] = counter++;
+                min_site_id = std::min(min_site_id, site_id);
+            }
+        }
+        #endif
+    }
+    #ifdef AMREX_USE_GPU
+    amrex::ParallelFor(num_field_sites, [=] AMREX_GPU_DEVICE (int s) noexcept 
+    {
+        if(site_id_vec(s) == 1) 
+        {
+            amrex::HostDevice::Atomic::Add(&(intermed_values[1]), 1);
+        }
+    });
+    amrex::Gpu::streamSynchronize();
+
+    amrex::Gpu::copy(amrex::Gpu::deviceToHost, d_intermed_values_vec.begin(),
+                                               d_intermed_values_vec.end(),
+                                               h_intermed_values_vec.begin() );
+    amrex::Gpu::streamSynchronize();
+
+    if(hasValidBox) {
+        NSType::site_id_offset = h_intermed_values_vec[0];
+    } else {
+        NSType::site_id_offset = 0;   
+    }
+    NSType::num_local_field_sites = h_intermed_values_vec[1];
+
+    #else
+    //obtained from hashmap solution
     if(hasValidBox) {
         NSType::site_id_offset = min_site_id;
     } else {
         NSType::site_id_offset = 0;   
     }
     NSType::num_local_field_sites = counter;
+    #endif
+    
 
     std::cout << " process/site_id_offset/num_local_field_sites: " 
               << NSType::my_rank << " " 
