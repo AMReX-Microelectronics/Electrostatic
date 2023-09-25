@@ -422,14 +422,14 @@ c_TransportSolver::Solve(const int step, const amrex::Real time)
 	           if( vp_CNT[c]->write_at_iter )
 	           {
 	               Create_Global_Output_Data(); 
-                   if (ParallelDescriptor::IOProcessor()) 
-                   {
+                   //if (ParallelDescriptor::IOProcessor()) 
+                   //{
                        #ifdef BROYDEN_PARALLEL
                        vp_CNT[c]->Write_Data(vp_CNT[c]->iter_filename_str, n_curr_out_glo_data, Norm_glo_data);
                        #else
                        vp_CNT[c]->Write_Data(vp_CNT[c]->iter_filename_str, h_n_curr_out_data, h_Norm_data);
                        #endif
-                   }
+                   //}
     	       }
                vp_CNT[c]->Deposit_AtomAttributeToMesh();
 	        }
@@ -443,19 +443,16 @@ c_TransportSolver::Solve(const int step, const amrex::Real time)
         #endif
         for (int c=0; c < vp_CNT.size(); ++c)
         {
-            if(ParallelDescriptor::IOProcessor()) 
-            {
-                #ifdef BROYDEN_PARALLEL
-                vp_CNT[c]->Write_Data(vp_CNT[c]->step_filename_str, n_curr_out_glo_data, Norm_glo_data);
-                #else
-                vp_CNT[c]->Write_Data(vp_CNT[c]->step_filename_str, h_n_curr_out_data, h_Norm_data);
+            #ifdef BROYDEN_PARALLEL
+            vp_CNT[c]->Write_Data(vp_CNT[c]->step_filename_str, n_curr_out_glo_data, Norm_glo_data);
+            #else
+            vp_CNT[c]->Write_Data(vp_CNT[c]->step_filename_str, h_n_curr_out_data, h_Norm_data);
 
-                if(map_AlgorithmType[Algorithm_Type] == s_Algorithm::Type::broyden_first) 
-	            {
-                    Write_Table2D(h_Jinv_curr_data, common_step_folder_str + "/Jinv.dat", "Jinv");
-	            }
-                #endif
-            }
+            if(map_AlgorithmType[Algorithm_Type] == s_Algorithm::Type::broyden_first) 
+	        {
+                Write_Table2D(h_Jinv_curr_data, common_step_folder_str + "/Jinv.dat", "Jinv");
+	        }
+            #endif
 
             vp_CNT[c]->Compute_Current();
 
@@ -484,10 +481,10 @@ c_TransportSolver::Solve(const int step, const amrex::Real time)
        {
            vp_CNT[c]->Solve_NEGF();
 
-           if(ParallelDescriptor::IOProcessor())  
-           {
+           //if(ParallelDescriptor::IOProcessor())  
+           //{
                vp_CNT[c]->Write_Data(vp_CNT[c]->step_filename_str, h_n_curr_out_data, h_Norm_data); 
-           }
+           //}
 
            vp_CNT[c]->Compute_Current();
 

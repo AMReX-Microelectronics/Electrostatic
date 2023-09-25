@@ -598,7 +598,7 @@ c_Nanostructure<NSType>::Obtain_PotentialAtSites()
         NSType::U_contact[c] = -p_V[NSType::global_contact_index[c]] / num_atoms_to_avg_over;
     }
     bool full_match = true;
-    for(int i=0; i < num_local_field_sites; ++i)
+    for(int i=0; i < blkCol_size_loc; ++i)
     {
         if(h_U_loc(i) - (-1*p_V[i+SIO]/num_atoms_to_avg_over) > 1e-8 )
         {
@@ -795,12 +795,33 @@ c_Nanostructure<NSType>::Write_PotentialAtSites(const std::string filename_prefi
 
     outfile.open(filename);
 
-    //amrex::Print() << "Root Writing " << filename << "\n";
-    
-    for (int l=0; l<NSType::num_field_sites; ++l)
+    RealTable1D h_U_glo_data;
+    if(ParallelDescriptor::IOProcessor())
     {
-        outfile << l << std::setw(35) << NSType::PTD[l] << std::setw(35) << NSType::Potential[l] << "\n";
-    }  
+        h_U_glo_data.resize({0},{NSType::num_field_sites}, The_Pinned_Arena());
+    }
+    auto const& h_U_glo = h_U_glo_data.table();
+    auto const& h_U_loc = NSType::h_U_loc_data.table();
+
+    MPI_Gatherv(&h_U_loc(0),
+                 NSType::blkCol_size_loc,
+                 MPI_DOUBLE,
+                &h_U_glo(0),
+                 NSType::MPI_recv_count.data(),
+                 NSType::MPI_recv_disp.data(),
+                 MPI_DOUBLE,
+                 ParallelDescriptor::IOProcessorNumber(),
+                 ParallelDescriptor::Communicator());
+
+    if(ParallelDescriptor::IOProcessor())
+    {
+        amrex::Print() << "Root Writing " << filename << "\n";
+        for (int l=0; l<NSType::num_field_sites; ++l)
+        {
+            outfile << l << std::setw(35) << NSType::PTD[l] << std::setw(35) << h_U_glo(l) << "\n";
+        }  
+        h_U_glo_data.clear();
+    }
 
     outfile.close();
 }
@@ -850,7 +871,7 @@ c_Nanostructure<NSType>:: Solve_NEGF ()
     BL_PROFILE_VAR("Other", compute_other);
 
     NSType::AddPotentialToHamiltonian();
-    NSType::Update_ContactPotential(); 
+    //NSType::Update_ContactPotential(); 
     NSType::Update_ContactElectrochemicalPotential(); 
     NSType::Define_EnergyLimits();
     NSType::Update_IntegrationPaths();
@@ -872,10 +893,14 @@ c_Nanostructure<NSType>:: Write_Data (const std::string filename_prefix,
                                       RealTable1D& n_curr_out_data, 
                                       RealTable1D& Norm_data)
 {
-    //BL_PROFILE_VAR("Write_Data", compute_write_data);
+    BL_PROFILE_VAR("Write_Data", compute_write_data);
 
     Write_PotentialAtSites(filename_prefix);
-    NSType::Write_InducedCharge(filename_prefix, n_curr_out_data);
-    NSType::Write_ChargeNorm(filename_prefix, Norm_data);
-    //BL_PROFILE_VAR_STOP(compute_write_data);
+    if (ParallelDescriptor::IOProcessor())
+    {
+        NSType::Write_InducedCharge(filename_prefix, n_curr_out_data);
+        NSType::Write_ChargeNorm(filename_prefix, Norm_data);
+    }
+
+    BL_PROFILE_VAR_STOP(compute_write_data);
 }
