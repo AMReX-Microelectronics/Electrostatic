@@ -19,6 +19,8 @@ template class c_Nanostructure<c_CNT>;
 template class c_Nanostructure<c_Graphene>; 
 //template class c_Nanostructure<c_Silicon>; 
 
+AMREX_GPU_MANAGED int min_site_id;
+
 template<typename NSType>
 c_Nanostructure<NSType>::c_Nanostructure (const amrex::Geometry            & geom,
                                   const amrex::DistributionMapping & dm,
@@ -213,7 +215,7 @@ c_Nanostructure<NSType>::Evaluate_LocalFieldSites()
     std::unordered_map<int, int> map;
     int counter=0;
     int lev=0;
-    int min_site_id = std::numeric_limits<int>::max();
+    min_site_id = std::numeric_limits<int>::max();
 
     int hasValidBox = false;
     for (MyParIter pti(*this, lev); pti.isValid(); ++pti)
@@ -226,19 +228,27 @@ c_Nanostructure<NSType>::Evaluate_LocalFieldSites()
         auto get_1D_site_id = NSType::get_1D_site_id();
 
 
-        for(int p=0; p < np; ++p) 
-        {   
-            int global_id = p_par[p].id();
-            amrex::Print() << "Printing global_id: " << global_id << " for p: " << p << "\n";
-            int site_id   = get_1D_site_id(global_id);
+        //for(int p=0; p < np; ++p) 
+        //{   
+        //    int global_id = p_par[p].id();
+        //    amrex::Print() << "Printing global_id: " << global_id << " for p: " << p << "\n";
+        //    int site_id   = get_1D_site_id(global_id);
 
-            if(map.find(site_id) == map.end()) 
-            {
-                map[site_id] = counter++;
-                min_site_id = std::min(min_site_id, site_id);
-            }
-        }
+        //    if(map.find(site_id) == map.end()) 
+        //    {
+        //        map[site_id] = counter++;
+        //        min_site_id = std::min(min_site_id, site_id);
+        //    }
+        //}
+
+        amrex::ParallelFor(np, [=] AMREX_GPU_DEVICE (int p) noexcept 
+        {
+            int global_id = p_par[p].id();
+            int site_id   = get_1D_site_id(global_id);
+            amrex::Gpu::Atomic::Min(&(min_site_id), site_id);
+        });
     }
+    
 
     if(hasValidBox) {
         NSType::site_id_offset = min_site_id;
