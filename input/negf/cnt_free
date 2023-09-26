@@ -1,5 +1,6 @@
 use_electrostatic = 0
 use_transport = 1
+amrex.the_arena_is_managed=1
 
 ##################################
 ##### USER DEFINED CONSTANTS #####
