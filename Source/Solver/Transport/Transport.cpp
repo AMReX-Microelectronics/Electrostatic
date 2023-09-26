@@ -422,14 +422,11 @@ c_TransportSolver::Solve(const int step, const amrex::Real time)
 	           if( vp_CNT[c]->write_at_iter )
 	           {
 	               Create_Global_Output_Data(); 
-                   //if (ParallelDescriptor::IOProcessor()) 
-                   //{
-                       #ifdef BROYDEN_PARALLEL
-                       vp_CNT[c]->Write_Data(vp_CNT[c]->iter_filename_str, n_curr_out_glo_data, Norm_glo_data);
-                       #else
-                       vp_CNT[c]->Write_Data(vp_CNT[c]->iter_filename_str, h_n_curr_out_data, h_Norm_data);
-                       #endif
-                   //}
+                   #ifdef BROYDEN_PARALLEL
+                   vp_CNT[c]->Write_Data(vp_CNT[c]->iter_filename_str, n_curr_out_glo_data, Norm_glo_data);
+                   #else
+                   vp_CNT[c]->Write_Data(vp_CNT[c]->iter_filename_str, h_n_curr_out_data, h_Norm_data);
+                   #endif
     	       }
                vp_CNT[c]->Deposit_AtomAttributeToMesh();
 	        }
@@ -437,6 +434,7 @@ c_TransportSolver::Solve(const int step, const amrex::Real time)
             max_iter += 1;
 
         } while(Broyden_Norm > Broyden_max_norm);    
+
 
         #ifdef BROYDEN_PARALLEL
         Create_Global_Output_Data(); /*May need to be before & outside the forloop for multiple NS*/
@@ -474,17 +472,15 @@ c_TransportSolver::Solve(const int step, const amrex::Real time)
         #endif
 
         amrex::Print() << "\nAverage mlmg time for self-consistency (s): " << total_mlmg_solve_time / max_iter << "\n";
-   }
+
+   } //use electrostatics
    else 
    {
        for (int c=0; c < vp_CNT.size(); ++c)
        {
            vp_CNT[c]->Solve_NEGF();
 
-           //if(ParallelDescriptor::IOProcessor())  
-           //{
-               vp_CNT[c]->Write_Data(vp_CNT[c]->step_filename_str, h_n_curr_out_data, h_Norm_data); 
-           //}
+           vp_CNT[c]->Write_Data(vp_CNT[c]->step_filename_str, h_n_curr_out_data, h_Norm_data); 
 
            vp_CNT[c]->Compute_Current();
 

@@ -72,17 +72,19 @@ c_Nanostructure<NSType>::c_Nanostructure (const amrex::Geometry            & geo
     _use_electrostatic            = rCode.use_electrostatic;
     _use_negf                     = use_negf;
 
+    NSType::num_proc       = amrex::ParallelDescriptor::NProcs();
+    NSType::my_rank        = amrex::ParallelDescriptor::MyProc();
+    NSType::initial_charge = NS_initial_deposit_value;
+
     if(_use_negf) 
     {
-        NSType::num_proc       = amrex::ParallelDescriptor::NProcs();
-        NSType::my_rank        = amrex::ParallelDescriptor::MyProc();
-        NSType::initial_charge = NS_initial_deposit_value;
-
         ReadNanostructureProperties();
+
+        NSType::DefineMatrixPartition();
 
         pos_vec.resize(NSType::num_atoms);
         Read_AtomLocations();
-    } 
+    }
 
     if(_use_electrostatic) 
     {
@@ -125,6 +127,7 @@ c_Nanostructure<NSType>::c_Nanostructure (const amrex::Geometry            & geo
         InitializeNEGF();
         pos_vec.clear(); 
     }
+    
 
 #ifdef PRINT_NAME
     amrex::Print() << "\t\t\t}************************c_Nanostructure() Constructor************************\n";
@@ -654,24 +657,25 @@ c_Nanostructure<NSType>::Obtain_PotentialAtSites()
     auto const& h_U_loc = NSType::h_U_loc_data.table();
     for (int l=0; l < blkCol_size_loc; ++l) 
     {
-        h_U_loc(l) = -p_V[SIO+l] / num_atoms_to_avg_over;
+        int gid = NSType::vec_blkCol_gids[l];
+
+        h_U_loc(l) = -p_V[gid] / num_atoms_to_avg_over;
     }
     for(int c=0; c < NUM_CONTACTS; ++c)
     {
         NSType::U_contact[c] = -p_V[NSType::global_contact_index[c]] / num_atoms_to_avg_over;
     }
-    bool full_match = true;
-    for(int i=0; i < blkCol_size_loc; ++i)
-    {
-        if(h_U_loc(i) - (-1*p_V[i+SIO]/num_atoms_to_avg_over) > 1e-8 )
-        {
-            full_match = false;
-            amrex::Abort("h_U_loc != p_V: "
-                    + std::to_string(i) + " " + std::to_string(h_U_loc(i)) + " "
-                    + std::to_string(p_V[i+SIO]));
-        }
-    }
-    std::cout << "process: " << NSType::my_rank << " full_match: " << full_match << "\n";
+
+    //for (int l=0; l < blkCol_size_loc; ++l) 
+    //{
+    //    int gid = vec_blkCol_gids(l);
+    //    if(h_U_loc(i) - (-1*p_V[gid]/num_atoms_to_avg_over) > 1e-8 )
+    //    {
+    //        amrex::Abort("h_U_loc != p_V: "
+    //                + std::to_string(i) + " " + std::to_string(h_U_loc(i)) + " "
+    //                + std::to_string(p_V[gid]));
+    //    }
+    //}
 }
 
 
@@ -775,13 +779,14 @@ void
 c_Nanostructure<NSType>:: InitializeNEGF ()
 {
 
-    NSType::DefineMatrixPartition();
     NSType::AllocateArrays();
 
     NSType::ConstructHamiltonian();
+
     NSType::Define_ContactInfo();
 
     NSType::Define_EnergyLimits();
+
     NSType::Define_IntegrationPaths();
 
     BL_PROFILE_VAR("Compute_DOS", compute_dos);

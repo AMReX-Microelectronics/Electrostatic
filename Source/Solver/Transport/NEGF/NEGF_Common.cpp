@@ -492,7 +492,8 @@ c_NEGF_Common<T>:: Define_PotentialProfile()
                                                                                               << vec_V[1] << "\n";
             for (int l=0; l < blkCol_size_loc; ++l)
             {
-                h_U_loc(l) = -vec_V[0] + (static_cast<amrex::Real>(l+site_id_offset)/(num_field_sites-1.))*(vec_V[0] - vec_V[1]);
+                int gid = vec_blkCol_gids[l];
+                h_U_loc(l) = -vec_V[0] + (static_cast<amrex::Real>(gid)/(num_field_sites-1.))*(vec_V[0] - vec_V[1]);
             }
             for(int c=0; c < NUM_CONTACTS; ++c)
             {
