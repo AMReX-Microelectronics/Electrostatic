@@ -188,14 +188,14 @@ using namespace amrex;
                               ParallelDescriptor::Communicator());
     
     
-                if (ParallelDescriptor::IOProcessor())
-                {
-                    amrex::Print() << "Printing itermed_vector (location 2): \n";
-                    for(int iter=0; iter <= m; ++iter)
-                    {
-                        amrex::Print() << iter << " "<< intermed_vector(iter) << "\n";
-                    }
-                }
+                //if (ParallelDescriptor::IOProcessor())
+                //{
+                //    amrex::Print() << "Printing intermed_vector (location 2): \n";
+                //    for(int iter=0; iter <= m; ++iter)
+                //    {
+                //        amrex::Print() << iter << " "<< intermed_vector(iter) << "\n";
+                //    }
+                //}
     
         	    /*Reuse sum_vector to temporarily store Wmat*intermed_vector */
                 SetVal_RealTable1D(h_sum_vector_data, 0.);

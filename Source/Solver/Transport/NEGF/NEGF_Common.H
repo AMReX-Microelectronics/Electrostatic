@@ -155,12 +155,6 @@ public:
     amrex::Vector<int> block_degen_vec;
     amrex::Gpu::DeviceVector<int> block_degen_gpuvec;
 
-    /* Global array representing potential on the surface of the nanotube */
-    amrex::Vector<amrex::Real> Potential;
-
-    /* PTD: primary transport dir*/
-    amrex::Vector<amrex::Real> PTD; 
-
     /* MPI_recv_count stores blkCol_size_loc of each processor.
      * MPI_recv_disp stores the offset id of block columns for each processor.
      * These vectors are defined for each processor and are useful during
@@ -195,6 +189,7 @@ public:
     BlkTable1D  h_RhoNonEq_loc_data;
     RealTable1D h_RhoInduced_loc_data;
     RealTable1D h_U_loc_data;
+    amrex::Vector<amrex::Real> h_PTD_glo_vec; /*PTD: primary transport direction*/
 
     RealTable1D h_n_curr_in_loc_data;
     RealTable1D d_n_curr_in_loc_data;
@@ -390,6 +385,7 @@ public:
                                  std::string filename,
                                  std::string header);
 
+    void Write_PotentialAtSites(const std::string filename_prefix);
     void Write_InputInducedCharge (const std::string filename_prefix, RealTable1D& n_curr_in_data);
     void Write_InducedCharge (const std::string filename_prefix, RealTable1D& n_curr_out_data);
     void Write_ChargeNorm(const std::string filename_prefix, RealTable1D& Norm_data);

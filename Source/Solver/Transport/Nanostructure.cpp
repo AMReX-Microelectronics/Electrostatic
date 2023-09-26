@@ -266,7 +266,6 @@ c_Nanostructure<NSType>::Evaluate_LocalFieldSites()
         for(int p=0; p < np; ++p) 
         {   
             int global_id = p_par[p].id();
-            amrex::Print() << "Printing global_id: " << global_id << " for p: " << p << "\n";
             int site_id   = get_1D_site_id(global_id);
 
             if(map.find(site_id) == map.end()) 
@@ -653,7 +652,7 @@ c_Nanostructure<NSType>::Obtain_PotentialAtSites()
     //    amrex::Print() << "proc/i/h_vec_V: " << NSType::my_rank << " " << i << "  " << p_V[i] << "\n";
     //}
     auto const& h_U_loc = NSType::h_U_loc_data.table();
-    for (int l=0; l<num_local_field_sites; ++l) 
+    for (int l=0; l < blkCol_size_loc; ++l) 
     {
         h_U_loc(l) = -p_V[SIO+l] / num_atoms_to_avg_over;
     }
@@ -673,84 +672,6 @@ c_Nanostructure<NSType>::Obtain_PotentialAtSites()
         }
     }
     std::cout << "process: " << NSType::my_rank << " full_match: " << full_match << "\n";
-
-    //amrex::Vector<amrex::Real> h_vec_V(num_local_field_sites);
-    ////amrex::Gpu::copy(amrex::Gpu::deviceToHost, d_vec_V.begin(), d_vec_V.end(), h_vec_V.begin());
-    //std::fill(h_vec_V.begin(), h_vec_V.end(), NSType::my_rank+1);
-
-    //RealTable1D h_U_glo_data;
-    //if(ParallelDescriptor::IOProcessor())
-    //{
-    //    h_U_glo_data.resize({0},{num_field_sites}, The_Pinned_Arena());
-    //    NSType::SetVal_Table1D(h_U_glo_data, 0.);
-    //}
-    //auto const& h_U_glo = h_U_glo_data.table();
-    //auto const& h_U_loc = NSType::h_U_loc_data.table();
-
-    //MPI_Barrier(ParallelDescriptor::Communicator());
-
-    //if(ParallelDescriptor::IOProcessor())
-    //{
-    //    for(int i=0; i < num_field_sites; ++i)
-    //    {
-    //        amrex::Print() << "i/h_U_glo: " << i << "  " << h_U_glo(i) << "\n";
-    //    }
-    //}
-
-    //MPI_Scatterv(&h_U_glo(0),
-    //              NSType::MPI_recv_count.data(),
-    //              NSType::MPI_recv_disp.data(),
-    //              MPI_DOUBLE,
-    //             &h_U_loc(0),
-    //              num_local_field_sites,
-    //              MPI_DOUBLE,
-    //              ParallelDescriptor::IOProcessorNumber(),
-    //              ParallelDescriptor::Communicator());
-
-    //if(ParallelDescriptor::IOProcessor())
-    //{
-    //    for(int c=0; c < NUM_CONTACTS; ++c)
-    //    {
-    //        NSType::U_contact[c] = -h_U_glo(NSType::global_contact_index[c]) / num_atoms_to_avg_over;
-    //    }
-    //}
-    //MPI_Scatter(NSType::U_contact,
-    //            NUM_CONTACTS,
-    //            MPI_DOUBLE,
-    //            NSType::U_contact,
-    //            NUM_CONTACTS,
-    //            MPI_DOUBLE,
-    //            ParallelDescriptor::IOProcessorNumber(),
-    //            ParallelDescriptor::Communicator());
-
-    //for (int l=0; l < blkCol_size_loc; ++l) 
-    //{
-    //    /*minus because Potential is experienced by electrons*/
-    //    h_U_loc(l) = -h_U_loc(l) / num_atoms_to_avg_over;
-    //}
-
-    //MPI_Barrier(ParallelDescriptor::Communicator());
-    //if(ParallelDescriptor::IOProcessor())
-    //{
-    //    h_U_glo_data.clear();
-    //}
-
-    //if(ParallelDescriptor::IOProcessor())
-    //{
-    //    bool full_match = true;
-    //    for(int i=0; i < num_local_field_sites; ++i)
-    //    {
-    //        if(h_U_loc(i) != h_U_glo(i+SIO) )
-    //        {
-    //            full_match = false;
-    //            amrex::Abort("h_U_loc != h_U_glo: "
-    //                    + std::to_string(i) + " " + std::to_string(h_U_loc(i)) + " "
-    //                    + std::to_string(h_U_glo(i+SIO)));
-    //        }
-    //    }
-    //    std::cout << "process: " << NSType::my_rank << " full_match: " << full_match << "\n";
-    //}
-    //amrex::Abort("Manually stopping for debugging");
 }
 
 
@@ -850,49 +771,6 @@ c_Nanostructure<NSType>::Obtain_PotentialAtSites()
 
 
 template<typename NSType>
-void 
-c_Nanostructure<NSType>::Write_PotentialAtSites(const std::string filename_prefix) 
-{
-    RealTable1D h_U_glo_data;
-
-    std::ofstream outfile;
-    std::string filename = filename_prefix + "_U.dat";
-
-    if(ParallelDescriptor::IOProcessor())
-    {
-        int size = NSType::num_field_sites;
-        outfile.open(filename);
-        h_U_glo_data.resize({0}, {size}, The_Pinned_Arena());
-
-    }
-    auto const& h_U_glo = h_U_glo_data.table();
-    auto const& h_U_loc = NSType::h_U_loc_data.table();
-
-    MPI_Gatherv(&h_U_loc(0),
-                 NSType::blkCol_size_loc,
-                 MPI_DOUBLE,
-                &h_U_glo(0),
-                 NSType::MPI_recv_count.data(),
-                 NSType::MPI_recv_disp.data(),
-                 MPI_DOUBLE,
-                 ParallelDescriptor::IOProcessorNumber(),
-                 ParallelDescriptor::Communicator());
-
-    if(ParallelDescriptor::IOProcessor())
-    {
-        amrex::Print() << "Root Writing " << filename << "\n";
-        for (int l=0; l<NSType::num_field_sites; ++l)
-        {
-            outfile << l << std::setw(35) << NSType::PTD[l] << std::setw(35) << h_U_glo(l) << "\n";
-        }  
-
-        h_U_glo_data.clear();
-        outfile.close();
-    }
-}
-
-
-template<typename NSType>
 void
 c_Nanostructure<NSType>:: InitializeNEGF ()
 {
@@ -900,11 +778,6 @@ c_Nanostructure<NSType>:: InitializeNEGF ()
     NSType::DefineMatrixPartition();
     NSType::AllocateArrays();
 
-    if(!_use_electrostatic)
-    {
-	    NSType::Define_PotentialProfile();
-    }
-        
     NSType::ConstructHamiltonian();
     NSType::Define_ContactInfo();
 
@@ -924,6 +797,10 @@ c_Nanostructure<NSType>:: InitializeNEGF ()
 
     BL_PROFILE_VAR_STOP(compute_rho0);
 
+    if(!_use_electrostatic)
+    {
+	    NSType::Define_PotentialProfile();
+    }
 
 }
 
@@ -936,7 +813,6 @@ c_Nanostructure<NSType>:: Solve_NEGF ()
     BL_PROFILE_VAR("Other", compute_other);
 
     NSType::AddPotentialToHamiltonian();
-    //NSType::Update_ContactPotential(); 
     NSType::Update_ContactElectrochemicalPotential(); 
     NSType::Define_EnergyLimits();
     NSType::Update_IntegrationPaths();
@@ -960,13 +836,11 @@ c_Nanostructure<NSType>:: Write_Data (const std::string filename_prefix,
 {
     BL_PROFILE_VAR("Write_Data", compute_write_data);
 
-    Write_PotentialAtSites(filename_prefix);
-
+    NSType::Write_PotentialAtSites(filename_prefix);
     if (ParallelDescriptor::IOProcessor())
     {
         NSType::Write_InducedCharge(filename_prefix, n_curr_out_data);
         NSType::Write_ChargeNorm(filename_prefix, Norm_data);
     }
-
     BL_PROFILE_VAR_STOP(compute_write_data);
 }

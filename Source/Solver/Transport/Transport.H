@@ -158,7 +158,7 @@ private:
 
         RealTable2D d_Wmat_data;
         RealTable2D d_VmatTran_data;
-        amrex::Gpu::HostVector<amrex::Real> d_Intermed_values_vec = {0., 0., 0.};
+        amrex::Gpu::DeviceVector<amrex::Real> d_Intermed_values_vec = {0., 0., 0.};
         /*stores Broyden_Norm, Broyden_NormSum_Curr,  Broyden_Denom*/
         #endif
     #else

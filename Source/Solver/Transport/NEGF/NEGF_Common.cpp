@@ -16,9 +16,6 @@ template<typename T>
 void
 c_NEGF_Common<T>:: Deallocate ()
 {
-    Potential.clear();
-    PTD.clear();
-
     h_n_curr_in_loc_data.clear();
     #if AMREX_USE_GPU
     d_n_curr_in_loc_data.clear();
@@ -408,16 +405,10 @@ template<typename T>
 void 
 c_NEGF_Common<T>::Set_Arrays_OfSize_NumFieldSites() 
 {
-
-    Potential.resize(num_field_sites);
-    PTD.resize(num_field_sites);
-
-    for(int l=0; l < num_field_sites; ++l) 
+    if(ParallelDescriptor::IOProcessor()) 
     {
-        Potential[l] = 0.;
-        PTD[l]       = 0.;
+        h_PTD_glo_vec.resize(num_field_sites);
     }
-
 }
 
 
@@ -456,11 +447,11 @@ c_NEGF_Common<T>:: Generate_AtomLocations (amrex::Vector<s_Position3D>& pos)
        }  
     }
 
-    //amrex::Print() << "PTD is specified in nm! \n";
+    /*amrex::Print() << "PTD is specified in nm! \n";*/
     for(int l=0; l< num_field_sites; ++l) 
     {
-       PTD[l] = pos[l*num_atoms_per_field_site].dir[primary_transport_dir] / 1.e-9;
-       //amrex::Print() << l << "  " << PTD[l] << "\n";
+       h_PTD_glo_vec[l] = pos[l*num_atoms_per_field_site].dir[primary_transport_dir] / 1.e-9;
+       //amrex::Print() << l << "  " << h_PTD_glo_vec(l) << "\n";
     }
 }
 
@@ -470,6 +461,7 @@ void
 c_NEGF_Common<T>:: Define_PotentialProfile()
 {
 
+    auto const& h_U_loc = h_U_loc_data.table();
 
     switch(map_PotentialProfile[potential_profile_type_str])
     {
@@ -480,22 +472,33 @@ c_NEGF_Common<T>:: Define_PotentialProfile()
             getWithParser(pp_ns,"applied_voltage", V_const);
             amrex::Print() << "#####* For Constant Potential Profile, applied voltage: " << V_const << "\n";
 
-            for (int l=0; l<num_field_sites; ++l)
+            for (int l=0; l < blkCol_size_loc; ++l)
             {
-                Potential[l]   = -V_const;
+                h_U_loc(l) = -V_const;
+            }
+            for(int c=0; c < NUM_CONTACTS; ++c)
+            {
+                U_contact[c] = -V_const;
             }
             break;
         }
         case s_Potential_Profile::Type::LINEAR:
         {
             amrex::ParmParse pp_ns(name);
-	    amrex::Vector<amrex::Real> vec_V;
+    	    amrex::Vector<amrex::Real> vec_V;
             getArrWithParser(pp_ns, "applied_voltage_limits", vec_V, 0, NUM_CONTACTS);
 
-            amrex::Print() << "#####* For Linear Potential Profile, applied_voltage_limits: " << vec_V[0] << "  " << vec_V[1] << "\n";
-            for (int l=0; l<num_field_sites; ++l)
+            amrex::Print() << "#####* For Linear Potential Profile, applied_voltage_limits: " << vec_V[0] << "  " 
+                                                                                              << vec_V[1] << "\n";
+            for (int l=0; l < blkCol_size_loc; ++l)
             {
-                Potential[l]   = -vec_V[0] + (static_cast<amrex::Real>(l)/(num_field_sites-1.))*(vec_V[0] - vec_V[1]);
+                h_U_loc(l) = -vec_V[0] + (static_cast<amrex::Real>(l+site_id_offset)/(num_field_sites-1.))*(vec_V[0] - vec_V[1]);
+            }
+            for(int c=0; c < NUM_CONTACTS; ++c)
+            {
+                U_contact[c] = -vec_V[0] 
+                               + (static_cast<amrex::Real>(global_contact_index[c])/(num_field_sites-1.))
+                               * (vec_V[0] - vec_V[1]);
             }
             break;
         }
@@ -683,14 +686,8 @@ c_NEGF_Common<T>:: AddPotentialToHamiltonian ()
 
     for(int c=0; c < blkCol_size_loc; ++c) 
     {
-        h_minusHa(c) = -1*h_U_loc(c);
+        h_minusHa(c) = -1*h_U_loc(c); /*Note: Ha = H0a (=0) + U, so -Ha = -U */
     }
-    //int c=0;
-    //for(auto& col_gid: vec_blkCol_gids)
-    //{
-    //    h_minusHa(c) = -1*(Potential[col_gid]); /*Note: Ha = H0a (=0) + U, so -Ha = -U */
-    //    ++c;
-    //}
 }
 
 
@@ -1398,10 +1395,55 @@ c_NEGF_Common<T>:: Write_InputInducedCharge (const std::string filename_prefix, 
 
         std::string filename = filename_prefix + "_Qin.dat";
 
-        Write_Table1D(PTD, n_curr_in_data, filename.c_str(), 
+        Write_Table1D(h_PTD_glo_vec, n_curr_in_data, filename.c_str(), 
                       "'axial location / (nm)', 'Induced charge per site / (e)'");
     }
 
+}
+
+
+template<typename T>
+void 
+c_NEGF_Common<T>:: Write_PotentialAtSites (const std::string filename_prefix)
+{
+
+    /* (?) may need to be changed for multiple nanotubes */
+    RealTable1D h_U_glo_data;
+
+    std::ofstream outfile;
+    std::string filename = filename_prefix + "_U.dat";
+
+    if(ParallelDescriptor::IOProcessor())
+    {
+        int size = num_field_sites;
+        outfile.open(filename);
+        h_U_glo_data.resize({0}, {size}, The_Pinned_Arena());
+
+    }
+    auto const& h_U_glo = h_U_glo_data.table();
+    auto const& h_U_loc = h_U_loc_data.table();
+
+    MPI_Gatherv(&h_U_loc(0),
+                 blkCol_size_loc,
+                 MPI_DOUBLE,
+                &h_U_glo(0),
+                 MPI_recv_count.data(),
+                 MPI_recv_disp.data(),
+                 MPI_DOUBLE,
+                 ParallelDescriptor::IOProcessorNumber(),
+                 ParallelDescriptor::Communicator());
+
+    if(ParallelDescriptor::IOProcessor())
+    {
+        amrex::Print() << "Root Writing " << filename << "\n";
+        for (int l=0; l < num_field_sites; ++l)
+        {
+            outfile << l << std::setw(35) << h_PTD_glo_vec[l] << std::setw(35) << h_U_glo(l) << "\n";
+        }
+
+        h_U_glo_data.clear();
+        outfile.close();
+    }
 }
 
 
@@ -1412,7 +1454,7 @@ c_NEGF_Common<T>:: Write_InducedCharge (const std::string filename_prefix, RealT
 
     std::string filename = filename_prefix + "_Qout.dat";
 
-    Write_Table1D(PTD, n_curr_out_data, filename.c_str(), 
+    Write_Table1D(h_PTD_glo_vec, n_curr_out_data, filename.c_str(), 
                       "'axial location / (nm)', 'Induced charge per site / (e)'");
 }
 
@@ -1424,7 +1466,7 @@ c_NEGF_Common<T>:: Write_ChargeNorm (const std::string filename_prefix, RealTabl
 
     std::string filename = filename_prefix + "_norm.dat";
 
-    Write_Table1D(PTD, Norm_data, filename.c_str(), 
+    Write_Table1D(h_PTD_glo_vec, Norm_data, filename.c_str(), 
                   "'axial location / (nm)', 'norm");
 
 }
