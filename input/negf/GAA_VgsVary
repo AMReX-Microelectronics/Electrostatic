@@ -188,12 +188,7 @@ macroscopic.ghostcells_for_fields = alpha.0 epsilon.1 charge_density.1 phi.1  at
 macroscopic.alpha = 0.
 macroscopic.charge_density = 0.
 
-macroscopic.epsilon_function = 
-" epsilon_0  \
-+ (epsilon_GO - epsilon_0) \
-  * (sqrt( (x-CN_x)**2 + (z-CN_z)**2 )  < G_inner_rad) \
-  * (sqrt( (x-CN_x)**2 + (z-CN_z)**2 )  >= (R_CN + small_gap))  \
-  * (y > source_hi_y) * (y < drain_lo_y)"
+macroscopic.epsilon_function = "epsilon_0 + (epsilon_GO - epsilon_0) * (sqrt( (x-CN_x)**2 + (z-CN_z)**2 )  < G_inner_rad) * (sqrt( (x-CN_x)**2 + (z-CN_z)**2 )  >= (R_CN + small_gap)) * (y > source_hi_y) * (y < drain_lo_y)"
 #+ (((epsilon_GO + 1) + (epsilon_GO - 1) * tanh( (sqrt( (x-CN_x)**2 + (z-CN_z)**2 ) - R_CN - small_gap) / length_scale_lattice_const))   - epsilon_0 )
 #  * ( sqrt( (x-CN_x)**2 + (z-CN_z)**2 )  < (R_CN + small_gap) )
 #  * ( sqrt( (x-CN_x)**2 + (z-CN_z)**2 )  >= R_CN  ) 
@@ -212,7 +207,8 @@ macroscopic.atom_locations = 0.
 ###### OUTPUT ######
 ####################
 
-plot.folder_name = /global/cfs/projectdirs/m3766/SaurabhTests/eXstatic_Run/GAA_VgsVary
+plot.folder_name = /global/cfs/projectdirs/m3766/SaurabhTests/eXstatic_Run/GAA_Vgs_BroydenPll
+plot.folder_name = GAA_Vgs_BroydenPll
 plot.fields_to_plot = epsilon.1 charge_density.1 phi.1 atom_locations #vecField 
 plot.write_after_init = 1
 plot.write_interval = 1
@@ -263,7 +259,7 @@ transport.NS_initial_deposit_value  = 1e-3
 transport.Broyden_fraction = 0.1
 transport.Broyden_max_norm = 1.e-5
 transport.Broyden_norm_type = relative
-transport.selfconsistency_algorithm = broyden_first
+transport.selfconsistency_algorithm = broyden_second
 transport.reset_with_previous_charge_distribution = 1
 transport.initialize_inverse_jacobian = 0
 cnt.initialize_charge_distribution = 0
