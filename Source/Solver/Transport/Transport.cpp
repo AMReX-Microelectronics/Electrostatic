@@ -298,15 +298,16 @@ c_TransportSolver::Solve(const int step, const amrex::Real time)
         bool update_surface_soln_flag = true;	   
         do 
         {
-            amrex::Print() << "Printing Broyden_Parallel Write_Data! \n";
-	       if(max_iter > MAX_ITER_THRESHOLD) {
-               amrex::Abort("Iteration step is GREATER than the THRESHOLD" + MAX_ITER_THRESHOLD);
+           if (Broyden_Step > Broyden_Threshold_MaxStep)
+           {
+               amrex::Abort("Broyden_Step has exceeded the Broyden_Threshold_MaxStep!");
            }
 
            amrex::Print() << "\n\nSelf-consistent iteration: " << max_iter << "\n";
 
            rMprop.ReInitializeMacroparam(NS_gather_field_str);
            rMLMG.UpdateBoundaryConditions(update_surface_soln_flag);
+
            auto mlmg_solve_time = rMLMG.Solve_PoissonEqn();
            total_mlmg_solve_time += mlmg_solve_time;
            amrex::Print() << "\nmlmg_solve_time: " << mlmg_solve_time << "\n";
@@ -362,11 +363,6 @@ c_TransportSolver::Solve(const int step, const amrex::Real time)
                #endif
             }
 
-            if (Broyden_Step > Broyden_Threshold_MaxStep)
-            {
-                amrex::Abort("Broyden_Step has exceeded the Broyden_Threshold_MaxStep!");
-            }
-
             switch(map_AlgorithmType[Algorithm_Type])
             {
                 case s_Algorithm::Type::broyden_first:
@@ -413,7 +409,7 @@ c_TransportSolver::Solve(const int step, const amrex::Real time)
            for (int c=0; c < vp_CNT.size(); ++c)
            {
                /*(?) Future: Need generalization for multiple CNTs*/
-		       #ifdef BROYDEN_PARALLEL	
+	       #ifdef BROYDEN_PARALLEL	
                vp_CNT[c]->Scatterv_BroydenComputed_GlobalCharge(n_curr_in_glo_data); 
                #else
                vp_CNT[c]->Scatterv_BroydenComputed_GlobalCharge(h_n_curr_in_data);
@@ -455,7 +451,7 @@ c_TransportSolver::Solve(const int step, const amrex::Real time)
             vp_CNT[c]->Compute_Current();
 
             vp_CNT[c]->Write_Current(step, Vds, Vgs, Broyden_Step, max_iter, Broyden_fraction, Broyden_Scalar);
-
+             
             if(rCode.use_electrostatic)
             {
                 #ifdef BROYDEN_PARALLEL
@@ -470,6 +466,8 @@ c_TransportSolver::Solve(const int step, const amrex::Real time)
         #ifdef BROYDEN_PARALLEL
         Clear_Global_Output_Data();
         #endif
+
+	MPI_Barrier(ParallelDescriptor::Communicator());
 
         amrex::Print() << "\nAverage mlmg time for self-consistency (s): " << total_mlmg_solve_time / max_iter << "\n";
 

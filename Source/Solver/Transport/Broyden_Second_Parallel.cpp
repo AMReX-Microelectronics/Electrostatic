@@ -460,14 +460,14 @@ using namespace amrex;
                 h_intermed_vector_data.copy(d_intermed_vector_data); /*from device to host*/
                 amrex::Gpu::streamSynchronize();
     
-                amrex::Print() << "Printing itermed_vector (all proc): \n";
-                for(int iter=0; iter <= m; ++iter)
-                {
-                    std::cout << "rank/iter/value: " 
-                              << amrex::ParallelDescriptor::MyProc() << "  " 
-                              << iter << "  " 
-                              << h_intermed_vector(iter) << "\n";
-                }
+                //amrex::Print() << "Printing itermed_vector (all proc): \n";
+                //for(int iter=0; iter <= m; ++iter)
+                //{
+                //    std::cout << "rank/iter/value: " 
+                //              << amrex::ParallelDescriptor::MyProc() << "  " 
+                //              << iter << "  " 
+                //              << h_intermed_vector(iter) << "\n";
+                //}
     
                 /*Allreduce intermed_vector for complete matrix-vector multiplication*/
                 MPI_Allreduce(MPI_IN_PLACE,
@@ -480,14 +480,14 @@ using namespace amrex;
                 d_intermed_vector_data.copy(h_intermed_vector_data); /*from host to device*/
                 amrex::Gpu::streamSynchronize();
     
-                if (ParallelDescriptor::IOProcessor())
-                {
-                    amrex::Print() << "Printing itermed_vector (location 2): \n";
-                    for(int iter=0; iter <= m; ++iter)
-                    {
-                        amrex::Print() << iter << " "<< h_intermed_vector(iter) << "\n";
-                    }
-                }
+                //if (ParallelDescriptor::IOProcessor())
+                //{
+                //    amrex::Print() << "Printing itermed_vector (location 2): \n";
+                //    for(int iter=0; iter <= m; ++iter)
+                //    {
+                //        amrex::Print() << iter << " "<< h_intermed_vector(iter) << "\n";
+                //    }
+                //}
     
         	    /*Reuse sum_vector to temporarily store Wmat*intermed_vector */
                 amrex::ParallelFor(site_size_loc, [=] AMREX_GPU_DEVICE (int site) noexcept
