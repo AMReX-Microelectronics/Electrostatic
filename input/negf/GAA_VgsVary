@@ -189,10 +189,10 @@ macroscopic.alpha = 0.
 macroscopic.charge_density = 0.
 
 macroscopic.epsilon_function = 
-" epsilon_0 
-+ (epsilon_GO - epsilon_0) 
-  * (sqrt( (x-CN_x)**2 + (z-CN_z)**2 )  < G_inner_rad) 
-  * (sqrt( (x-CN_x)**2 + (z-CN_z)**2 )  >= (R_CN + small_gap))  
+" epsilon_0  \
++ (epsilon_GO - epsilon_0) \
+  * (sqrt( (x-CN_x)**2 + (z-CN_z)**2 )  < G_inner_rad) \
+  * (sqrt( (x-CN_x)**2 + (z-CN_z)**2 )  >= (R_CN + small_gap))  \
   * (y > source_hi_y) * (y < drain_lo_y)"
 #+ (((epsilon_GO + 1) + (epsilon_GO - 1) * tanh( (sqrt( (x-CN_x)**2 + (z-CN_z)**2 ) - R_CN - small_gap) / length_scale_lattice_const))   - epsilon_0 )
 #  * ( sqrt( (x-CN_x)**2 + (z-CN_z)**2 )  < (R_CN + small_gap) )
