@@ -35,11 +35,6 @@ c_Nanostructure<NSType>::c_Nanostructure (const amrex::Geometry            & geo
                  : amrex::ParticleContainer<realPD::NUM, intPD::NUM, 
                                             realPA::NUM, intPA::NUM> (geom, dm, ba)
 {
-#ifdef PRINT_NAME
-    amrex::Print() << "\n\n\t\t\t{************************c_Nanostructure() Constructor************************\n";
-    amrex::Print() << "\t\t\tin file: " << __FILE__ << " at line: " << __LINE__ << "\n";
-#endif
-
     NSType::name = NS_name_str;
     amrex::Print() << "Nanostructure: " << NS_name_str << "\n";
 
@@ -128,10 +123,6 @@ c_Nanostructure<NSType>::c_Nanostructure (const amrex::Geometry            & geo
         pos_vec.clear(); 
     }
     
-
-#ifdef PRINT_NAME
-    amrex::Print() << "\t\t\t}************************c_Nanostructure() Constructor************************\n";
-#endif
 }
 
 

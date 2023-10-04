@@ -269,16 +269,15 @@ c_TransportSolver::Solve(const int step, const amrex::Real time)
 {
 
     auto& rCode    = c_Code::GetInstance();
-    auto& rGprop = rCode.get_GeometryProperties();
-    auto& rMprop = rCode.get_MacroscopicProperties();
+    auto& rMprop   = rCode.get_MacroscopicProperties();
     auto& rMLMG    = rCode.get_MLMGSolver();
     auto& rOutput  = rCode.get_Output();
     auto& rPostPro = rCode.get_PostProcessor();
 
     amrex::Real total_mlmg_solve_time = 0.;
 
-    int max_iter = 1;
-    int MAX_ITER_THRESHOLD = 800;
+    max_iter = 1;
+    m_step = step;
 
     for (int c=0; c < vp_CNT.size(); ++c)
     {
@@ -286,210 +285,198 @@ c_TransportSolver::Solve(const int step, const amrex::Real time)
        Set_CommonStepFolder(step);
     }
 
-    amrex::Real Vds = 0.;
-    amrex::Real Vgs = 0.;
     if(rCode.use_electrostatic) 
     {	
-
         BL_PROFILE_VAR("self-consistency loop", self_consistency_loop);
 
         bool update_surface_soln_flag = true;	   
         do 
         {
+           amrex::Print() << "\n\nSelf-consistent iteration: " << max_iter << "\n";
            if (Broyden_Step > Broyden_Threshold_MaxStep)
            {
                amrex::Abort("Broyden_Step has exceeded the Broyden_Threshold_MaxStep!");
            }
-
-           amrex::Print() << "\n\nSelf-consistent iteration: " << max_iter << "\n";
-
+    
+           //Part 1: Electrostatics
            rMprop.ReInitializeMacroparam(NS_gather_field_str);
+
            rMLMG.UpdateBoundaryConditions(update_surface_soln_flag);
 
            auto mlmg_solve_time = rMLMG.Solve_PoissonEqn();
-           total_mlmg_solve_time += mlmg_solve_time;
            amrex::Print() << "\nmlmg_solve_time: " << mlmg_solve_time << "\n";
+
+           total_mlmg_solve_time += mlmg_solve_time;
 
            rPostPro.Compute();
 
+           //Part 2: NEGF
            for (int c=0; c < vp_CNT.size(); ++c)
            {
-	            if( vp_CNT[c]->write_at_iter )
-	            {
+	           if( vp_CNT[c]->write_at_iter )
+	           {
 	                vp_CNT[c]->Set_IterationFilenameString(max_iter);
-
-                    #ifdef BROYDEN_PARALLEL
-	                vp_CNT[c]->Write_InputInducedCharge(vp_CNT[c]->iter_filename_str, n_curr_in_glo_data); 
-                    #else
-	                vp_CNT[c]->Write_InputInducedCharge(vp_CNT[c]->iter_filename_str, h_n_curr_in_data); 
-                    #endif  
+                    Write_PredictedCharge(vp_CNT[c]);
                }
 
 	           vp_CNT[c]->Gather_MeshAttributeAtAtoms();  
-                   
-
+                
 	           if(update_surface_soln_flag && vp_CNT[c]->flag_contact_mu_specified == 0) 
 	           {
-                    amrex::Real V_contact[NUM_CONTACTS] = {0., 0.};
-
-                    for(int k=0; k<NUM_CONTACTS; ++k) 
-		            {    
-                        V_contact[k] = rGprop.pEB->Read_SurfSoln(vp_CNT[c]->Contact_Parser_String[k]);
-                           
-		                 amrex::Print() << "Updated terminal voltage: " << k << "  " << V_contact[k] << "\n";
-
-		                vp_CNT[c]->Contact_Electrochemical_Potential[k] = vp_CNT[c]->E_f - V_contact[k];
-                    }
-
-		            Vds = V_contact[1] - V_contact[0];
-
-                    Vgs = rGprop.pEB->Read_SurfSoln(vp_CNT[c]->Gate_String) - V_contact[0];
-
-    	            amrex::Print() << "Vds, Vgs: " << Vds << "  " << Vgs << "\n";
-	           }
+                   Set_TerminalBiasesAndContactPotential(vp_CNT[c]);   
+               }
 
                vp_CNT[c]->Solve_NEGF();
 
-               #ifdef BROYDEN_PARALLEL
-                   /* (?) Need a strategy to gather data for multiple CNTs*/
-                   /* (?) Future: if condition to check if proc was used for charge computation of this nanostructure*/
-                   /* (?) Future: for multiple nanotubes, then gather the data into a global array and then partition */
-                   #ifdef BROYDEN_SKIP_GPU_OPTIMIZATION
-                   h_n_curr_out_data.copy(vp_CNT[c]->h_RhoInduced_loc_data); 
-                   #else
-                   d_n_curr_out_data.copy(vp_CNT[c]->h_RhoInduced_loc_data); 
-                   #endif
-               #else
-	           vp_CNT[c]->Gatherv_NEGFComputed_LocalCharge(h_n_curr_out_data); 
-               #endif
+               CopyFromNS_ChargeComputedFromNEGF(vp_CNT[c]);
             }
 
-            switch(map_AlgorithmType[Algorithm_Type])
-            {
-                case s_Algorithm::Type::broyden_first:
-                {
-		            #ifdef BROYDEN_PARALLEL	
-                    amrex::Abort("At present, `Broyden's first' algorithm exists with only\
-                                  serial implementation (BROYDEN_PARALLEL=FALSE).");
-                    #else
-	                Execute_Broyden_First_Algorithm(); 
-                    #endif
-                    break;
-                }
-                case s_Algorithm::Type::broyden_second:
-                {
-		            #ifdef BROYDEN_PARALLEL	
-                        #ifdef BROYDEN_SKIP_GPU_OPTIMIZATION
-                        Execute_Broyden_Modified_Second_Algorithm_Parallel_SkipGPU();
-                        #else
-	                    Execute_Broyden_Modified_Second_Algorithm_Parallel(); 
-                        #endif
-                    #else
-    	            Execute_Broyden_Modified_Second_Algorithm(); 
-                    #endif
-                    break;
-                }
-                case s_Algorithm::Type::simple_mixing:
-                {
-		            #ifdef BROYDEN_PARALLEL	
-                    amrex::Abort("At present, the `simple mixing' algorithm exists with only\
-                                  serial implementation (BROYDEN_PARALLEL=FALSE).");
-                    #else
-	                Execute_Simple_Mixing_Algorithm(); 
-                    #endif
-                    break;
-                }
-                default:
-                {
-                    amrex::Abort("selfconsistency_algorithm, " + Algorithm_Type + ", is not yet defined.");
-                }
-            }
+           //Part 3: Self-consistency
+           Choose_SelfConsistencyAlgorithm();
 
            rMprop.ReInitializeMacroparam(NS_deposit_field_str);
 
            for (int c=0; c < vp_CNT.size(); ++c)
            {
-               /*(?) Future: Need generalization for multiple CNTs*/
-	       #ifdef BROYDEN_PARALLEL	
-               vp_CNT[c]->Scatterv_BroydenComputed_GlobalCharge(n_curr_in_glo_data); 
-               #else
-               vp_CNT[c]->Scatterv_BroydenComputed_GlobalCharge(h_n_curr_in_data);
-               #endif
+               CopyToNS_ChargeComputedUsingSelfConsistencyAlgorithm(vp_CNT[c]);
 
-	           if( vp_CNT[c]->write_at_iter )
-	           {
-	               Create_Global_Output_Data(); 
-                   #ifdef BROYDEN_PARALLEL
-                   vp_CNT[c]->Write_Data(vp_CNT[c]->iter_filename_str, n_curr_out_glo_data, Norm_glo_data);
-                   #else
-                   vp_CNT[c]->Write_Data(vp_CNT[c]->iter_filename_str, h_n_curr_out_data, h_Norm_data);
-                   #endif
+	           if( vp_CNT[c]->write_at_iter ) 
+               {
+                   bool compute_current = false;
+                   Write_DataComputedUsingSelfConsistencyAlgorithm(vp_CNT[c], vp_CNT[c]->iter_filename_str, compute_current);
     	       }
+
                vp_CNT[c]->Deposit_AtomAttributeToMesh();
 	        }
+
             update_surface_soln_flag = false;
+
             max_iter += 1;
 
         } while(Broyden_Norm > Broyden_max_norm);    
 
         BL_PROFILE_VAR_STOP(self_consistency_loop);
 
-
-        #ifdef BROYDEN_PARALLEL
-        Create_Global_Output_Data(); /*May need to be before & outside the forloop for multiple NS*/
-        #endif
+        //Part 4: current computation & writing data
         for (int c=0; c < vp_CNT.size(); ++c)
         {
-            #ifdef BROYDEN_PARALLEL
-            vp_CNT[c]->Write_Data(vp_CNT[c]->step_filename_str, n_curr_out_glo_data, Norm_glo_data);
-            #else
-            vp_CNT[c]->Write_Data(vp_CNT[c]->step_filename_str, h_n_curr_out_data, h_Norm_data);
-
-            if(map_AlgorithmType[Algorithm_Type] == s_Algorithm::Type::broyden_first) 
-	        {
-                Write_Table2D(h_Jinv_curr_data, common_step_folder_str + "/Jinv.dat", "Jinv");
-	        }
-            #endif
-
-            vp_CNT[c]->Compute_Current();
-
-            vp_CNT[c]->Write_Current(step, Vds, Vgs, Broyden_Step, max_iter, Broyden_fraction, Broyden_Scalar);
-             
-            if(rCode.use_electrostatic)
-            {
-                #ifdef BROYDEN_PARALLEL
-                Reset_Broyden_Parallel();
-                #else
-                Reset_Broyden();
-                #endif
-            }
-           //rMprop.ReInitializeMacroparam(NS_deposit_field_str);
+            bool compute_current = true;
+            Write_DataComputedUsingSelfConsistencyAlgorithm(vp_CNT[c], vp_CNT[c]->step_filename_str, compute_current);
         }
 
-        #ifdef BROYDEN_PARALLEL
-        Clear_Global_Output_Data();
-        #endif
-
-	MPI_Barrier(ParallelDescriptor::Communicator());
+        Reset_ForNextBiasStep();
 
         amrex::Print() << "\nAverage mlmg time for self-consistency (s): " << total_mlmg_solve_time / max_iter << "\n";
-
-   } //use electrostatics
+   } //if use electrostatics
    else 
    {
        for (int c=0; c < vp_CNT.size(); ++c)
        {
            vp_CNT[c]->Solve_NEGF();
 
-           vp_CNT[c]->Write_Data(vp_CNT[c]->step_filename_str, h_n_curr_out_data, h_Norm_data); 
-
-           vp_CNT[c]->Compute_Current();
-
-           vp_CNT[c]->Write_Current(step, Vds, Vgs, Broyden_Step, max_iter, Broyden_fraction, Broyden_Scalar);
+           bool compute_current = true;
+           Write_DataComputedUsingSelfConsistencyAlgorithm(vp_CNT[c], vp_CNT[c]->step_filename_str, compute_current);
        }
    }
 
 }
+
+template<typename NSType>
+void 
+c_TransportSolver:: Write_PredictedCharge(NSType const& NS)
+{
+    #ifdef BROYDEN_PARALLEL
+	NS->Write_InputInducedCharge(NS->iter_filename_str, n_curr_in_glo_data); 
+    #else
+	NS->Write_InputInducedCharge(NS->iter_filename_str, h_n_curr_in_data); 
+    #endif  
+}
+
+template<typename NSType>
+void
+c_TransportSolver:: Set_TerminalBiasesAndContactPotential(NSType const& NS)
+{
+    auto& rCode  = c_Code::GetInstance();
+    auto& rGprop = rCode.get_GeometryProperties();
+
+    amrex::Real V_contact[NUM_CONTACTS] = {0., 0.};
+
+    for(int k=0; k<NUM_CONTACTS; ++k) 
+	{    
+        V_contact[k] = rGprop.pEB->Read_SurfSoln(NS->Contact_Parser_String[k]);
+           
+	     amrex::Print() << "Updated terminal voltage: " << k << "  " << V_contact[k] << "\n";
+
+	    NS->Contact_Electrochemical_Potential[k] = NS->E_f - V_contact[k];
+    }
+
+	Vds = V_contact[1] - V_contact[0];
+
+    Vgs = rGprop.pEB->Read_SurfSoln(NS->Gate_String) - V_contact[0];
+
+    amrex::Print() << "Vds, Vgs: " << Vds << "  " << Vgs << "\n";
+}
+
+
+template<typename NSType>
+void
+c_TransportSolver:: CopyFromNS_ChargeComputedFromNEGF(NSType const& NS)
+{
+   #ifdef BROYDEN_PARALLEL
+       /* (?) Need a strategy to gather data for multiple CNTs*/
+       /* (?) Future: if condition to check if proc was used for charge computation of this nanostructure*/
+       /* (?) Future: for multiple nanotubes, then gather the data into a global array and then partition */
+       #ifdef BROYDEN_SKIP_GPU_OPTIMIZATION
+       h_n_curr_out_data.copy(NS->h_RhoInduced_loc_data); 
+       #else
+       d_n_curr_out_data.copy(NS->h_RhoInduced_loc_data); 
+       #endif
+   #else
+   NS->Gatherv_NEGFComputed_LocalCharge(h_n_curr_out_data); 
+   #endif
+}
+
+
+template<typename NSType>
+void
+c_TransportSolver:: CopyToNS_ChargeComputedUsingSelfConsistencyAlgorithm(NSType const& NS)
+{
+    /*(?) Future: Need generalization for multiple CNTs*/
+    #ifdef BROYDEN_PARALLEL	
+    NS->Scatterv_BroydenComputed_GlobalCharge(n_curr_in_glo_data); 
+    #else
+    NS->Scatterv_BroydenComputed_GlobalCharge(h_n_curr_in_data);
+    #endif
+}
+
+
+template<typename NSType>
+void
+c_TransportSolver:: Write_DataComputedUsingSelfConsistencyAlgorithm(NSType const& NS, 
+                                                                    std::string const& write_filename,
+                                                                    bool const compute_current_flag)
+{
+    #ifdef BROYDEN_PARALLEL
+	Create_Global_Output_Data(); 
+    /*May need to be before & outside the forloop for multiple NS*/
+    NS->Write_Data(write_filename, n_curr_out_glo_data, Norm_glo_data);
+    #else
+    NS->Write_Data(write_filename, h_n_curr_out_data, h_Norm_data);
+
+    //if(map_AlgorithmType[Algorithm_Type] == s_Algorithm::Type::broyden_first) 
+	//{
+    //    Write_Table2D(h_Jinv_curr_data, common_step_folder_str + "/Jinv.dat", "Jinv");
+	//}
+    #endif
+
+    if(compute_current_flag) 
+    {
+        NS->Compute_Current();
+        NS->Write_Current(m_step, Vds, Vgs, Broyden_Step, max_iter, Broyden_fraction, Broyden_Scalar);
+    }
+
+}
+
 
 #ifdef BROYDEN_PARALLEL
 void
@@ -552,13 +539,73 @@ c_TransportSolver:: Create_Global_Output_Data()
 void
 c_TransportSolver:: Clear_Global_Output_Data() 
 {
-     if (ParallelDescriptor::IOProcessor())
-     {
-         n_curr_out_glo_data.clear();
-         Norm_glo_data.clear();
-     }
+    if (ParallelDescriptor::IOProcessor())
+    {
+        n_curr_out_glo_data.clear();
+        Norm_glo_data.clear();
+    }
 }
 #endif
+
+
+void
+c_TransportSolver:: Choose_SelfConsistencyAlgorithm() 
+{
+   switch(map_AlgorithmType[Algorithm_Type])
+   {
+       case s_Algorithm::Type::broyden_first:
+       {
+           #ifdef BROYDEN_PARALLEL	
+           amrex::Abort("At present, `Broyden's first' algorithm exists with only\
+                         serial implementation (BROYDEN_PARALLEL=FALSE).");
+           #else
+           Execute_Broyden_First_Algorithm(); 
+           #endif
+           break;
+       }
+       case s_Algorithm::Type::broyden_second:
+       {
+           #ifdef BROYDEN_PARALLEL	
+               #ifdef BROYDEN_SKIP_GPU_OPTIMIZATION
+               Execute_Broyden_Modified_Second_Algorithm_Parallel_SkipGPU();
+               #else
+               Execute_Broyden_Modified_Second_Algorithm_Parallel(); 
+               #endif
+           #else
+           Execute_Broyden_Modified_Second_Algorithm(); 
+           #endif
+           break;
+       }
+       case s_Algorithm::Type::simple_mixing:
+       {
+           #ifdef BROYDEN_PARALLEL	
+           amrex::Abort("At present, the `simple mixing' algorithm exists with only\
+                         serial implementation (BROYDEN_PARALLEL=FALSE).");
+           #else
+           Execute_Simple_Mixing_Algorithm(); 
+           #endif
+           break;
+       }
+       default:
+       {
+           amrex::Abort("selfconsistency_algorithm, " + Algorithm_Type + ", is not yet defined.");
+       }
+   }
+}
+
+
+void
+c_TransportSolver:: Reset_ForNextBiasStep() 
+{
+    #ifdef BROYDEN_PARALLEL
+    Reset_Broyden_Parallel();
+    Clear_Global_Output_Data();
+    #else
+    Reset_Broyden();
+    #endif
+    //rMprop.ReInitializeMacroparam(NS_deposit_field_str);
+    MPI_Barrier(ParallelDescriptor::Communicator());
+}
 
 void
 c_TransportSolver:: SetVal_RealTable1D (RealTable1D& Tab1D_data, amrex::Real val)

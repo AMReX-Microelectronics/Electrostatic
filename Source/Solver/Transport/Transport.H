@@ -46,6 +46,7 @@ private:
     using RealTable2D    = TableData<amrex::Real, 2>;
 
     int num_NS=0;
+    int m_step=0;
     amrex::Geometry  dummy_geom;
     amrex::BoxArray  dummy_ba;
     amrex::DistributionMapping  dummy_dm;
@@ -55,6 +56,10 @@ private:
     amrex::DistributionMapping const * _dm = &dummy_dm;
     //const amrex::GpuArray<int, AMREX_SPACEDIM> * _n_cell;
     amrex::Vector< std::string > vec_NS_names;
+   
+    amrex::Real Vds = 0;
+    amrex::Real Vgs = 0;
+    int max_iter = 1;
 
     void ReadData();
 
@@ -168,6 +173,26 @@ private:
     amrex::Vector<RealTable1D*> W_Broyden;
     amrex::Vector<RealTable1D*> V_Broyden;
     #endif
+
+    template<typename NSType>
+    void Write_PredictedCharge(NSType const& NS);
+
+    template<typename NSType>
+    void Set_TerminalBiasesAndContactPotential(NSType const& NS);
+
+    template<typename NSType>
+    void CopyFromNS_ChargeComputedFromNEGF(NSType const& NS);
+
+    template<typename NSType>
+    void CopyToNS_ChargeComputedUsingSelfConsistencyAlgorithm(NSType const& NS);
+
+    template<typename NSType>
+    void Write_DataComputedUsingSelfConsistencyAlgorithm(NSType const& NS, std::string const& write_filename,
+            bool const compute_current_flag);
+
+    void Choose_SelfConsistencyAlgorithm();
+
+    void Reset_ForNextBiasStep();
 
     #ifdef BROYDEN_PARALLEL
     void Deallocate_Broyden_Parallel();
