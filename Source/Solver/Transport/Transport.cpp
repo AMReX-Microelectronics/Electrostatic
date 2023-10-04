@@ -25,10 +25,6 @@ c_TransportSolver::c_TransportSolver()
 
 c_TransportSolver::~c_TransportSolver()
 {
-    vp_CNT.clear();
-    vp_Graphene.clear();
-    //vp_Silicon.clear();
-    
     #ifdef BROYDEN_PARALLEL
     Deallocate_Broyden_Parallel();
     #else
@@ -294,7 +290,9 @@ c_TransportSolver::Solve(const int step, const amrex::Real time)
     amrex::Real Vgs = 0.;
     if(rCode.use_electrostatic) 
     {	
-	   
+
+        BL_PROFILE_VAR("self-consistency loop", self_consistency_loop);
+
         bool update_surface_soln_flag = true;	   
         do 
         {
@@ -316,13 +314,16 @@ c_TransportSolver::Solve(const int step, const amrex::Real time)
 
            for (int c=0; c < vp_CNT.size(); ++c)
            {
-	           vp_CNT[c]->Set_IterationFilenameString(max_iter);
+	            if( vp_CNT[c]->write_at_iter )
+	            {
+	                vp_CNT[c]->Set_IterationFilenameString(max_iter);
 
-                #ifdef BROYDEN_PARALLEL
-	            vp_CNT[c]->Write_InputInducedCharge(vp_CNT[c]->iter_filename_str, n_curr_in_glo_data); 
-                #else
-	            vp_CNT[c]->Write_InputInducedCharge(vp_CNT[c]->iter_filename_str, h_n_curr_in_data); 
-                #endif  
+                    #ifdef BROYDEN_PARALLEL
+	                vp_CNT[c]->Write_InputInducedCharge(vp_CNT[c]->iter_filename_str, n_curr_in_glo_data); 
+                    #else
+	                vp_CNT[c]->Write_InputInducedCharge(vp_CNT[c]->iter_filename_str, h_n_curr_in_data); 
+                    #endif  
+               }
 
 	           vp_CNT[c]->Gather_MeshAttributeAtAtoms();  
                    
@@ -430,6 +431,8 @@ c_TransportSolver::Solve(const int step, const amrex::Real time)
             max_iter += 1;
 
         } while(Broyden_Norm > Broyden_max_norm);    
+
+        BL_PROFILE_VAR_STOP(self_consistency_loop);
 
 
         #ifdef BROYDEN_PARALLEL

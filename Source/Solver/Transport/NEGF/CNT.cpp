@@ -13,12 +13,6 @@ amrex::Array<int,2> c_CNT::type_id; //very important
 /*Next, member class functions are defined*/
 
 void
-c_CNT::Deallocate ()
-{
-    c_NEGF_Common<BlkType>::Deallocate();
-}
-
-void
 c_CNT:: ReadNanostructureProperties ()
 {
     amrex::Print() << "\n##### NANOSTRUCTURE PROPERTIES #####\n\n";

@@ -80,12 +80,9 @@ public:
 
     amrex::Real Get_Bandgap_Of_Mode(int p);
 
-    //virtual void DeallocateArrays() override;
     //virtual void ComputeChargeDensity() override;
 
     ComplexType get_beta(int J);
-
-    virtual void Deallocate() override;
 
 };
 

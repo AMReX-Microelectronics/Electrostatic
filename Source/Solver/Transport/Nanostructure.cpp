@@ -134,23 +134,6 @@ c_Nanostructure<NSType>::c_Nanostructure (const amrex::Geometry            & geo
 #endif
 }
 
-template<typename NSType>
-c_Nanostructure<NSType>::~c_Nanostructure ()
-{
-#ifdef PRINT_NAME
-    amrex::Print() << "\n\n\t\t\t{************************c_Nanostructure() Destructor************************\n";
-    amrex::Print() << "\t\t\tin file: " << __FILE__ << " at line: " << __LINE__ << "\n";
-#endif
-
-    NSType::Deallocate();
-
-    NSType::outfile_I.close();
-
-#ifdef PRINT_NAME
-    amrex::Print() << "\t\t\t}************************c_Nanostructure() Destructor************************\n";
-#endif
-}
-
 
 template<typename NSType>
 void
@@ -214,8 +197,7 @@ void
 c_Nanostructure<NSType>::Evaluate_LocalFieldSites() 
 {
     int lev=0;
-    int num_field_sites = NSType::num_field_sites;
-
+    //int num_field_sites = NSType::num_field_sites;
     //#ifdef AMREX_USE_GPU
     //amrex::Gpu::HostVector<amrex::Real> h_intermed_values_vec = {std::numeric_limits<int>::max(), 0};
 
@@ -312,10 +294,10 @@ c_Nanostructure<NSType>::Evaluate_LocalFieldSites()
     //#endif
     
 
-    std::cout << " process/site_id_offset/num_local_field_sites: " 
-              << NSType::my_rank << " " 
-              << NSType::site_id_offset << " "
-              << NSType::num_local_field_sites << "\n";
+    //std::cout << " process/site_id_offset/num_local_field_sites: " 
+    //          << NSType::my_rank << " " 
+    //          << NSType::site_id_offset << " "
+    //          << NSType::num_local_field_sites << "\n";
 
     /*define local charge density 1D table, h_n_curr_in_loc_data */
     NSType::h_n_curr_in_loc_data.resize({0},{NSType::num_local_field_sites}, The_Pinned_Arena()); 
@@ -574,8 +556,6 @@ c_Nanostructure<NSType>::Obtain_PotentialAtSites()
     const int num_atoms_to_avg_over    = NSType::num_atoms_to_avg_over;
     const int average_field_flag       = NSType::average_field_flag;
     const int blkCol_size_loc          = NSType::blkCol_size_loc;
-    const int num_local_field_sites    = NSType::num_local_field_sites;
-    const int SIO                      = NSType::site_id_offset;
 
     amrex::Gpu::DeviceVector<amrex::Real> d_vec_V(num_field_sites);
     std::fill(d_vec_V.begin(), d_vec_V.end(), 0);

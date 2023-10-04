@@ -13,8 +13,7 @@ template class c_NEGF_Common<ComplexType[NUM_MODES][NUM_MODES]>; //c_Graphene
 								 
 
 template<typename T>
-void
-c_NEGF_Common<T>:: Deallocate ()
+c_NEGF_Common<T>:: ~c_NEGF_Common<T>()
 {
     h_n_curr_in_loc_data.clear();
     #if AMREX_USE_GPU
@@ -23,6 +22,9 @@ c_NEGF_Common<T>:: Deallocate ()
 
     eq_integration_pts.clear();
     noneq_integration_pts.clear();
+
+    outfile_I.close();
+
 }
 
 

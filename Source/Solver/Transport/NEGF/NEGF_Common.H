@@ -51,6 +51,7 @@ public:
     using BlkTable1D     = TableData<MatrixBlock<T>, 1>;
     using BlkTable2D     = TableData<MatrixBlock<T>, 2>;
 
+    virtual ~c_NEGF_Common();
     /* This is the name of the nanostructure specified by user in the input file. */
     std::string name;
 
@@ -413,7 +414,7 @@ public:
     template<typename U, typename V> 
     void SetVal_Table2D(U& Tab2D_data, V val);
 
-    virtual void Deallocate();
+    //virtual void Deallocate();
 
     void Define_MPISendCountAndDisp();
 };

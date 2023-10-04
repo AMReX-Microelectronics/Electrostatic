@@ -208,8 +208,8 @@ macroscopic.atom_locations = 0.
 ###### OUTPUT ######
 ####################
 
-#plot.folder_name = /global/cfs/projectdirs/m3766/SaurabhTests/eXstatic_Run/GAA_Vds_New_Run8
-plot.folder_name = GAA_Vds_BroySecondPll
+plot.folder_name = /global/cfs/projectdirs/m3766/SaurabhTests/eXstatic_Run/GAA_Vds_BroySecondPll
+#plot.folder_name = GAA_Vds_BroySecondPll
 plot.fields_to_plot = epsilon.1 charge_density.1 phi.1 atom_locations #vecField 
 plot.write_after_init = 1
 plot.write_interval = 1

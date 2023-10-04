@@ -114,7 +114,7 @@ c_Nanostructure
 public:
     using RealTable1D    = TableData<amrex::Real, 1>;
 
-   ~c_Nanostructure();
+    //~c_Nanostructure();
     c_Nanostructure (const amrex::Geometry            & geom,
                      const amrex::DistributionMapping & dm,
                      const amrex::BoxArray            & ba,
@@ -144,15 +144,12 @@ public:
 private:
     const amrex::GpuArray<int, AMREX_SPACEDIM>* _n_cell; 
     const amrex::Geometry * _geom;
+    amrex::MultiFab* p_mf_gather=nullptr;
+    amrex::MultiFab* p_mf_deposit=nullptr;
 
     void Fill_AtomLocations ();
     void Read_AtomLocations ();
     std::string read_filename;
-
-    amrex::MultiFab* p_mf_gather=nullptr;
-    amrex::MultiFab* p_mf_deposit=nullptr;
-
-    //amrex::Vector<amrex::Real> avg_gatherField;
 
     int _use_electrostatic=0;
     int _use_negf=0;
