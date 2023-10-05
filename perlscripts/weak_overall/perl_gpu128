@@ -1,0 +1,23 @@
+#!/bin/bash
+#SBATCH -N 32
+#SBATCH -C gpu
+#SBATCH -G 128
+#SBATCH -J out_gpu128
+#SBATCH -q regular
+#SBATCH --mail-user=saurabhsawant@lbl.gov
+#SBATCH --mail-type=ALL
+#SBATCH -t 00:08:00
+#SBATCH -A m3766_g
+#SBATCH -o gpu128.o%j
+#SBATCH -e gpu128.e%j
+### SBATCH --reservation=weak_scaling_saurabh
+
+
+#OpenMP settings:
+export OMP_NUM_THREADS=1
+export OMP_PLACES=threads
+export OMP_PROC_BIND=spread
+
+#run the application:
+#applications may performance better with --gpu-bind=none instead of --gpu-bind=single:1 
+srun -n 128 -c 32 --cpu_bind=cores -G 128 --gpu-bind=single:1  ./../../Exec/main3d.gnu.TPROF.MPI.CUDA.EB.TD.TRAN.BROYPRLL.ex ../../input/scaling/weak_overall/gpu128
