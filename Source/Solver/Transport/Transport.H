@@ -50,6 +50,8 @@ private:
     amrex::Geometry  dummy_geom;
     amrex::BoxArray  dummy_ba;
     amrex::DistributionMapping  dummy_dm;
+    amrex::Real total_max_time_across_all_steps[3] = {0., 0., 0.};
+    int total_iter = 0;
 
     amrex::Geometry const * _geom = &dummy_geom;
     amrex::BoxArray const * _ba = &dummy_ba;
@@ -193,6 +195,9 @@ private:
     void Choose_SelfConsistencyAlgorithm();
 
     void Reset_ForNextBiasStep();
+
+    void Obtain_maximum_time(amrex::Real const* total_time_counter_diff);
+
 
     #ifdef BROYDEN_PARALLEL
     void Deallocate_Broyden_Parallel();

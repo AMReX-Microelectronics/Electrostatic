@@ -274,8 +274,6 @@ c_TransportSolver::Solve(const int step, const amrex::Real time)
     auto& rOutput  = rCode.get_Output();
     auto& rPostPro = rCode.get_PostProcessor();
 
-    amrex::Real total_mlmg_solve_time = 0.;
-
     max_iter = 1;
     m_step = step;
 
@@ -285,9 +283,12 @@ c_TransportSolver::Solve(const int step, const amrex::Real time)
        Set_CommonStepFolder(step);
     }
 
+    amrex::Real time_counter[4] = {0., 0., 0., 0.};
+    amrex::Real total_time_counter_diff[3] = {0., 0., 0.};
+
     if(rCode.use_electrostatic) 
     {	
-        BL_PROFILE_VAR("self-consistency loop", self_consistency_loop);
+        BL_PROFILE_VAR("Part1_to_3_sum", part1_to_3_sum_counter);
 
         bool update_surface_soln_flag = true;	   
         do 
@@ -299,18 +300,25 @@ c_TransportSolver::Solve(const int step, const amrex::Real time)
            }
     
            //Part 1: Electrostatics
+           time_counter[0] = amrex::second();
+           
+           BL_PROFILE_VAR("Part1_Electrostatics", electrostatics_couter);
+
            rMprop.ReInitializeMacroparam(NS_gather_field_str);
 
            rMLMG.UpdateBoundaryConditions(update_surface_soln_flag);
 
            auto mlmg_solve_time = rMLMG.Solve_PoissonEqn();
-           amrex::Print() << "\nmlmg_solve_time: " << mlmg_solve_time << "\n";
-
-           total_mlmg_solve_time += mlmg_solve_time;
 
            rPostPro.Compute();
 
+           BL_PROFILE_VAR_STOP(electrostatics_couter);
+
            //Part 2: NEGF
+           time_counter[1] = amrex::second();
+
+           BL_PROFILE_VAR("Part2_NEGF", negf_couter);
+
            for (int c=0; c < vp_CNT.size(); ++c)
            {
 	           if( vp_CNT[c]->write_at_iter )
@@ -331,7 +339,13 @@ c_TransportSolver::Solve(const int step, const amrex::Real time)
                CopyFromNS_ChargeComputedFromNEGF(vp_CNT[c]);
             }
 
+           BL_PROFILE_VAR_STOP(negf_couter);
+
            //Part 3: Self-consistency
+           time_counter[2] = amrex::second();
+           
+           BL_PROFILE_VAR("Part3_Self_Consistency", self_consistency_counter);
+
            Choose_SelfConsistencyAlgorithm();
 
            rMprop.ReInitializeMacroparam(NS_deposit_field_str);
@@ -348,25 +362,42 @@ c_TransportSolver::Solve(const int step, const amrex::Real time)
 
                vp_CNT[c]->Deposit_AtomAttributeToMesh();
 	        }
-
             update_surface_soln_flag = false;
-
             max_iter += 1;
 
-        } while(Broyden_Norm > Broyden_max_norm);    
+            BL_PROFILE_VAR_STOP(self_consistency_counter);
 
-        BL_PROFILE_VAR_STOP(self_consistency_loop);
+            time_counter[3] = amrex::second();
+
+            total_time_counter_diff[0] += time_counter[1] - time_counter[0];
+            total_time_counter_diff[1] += time_counter[2] - time_counter[1];
+            total_time_counter_diff[2] += time_counter[3] - time_counter[2];
+
+            amrex::Print() << "Time for electrostatics:   " << time_counter[1] - time_counter[0] << "\n";    
+            amrex::Print() << "Time for NEGF:             " << time_counter[2] - time_counter[1] << "\n";    
+            amrex::Print() << "Time for self-consistency: " << time_counter[3] - time_counter[2] << "\n";    
+
+        } while(Broyden_Norm > Broyden_max_norm);    
+        
+        BL_PROFILE_VAR_STOP(part1_to_3_sum_counter);
+
+        Obtain_maximum_time(total_time_counter_diff);
 
         //Part 4: current computation & writing data
+        amrex::Real time_for_current = amrex::second();
+
+        BL_PROFILE_VAR("Part4_Current_Computation", current_computation_counter);
+
         for (int c=0; c < vp_CNT.size(); ++c)
         {
             bool compute_current = true;
             Write_DataComputedUsingSelfConsistencyAlgorithm(vp_CNT[c], vp_CNT[c]->step_filename_str, compute_current);
         }
+        BL_PROFILE_VAR_STOP(current_computation_counter);
+        amrex::Print() << "Time for current computation:   " << amrex::second() - time_for_current << "\n";    
 
         Reset_ForNextBiasStep();
 
-        amrex::Print() << "\nAverage mlmg time for self-consistency (s): " << total_mlmg_solve_time / max_iter << "\n";
    } //if use electrostatics
    else 
    {
@@ -593,6 +624,56 @@ c_TransportSolver:: Choose_SelfConsistencyAlgorithm()
    }
 }
 
+
+void
+c_TransportSolver:: Obtain_maximum_time(amrex::Real const* total_time_counter_diff)
+{
+
+    amrex::Real total_max_time_for_current_step[3] = {0., 0., 0.};
+
+    MPI_Reduce(total_time_counter_diff,
+               total_max_time_for_current_step,
+               3,
+               MPI_DOUBLE,
+               MPI_MAX,
+               ParallelDescriptor::IOProcessorNumber(),
+               ParallelDescriptor::Communicator());
+
+    if(ParallelDescriptor::IOProcessor()) 
+    {
+        amrex::Real avg_curr[3] = {total_max_time_for_current_step[0]/max_iter, 
+                                   total_max_time_for_current_step[1]/max_iter,
+                                   total_max_time_for_current_step[2]/max_iter};
+
+        amrex::Print() << "\nIterations in this step: " << max_iter << "\n";
+        amrex::Print() << "Avg. max time for this step electrostatics:   " 
+                       << avg_curr[0] << "\n";    
+        amrex::Print() << "Avg. max time for this step NEGF:             " 
+                       << avg_curr[1] << "\n";    
+        amrex::Print() << "Avg. max time for this step self-consistency: " 
+                       << avg_curr[2] << "\n";    
+        amrex::Print() << "Sum of above three times: " << avg_curr[0] + avg_curr[1] + avg_curr[2] << "\n";
+
+        total_max_time_across_all_steps[0] += total_max_time_for_current_step[0];
+        total_max_time_across_all_steps[1] += total_max_time_for_current_step[1];
+        total_max_time_across_all_steps[2] += total_max_time_for_current_step[2];
+        total_iter += max_iter;
+
+        amrex::Real avg_all[3] = {total_max_time_across_all_steps[0]/total_iter, 
+                                  total_max_time_across_all_steps[1]/total_iter,
+                                  total_max_time_across_all_steps[2]/total_iter};
+      
+        amrex::Print() << "\nTotal iterations so far: " << total_iter << "\n";
+        amrex::Print() << "Avg. time over all steps electrostatics:   " 
+                       << avg_all[0] << "\n";    
+        amrex::Print() << "Avg. Time over all steps NEGF:             " 
+                       << avg_all[1] << "\n";    
+        amrex::Print() << "Avg. Time over all steps self-consistency: " 
+                       << avg_all[2] << "\n";    
+        amrex::Print() << "Sum of above three times: " << avg_all[0] + avg_all[1] + avg_all[2] << "\n";
+    }
+
+}
 
 void
 c_TransportSolver:: Reset_ForNextBiasStep() 
