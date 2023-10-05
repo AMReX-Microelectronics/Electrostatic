@@ -711,11 +711,11 @@ template<typename T>
 void 
 c_NEGF_Common<T>:: Update_ContactElectrochemicalPotential () 
 {
-    amrex::Print() <<  "Updated contact electrochemical potential: \n";
+    //amrex::Print() <<  "Updated contact electrochemical potential: \n";
     for(int c=0; c < NUM_CONTACTS; ++c)
     {
         mu_contact[c] = Contact_Electrochemical_Potential[c];
-        amrex::Print() << "  contact, mu: " <<  c << " " << mu_contact[c] << "\n";
+        //amrex::Print() << "  contact, mu: " <<  c << " " << mu_contact[c] << "\n";
     }
 }
 
@@ -793,17 +793,17 @@ c_NEGF_Common<T>:: Define_EnergyLimits ()
     //{
     //    amrex::Print() <<  U_contact[c] << " ";
     //}
-    amrex::Print() << "\n";
-    amrex::Print() << "\nE_f: " << E_f << "\n";
-    amrex::Print() << "mu_min/max: " << mu_min << " " << mu_max << "\n";
-    amrex::Print() << "kT_min/max: " << kT_min << " " << kT_max << "\n";
-    amrex::Print() << "E_zPlus: "  << E_zPlus << "\n";
-    amrex::Print() << "E_contour_left/E_contour_right/E_rightmost: " << E_contour_left      <<  "  "
-                                                                     << E_contour_right << "  "
-                                                                     << E_rightmost     << "\n";
-    amrex::Print() << "E_pole_max: " << E_pole_max << ", number of poles: " << num_enclosed_poles << "\n";
-    amrex::Print() << "E_zeta: " << E_zeta << "\n";
-    amrex::Print() << "E_eta: "  << E_eta << "\n";
+    //amrex::Print() << "\n";
+    //amrex::Print() << "\nE_f: " << E_f << "\n";
+    //amrex::Print() << "mu_min/max: " << mu_min << " " << mu_max << "\n";
+    //amrex::Print() << "kT_min/max: " << kT_min << " " << kT_max << "\n";
+    //amrex::Print() << "E_zPlus: "  << E_zPlus << "\n";
+    //amrex::Print() << "E_contour_left/E_contour_right/E_rightmost: " << E_contour_left      <<  "  "
+    //                                                                 << E_contour_right << "  "
+    //                                                                 << E_rightmost     << "\n";
+    //amrex::Print() << "E_pole_max: " << E_pole_max << ", number of poles: " << num_enclosed_poles << "\n";
+    //amrex::Print() << "E_zeta: " << E_zeta << "\n";
+    //amrex::Print() << "E_eta: "  << E_eta << "\n";
 
 }
 
@@ -1317,7 +1317,7 @@ c_NEGF_Common<T>:: Compute_InducedCharge ()
         //        							  << " " <<  h_RhoInduced_loc(n) << "\n";
 	//}
     }
-    amrex::Print() << "induced charge at site 0: " << h_RhoInduced_loc(0) << "\n";
+    //amrex::Print() << "induced charge at site 0: " << h_RhoInduced_loc(0) << "\n";
 
 }
 

@@ -10,10 +10,10 @@ using namespace amrex;
     void 
     c_TransportSolver::Execute_Broyden_Modified_Second_Algorithm_Parallel_SkipGPU()
     {
-            amrex::Print() << "Execute_Broyden_Modified_Second_Algorithm_Parallel_SkipGPU\n";    
-            amrex::Print() << "\nBroydenStep: " << Broyden_Step  
-    		               << ",  fraction: "   << Broyden_fraction 
-    		               << ",  scalar: " << Broyden_Scalar<< "\n";
+            //amrex::Print() << "Execute_Broyden_Modified_Second_Algorithm_Parallel_SkipGPU\n";    
+            //amrex::Print() << "\nBroydenStep: " << Broyden_Step  
+    		//               << ",  fraction: "   << Broyden_fraction 
+    		//               << ",  scalar: " << Broyden_Scalar<< "\n";
     
             /*vectors*/
             auto const& n_curr_in      = h_n_curr_in_data.table();
@@ -109,12 +109,12 @@ using namespace amrex;
     		              MPI_SUM,
                           ParallelDescriptor::Communicator());
     
-            amrex::Print() << "n_curr_in, n_prev_in: " << n_curr_in(0) << " " << n_prev_in(0) << "\n";
+            //amrex::Print() << "n_curr_in, n_prev_in: " << n_curr_in(0) << " " << n_prev_in(0) << "\n";
             amrex::Print() << "\nBroyden_NormSum_Curr: " << std::setw(20) << Broyden_NormSum_Curr << "\n";
             amrex::Print() <<   "Broyden_NormSum_Prev: " << std::setw(20) << Broyden_NormSum_Prev
                            << ",   Difference: " << (Broyden_NormSum_Curr - Broyden_NormSum_Prev) << "\n";
             amrex::Print() << "Broyden max norm: " << Broyden_Norm << "\n\n";
-            amrex::Print() << "Broyden_denom: " << Broyden_Denom << "\n";
+            //amrex::Print() << "Broyden_denom: " << Broyden_Denom << "\n";
 
             Broyden_NormSum_Prev = Broyden_NormSum_Curr; 
     
@@ -254,11 +254,11 @@ using namespace amrex;
     c_TransportSolver::Execute_Broyden_Modified_Second_Algorithm_Parallel()
     {
 
-            amrex::Print() << "Execute_Broyden_Modified_Second_Algorithm_Parallel\n";    
+            //amrex::Print() << "Execute_Broyden_Modified_Second_Algorithm_Parallel\n";    
     
-            amrex::Print() << "\nBroydenStep: " << Broyden_Step  
-    		               << ",  fraction: "   << Broyden_fraction 
-            		       << ",  scalar: " << Broyden_Scalar<< "\n";
+            //amrex::Print() << "\nBroydenStep: " << Broyden_Step  
+    	    //               << ",  fraction: "   << Broyden_fraction 
+            //		       << ",  scalar: " << Broyden_Scalar<< "\n";
     
             auto const& h_n_curr_in       = h_n_curr_in_data.table();
             auto const& n_curr_in_glo     = n_curr_in_glo_data.table();
@@ -385,8 +385,8 @@ using namespace amrex;
             amrex::Print() <<   "Broyden_NormSum_Prev: " << std::setw(20) << Broyden_NormSum_Prev
                            << ",   Difference: " << (Broyden_NormSum_Curr - Broyden_NormSum_Prev) << "\n";
             amrex::Print() << "Broyden max norm: " << Broyden_Norm << "\n\n";
-            amrex::Print() << "n_curr_in, n_prev_in: " << n_curr_in(0) << " " << n_prev_in(0) << "\n";
-            amrex::Print() << "Broyden_denom: " << Broyden_Denom << "\n";
+            //amrex::Print() << "n_curr_in, n_prev_in: " << n_curr_in(0) << " " << n_prev_in(0) << "\n";
+            //amrex::Print() << "Broyden_denom: " << Broyden_Denom << "\n";
     
             /*Swap L2 norms*/
             Broyden_NormSum_Prev = Broyden_NormSum_Curr; 
