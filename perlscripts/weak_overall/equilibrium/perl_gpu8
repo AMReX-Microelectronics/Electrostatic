@@ -1,15 +1,15 @@
 #!/bin/bash
-#SBATCH -N 32
+#SBATCH -N 2
 #SBATCH -C gpu
-#SBATCH -G 128
-#SBATCH -J out_gpu128
+#SBATCH -G 8
+#SBATCH -J out_gpu8
 #SBATCH -q regular
 #SBATCH --mail-user=saurabhsawant@lbl.gov
 #SBATCH --mail-type=ALL
-#SBATCH -t 00:08:00
+#SBATCH -t 00:05:00
 #SBATCH -A m3766_g
-#SBATCH -o gpu128.o%j
-#SBATCH -e gpu128.e%j
+#SBATCH -o gpu8.o%j
+#SBATCH -e gpu8.e%j
 ### SBATCH --reservation=weak_scaling_saurabh
 
 
@@ -20,4 +20,4 @@ export OMP_PROC_BIND=spread
 
 #run the application:
 #applications may performance better with --gpu-bind=none instead of --gpu-bind=single:1 
-srun -n 128 -c 32 --cpu_bind=cores -G 128 --gpu-bind=single:1  ./../../Exec/main3d.gnu.TPROF.MPI.CUDA.EB.TD.TRAN.BROYPRLL.ex ../../input/scaling/weak_overall/gpu128
+srun -n 8 -c 32 --cpu_bind=cores -G 8 --gpu-bind=single:1  ./../../../Exec/main3d.gnu.TPROF.MPI.CUDA.EB.TD.TRAN.BROYPRLL.ex ../../input/scaling/weak_overall/equilibrium/gpu8
