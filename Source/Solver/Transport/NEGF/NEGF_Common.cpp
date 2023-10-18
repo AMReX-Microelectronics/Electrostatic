@@ -788,22 +788,22 @@ c_NEGF_Common<T>:: Define_EnergyLimits ()
     ComplexType val3(E_contour_right.real() - 2*Fermi_tail_factor*kT_max, E_zeta.imag());
     E_eta =  val3;
 
-    //amrex::Print() << "U_contact: ";
-    //for (int c=0; c<NUM_CONTACTS; ++c)
-    //{
-    //    amrex::Print() <<  U_contact[c] << " ";
-    //}
-    //amrex::Print() << "\n";
-    //amrex::Print() << "\nE_f: " << E_f << "\n";
-    //amrex::Print() << "mu_min/max: " << mu_min << " " << mu_max << "\n";
-    //amrex::Print() << "kT_min/max: " << kT_min << " " << kT_max << "\n";
-    //amrex::Print() << "E_zPlus: "  << E_zPlus << "\n";
-    //amrex::Print() << "E_contour_left/E_contour_right/E_rightmost: " << E_contour_left      <<  "  "
-    //                                                                 << E_contour_right << "  "
-    //                                                                 << E_rightmost     << "\n";
-    //amrex::Print() << "E_pole_max: " << E_pole_max << ", number of poles: " << num_enclosed_poles << "\n";
-    //amrex::Print() << "E_zeta: " << E_zeta << "\n";
-    //amrex::Print() << "E_eta: "  << E_eta << "\n";
+    amrex::Print() << "U_contact: ";
+    for (int c=0; c<NUM_CONTACTS; ++c)
+    {
+        amrex::Print() <<  U_contact[c] << " ";
+    }
+    amrex::Print() << "\n";
+    amrex::Print() << "\nE_f: " << E_f << "\n";
+    amrex::Print() << "mu_min/max: " << mu_min << " " << mu_max << "\n";
+    amrex::Print() << "kT_min/max: " << kT_min << " " << kT_max << "\n";
+    amrex::Print() << "E_zPlus: "  << E_zPlus << "\n";
+    amrex::Print() << "E_contour_left/E_contour_right/E_rightmost: " << E_contour_left      <<  "  "
+                                                                     << E_contour_right << "  "
+                                                                     << E_rightmost     << "\n";
+    amrex::Print() << "E_pole_max: " << E_pole_max << ", number of poles: " << num_enclosed_poles << "\n";
+    amrex::Print() << "E_zeta: " << E_zeta << "\n";
+    amrex::Print() << "E_eta: "  << E_eta << "\n";
 
 }
 
@@ -1303,6 +1303,7 @@ c_NEGF_Common<T>:: Compute_InducedCharge ()
     auto const& h_RhoInduced_loc = h_RhoInduced_loc_data.table();
     SetVal_Table1D(h_RhoInduced_loc_data,0.);
 
+    MPI_Barrier(ParallelDescriptor::Communicator());
     //amrex::Print() << "Differential Charge per Atom: \n";
     for (int n=0; n <blkCol_size_loc; ++n) 
     {
@@ -1310,13 +1311,22 @@ c_NEGF_Common<T>:: Compute_InducedCharge ()
                               + h_RhoNonEq_loc(n).DiagSum().real() 
                              - h_Rho0_loc(n).DiagSum().imag() );
 
-	//if(n < 5) {
-        //amrex::Print() << "n/rho_Eq/Rho_NonEq/Rho0/RhoInduced: " << n << " " <<  h_RhoEq_loc(n).DiagSum().imag() 
-        //        	                                                  << " " <<  h_RhoNonEq_loc(n).DiagSum().real() 
-        //        							  << " " <<  h_Rho0_loc(n).DiagSum().imag() 
-        //        							  << " " <<  h_RhoInduced_loc(n) << "\n";
-	//}
+        //if (ParallelDescriptor::IOProcessor()) 
+        //if (my_rank==4) 
+        //{
+	    //    //if(n < 5) 
+        //    //{
+        //    std::cout << "site_id/rho_Eq/Rho_NonEq/Rho0/RhoInduced: " 
+        //          << vec_blkCol_gids[n]
+        //          << " " <<  h_RhoEq_loc(n).DiagSum().imag() 
+        //          << " " <<  h_RhoNonEq_loc(n).DiagSum().real()                     						                         
+        //          << " " <<  h_Rho0_loc(n).DiagSum().imag() 
+        //          << " " <<  h_RhoInduced_loc(n) << "\n";
+	    //    //}
+        //}
     }
+    MPI_Barrier(ParallelDescriptor::Communicator());
+    
     //amrex::Print() << "induced charge at site 0: " << h_RhoInduced_loc(0) << "\n";
 
 }

@@ -614,12 +614,18 @@ c_Nanostructure<NSType>::Obtain_PotentialAtSites()
             });
         } 
     }
-    MPI_Allreduce( MPI_IN_PLACE,
-                   &(p_V[0]),
-                   num_field_sites,
-                   MPI_DOUBLE,
-                   MPI_SUM,
-                   ParallelDescriptor::Communicator());
+
+    for (int l=0; l<num_field_sites; ++l)
+    {
+        ParallelDescriptor::ReduceRealSum(p_V[l]);
+    }
+
+    //MPI_Allreduce( MPI_IN_PLACE,
+    //               &(p_V[0]),
+    //               num_field_sites,
+    //               MPI_DOUBLE,
+    //               MPI_SUM,
+    //               ParallelDescriptor::Communicator());
 
     //for(int i=0; i < num_field_sites; ++i)
     //{

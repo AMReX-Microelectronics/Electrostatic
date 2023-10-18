@@ -664,13 +664,14 @@ c_TransportSolver:: Obtain_maximum_time(amrex::Real const* total_time_counter_di
                                   total_max_time_across_all_steps[2]/total_iter};
       
         amrex::Print() << "\nTotal iterations so far: " << total_iter << "\n";
+        amrex::Real avg_total = avg_all[0] + avg_all[1] + avg_all[2];
         amrex::Print() << "Avg. time over all steps electrostatics:   " 
-                       << avg_all[0] << "\n";    
+                       << avg_all[0] << std::setw(15) << (avg_all[0]/avg_total)*100 << " %" << "\n";    
         amrex::Print() << "Avg. Time over all steps NEGF:             " 
-                       << avg_all[1] << "\n";    
+                       << avg_all[1] << std::setw(15) << (avg_all[1]/avg_total)*100 << " %" << "\n";    
         amrex::Print() << "Avg. Time over all steps self-consistency: " 
-                       << avg_all[2] << "\n";    
-        amrex::Print() << "Sum of above three times: " << avg_all[0] + avg_all[1] + avg_all[2] << "\n";
+                       << avg_all[2] << std::setw(15) << (avg_all[2]/avg_total)*100 << " %" << "\n";    
+        amrex::Print() << "Sum of above three times: " << avg_total << "\n";
     }
 
 }

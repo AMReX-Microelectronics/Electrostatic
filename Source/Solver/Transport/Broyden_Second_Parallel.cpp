@@ -289,12 +289,12 @@ using namespace amrex;
                                                        d_Intermed_values_vec.begin() );
             amrex::Gpu::streamSynchronize();
 
-            const int BTM = Broyden_Threshold_MaxStep;
-            const int SSL = site_size_loc;
             switch(map_NormType[Broyden_Norm_Type])
             {
                 case s_Norm::Type::Absolute:
                 {
+                    const int BTM = Broyden_Threshold_MaxStep;
+                    const int SSL = site_size_loc;
                     amrex::ParallelFor(site_size_loc, [=] AMREX_GPU_DEVICE (int site) noexcept
                     {
                         Norm(site) = 0.;
@@ -321,6 +321,8 @@ using namespace amrex;
                 }
                 case s_Norm::Type::Relative:
                 {
+                    const int BTM = Broyden_Threshold_MaxStep;
+                    const int SSL = site_size_loc;
                     amrex::ParallelFor(site_size_loc, [=] AMREX_GPU_DEVICE (int site) noexcept
                     {
                         Norm(site) = 0.;
