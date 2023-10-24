@@ -1300,7 +1300,6 @@ c_NEGF_Common<T>:: Compute_DensityOfStates (std::string dos_foldername, bool fla
 
             std::string spatialdos_filename = dos_foldername + "/Ept_" + std::to_string(e) + ".dat";
 
-            amrex::Print() << "Printing LDOS: \n";
             Write_Table1D(h_PTD_glo_vec,
                           h_LDOS_glo_data,
                           spatialdos_filename,  "PTD LDOS_r at E="+std::to_string(E.real()));

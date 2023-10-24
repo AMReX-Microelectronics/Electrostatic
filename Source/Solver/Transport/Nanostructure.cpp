@@ -766,11 +766,13 @@ c_Nanostructure<NSType>:: InitializeNEGF (std::string common_foldername_str)
 
     BL_PROFILE_VAR("Compute_DOS", compute_dos);
 
-    bool flag_write_spatial_DOS = true;
+    bool flag_write_LDOS = true;
 
-    std::string dir=NSType::step_foldername_str + "/DOS_flatband";
-    CreateDirectory(dir);
-    NSType::Compute_DensityOfStates(dir, flag_write_spatial_DOS);
+    std::string dos_dir = NSType::step_foldername_str + "/DOS_flatband";
+
+    if (ParallelDescriptor::IOProcessor()) CreateDirectory(dos_dir);
+
+    NSType::Compute_DensityOfStates(dos_dir, flag_write_LDOS);
 
     BL_PROFILE_VAR_STOP(compute_dos);
 
