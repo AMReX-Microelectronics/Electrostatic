@@ -762,8 +762,8 @@ c_NEGF_Common<T>:: Define_EnergyLimits ()
     if(fabs(mu_min - mu_max) > 1e-8) flag_noneq_exists = true;
     if(fabs(kT_min - kT_max) > 0.01) flag_noneq_exists = true;
 
-    ComplexType val(0.,1e-8);
-    E_zPlus = val;
+    //ComplexType val(0.,1e-8);
+    //E_zPlus = val;
     E_contour_left  = E_valence_min + E_zPlus; /*set in the input*/
     E_rightmost = mu_max + Fermi_tail_factor*kT_max + E_zPlus;
 
@@ -991,7 +991,7 @@ c_NEGF_Common<T>:: Deallocate_TemporaryArraysForGFComputation ()
 
 template<typename T>
 void 
-c_NEGF_Common<T>:: Compute_DensityOfStates (std::string foldername, bool flag_write_LDOS)
+c_NEGF_Common<T>:: Compute_DensityOfStates (std::string dos_foldername, bool flag_write_LDOS)
 {
     int E_pts = ContourPath_DOS.num_pts;
     h_DOS_loc_data.resize({0}, {E_pts}, The_Pinned_Arena());
@@ -1002,8 +1002,6 @@ c_NEGF_Common<T>:: Compute_DensityOfStates (std::string foldername, bool flag_wr
 
     RealTable1D h_LDOS_loc_data;
     RealTable1D h_LDOS_glo_data;
-    std::string dos_foldername = foldername + "/DOS";
-    CreateDirectory(dos_foldername);
 
     if (flag_write_LDOS)
     {
