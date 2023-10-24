@@ -374,7 +374,7 @@ c_TransportSolver::Solve(const int step, const amrex::Real time)
                if(flag_write_LDOS_iter and max_iter%write_LDOS_iter_period == 0) 
                {
                    std::string iter_dos_foldername_str 
-                   = amrex::Concatenate(vp_CNT[c]->iter_foldername_str + "/LDOS_", max_iter, negf_plt_name_digits);
+                   = amrex::Concatenate(vp_CNT[c]->iter_foldername_str + "/LDOS_iter", max_iter, negf_plt_name_digits);
 
                    CreateDirectory(iter_dos_foldername_str);
                    // e.g.: /negf/cnt/step0001_iter/LDOS_iter0002/
@@ -419,7 +419,7 @@ c_TransportSolver::Solve(const int step, const amrex::Real time)
             {
                 std::string 
                 dos_step_foldername_str 
-                = amrex::Concatenate(vp_CNT[c]->step_foldername_str + "/LDOS_", step, negf_plt_name_digits);
+                = amrex::Concatenate(vp_CNT[c]->step_foldername_str + "/LDOS_step", step, negf_plt_name_digits);
                 CreateDirectory(dos_step_foldername_str);
                 // e.g.: /negf/cnt/LDOS_step0001/
                 
