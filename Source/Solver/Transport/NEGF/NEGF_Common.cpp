@@ -840,7 +840,7 @@ c_NEGF_Common<T>:: Define_IntegrationPaths ()
     /* Define_ContourPath_DOS */
     //ComplexType lower_limit(-0.8,E_zPlus.imag());
     //ComplexType upper_limit(0.8,E_zPlus.imag());
-    ContourPath_DOS.Define_GaussLegendrePoints(E_eta.real(), E_zeta.real(), dos_integration_pts, 0);
+    contourpath_dos.define_gausslegendrepoints(e_eta.real(), e_zeta.real(), dos_integration_pts, 0);
 
     /* Write Fermi function */
     auto* Fermi_path = &ContourPath_DOS;
@@ -882,9 +882,14 @@ c_NEGF_Common<T>:: Update_IntegrationPaths ()
     {
         ContourPath_RhoNonEq.resize(1); 
         ContourPath_RhoNonEq[0].Define_GaussLegendrePoints(E_contour_right, E_rightmost, noneq_integration_pts[0], 0);
+        dos_integration_pts = noneq_integration_pts[0];
+        ContourPath_DOS.Define_GaussLegendrePoints(E_contour_right, E_rightmost, dos_integration_pts, 0);
+        //ContourPath_DOS = &ContourPath_RhoNonEq[0];
+    }
+    else {
+        ContourPath_DOS.Define_GaussLegendrePoints(E_eta.real(), E_rightmost, dos_integration_pts, 0);
     }
 
-    ContourPath_DOS.Define_GaussLegendrePoints(E_eta.real(), E_rightmost, dos_integration_pts, 0);
 
 }
 
