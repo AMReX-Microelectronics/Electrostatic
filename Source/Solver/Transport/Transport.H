@@ -94,7 +94,9 @@ private:
 
     int flag_reset_with_previous_charge_distribution = 0;
     int flag_initialize_inverse_jacobian = 0;
-
+    bool flag_write_LDOS = false;
+    bool flag_write_LDOS_iter = false;
+    int  write_LDOS_iter_period = 1e6;
     /*For Broyden*/
     std::string Algorithm_Type = "broyden_second";
     std::map<std::string, s_Algorithm::Type>

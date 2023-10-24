@@ -27,18 +27,16 @@ c_Nanostructure<NSType>::c_Nanostructure (const amrex::Geometry            & geo
                                   const std::string NS_gather_str,
                                   const std::string NS_deposit_str,
                                   const amrex::Real NS_initial_deposit_value,
-                                  const amrex::Real NS_Broyden_frac,
-                                  const std::string NS_Broyden_norm_type,
                                   const int use_negf,
-				  const std::string negf_foldername_str
-				  )
+                  				  const std::string negf_foldername_str
+		                 		  )
                  : amrex::ParticleContainer<realPD::NUM, intPD::NUM, 
                                             realPA::NUM, intPA::NUM> (geom, dm, ba)
 {
     NSType::name = NS_name_str;
     amrex::Print() << "Nanostructure: " << NS_name_str << "\n";
 
-    NSType::step_foldername_str = negf_foldername_str + "/" + NSType::name; 
+    NSType::step_foldername_str = negf_foldername_str + "/" + NSType::name;
     /*eg. output/negf/cnt for nanostructure named cnt */
 
     if (ParallelDescriptor::IOProcessor())
@@ -119,7 +117,7 @@ c_Nanostructure<NSType>::c_Nanostructure (const amrex::Geometry            & geo
 
     if(_use_negf) 
     {
-        InitializeNEGF();
+        InitializeNEGF(negf_foldername_str + "/transport_common");
         pos_vec.clear(); 
     }
     
@@ -753,7 +751,7 @@ c_Nanostructure<NSType>::Obtain_PotentialAtSites()
 
 template<typename NSType>
 void
-c_Nanostructure<NSType>:: InitializeNEGF ()
+c_Nanostructure<NSType>:: InitializeNEGF (std::string common_foldername_str)
 {
 
     NSType::AllocateArrays();
@@ -768,7 +766,8 @@ c_Nanostructure<NSType>:: InitializeNEGF ()
 
     BL_PROFILE_VAR("Compute_DOS", compute_dos);
 
-    NSType::Compute_DensityOfStates();
+    bool flag_write_spatial_DOS = true;
+    NSType::Compute_DensityOfStates(common_foldername_str, flag_write_spatial_DOS);
 
     BL_PROFILE_VAR_STOP(compute_dos);
 

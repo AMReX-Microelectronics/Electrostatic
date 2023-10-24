@@ -308,6 +308,7 @@ c_NEGF_Common<T>:: ReadNanostructureProperties ()
 
     auto is_specified_eq = queryArrWithParser(pp_ns, "eq_integration_pts", eq_integration_pts, 0, 3);
     auto is_specified_noneq = queryArrWithParser(pp_ns, "noneq_integration_pts", noneq_integration_pts, 0, 1);
+    auto is_specified_dos = queryWithParser(pp_ns, "dos_integration_pts", dos_integration_pts);
 
     write_at_iter = 0;
     queryWithParser(pp_ns,"write_at_iter", write_at_iter);
@@ -387,6 +388,9 @@ c_NEGF_Common<T>:: ReadNanostructureProperties ()
     for(int c=0; c < 1; ++c) {
         amrex::Print() << noneq_integration_pts[c] << "  ";
     }
+    amrex::Print() << "\n";
+    amrex::Print() << "##### DOS contour integration points: ";
+    amrex::Print() << dos_integration_pts << "  ";
     amrex::Print() << "\n";
 
     
@@ -828,10 +832,9 @@ c_NEGF_Common<T>:: Define_IntegrationPaths ()
     ContourPath_Rho0[2].Define_GaussLegendrePoints(E_eta, E_contour_left, 30, 1); 
 
     /* Define_ContourPath_DOS */
-    ComplexType lower_limit(-0.8,E_zPlus.imag());
-    ComplexType upper_limit(0.8,E_zPlus.imag());
-    ContourPath_DOS.Define_GaussLegendrePoints(lower_limit, upper_limit, 10,0);
-    //ContourPath_DOS.Define_GaussLegendrePoints(E_contour_left, -E_contour_left, 400,0);
+    //ComplexType lower_limit(-0.8,E_zPlus.imag());
+    //ComplexType upper_limit(0.8,E_zPlus.imag());
+    ContourPath_DOS.Define_GaussLegendrePoints(E_eta.real(), E_zeta.real(), dos_integration_pts, 0);
 
     /* Write Fermi function */
     auto* Fermi_path = &ContourPath_DOS;
@@ -874,6 +877,8 @@ c_NEGF_Common<T>:: Update_IntegrationPaths ()
         ContourPath_RhoNonEq.resize(1); 
         ContourPath_RhoNonEq[0].Define_GaussLegendrePoints(E_contour_right, E_rightmost, noneq_integration_pts[0], 0);
     }
+
+    ContourPath_DOS.Define_GaussLegendrePoints(E_eta.real(), E_rightmost, dos_integration_pts, 0);
 
 }
 
@@ -986,21 +991,34 @@ c_NEGF_Common<T>:: Deallocate_TemporaryArraysForGFComputation ()
 
 template<typename T>
 void 
-c_NEGF_Common<T>:: Compute_DensityOfStates ()
+c_NEGF_Common<T>:: Compute_DensityOfStates (std::string foldername, bool flag_write_LDOS)
 {
     int E_pts = ContourPath_DOS.num_pts;
-    h_LDOS_loc_data.resize({0}, {E_pts}, The_Pinned_Arena());
-    SetVal_Table1D(h_LDOS_loc_data,0.);
+    h_DOS_loc_data.resize({0}, {E_pts}, The_Pinned_Arena());
+    SetVal_Table1D(h_DOS_loc_data,0.);
 
     h_Transmission_loc_data.resize({0}, {E_pts}, The_Pinned_Arena());
     SetVal_Table1D(h_Transmission_loc_data,0.);
 
+    RealTable1D h_LDOS_loc_data;
+    RealTable1D h_LDOS_glo_data;
+    std::string dos_foldername = foldername + "/DOS";
+    CreateDirectory(dos_foldername);
+
+    if (flag_write_LDOS)
+    {
+        h_LDOS_loc_data.resize({0}, {blkCol_size_loc}, The_Pinned_Arena());
+        if (ParallelDescriptor::IOProcessor()) 
+        {
+            h_LDOS_glo_data.resize({0}, {Hsize_glo}, The_Pinned_Arena());
+        }
+    }
 
     auto const& h_minusHa_loc  = h_minusHa_loc_data.table();
     auto const& h_Hb_loc  = h_Hb_loc_data.table();
     auto const& h_Hc_loc  = h_Hc_loc_data.table();
     auto const& h_tau     = h_tau_glo_data.table();
-    auto const& h_LDOS_loc = h_LDOS_loc_data.table();
+    auto const& h_DOS_loc = h_DOS_loc_data.table();
     auto const& h_Transmission_loc = h_Transmission_loc_data.table();
 
     Allocate_TemporaryArraysForGFComputation();
@@ -1017,6 +1035,8 @@ c_NEGF_Common<T>:: Compute_DensityOfStates ()
     auto const& h_Y_contact = h_Y_contact_data.table();
     auto const& h_X_contact = h_X_contact_data.table();
     auto const& h_Sigma_contact = h_Sigma_contact_data.table();
+    auto const& h_LDOS_loc = h_LDOS_loc_data.table();
+    auto const& h_LDOS_glo = h_LDOS_glo_data.table();
 
     #ifdef AMREX_USE_GPU
     auto const& GR_loc          = d_GR_loc_data.table();
@@ -1036,6 +1056,12 @@ c_NEGF_Common<T>:: Compute_DensityOfStates ()
     auto* trace_r               = d_Trace_r.dataPtr();
     auto* trace_i               = d_Trace_i.dataPtr();
     auto& degen_vec             = block_degen_gpuvec;
+
+    RealTable1D d_LDOS_loc_data;
+    if(flag_write_LDOS) {
+        d_LDOS_loc_data.resize({0}, {blkCol_size_loc}, The_Arena());
+    }
+    auto const& LDOS_loc  = d_LDOS_loc_data.table();
     #else
     auto const& GR_loc          = h_GR_loc_data.table();
     auto const& A_loc           = h_A_loc_data.table();
@@ -1054,6 +1080,7 @@ c_NEGF_Common<T>:: Compute_DensityOfStates ()
     auto* trace_r               = h_Trace_r.dataPtr();
     auto* trace_i               = h_Trace_i.dataPtr();
     auto& degen_vec             = block_degen_vec;
+    auto const& LDOS_loc        = h_LDOS_loc_data.table();
     #endif
   
     for(int e=0; e < ContourPath_DOS.num_pts; ++e) 
@@ -1159,6 +1186,8 @@ c_NEGF_Common<T>:: Compute_DensityOfStates ()
     	auto& CT_ID = contact_transmission_index;
         auto* degen_vec_ptr = degen_vec.dataPtr();
 
+        bool gpu_flag_write_LDOS = flag_write_LDOS;
+
         amrex::ParallelFor(blkCol_size_loc, [=] AMREX_GPU_DEVICE (int n) noexcept
         {
             int n_glo = n + cumulative_columns; /*global column number*/
@@ -1228,6 +1257,7 @@ c_NEGF_Common<T>:: Compute_DensityOfStates ()
             /*LDOS*/ 
 	     
             ComplexType val = A_loc(n_glo,n).DiagDotSum(degen_vec_ptr)/(2.*MathConst::pi);
+            if(gpu_flag_write_LDOS) LDOS_loc(n) = val.real();
 
             amrex::HostDevice::Atomic::Add(&(trace_r[0]), val.real());
             amrex::HostDevice::Atomic::Add(&(trace_i[0]), val.imag());
@@ -1253,9 +1283,30 @@ c_NEGF_Common<T>:: Compute_DensityOfStates ()
             amrex::ParallelDescriptor::ReduceRealSum(h_Trace_i[t]);
         }
 
-        h_LDOS_loc(e) = spin_degen*h_Trace_r[0]/num_atoms_per_unitcell;
+        h_DOS_loc(e) = spin_degen*h_Trace_r[0]/num_atoms_per_unitcell;
         h_Transmission_loc(e) = h_Trace_r[1];
 
+        if(flag_write_LDOS) 
+        {
+            h_LDOS_loc_data.copy(d_LDOS_loc_data); 
+
+            MPI_Gatherv(&h_LDOS_loc(0),
+                         blkCol_size_loc,
+                         MPI_DOUBLE,
+                        &h_LDOS_glo(0),
+                         MPI_recv_count.data(),
+                         MPI_recv_disp.data(),
+                         MPI_DOUBLE,
+             		     ParallelDescriptor::IOProcessorNumber(),
+                         ParallelDescriptor::Communicator());
+
+            std::string spatialdos_filename = dos_foldername + "/Ept_" + std::to_string(e) + ".dat";
+
+            amrex::Print() << "Printing LDOS: \n";
+            Write_Table1D(h_PTD_glo_vec,
+                          h_LDOS_glo_data,
+                          spatialdos_filename,  "PTD LDOS_r at E="+std::to_string(E.real()));
+        }
         //if(e==0) 
     	//{
         //    h_GR_loc_data.copy(d_GR_loc_data); //copy from cpu to gpu 
@@ -1272,15 +1323,15 @@ c_NEGF_Common<T>:: Compute_DensityOfStates ()
         //}
     }
 
-    //amrex::Print() << "Printing LDOS: \n";
-    //Write_Table1D(ContourPath_DOS.E_vec, 
-    //              h_LDOS_loc_data, 
-    //              "LDOS.dat",  "E_r LDOS_r");
+    amrex::Print() << "Printing DOS: \n";
+    Write_Table1D(ContourPath_DOS.E_vec, 
+                  h_DOS_loc_data, 
+                  dos_foldername+"/DOS.dat", "E_r DOS_r");
 
-    //amrex::Print() << "Printing Transmission: \n";
-    //Write_Table1D(ContourPath_DOS.E_vec, 
-    //              h_Transmission_loc_data, 
-    //              "Transmission.dat",  "E_r T_r");
+    amrex::Print() << "Printing Transmission: \n";
+    Write_Table1D(ContourPath_DOS.E_vec, 
+                  h_Transmission_loc_data, 
+                  "Transmission.dat",  "E_r T_r");
 
     Deallocate_TemporaryArraysForGFComputation();
 

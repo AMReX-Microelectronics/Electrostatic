@@ -182,7 +182,7 @@ public:
     BlkTable2D h_GR_loc_data;
     BlkTable2D h_A_loc_data;
 
-    RealTable1D h_LDOS_loc_data;
+    RealTable1D h_DOS_loc_data;
     RealTable1D h_Transmission_loc_data;
     BlkTable1D  h_Rho0_loc_data;
     BlkTable1D  h_GR_atPoles_loc_data;
@@ -262,6 +262,7 @@ public:
     amrex::Vector<ComplexType> E_poles_vec;
     amrex::Vector<int> eq_integration_pts;
     amrex::Vector<int> noneq_integration_pts;
+    int dos_integration_pts = 100;
     amrex::Real Fermi_tail_factor = 40.;
 
     amrex::Real Contact_Temperature[NUM_CONTACTS] = {298., 298.};
@@ -340,7 +341,7 @@ public:
     virtual 
     AMREX_GPU_HOST_DEVICE
     void Compute_SurfaceGreensFunction (MatrixBlock<T>& gr, const ComplexType EmU);
-    void Compute_DensityOfStates();
+    void Compute_DensityOfStates(std::string DOS_foldername, bool flag_write_LDOS);
     void Compute_Rho0();
     void Compute_GR_atPoles();
     void Compute_RhoEq();

@@ -150,37 +150,50 @@ c_TransportSolver::InitData()
         pp_transport.query("reset_with_previous_charge_distribution", flag_reset_with_previous_charge_distribution);
         amrex::Print() << "##### reset_with_previous_charge_distribution: " << flag_reset_with_previous_charge_distribution  << "\n";
 
-	flag_initialize_inverse_jacobian = 0;
+    	flag_initialize_inverse_jacobian = 0;
         pp_transport.query("initialize_inverse_jacobian", flag_initialize_inverse_jacobian);
         amrex::Print() << "##### flag_initialize_inverse_jacobian: " << flag_initialize_inverse_jacobian  << "\n";
 
-	if(flag_initialize_inverse_jacobian) 
-	{
-            amrex::ParmParse pp;
-            int flag_restart = 0;
-            pp.query("restart", flag_restart);
+        flag_write_LDOS = false;
+        pp_transport.query("flag_write_LDOS", flag_write_LDOS);
+        amrex::Print() << "##### flag_write_LDOS: " << flag_write_LDOS << "\n";
 
-	    if(flag_restart) 
-	    {		    
-                int restart_step = 0;       
-                getWithParser(pp,"restart_step", restart_step);
+        flag_write_LDOS_iter = false;
+        pp_transport.query("flag_write_LDOS_iter", flag_write_LDOS_iter);
+        amrex::Print() << "##### flag_write_LDOS_iter: " << flag_write_LDOS_iter << "\n";
 
-                std::string restart_folder_str  = amrex::Concatenate(common_foldername_str + "/step", restart_step-1, negf_plt_name_digits);
-                /*eg. output/negf/transport_common/step0001 for step 1*/
+        write_LDOS_iter_period = 1e6;
+        pp_transport.query("write_LDOS_iter_period", write_LDOS_iter_period);
+        amrex::Print() << "##### write_LDOS_iter_period: " << write_LDOS_iter_period << "\n";
 
-                inverse_jacobian_filename  = restart_folder_str + "/Jinv.dat";
-                pp_transport.query("inverse_jacobian_filename", inverse_jacobian_filename);
-	    }	
-	    else 
+	    if(flag_initialize_inverse_jacobian) 
 	    {
-                pp_transport.get("inverse_jacobian_filename", inverse_jacobian_filename);
-	    }
-            amrex::Print() << "##### inverse_jacobian_filename: " << inverse_jacobian_filename << "\n";
+                amrex::ParmParse pp;
+                int flag_restart = 0;
+                pp.query("restart", flag_restart);
+
+	        if(flag_restart) 
+	        {		    
+                    int restart_step = 0;       
+                    getWithParser(pp,"restart_step", restart_step);
+
+                    std::string restart_folder_str  = amrex::Concatenate(common_foldername_str + "/step", 
+                                                                         restart_step-1, negf_plt_name_digits);
+                    /*eg. output/negf/transport_common/step0001 for step 1*/
+
+                    inverse_jacobian_filename  = restart_folder_str + "/Jinv.dat";
+                    pp_transport.query("inverse_jacobian_filename", inverse_jacobian_filename);
+	        }	
+	        else 
+	        {
+                    pp_transport.get("inverse_jacobian_filename", inverse_jacobian_filename);
+	        }
+                amrex::Print() << "##### inverse_jacobian_filename: " << inverse_jacobian_filename << "\n";
+            }
+
         }
 
-    }
-
-    std::string type;
+        std::string type;
 
     for (auto name: vec_NS_names)
     {
@@ -201,8 +214,6 @@ c_TransportSolver::InitData()
                                                                        NS_gather_field_str, 
                                                                        NS_deposit_field_str, 
                                                                        NS_initial_deposit_value,
-                                                                       NS_Broyden_frac,
-                                                                       NS_Broyden_norm_type,
                                                                        use_negf,
 								                                       negf_foldername_str
                                                                       ));
@@ -217,8 +228,6 @@ c_TransportSolver::InitData()
                                                                             NS_gather_field_str, 
                                                                             NS_deposit_field_str, 
                                                                             NS_initial_deposit_value,
-                                                                            NS_Broyden_frac,
-                                                                            NS_Broyden_norm_type,
                                                                             use_negf,
 	                                    								    negf_foldername_str
                                                                            ));
@@ -350,8 +359,8 @@ c_TransportSolver::Solve(const int step, const amrex::Real time)
 
            rMprop.ReInitializeMacroparam(NS_deposit_field_str);
 
-           for (int c=0; c < vp_CNT.size(); ++c)
-           {
+            for (int c=0; c < vp_CNT.size(); ++c)
+            {
                CopyToNS_ChargeComputedUsingSelfConsistencyAlgorithm(vp_CNT[c]);
 
 	           if( vp_CNT[c]->write_at_iter ) 
@@ -361,6 +370,16 @@ c_TransportSolver::Solve(const int step, const amrex::Real time)
     	       }
 
                vp_CNT[c]->Deposit_AtomAttributeToMesh();
+
+               if(flag_write_LDOS_iter and max_iter%write_LDOS_iter_period == 0) 
+               {
+                   std::string 
+                   dos_iter_foldername_str 
+                   = amrex::Concatenate(vp_CNT[c]->iter_foldername_str + "DOS_iter", max_iter, negf_plt_name_digits);
+                   CreateDirectory(dos_iter_foldername_str);
+                   
+                   vp_CNT[c]->Compute_DensityOfStates(dos_iter_foldername_str, flag_write_LDOS_iter);
+               }
 	        }
             update_surface_soln_flag = false;
             max_iter += 1;
@@ -377,8 +396,10 @@ c_TransportSolver::Solve(const int step, const amrex::Real time)
             amrex::Print() << "Time for NEGF:             " << time_counter[2] - time_counter[1] << "\n";    
             amrex::Print() << "Time for self-consistency: " << time_counter[3] - time_counter[2] << "\n";    
 
+
         } while(Broyden_Norm > Broyden_max_norm);    
-        
+
+
         BL_PROFILE_VAR_STOP(part1_to_3_sum_counter);
 
         Obtain_maximum_time(total_time_counter_diff);
@@ -392,6 +413,11 @@ c_TransportSolver::Solve(const int step, const amrex::Real time)
         {
             bool compute_current = true;
             Write_DataComputedUsingSelfConsistencyAlgorithm(vp_CNT[c], vp_CNT[c]->step_filename_str, compute_current);
+
+            if(flag_write_LDOS) 
+            {
+                vp_CNT[c]->Compute_DensityOfStates(common_step_folder_str,flag_write_LDOS);
+            }
         }
         BL_PROFILE_VAR_STOP(current_computation_counter);
         amrex::Print() << "Time for current computation:   " << amrex::second() - time_for_current << "\n";    

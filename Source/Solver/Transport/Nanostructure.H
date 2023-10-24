@@ -122,10 +122,8 @@ public:
                      const std::string NS_gather_str,
                      const std::string NS_deposit_str,
                      const amrex::Real NS_initial_deposit_value,
-                     const amrex::Real NS_Broyden_frac,
-                     const std::string NS_Broyden_norm_type,
                      const int use_negf,
-		     const std::string negf_foldername_str    );
+		             const std::string negf_foldername_str    );
 
     virtual void ReadNanostructureProperties () override;
 
@@ -155,7 +153,7 @@ private:
     int _use_negf=0;
     amrex::Vector<s_Position3D> pos_vec;
 
-    void InitializeNEGF();
+    void InitializeNEGF(std::string common_foldername_str);
 };
 
 #endif
