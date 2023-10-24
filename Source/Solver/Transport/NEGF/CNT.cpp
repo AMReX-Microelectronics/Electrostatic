@@ -66,18 +66,28 @@ c_CNT:: ReadNanostructureProperties ()
 
     E_valence_min = -10.; 
     queryWithParser(pp_ns,"E_valence_min", E_valence_min); 
-    amrex::Print() << "#####* valence_band_lower_limit, E_valence_min (eV): " << E_valence_min << "\n";
+    amrex::Print() << "##### valence_band_lower_limit, E_valence_min (eV): " << E_valence_min << "\n";
 
     E_pole_max = 3; 
     queryWithParser(pp_ns,"E_pole_max", E_pole_max); 
-    amrex::Print() << "#####* pole_energy_upper_limit, E_pole_max (eV): " << E_pole_max << "\n";
+    amrex::Print() << "##### pole_energy_upper_limit, E_pole_max (eV): " << E_pole_max << "\n";
 
     amrex::Real E_zPlus_imag = 1.e-8; 
     queryWithParser(pp_ns,"E_zPlus_imag", E_zPlus_imag); 
     ComplexType val(0.,E_zPlus_imag);
     E_zPlus = val;
-    amrex::Print() << "#####* tiny distance between real axis and nonequilibrium integration line, E_zPlus_imag: " 
+    amrex::Print() << "##### tiny distance between real axis and nonequilibrium integration line, E_zPlus_imag: " 
                    << E_zPlus << "\n";
+
+    amrex::Vector<amrex::Real> vec_FermiTailFactors;
+    auto is_specified = queryArrWithParser(pp_ns, "Fermi_tail_factors", vec_FermiTailFactors, 0, 2);
+    if(is_specified) 
+    {
+        //default 14.
+        Fermi_tail_factor_lower = vec_FermiTailFactors[0];
+        Fermi_tail_factor_upper = vec_FermiTailFactors[1];
+    }
+    amrex::Print() << "##### Fermi tail factors (lower, upper): " << Fermi_tail_factor_lower << " " << Fermi_tail_factor_upper<< "\n";
 
     c_NEGF_Common<BlkType>::ReadNanostructureProperties();
 

@@ -263,7 +263,8 @@ public:
     amrex::Vector<int> eq_integration_pts;
     amrex::Vector<int> noneq_integration_pts;
     int dos_integration_pts = 100;
-    amrex::Real Fermi_tail_factor = 40.;
+    amrex::Real Fermi_tail_factor_lower = 14.;
+    amrex::Real Fermi_tail_factor_upper = 14.;
 
     amrex::Real Contact_Temperature[NUM_CONTACTS] = {298., 298.};
 

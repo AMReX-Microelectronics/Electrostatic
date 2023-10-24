@@ -765,15 +765,21 @@ c_NEGF_Common<T>:: Define_EnergyLimits ()
     //ComplexType val(0.,1e-8);
     //E_zPlus = val;
     E_contour_left  = E_valence_min + E_zPlus; /*set in the input*/
-    E_rightmost = mu_max + Fermi_tail_factor*kT_max + E_zPlus;
+    E_rightmost = mu_max + Fermi_tail_factor_upper*kT_max + E_zPlus;
 
     int num_poles = int((E_pole_max-MathConst::pi*kT_max)/(2.*MathConst::pi*kT_max) + 1);
 
     if(flag_noneq_exists)
     {
         amrex::Print() << "\nnonequilibrium exists between terminals\n";
-        E_contour_right = mu_min - Fermi_tail_factor*kT_max + E_zPlus;
+        E_contour_right = mu_min - Fermi_tail_factor_lower*kT_max + E_zPlus;
         num_enclosed_poles = 0;
+
+        ComplexType val2(E_contour_right.real(), 2*num_poles*MathConst::pi*kT_max);
+        E_zeta = val2;
+
+        ComplexType val3(E_contour_right.real() - Fermi_tail_factor_lower*kT_max, E_zeta.imag());
+        E_eta =  val3;
     }
     else
     {
@@ -786,11 +792,11 @@ c_NEGF_Common<T>:: Define_EnergyLimits ()
             ComplexType pole(mu_min, MathConst::pi*kT_max*(2*p+1));
             E_poles_vec[p] = pole;
         }
+        ComplexType val2(E_contour_right.real(), 2*num_poles*MathConst::pi*kT_max);
+        E_zeta = val2;
+        ComplexType val3(mu_min - Fermi_tail_factor_lower*kT_max, E_zeta.imag());
+        E_eta =  val3;
     }
-    ComplexType val2(E_contour_right.real(), 2*num_poles*MathConst::pi*kT_max);
-    E_zeta = val2;
-    ComplexType val3(E_contour_right.real() - 2*Fermi_tail_factor*kT_max, E_zeta.imag());
-    E_eta =  val3;
 
     amrex::Print() << "U_contact: ";
     for (int c=0; c<NUM_CONTACTS; ++c)
