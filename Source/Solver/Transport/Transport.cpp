@@ -333,7 +333,7 @@ c_TransportSolver::Solve(const int step, const amrex::Real time)
 	           if( vp_CNT[c]->write_at_iter )
 	           {
 	                vp_CNT[c]->Set_IterationFilenameString(max_iter);
-                    Write_PredictedCharge(vp_CNT[c]);
+                    //Write_PredictedCharge(vp_CNT[c]);
                }
 
 	           vp_CNT[c]->Gather_MeshAttributeAtAtoms();  
@@ -523,9 +523,15 @@ c_TransportSolver:: Write_DataComputedUsingSelfConsistencyAlgorithm(NSType const
     #ifdef BROYDEN_PARALLEL
 	Create_Global_Output_Data(); 
     /*May need to be before & outside the forloop for multiple NS*/
+    //Note: n_curr_out_glo was output from negf and input to broyden.
+    //n_curr_in is the broyden predicted charge for next iteration.
+    //NEGF->n_curr_out -> Broyden->n_curr_in -> Electrostatics -> NEGF.
     NS->Write_Data(write_filename, n_curr_out_glo_data, Norm_glo_data);
+	NS->Write_InputInducedCharge(write_filename, n_curr_in_glo_data); 
+
     #else
     NS->Write_Data(write_filename, h_n_curr_out_data, h_Norm_data);
+	NS->Write_InputInducedCharge(write_filename, h_n_curr_in_data); 
 
     //if(map_AlgorithmType[Algorithm_Type] == s_Algorithm::Type::broyden_first) 
 	//{

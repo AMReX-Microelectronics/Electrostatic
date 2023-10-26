@@ -283,10 +283,10 @@ c_Nanostructure<NSType>::Evaluate_LocalFieldSites()
     //#endif
     
 
-    //std::cout << " process/site_id_offset/num_local_field_sites: " 
-    //          << NSType::my_rank << " " 
-    //          << NSType::site_id_offset << " "
-    //          << NSType::num_local_field_sites << "\n";
+    std::cout << " process/site_id_offset/num_local_field_sites: " 
+              << NSType::my_rank << " " 
+              << NSType::site_id_offset << " "
+              << NSType::num_local_field_sites << "\n";
 
     /*define local charge density 1D table, h_n_curr_in_loc_data */
     NSType::h_n_curr_in_loc_data.resize({0},{NSType::num_local_field_sites}, The_Pinned_Arena()); 
@@ -617,7 +617,6 @@ c_Nanostructure<NSType>::Obtain_PotentialAtSites()
     {
         ParallelDescriptor::ReduceRealSum(p_V[l]);
     }
-
     //MPI_Allreduce( MPI_IN_PLACE,
     //               &(p_V[0]),
     //               num_field_sites,
@@ -633,14 +632,12 @@ c_Nanostructure<NSType>::Obtain_PotentialAtSites()
     for (int l=0; l < blkCol_size_loc; ++l) 
     {
         int gid = NSType::vec_blkCol_gids[l];
-
         h_U_loc(l) = -p_V[gid] / num_atoms_to_avg_over;
     }
     for(int c=0; c < NUM_CONTACTS; ++c)
     {
         NSType::U_contact[c] = -p_V[NSType::global_contact_index[c]] / num_atoms_to_avg_over;
     }
-
     //for (int l=0; l < blkCol_size_loc; ++l) 
     //{
     //    int gid = vec_blkCol_gids(l);

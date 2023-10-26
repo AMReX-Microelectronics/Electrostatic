@@ -12,6 +12,10 @@ c_IntegrationPath::Define_GaussLegendrePoints(const ComplexType min,
                                               const int degree,
                                               const int id) 
 {
+    weight_vec.clear();
+    mul_factor_vec.clear();
+    E_vec.clear();
+
     amrex::Vector<amrex::Real> x, w;
     x.resize(degree);
     w.resize(degree); 

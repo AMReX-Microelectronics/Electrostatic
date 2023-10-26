@@ -192,6 +192,7 @@ public:
     RealTable1D h_U_loc_data;
     amrex::Vector<amrex::Real> h_PTD_glo_vec; /*PTD: primary transport direction*/
 
+    RealTable1D h_n_curr_in_glo_data; //temporarily used for initialization
     RealTable1D h_n_curr_in_loc_data;
     RealTable1D d_n_curr_in_loc_data;
     RealTable1D h_Current_loc_data;
@@ -352,7 +353,7 @@ public:
     //void GuessNewCharge_SimpleMixingAlg();
     
     void Gatherv_NEGFComputed_LocalCharge(RealTable1D& n_curr_out_glo_data);
-    void Gatherv_Input_LocalCharge(RealTable1D& n_curr_in_glo_data);
+    void Fetch_InputLocalCharge_FromNanostructure(RealTable1D& container_data, const int disp, const int data_size);
     void Scatterv_BroydenComputed_GlobalCharge(RealTable1D& n_curr_in_glo_data);
 
     void Set_Arrays_OfSize_NumFieldSites();

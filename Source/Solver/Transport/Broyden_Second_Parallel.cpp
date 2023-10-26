@@ -507,6 +507,7 @@ using namespace amrex;
             /*Store current n in previous n, predict next n and store it in current n*/
             const amrex::Real BS = Broyden_Scalar;
             const amrex::Real BF = Broyden_fraction;
+            const int my_rank = amrex::ParallelDescriptor::MyProc();
             amrex::ParallelFor(site_size_loc, [=] AMREX_GPU_DEVICE (int site) noexcept
             {
                 n_prev_in(site) =  n_curr_in(site);
@@ -516,7 +517,6 @@ using namespace amrex;
             });
             h_n_curr_in_data.copy(d_n_curr_in_data); /*from device to host*/
             amrex::Gpu::streamSynchronize();
-            amrex::Print() << "n_new_in: " << h_n_curr_in(0) << "\n";
     
             Broyden_Step += 1;
  
@@ -529,15 +529,12 @@ using namespace amrex;
                          MPI_DOUBLE,
                          ParallelDescriptor::IOProcessorNumber(),
                          ParallelDescriptor::Communicator());
-
-            //MPI_Allgatherv(&h_n_curr_in(0),
-            //                site_size_loc,
-            //                MPI_DOUBLE,
-            //               &n_curr_in_glo(0),
-            //                MPI_recv_count.data(),
-            //                MPI_recv_disp.data(),
-            //                MPI_DOUBLE,
-            //                ParallelDescriptor::Communicator());
+           //if (ParallelDescriptor::IOProcessor()) 
+           //{
+           //    for(int n=0; n < num_field_sites_all_NS; ++n) {
+           //       amrex::Print() << n << "  " <<  n_curr_in_glo(n) << "\n";
+           //    }
+           //}
     }
   #endif
 #endif

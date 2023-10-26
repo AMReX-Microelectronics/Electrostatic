@@ -97,15 +97,15 @@ c_NEGF_Common<T>:: Define_MPISendCountAndDisp()
                 ParallelDescriptor::IOProcessorNumber(),
                 ParallelDescriptor::Communicator());
 
-    //if(ParallelDescriptor::IOProcessor()) 
-    //{
-    //    for(int p=0; p < num_proc; ++p)
-    //    {
-    //        amrex::Print() << " process/MPI_send_disp/count: " << p << " "
-    //                                                           << MPI_send_disp[p] << " "
-    //                                                           << MPI_send_count[p] << "\n";
-    //    }
-    //}
+    if(ParallelDescriptor::IOProcessor()) 
+    {
+        for(int p=0; p < num_proc; ++p)
+        {
+            amrex::Print() << " process/MPI_send_disp/count: " << p << " "
+                                                               << MPI_send_disp[p] << " "
+                                                               << MPI_send_count[p] << "\n";
+        }
+    }
     //amrex::Abort("Manually stopping for debugging");
 }
 
@@ -117,48 +117,52 @@ c_NEGF_Common<T>:: Initialize_ChargeAtFieldSites()
 
     if(flag_initialize_charge_distribution) 
     {
-        RealTable1D h_n_curr_in_glo_data;
+        h_n_curr_in_glo_data.resize({0},{num_field_sites}, The_Pinned_Arena());
+        auto const& h_n_curr_in_glo  = h_n_curr_in_glo_data.table();
 
         if(ParallelDescriptor::IOProcessor())  /*&*/
         {
-            h_n_curr_in_glo_data.resize({0},{num_field_sites}, The_Pinned_Arena());
             Read_Table1D(num_field_sites, h_n_curr_in_glo_data, charge_distribution_filename); 
         }
 
-        auto const& h_n_curr_in_glo  = h_n_curr_in_glo_data.table();
+        ParallelDescriptor::Bcast(&h_n_curr_in_glo(0), Hsize_glo,
+                    ParallelDescriptor::IOProcessorNumber());
+
+        //h_n_curr_in_glo exists temporarily until Broyden's algorithm is initialized with 
+        //the input charge in Set_Broyden_Parallel.
+        //It is deallocated in Fetch_InputLocalCharge_FromNanostructure(*).
+
+        //We use h_n_curr_in_loc for depositing charge to mesh.
         auto const& h_n_curr_in_loc  = h_n_curr_in_loc_data.table();
-
         MPI_Scatterv(&h_n_curr_in_glo(0),
-                     MPI_send_count.data(),
-                     MPI_send_disp.data(),
-                     MPI_DOUBLE,
-                    &h_n_curr_in_loc(0),
-                     num_local_field_sites,
-                     MPI_DOUBLE,
-                     ParallelDescriptor::IOProcessorNumber(),
-                     ParallelDescriptor::Communicator());
+                      MPI_send_count.data(),
+                      MPI_send_disp.data(),
+                      MPI_DOUBLE,
+                     &h_n_curr_in_loc(0),
+                      num_local_field_sites,
+                      MPI_DOUBLE,
+                      ParallelDescriptor::IOProcessorNumber(),
+                      ParallelDescriptor::Communicator());
 
-        if(ParallelDescriptor::IOProcessor())  /*&*/
-        {
-            h_n_curr_in_glo_data.clear();
-           // bool full_match = true;
-           // for(int i=0; i < num_local_field_sites; ++i) 
-           // {
-           //     if(h_n_curr_in_loc(i) != h_n_curr_in_glo(i+site_id_offset) )
-           //     {
-           //         full_match = false;
-           //         amrex::Abort("n_curr_in_loc doesn't match with glo: " 
-           //                 + std::to_string(i) + " " + std::to_string(h_n_curr_in_loc(i)) + " " 
-           //                 + std::to_string(h_n_curr_in_glo(i+site_id_offset)));
-           //     }
-           // }
-           // std::cout << "process: " << my_rank << " full_match: " << full_match << "\n";
-        }
-
+        //if(ParallelDescriptor::IOProcessor())  /*&*/
+        //{
+        //   // bool full_match = true;
+        //   // for(int i=0; i < num_local_field_sites; ++i) 
+        //   // {
+        //   //     if(h_n_curr_in_loc(i) != h_n_curr_in_glo(i+site_id_offset) )
+        //   //     {
+        //   //         full_match = false;
+        //   //         amrex::Abort("n_curr_in_loc doesn't match with glo: " 
+        //   //                 + std::to_string(i) + " " + std::to_string(h_n_curr_in_loc(i)) + " " 
+        //   //                 + std::to_string(h_n_curr_in_glo(i+site_id_offset)));
+        //   //     }
+        //   // }
+        //   // std::cout << "process: " << my_rank << " full_match: " << full_match << "\n";
+        //}
     }
     else 
     {    
-        //SetVal_Table1D(h_n_curr_in_glo_data, initial_charge);
+        SetVal_Table1D(h_n_curr_in_glo_data, initial_charge);
         SetVal_Table1D(h_n_curr_in_loc_data, initial_charge);
     }
 }
@@ -210,7 +214,7 @@ c_NEGF_Common<T>::Read_Table1D(int assert_size,
         {
             infile >> position >> value;
 	        Tab1D(l) = value;
-            amrex::Print() << "position/value: " << position << "    " << Tab1D(l) << "\n";
+            //amrex::Print() << "position/value: " << position << "    " << Tab1D(l) << "\n";
         }
         infile.close();
     }
@@ -721,6 +725,10 @@ c_NEGF_Common<T>:: Update_ContactElectrochemicalPotential ()
         mu_contact[c] = Contact_Electrochemical_Potential[c];
         //amrex::Print() << "  contact, mu: " <<  c << " " << mu_contact[c] << "\n";
     }
+    std::cout << " proc, contact, mu: " << my_rank << "; "
+                                        << mu_contact[0] << " " << mu_contact[1] << "; "
+                                        << U_contact[0] << " "  << U_contact[1] << "\n";
+    MPI_Barrier(ParallelDescriptor::Communicator());
 }
 
 
@@ -840,7 +848,7 @@ c_NEGF_Common<T>:: Define_IntegrationPaths ()
     /* Define_ContourPath_DOS */
     //ComplexType lower_limit(-0.8,E_zPlus.imag());
     //ComplexType upper_limit(0.8,E_zPlus.imag());
-    contourpath_dos.define_gausslegendrepoints(e_eta.real(), e_zeta.real(), dos_integration_pts, 0);
+    ContourPath_DOS.Define_GaussLegendrePoints(E_eta.real(), E_zeta.real(), dos_integration_pts, 0);
 
     /* Write Fermi function */
     auto* Fermi_path = &ContourPath_DOS;
@@ -880,11 +888,20 @@ c_NEGF_Common<T>:: Update_IntegrationPaths ()
     /* Define_ContourPath_RhoNonEq */
     if(flag_noneq_exists) 
     {
-        ContourPath_RhoNonEq.resize(1); 
+        ContourPath_RhoNonEq.resize(1);
         ContourPath_RhoNonEq[0].Define_GaussLegendrePoints(E_contour_right, E_rightmost, noneq_integration_pts[0], 0);
         dos_integration_pts = noneq_integration_pts[0];
         ContourPath_DOS.Define_GaussLegendrePoints(E_contour_right, E_rightmost, dos_integration_pts, 0);
+        amrex::Print() << "update: dos_integration_pts: " << dos_integration_pts << "\n";
+        amrex::Print() << "update: noneq_integration_pts[0]: " << noneq_integration_pts[0] << "\n";
         //ContourPath_DOS = &ContourPath_RhoNonEq[0];
+        
+        //ContourPath_RhoNonEq.resize(2);
+        //ContourPath_RhoNonEq[0].Define_GaussLegendrePoints(E_contour_right, mu_max + kT_max, 
+        //                                                   noneq_integration_pts[0], 0);
+
+        //ContourPath_RhoNonEq[1].Define_GaussLegendrePoints(mu_max + kT_max, E_rightmost, 
+        //                                                   noneq_integration_pts[1], 0);
     }
     else {
         ContourPath_DOS.Define_GaussLegendrePoints(E_eta.real(), E_rightmost, dos_integration_pts, 0);
@@ -1297,7 +1314,10 @@ c_NEGF_Common<T>:: Compute_DensityOfStates (std::string dos_foldername, bool fla
 
         if(flag_write_LDOS) 
         {
+            #ifdef AMREX_USE_GPU 
             h_LDOS_loc_data.copy(d_LDOS_loc_data); 
+            amrex::Gpu::streamSynchronize();
+            #endif
 
             MPI_Gatherv(&h_LDOS_loc(0),
                          blkCol_size_loc,
@@ -1314,6 +1334,7 @@ c_NEGF_Common<T>:: Compute_DensityOfStates (std::string dos_foldername, bool fla
             Write_Table1D(h_PTD_glo_vec,
                           h_LDOS_glo_data,
                           spatialdos_filename,  "PTD LDOS_r at E="+std::to_string(E.real()));
+            //MPI_Barrier(ParallelDescriptor::Communicator());
         }
         //if(e==0) 
     	//{
@@ -1362,7 +1383,7 @@ c_NEGF_Common<T>:: Compute_InducedCharge ()
     auto const& h_RhoInduced_loc = h_RhoInduced_loc_data.table();
     SetVal_Table1D(h_RhoInduced_loc_data,0.);
 
-    MPI_Barrier(ParallelDescriptor::Communicator());
+    //MPI_Barrier(ParallelDescriptor::Communicator());
     //amrex::Print() << "Differential Charge per Atom: \n";
     for (int n=0; n <blkCol_size_loc; ++n) 
     {
@@ -1370,46 +1391,100 @@ c_NEGF_Common<T>:: Compute_InducedCharge ()
                               + h_RhoNonEq_loc(n).DiagSum().real() 
                              - h_Rho0_loc(n).DiagSum().imag() );
 
-        //if (ParallelDescriptor::IOProcessor()) 
-        //if (my_rank==4) 
-        //{
-	    //    //if(n < 5) 
-        //    //{
-        //    std::cout << "site_id/rho_Eq/Rho_NonEq/Rho0/RhoInduced: " 
-        //          << vec_blkCol_gids[n]
-        //          << " " <<  h_RhoEq_loc(n).DiagSum().imag() 
-        //          << " " <<  h_RhoNonEq_loc(n).DiagSum().real()                     						                         
-        //          << " " <<  h_Rho0_loc(n).DiagSum().imag() 
-        //          << " " <<  h_RhoInduced_loc(n) << "\n";
-	    //    //}
-        //}
     }
-    MPI_Barrier(ParallelDescriptor::Communicator());
-    
-    //amrex::Print() << "induced charge at site 0: " << h_RhoInduced_loc(0) << "\n";
 
+    //RealTable1D RhoEq_loc_data({0}, {blkCol_size_loc}, The_Pinned_Arena());
+    //RealTable1D RhoNonEq_loc_data({0}, {blkCol_size_loc}, The_Pinned_Arena());
+    //RealTable1D Rho0_loc_data({0}, {blkCol_size_loc}, The_Pinned_Arena());
+    //auto const& Rho0_loc     = Rho0_loc_data.table();
+    //auto const& RhoEq_loc    = RhoEq_loc_data.table();
+    //auto const& RhoNonEq_loc = RhoNonEq_loc_data.table();
+
+    //for (int n=0; n <blkCol_size_loc; ++n) 
+    //{
+    //    Rho0_loc(n) = h_Rho0_loc(n).DiagSum().imag();
+    //    RhoEq_loc(n) = h_RhoEq_loc(n).DiagSum().imag();
+    //    RhoNonEq_loc(n) = h_RhoNonEq_loc(n).DiagSum().real();
+    //}
+    //MPI_Barrier(ParallelDescriptor::Communicator());
+
+    //RealTable1D RhoEq_data({0}, {Hsize_glo}, The_Pinned_Arena());
+    //RealTable1D RhoNonEq_data({0}, {Hsize_glo}, The_Pinned_Arena());
+    //RealTable1D Rho0_data({0}, {Hsize_glo}, The_Pinned_Arena());
+    //RealTable1D RhoInduced_data({0}, {Hsize_glo}, The_Pinned_Arena());
+    //auto const& Rho0     = Rho0_data.table();
+    //auto const& RhoEq    = RhoEq_data.table();
+    //auto const& RhoNonEq = RhoNonEq_data.table();
+    //auto const& RhoInduced = RhoInduced_data.table();
+
+    //MPI_Gatherv(&Rho0_loc(0),
+    //             blkCol_size_loc,
+    //             MPI_DOUBLE,
+    //            &Rho0(0),
+    //             MPI_recv_count.data(),
+    //             MPI_recv_disp.data(),
+    //             MPI_DOUBLE,
+    //    		 ParallelDescriptor::IOProcessorNumber(),
+    //             ParallelDescriptor::Communicator());
+
+    //MPI_Gatherv(&RhoEq_loc(0),
+    //             blkCol_size_loc,
+    //             MPI_DOUBLE,
+    //            &RhoEq(0),
+    //             MPI_recv_count.data(),
+    //             MPI_recv_disp.data(),
+    //             MPI_DOUBLE,
+    //    		 ParallelDescriptor::IOProcessorNumber(),
+    //             ParallelDescriptor::Communicator());
+
+    //MPI_Gatherv(&RhoNonEq_loc(0),
+    //             blkCol_size_loc,
+    //             MPI_DOUBLE,
+    //            &RhoNonEq(0),
+    //             MPI_recv_count.data(),
+    //             MPI_recv_disp.data(),
+    //             MPI_DOUBLE,
+    //    		 ParallelDescriptor::IOProcessorNumber(),
+    //             ParallelDescriptor::Communicator());
+
+    //MPI_Gatherv(&h_RhoInduced_loc(0),
+    //             blkCol_size_loc,
+    //             MPI_DOUBLE,
+    //            &RhoInduced(0),
+    //             MPI_recv_count.data(),
+    //             MPI_recv_disp.data(),
+    //             MPI_DOUBLE,
+    //    		 ParallelDescriptor::IOProcessorNumber(),
+    //             ParallelDescriptor::Communicator());
+
+    //if (ParallelDescriptor::IOProcessor()) 
+    //{
+    //    for (int n=0; n <Hsize_glo; ++n) 
+    //    {
+    //        amrex::Print() 
+    //        << n
+    //        << std::setw(20) <<  RhoEq(n) 
+    //        << std::setw(20) <<  RhoNonEq(n) 
+    //        << std::setw(20) << -Rho0(n) 
+    //        << std::setw(20) <<  RhoInduced(n) 
+    //        << "\n";
+    //    }
+    //}
 }
 
 
 template<typename T>
 void 
-c_NEGF_Common<T>:: Gatherv_Input_LocalCharge (RealTable1D& n_curr_in_glo_data)
+c_NEGF_Common<T>:: Fetch_InputLocalCharge_FromNanostructure (RealTable1D& container_data, const int disp, const int data_size)
 {
-    auto const& n_curr_in_glo = n_curr_in_glo_data.table();
-    auto const& h_n_curr_in_loc = h_n_curr_in_loc_data.table();
-
-    MPI_Gatherv(&h_n_curr_in_loc(0),
-                 blkCol_size_loc,
-                 MPI_DOUBLE,
-                &n_curr_in_glo(0),
-                 MPI_recv_count.data(),
-                 MPI_recv_disp.data(),
-                 MPI_DOUBLE,
-        		 ParallelDescriptor::IOProcessorNumber(),
-                 ParallelDescriptor::Communicator());
-
-    MPI_Barrier(ParallelDescriptor::Communicator());
-
+    auto const& h_n_curr_in_glo = h_n_curr_in_glo_data.table();
+    auto const& container       = container_data.table();
+    for(int i=0; i < data_size; ++i)
+    {
+        int gid = disp + i;
+        container(i) = h_n_curr_in_glo(gid);
+    }
+    h_n_curr_in_glo_data.clear();
 }
 
 
@@ -1420,6 +1495,7 @@ c_NEGF_Common<T>:: Gatherv_NEGFComputed_LocalCharge (RealTable1D& n_curr_out_glo
     auto const& h_RhoInduced_loc = h_RhoInduced_loc_data.table();
     auto const& n_curr_out_glo = n_curr_out_glo_data.table();
 
+    
     MPI_Gatherv(&h_RhoInduced_loc(0),
                  blkCol_size_loc,
                  MPI_DOUBLE,
@@ -1957,6 +2033,7 @@ c_NEGF_Common<T>:: Compute_RhoEq ()
     auto& degen_vec             = block_degen_gpuvec;
 
     d_RhoEq_loc_data.copy(h_RhoEq_loc_data);
+    amrex::Gpu::streamSynchronize();
 
     #else
     auto const& RhoEq_loc        = h_RhoEq_loc_data.table();
@@ -2275,7 +2352,6 @@ c_NEGF_Common<T>:: Compute_Rho0 ()
     auto& degen_vec             = block_degen_gpuvec;
 
     d_Rho0_loc_data.copy(h_Rho0_loc_data);
-
     #else
     auto const& Rho0_loc        = h_Rho0_loc_data.table();
     /*constant references*/

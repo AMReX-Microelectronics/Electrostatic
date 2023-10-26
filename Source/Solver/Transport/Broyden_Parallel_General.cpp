@@ -76,12 +76,20 @@ c_TransportSolver::Define_Broyden_Partition()
 	        if(recv_count == 0) num_procs_with_sites--;
 
 	        MPI_recv_count[g] = recv_count;
-	        MPI_recv_disp[g]       = vp_CNT[c]->MPI_recv_disp[i];
+	        MPI_recv_disp[g]  = vp_CNT[c]->MPI_recv_disp[i];
 
 	        g++;
 	    }
 	    site_size_loc = MPI_recv_count[my_rank];
     }
+    if (ParallelDescriptor::IOProcessor()) 
+    {
+        amrex::Print() << "recv_count/recv_disp: \n";
+	    for(int i=0; i < total_proc; ++i) {
+            amrex::Print() << i << " " << MPI_recv_count[i] << " "<< MPI_recv_disp[i] << "\n";
+        }
+    }
+
     amrex::Print() << "Number of field_sites at all nanostructures, num_field_sites_all_NS: " 
                    << num_field_sites_all_NS << "\n";
 }
@@ -112,16 +120,10 @@ c_TransportSolver:: Set_Broyden_Parallel ()
     auto const& n_curr_in_glo  = n_curr_in_glo_data.table();
 
     /*Need generalization for multiple CNTs*/
-    //for (int c=0; c < vp_CNT.size(); ++c)
-    //{
-    //    vp_CNT[c]->Gatherv_Input_LocalCharge(n_curr_in_glo_data);
-	//}
-    //for(int i=0; i < site_size_loc; ++i) 
-    //{
-    //    int gid = MPI_recv_disp[my_rank] + i;
-    //    h_n_curr_in(i) = n_curr_in_glo(gid);
-    //}
-    h_n_curr_in_data.copy(vp_CNT[0]->h_n_curr_in_loc_data); 
+    for (int c=0; c < vp_CNT.size(); ++c)
+    {
+        vp_CNT[c]->Fetch_InputLocalCharge_FromNanostructure(h_n_curr_in_data, MPI_recv_disp[my_rank], site_size_loc);
+	}
 
     #ifdef BROYDEN_SKIP_GPU_OPTIMIZATION
     h_n_curr_out_data.resize({0}, {site_size_loc}, The_Pinned_Arena());

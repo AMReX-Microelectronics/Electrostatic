@@ -23,6 +23,16 @@ class c_IntegrationPath
                                     const int id);
 
     void Define_RegularPoints(ComplexType min, ComplexType max, int pts);
+
+    void Reset() 
+    {
+        E_min = 0.;
+        E_max = 0.;
+        type_id = 0;
+        weight_vec.clear();
+        mul_factor_vec.clear();
+        E_vec.clear();
+    }
 };
 
 #endif
