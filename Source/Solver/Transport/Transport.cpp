@@ -251,10 +251,10 @@ c_TransportSolver::InitData()
     amrex::Print() << "#####* Broyden_Norm_Type: "          << Broyden_Norm_Type          << "\n";
 
     #ifdef BROYDEN_PARALLEL
-    amrex::Print() << "Setting Broyden PARALLEL\n";
+    amrex::Print() << "\nSetting Broyden PARALLEL\n";
     Set_Broyden_Parallel();
     #else
-    amrex::Print() << "Setting Broyden SERIAL\n";
+    amrex::Print() << "\nSetting Broyden SERIAL\n";
     Set_Broyden();
     #endif
 
@@ -302,7 +302,7 @@ c_TransportSolver::Solve(const int step, const amrex::Real time)
         bool update_surface_soln_flag = true;	   
         do 
         {
-           amrex::Print() << "\n\nSelf-consistent iteration: " << max_iter << "\n";
+           amrex::Print() << "\n\n##### Self-Consistent Iteration: " << max_iter << " #####\n";
            if (Broyden_Step > Broyden_Threshold_MaxStep)
            {
                amrex::Abort("Broyden_Step has exceeded the Broyden_Threshold_MaxStep!");
@@ -338,10 +338,11 @@ c_TransportSolver::Solve(const int step, const amrex::Real time)
 
 	           vp_CNT[c]->Gather_MeshAttributeAtAtoms();  
                 
-	           if(update_surface_soln_flag && vp_CNT[c]->flag_contact_mu_specified == 0) 
+	           if(update_surface_soln_flag)
 	           {
                    Set_TerminalBiasesAndContactPotential(vp_CNT[c]);   
                }
+               amrex::Print() << " Vds: " << Vds << " V, Vgs: " << Vgs << " V\n";
 
                vp_CNT[c]->Solve_NEGF();
 
@@ -393,9 +394,9 @@ c_TransportSolver::Solve(const int step, const amrex::Real time)
             total_time_counter_diff[1] += time_counter[2] - time_counter[1];
             total_time_counter_diff[2] += time_counter[3] - time_counter[2];
 
-            amrex::Print() << "Time for electrostatics:   " << time_counter[1] - time_counter[0] << "\n";    
-            amrex::Print() << "Time for NEGF:             " << time_counter[2] - time_counter[1] << "\n";    
-            amrex::Print() << "Time for self-consistency: " << time_counter[3] - time_counter[2] << "\n";    
+            amrex::Print() << " Time for electrostatics:   " << time_counter[1] - time_counter[0] << "\n";    
+            amrex::Print() << " Time for NEGF:             " << time_counter[2] - time_counter[1] << "\n";    
+            amrex::Print() << " Time for self-consistency: " << time_counter[3] - time_counter[2] << "\n";    
 
 
         } while(Broyden_Norm > Broyden_max_norm);    
@@ -463,22 +464,33 @@ c_TransportSolver:: Set_TerminalBiasesAndContactPotential(NSType const& NS)
     auto& rCode  = c_Code::GetInstance();
     auto& rGprop = rCode.get_GeometryProperties();
 
-    amrex::Real V_contact[NUM_CONTACTS] = {0., 0.};
-
-    for(int k=0; k<NUM_CONTACTS; ++k) 
-	{    
-        V_contact[k] = rGprop.pEB->Read_SurfSoln(NS->Contact_Parser_String[k]);
-           
-	     amrex::Print() << "Updated terminal voltage: " << k << "  " << V_contact[k] << "\n";
-
-	    NS->Contact_Electrochemical_Potential[k] = NS->E_f - V_contact[k];
+    if(NS->flag_contact_mu_specified == 0) 
+    {
+         amrex::Real V_contact[NUM_CONTACTS] = {0., 0.};
+    
+         for(int k=0; k<NUM_CONTACTS; ++k) 
+         {    
+             V_contact[k] = rGprop.pEB->Read_SurfSoln(NS->Contact_Parser_String[k]);
+                
+              amrex::Print() << " Updated terminal voltage: " << k << "  " << V_contact[k] << " V\n";
+    
+             NS->Contact_Electrochemical_Potential[k] = NS->E_f - V_contact[k];
+         }
+    
+         Vds = V_contact[1] - V_contact[0];
+    
+         Vgs = rGprop.pEB->Read_SurfSoln(NS->Gate_String) - V_contact[0];
     }
+    else 
+    {
+         Vds = NS->Contact_Electrochemical_Potential[0] - 
+               NS->Contact_Electrochemical_Potential[1]; 
+        
+         amrex::Real GV = rGprop.pEB->Read_SurfSoln(NS->Gate_String);
 
-	Vds = V_contact[1] - V_contact[0];
-
-    Vgs = rGprop.pEB->Read_SurfSoln(NS->Gate_String) - V_contact[0];
-
-    amrex::Print() << "Vds, Vgs: " << Vds << "  " << Vgs << "\n";
+         amrex::Print() << " Updated gate voltage: " << GV << " V\n";
+         Vgs = GV - (NS->E_f - NS->Contact_Electrochemical_Potential[0]);
+    }
 }
 
 
@@ -507,6 +519,24 @@ c_TransportSolver:: CopyToNS_ChargeComputedUsingSelfConsistencyAlgorithm(NSType 
 {
     /*(?) Future: Need generalization for multiple CNTs*/
     #ifdef BROYDEN_PARALLEL	
+    auto const& n_curr_in      = h_n_curr_in_data.table();
+    auto const& n_curr_in_glo  = n_curr_in_glo_data.table();
+
+    MPI_Gatherv(&n_curr_in(0),
+                 site_size_loc,
+                 MPI_DOUBLE,
+                &n_curr_in_glo(0),
+                 MPI_recv_count.data(),
+                 MPI_recv_disp.data(),
+                 MPI_DOUBLE,
+                 ParallelDescriptor::IOProcessorNumber(),
+                 ParallelDescriptor::Communicator());
+    //if (ParallelDescriptor::IOProcessor())
+    //{
+    //    for(int n=0; n < num_field_sites_all_NS; ++n) {
+    //       amrex::Print() << n << "  " <<  n_curr_in_glo(n) << "\n";
+    //    }
+    //}
     NS->Scatterv_BroydenComputed_GlobalCharge(n_curr_in_glo_data); 
     #else
     NS->Scatterv_BroydenComputed_GlobalCharge(h_n_curr_in_data);
@@ -698,11 +728,11 @@ c_TransportSolver:: Obtain_maximum_time(amrex::Real const* total_time_counter_di
         total_max_time_across_all_steps[2] += total_max_time_for_current_step[2];
         total_iter += max_iter;
 
-        amrex::Real avg_all[3] = {total_max_time_across_all_steps[0]/total_iter, 
-                                  total_max_time_across_all_steps[1]/total_iter,
-                                  total_max_time_across_all_steps[2]/total_iter};
+        amrex::Real avg_all[3] = {total_max_time_across_all_steps[0]/(total_iter-1), 
+                                  total_max_time_across_all_steps[1]/(total_iter-1),
+                                  total_max_time_across_all_steps[2]/(total_iter-1)};
       
-        amrex::Print() << "\nTotal iterations so far: " << total_iter << "\n";
+        amrex::Print() << "\nTotal iterations so far: " << (total_iter-1) << "\n";
         amrex::Real avg_total = avg_all[0] + avg_all[1] + avg_all[2];
         amrex::Print() << "Avg. time over all steps electrostatics:   " 
                        << avg_all[0] << std::setw(15) << (avg_all[0]/avg_total)*100 << " %" << "\n";    
@@ -712,7 +742,6 @@ c_TransportSolver:: Obtain_maximum_time(amrex::Real const* total_time_counter_di
                        << avg_all[2] << std::setw(15) << (avg_all[2]/avg_total)*100 << " %" << "\n";    
         amrex::Print() << "Sum of above three times: " << avg_total << "\n";
     }
-
 }
 
 void

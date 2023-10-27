@@ -17,7 +17,7 @@ using namespace amrex;
     
             /*vectors*/
             auto const& n_curr_in      = h_n_curr_in_data.table();
-            auto const& n_curr_in_glo  = n_curr_in_glo_data.table();
+            //auto const& n_curr_in_glo  = n_curr_in_glo_data.table();
             auto const& n_curr_out     = h_n_curr_out_data.table();
             auto const& n_prev_in      = h_n_prev_in_data.table();
             
@@ -110,10 +110,10 @@ using namespace amrex;
                           ParallelDescriptor::Communicator());
     
             //amrex::Print() << "n_curr_in, n_prev_in: " << n_curr_in(0) << " " << n_prev_in(0) << "\n";
-            amrex::Print() << "\nBroyden_NormSum_Curr: " << std::setw(20) << Broyden_NormSum_Curr << "\n";
-            amrex::Print() <<   "Broyden_NormSum_Prev: " << std::setw(20) << Broyden_NormSum_Prev
+            amrex::Print() << "\n Broyden_NormSum_Curr: " << std::setw(20) << Broyden_NormSum_Curr << "\n";
+            amrex::Print() <<   " Broyden_NormSum_Prev: " << std::setw(20) << Broyden_NormSum_Prev
                            << ",   Difference: " << (Broyden_NormSum_Curr - Broyden_NormSum_Prev) << "\n";
-            amrex::Print() << "Broyden max norm: " << Broyden_Norm << "\n\n";
+            amrex::Print() << " Broyden max norm: " << Broyden_Norm << "\n\n";
             //amrex::Print() << "Broyden_denom: " << Broyden_Denom << "\n";
 
             Broyden_NormSum_Prev = Broyden_NormSum_Curr; 
@@ -228,26 +228,15 @@ using namespace amrex;
             /*Increment Broyden_Step*/
             Broyden_Step += 1;
 
-            MPI_Gatherv(&n_curr_in(0),
-                         site_size_loc,
-                         MPI_DOUBLE,
-                        &n_curr_in_glo(0),
-                         MPI_recv_count.data(),
-                         MPI_recv_disp.data(),
-                         MPI_DOUBLE,
-                         ParallelDescriptor::IOProcessorNumber(),
-                         ParallelDescriptor::Communicator());
-
-    
-            //MPI_Allgatherv(&n_curr_in(0),
-            //                site_size_loc,
-            //                MPI_DOUBLE,
-            //               &n_curr_in_glo(0),
-            //                MPI_recv_count.data(),
-            //                MPI_recv_disp.data(),
-            //                MPI_DOUBLE,
-            //                ParallelDescriptor::Communicator());
-
+           // MPI_Gatherv(&n_curr_in(0),
+           //              site_size_loc,
+           //              MPI_DOUBLE,
+           //             &n_curr_in_glo(0),
+           //              MPI_recv_count.data(),
+           //              MPI_recv_disp.data(),
+           //              MPI_DOUBLE,
+           //              ParallelDescriptor::IOProcessorNumber(),
+           //              ParallelDescriptor::Communicator());
     }
   #else
     void 
@@ -383,10 +372,10 @@ using namespace amrex;
     		              MPI_SUM,
                           ParallelDescriptor::Communicator());
     
-            amrex::Print() << "\nBroyden_NormSum_Curr: " << std::setw(20) << Broyden_NormSum_Curr << "\n";
-            amrex::Print() <<   "Broyden_NormSum_Prev: " << std::setw(20) << Broyden_NormSum_Prev
+            amrex::Print() << "\n Broyden_NormSum_Curr: " << std::setw(20) << Broyden_NormSum_Curr << "\n";
+            amrex::Print() <<   " Broyden_NormSum_Prev: " << std::setw(20) << Broyden_NormSum_Prev
                            << ",   Difference: " << (Broyden_NormSum_Curr - Broyden_NormSum_Prev) << "\n";
-            amrex::Print() << "Broyden max norm: " << Broyden_Norm << "\n\n";
+            amrex::Print() << " Broyden max norm: " << Broyden_Norm << "\n\n";
             //amrex::Print() << "n_curr_in, n_prev_in: " << n_curr_in(0) << " " << n_prev_in(0) << "\n";
             //amrex::Print() << "Broyden_denom: " << Broyden_Denom << "\n";
     
@@ -519,22 +508,15 @@ using namespace amrex;
             amrex::Gpu::streamSynchronize();
     
             Broyden_Step += 1;
- 
-            MPI_Gatherv(&n_curr_in(0),
-                         site_size_loc,
-                         MPI_DOUBLE,
-                        &n_curr_in_glo(0),
-                         MPI_recv_count.data(),
-                         MPI_recv_disp.data(),
-                         MPI_DOUBLE,
-                         ParallelDescriptor::IOProcessorNumber(),
-                         ParallelDescriptor::Communicator());
-           //if (ParallelDescriptor::IOProcessor()) 
-           //{
-           //    for(int n=0; n < num_field_sites_all_NS; ++n) {
-           //       amrex::Print() << n << "  " <<  n_curr_in_glo(n) << "\n";
-           //    }
-           //}
+            // MPI_Gatherv(&n_curr_in(0),
+            //              site_size_loc,
+            //              MPI_DOUBLE,
+            //             &n_curr_in_glo(0),
+            //              MPI_recv_count.data(),
+            //              MPI_recv_disp.data(),
+            //              MPI_DOUBLE,
+            //              ParallelDescriptor::IOProcessorNumber(),
+            //              ParallelDescriptor::Communicator());
     }
   #endif
 #endif

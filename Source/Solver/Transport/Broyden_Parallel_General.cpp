@@ -82,15 +82,15 @@ c_TransportSolver::Define_Broyden_Partition()
 	    }
 	    site_size_loc = MPI_recv_count[my_rank];
     }
-    if (ParallelDescriptor::IOProcessor()) 
-    {
-        amrex::Print() << "recv_count/recv_disp: \n";
-	    for(int i=0; i < total_proc; ++i) {
-            amrex::Print() << i << " " << MPI_recv_count[i] << " "<< MPI_recv_disp[i] << "\n";
-        }
-    }
+    //if (ParallelDescriptor::IOProcessor()) 
+    //{
+    //    amrex::Print() << "recv_count/recv_disp: \n";
+	//    for(int i=0; i < total_proc; ++i) {
+    //        amrex::Print() << i << " " << MPI_recv_count[i] << " "<< MPI_recv_disp[i] << "\n";
+    //    }
+    //}
 
-    amrex::Print() << "Number of field_sites at all nanostructures, num_field_sites_all_NS: " 
+    amrex::Print() << "#####* Number of field_sites at all nanostructures, num_field_sites_all_NS: " 
                    << num_field_sites_all_NS << "\n";
 }
 

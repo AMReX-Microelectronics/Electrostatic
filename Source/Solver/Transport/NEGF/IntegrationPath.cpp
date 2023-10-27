@@ -6,6 +6,39 @@
 
 #include <fstream>
 
+//c_IntegrationPath::c_IntegrationPath(const c_IntegrationPath& src)
+//   :c_IntegrationPath {} //delegating constructor 
+//{
+//    //deep copy
+//}
+//
+//void 
+//c_IntegrationPath::swap(c_IntegrationPath& other) noexcept
+//{
+//    std::swap(m_var, other.m_var);
+//}
+//
+//c_IntegrationPath& 
+//c_IntegrationPath::operator=(const c_IntegrationPath& rhs)
+//{
+//    if(this == &rhs) { return *this }; //checking for self-assignment
+//
+//    c_IntegrationPath temp{rhs};
+//    swap(temp);
+//    return *this;
+//}
+
+void 
+c_IntegrationPath::Reset()
+{
+    E_min = 0.;
+    E_max = 0.;
+    type_id = 0;
+    weight_vec.clear();
+    mul_factor_vec.clear();
+    E_vec.clear();
+}
+
 void
 c_IntegrationPath::Define_GaussLegendrePoints(const ComplexType min, 
                                               const ComplexType max,

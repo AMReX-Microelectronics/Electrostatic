@@ -212,14 +212,12 @@ c_CNT::Get_Bandgap_Of_Mode(int p)
     Eg_case[5] = (acc*gamma/R_cnt)*fabs( 3*p - (  m - n  ));
 
     amrex::Real Eg_min = Eg_case[0];
-    int min_index = 0;
     for(int i=1; i<6; ++i) 
     {
         if(Eg_min > Eg_case[i]) 
-	{
+	    {
             Eg_min = Eg_case[i];
-	    min_index = i;
-	}
+	    }
     }
     return Eg_min;
 }

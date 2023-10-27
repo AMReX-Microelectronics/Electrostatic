@@ -263,7 +263,13 @@ public:
     amrex::Vector<ComplexType> E_poles_vec;
     amrex::Vector<int> eq_integration_pts;
     amrex::Vector<int> noneq_integration_pts;
-    int dos_integration_pts = 100;
+    amrex::Vector<amrex::Real> noneq_percent_intercuts;
+
+    int num_noneq_paths=1;
+
+    bool flag_compute_flatband_dos = false;
+    int flatband_dos_integration_pts = 100;
+    amrex::Vector<amrex::Real> flatband_dos_integration_limits = {-1., 1.};
     amrex::Real Fermi_tail_factor_lower = 14.;
     amrex::Real Fermi_tail_factor_upper = 14.;
 
@@ -295,7 +301,7 @@ public:
     amrex::Vector<c_IntegrationPath> ContourPath_Rho0;  
     amrex::Vector<c_IntegrationPath> ContourPath_RhoEq;  
     amrex::Vector<c_IntegrationPath> ContourPath_RhoNonEq;
-    c_IntegrationPath ContourPath_DOS;
+    amrex::Vector<c_IntegrationPath> ContourPath_DOS;
 
     /*For Restart*/
     int flag_initialize_charge_distribution=0;
@@ -344,6 +350,7 @@ public:
     AMREX_GPU_HOST_DEVICE
     void Compute_SurfaceGreensFunction (MatrixBlock<T>& gr, const ComplexType EmU);
     void Compute_DensityOfStates(std::string DOS_foldername, bool flag_write_LDOS);
+    void Write_FermiFunction (const amrex::Vector<ComplexType> E_vec, std::string filename);
     void Compute_Rho0();
     void Compute_GR_atPoles();
     void Compute_RhoEq();

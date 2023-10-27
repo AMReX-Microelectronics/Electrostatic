@@ -11,6 +11,11 @@ class c_IntegrationPath
     int type_id     = 0; /*0=line, 1=circle*/
     //ComplexType E_center  = 0.; 
     //amrex::Real E_radius  = 0.;
+    
+//    c_IntegrationPath() = default;
+//    c_IntegrationPath(const c_IntegrationPath& rhs);
+//    c_IntegrationPath& operator=(const c_IntegrationPath& rhs);
+//    void swap(c_IntegrationPath& other) noexcept;
 
     public:
     int num_pts = 0;
@@ -24,15 +29,10 @@ class c_IntegrationPath
 
     void Define_RegularPoints(ComplexType min, ComplexType max, int pts);
 
-    void Reset() 
-    {
-        E_min = 0.;
-        E_max = 0.;
-        type_id = 0;
-        weight_vec.clear();
-        mul_factor_vec.clear();
-        E_vec.clear();
-    }
+    void Reset(); 
 };
-
+//void swap(c_IntegrationPath& first, c_IntegrationPath& second) noexcept 
+//{
+//    first.swap(second)
+//}
 #endif

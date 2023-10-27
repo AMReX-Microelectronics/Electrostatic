@@ -96,22 +96,22 @@ c_Nanostructure<NSType>::c_Nanostructure (const amrex::Geometry            & geo
         p_mf_gather = rMprop.get_p_mf(NS_gather_str);  
         p_mf_deposit = rMprop.get_p_mf(NS_deposit_str);  
 
-        amrex::Print() << "Fill_AtomLocations()\n";
+        //amrex::Print() << "Fill_AtomLocations()\n";
         Fill_AtomLocations();
 
-        amrex::Print() << "Evaluate_LocalFieldSites()\n";
+        //amrex::Print() << "Evaluate_LocalFieldSites()\n";
         Evaluate_LocalFieldSites();
 
-        amrex::Print() << "Define_MPISendCountAndDisp()\n";
+        //amrex::Print() << "Define_MPISendCountAndDisp()\n";
         NSType::Define_MPISendCountAndDisp();
 
-        amrex::Print() << "Mark_CellsWithAtoms()\n";
+        //amrex::Print() << "Mark_CellsWithAtoms()\n";
         Mark_CellsWithAtoms();
 
-        amrex::Print() << "Initialize_ChargeAtFieldSites()\n";
+        //amrex::Print() << "Initialize_ChargeAtFieldSites()\n";
         NSType::Initialize_ChargeAtFieldSites();
 
-        amrex::Print() << "Deposit_AtomAttributeToMesh()\n";
+        //amrex::Print() << "Deposit_AtomAttributeToMesh()\n";
         Deposit_AtomAttributeToMesh();
     }
 
@@ -283,10 +283,10 @@ c_Nanostructure<NSType>::Evaluate_LocalFieldSites()
     //#endif
     
 
-    std::cout << " process/site_id_offset/num_local_field_sites: " 
-              << NSType::my_rank << " " 
-              << NSType::site_id_offset << " "
-              << NSType::num_local_field_sites << "\n";
+    //std::cout << " process/site_id_offset/num_local_field_sites: " 
+    //          << NSType::my_rank << " " 
+    //          << NSType::site_id_offset << " "
+    //          << NSType::num_local_field_sites << "\n";
 
     /*define local charge density 1D table, h_n_curr_in_loc_data */
     NSType::h_n_curr_in_loc_data.resize({0},{NSType::num_local_field_sites}, The_Pinned_Arena()); 
@@ -365,7 +365,7 @@ c_Nanostructure<NSType>::Mark_CellsWithAtoms()
 
     auto& mf = rMprop.get_mf("atom_locations"); //define in macroscopic.fields_to_define
     
-    amrex::Print() << "Marking atom locations\n";
+    //amrex::Print() << "Marking atom locations\n";
     int lev = 0;
     for (MyParIter pti(*this, lev); pti.isValid(); ++pti) 
     { 
@@ -757,22 +757,25 @@ c_Nanostructure<NSType>:: InitializeNEGF (std::string common_foldername_str)
 
     NSType::Define_ContactInfo();
 
+    amrex::Print() << "#####* Initially defining energy limits:\n";
     NSType::Define_EnergyLimits();
 
     NSType::Define_IntegrationPaths();
 
-    BL_PROFILE_VAR("Compute_DOS", compute_dos);
+    if(NSType::flag_compute_flatband_dos) 
+    {
+        bool flag_write_LDOS = false;
 
-    bool flag_write_LDOS = true;
+        BL_PROFILE_VAR("Compute_DOS", compute_dos);
 
-    std::string dos_dir = NSType::step_foldername_str + "/DOS_flatband";
+        std::string dos_dir = NSType::step_foldername_str + "/DOS_flatband";
 
-    if (ParallelDescriptor::IOProcessor()) CreateDirectory(dos_dir);
+        if (ParallelDescriptor::IOProcessor()) CreateDirectory(dos_dir);
 
-    NSType::Compute_DensityOfStates(dos_dir, flag_write_LDOS);
+        NSType::Compute_DensityOfStates(dos_dir, flag_write_LDOS);
 
-    BL_PROFILE_VAR_STOP(compute_dos);
-
+        BL_PROFILE_VAR_STOP(compute_dos);
+    }
 
     BL_PROFILE_VAR("Compute_Rho0", compute_rho0);
 
