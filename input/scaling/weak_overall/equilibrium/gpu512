@@ -1,23 +1,19 @@
 ################
 ##### FLAGS ####
 ################
-
 use_electrostatic = 1
 use_transport = 1
 amrex.the_arena_is_managed=1
 
-#my_constants.GV = 1.  #gate voltage [V]
-my_constants.GV_min = 0.
-my_constants.GV_max = 1.
-my_constants.Nsteps =  2
-my_constants.dt = 1./(Nsteps-1)
-
-my_constants.Ef = -1. #Palladium Contact Fermi level [eV]
-
+############################
+##### Scaling Variables ####
+############################
 my_constants.gx = 2
 my_constants.gy = 128
 my_constants.gz = 2
 
+my_constants.N_unitcells = 128000
+plot.folder_name = /global/cfs/projectdirs/m3766/SaurabhTests/weak_scaling/all_around_metal/gpu512
 ##################################
 ##### USER DEFINED CONSTANTS #####
 ##################################
@@ -26,6 +22,13 @@ my_constants.gz = 2
 my_constants.epsilon_0 = 8.8541878128e-12
 my_constants.tiny = 1e-12
 my_constants.pi = 3.141592653589793
+
+my_constants.GV_min = 0.
+my_constants.GV_max = 1.
+my_constants.Nsteps =  2
+my_constants.dt = 1./(Nsteps-1)
+
+my_constants.Ef = -1. #Palladium Contact Fermi level [eV]
 
 ### Carbon nanotube
 my_constants.m_index = 17
@@ -36,7 +39,6 @@ my_constants.CN_z = Lz/2.
 my_constants.CN_x = 0.
 my_constants.CN_y = 0.
 
-my_constants.N_unitcells = 96000
 my_constants.L_unitcell = 3*bond_length #0.426 nm
 
 my_constants.R_CN = bond_length*sqrt(3.*(m_index*m_index + n_index*n_index + m_index*n_index))/(2*pi)  #radius
@@ -46,18 +48,19 @@ my_constants.small_gap = 0.3e-9  #0.1nm #5*bond_length #0.355e-9, gap between na
 
 my_constants.epsilon_CN = epsilon_0 #vacuum
 
-
 ### Total domain dimensions
-my_constants.D_CN_unitcell = 1          #ceil(R_CN*2./L_unitcell) #2
-
 my_constants.Ly_offset_unitcells = 0
-my_constants.Lx = D_CN_unitcell*7*L_unitcell
-my_constants.Ly = (N_unitcells + Ly_offset_unitcells)*L_unitcell
-my_constants.Lz = D_CN_unitcell*7*L_unitcell
+my_constants.cells_per_unitcell = 12
+my_constants.unitcells_per_D_CN = floor((R_CN*2)/(L_unitcell)) #ceil(3.1241970) = 4, for R_CN=0.66545nm
+my_constants.width_factor  = 2
 
-my_constants.nx = 2*7*D_CN_unitcell*7                  
-my_constants.ny = 2*7*(N_unitcells+Ly_offset_unitcells) 
-my_constants.nz = 2*7*D_CN_unitcell*7                   
+my_constants.Lx = width_factor * unitcells_per_D_CN * L_unitcell
+my_constants.Ly = (N_unitcells + Ly_offset_unitcells) * L_unitcell
+my_constants.Lz = width_factor * unitcells_per_D_CN *L_unitcell
+
+my_constants.nx = width_factor * unitcells_per_D_CN * cells_per_unitcell                  
+my_constants.ny = (N_unitcells + Ly_offset_unitcells) * cells_per_unitcell
+my_constants.nz = width_factor * unitcells_per_D_CN * cells_per_unitcell                   
 
 my_constants.dx = Lx/nx
 my_constants.dy = Ly/ny
@@ -68,7 +71,6 @@ my_constants.epsilon_domain = epsilon_0 #air
 ##################################################
 ###### TIME DEPENDENT SIMULATION PROPERTIES ######
 ##################################################
-
 timestep = dt
 steps = Nsteps
 restart = 0
@@ -86,7 +88,7 @@ ebgeom.specify_inhomo_dir = 1
 
 Gate.geom_type      = cntfet_contact_cyl
 Gate.inner_radius   = R_CN + small_gap
-Gate.thickness      = 10*dz
+Gate.thickness      = 5*dz
 Gate.center         = CN_x CN_y CN_z
 Gate.height         = Ly + 2*dy/5
 Gate.direction      = 1
@@ -137,10 +139,9 @@ macroscopic.atom_locations = 0.
 ###### OUTPUT ######
 ####################
 
-plot.folder_name = /global/cfs/projectdirs/m3766/SaurabhTests/weak_scaling/all_around_metal/gpu512
 plot.fields_to_plot = epsilon.1 charge_density.1 phi.1 atom_locations
-plot.write_after_init = 1000000
-plot.write_interval = 1000000
+plot.write_after_init = 0
+plot.write_interval = 100
 plot.rawfield_write_interval = 1000000
 
 ########################
@@ -186,7 +187,7 @@ transport.NS_gather_field = phi
 transport.NS_deposit_field  = charge_density
 transport.NS_initial_deposit_value  = 0.
 transport.Broyden_fraction = 1e-1
-transport.Broyden_max_norm = 1.e-6
+transport.Broyden_max_norm = 1.e-5
 transport.Broyden_norm_type = absolute
 transport.selfconsistency_algorithm = broyden_second
 transport.reset_with_previous_charge_distribution = 1
@@ -210,7 +211,7 @@ cnt.E_valence_min = -10
 cnt.E_pole_max    = 3
 
 cnt.eq_integration_pts = 30 30 30
-cnt.noneq_integration_pts = 200
+cnt.noneq_integration_pts = 0
 
 cnt.write_at_iter = 0
 #####################################

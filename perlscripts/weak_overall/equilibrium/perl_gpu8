@@ -6,7 +6,7 @@
 #SBATCH -q regular
 #SBATCH --mail-user=saurabhsawant@lbl.gov
 #SBATCH --mail-type=ALL
-#SBATCH -t 00:05:00
+#SBATCH -t 00:03:00
 #SBATCH -A m3766_g
 #SBATCH -o gpu8.o%j
 #SBATCH -e gpu8.e%j
@@ -20,4 +20,4 @@ export OMP_PROC_BIND=spread
 
 #run the application:
 #applications may performance better with --gpu-bind=none instead of --gpu-bind=single:1 
-srun -n 8 -c 32 --cpu_bind=cores -G 8 --gpu-bind=single:1  ./../../../Exec/main3d.gnu.TPROF.MPI.CUDA.EB.TD.TRAN.BROYPRLL.ex ../../input/scaling/weak_overall/equilibrium/gpu8
+srun -n 8 -c 32 --cpu_bind=cores -G 8 --gpu-bind=single:1  ./../../../Exec/main3d.gnu.TPROF.MPI.CUDA.EB.TD.TRAN.BROYPRLL.ex ../../../input/scaling/weak_overall/equilibrium/gpu8
