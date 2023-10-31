@@ -1,0 +1,161 @@
+my_constants.fx = 1
+my_constants.fy = 1
+my_constants.fz = 1
+
+my_constants.nx = fx*640
+my_constants.ny = fy*640
+my_constants.nz = fz*640
+
+my_constants.gx = 320
+my_constants.gy = 320
+my_constants.gz = 320
+#################################
+###### GEOMETRY PROPERTIES ######
+#################################
+domain.n_cell = nx ny nz
+domain.max_grid_size = gx gy gz
+domain.blocking_factor = gx gy gz
+
+domain.prob_lo = -Lx/2. -Ly/2.  0.
+domain.prob_hi =  Lx/2.  Ly/2.  Lz
+
+domain.is_periodic = 0 0 0
+
+domain.coord_sys = cartesian 
+
+#total domain dimensions
+my_constants.Lx = fx*28.0e-9  #(28-~4)/2=~12 nm free on each x side past contacts
+my_constants.Ly = fy*28e-9 # <= 65 unit cells can fit
+my_constants.Lz = fz*28.0e-9 #28-(10+3) = 15~nm free in z above the contacts
+
+
+my_constants.GO_h = fz*10e-9      #smallest dimension that limits n_cell in z.
+my_constants.CM_w = fx*4.e-9
+my_constants.CM_h = fz*4.e-9
+
+my_constants.CN_co_l = fy*3.408e-9  #contact length 8 unit cells
+my_constants.CN_ch_l = fy*20.448e-9 #channel length 48 unit cells
+my_constants.R_CN = fz*0.6654e-9    #radius
+my_constants.small_gap = fz*0.3e-9 #5*bond_length #0.355e-9, gap between nanotube and the contacts
+
+#######################################
+##### CONSTANTS for PROBLEM SETUP #####
+#######################################
+
+### Physical and Other Constants 
+my_constants.epsilon_0 = 8.8541878128e-12
+my_constants.GV_min = -0.3
+my_constants.GV_max =  0.3
+my_constants.Nsteps =  12
+my_constants.dt = 1./(Nsteps-1)
+
+### GEOMETRY and MACROSCOPIC PARAMETER PROPERTIES 
+
+#gate oxide
+my_constants.GO_w = Lx
+my_constants.GO_l = Ly
+
+my_constants.epsilon_GO = 3.8*epsilon_0
+ 
+#contact metal
+my_constants.CM_l = CN_co_l
+
+
+my_constants.SV =  0  #source voltage [V]
+my_constants.DV = 0.1 #100mV drain voltage [V]
+
+my_constants.CM_lo_z =  GO_h 
+my_constants.CM_hi_z =  GO_h + CM_h 
+
+my_constants.dx = Lx/nx
+my_constants.dy = Ly/ny
+my_constants.dz = Lz/nz
+my_constants.tiny_ebx = dx/4
+my_constants.tiny_eby = dy/4
+my_constants.tiny_ebz = dz/4
+
+my_constants.source_lo_y = -Ly/2 + gap_CM_Boundary + tiny_eby
+my_constants.source_hi_y = source_lo_y + CM_l + tiny_eby
+
+my_constants.drain_hi_y = Ly/2 - gap_CM_Boundary - tiny_eby
+my_constants.drain_lo_y = drain_hi_y - CM_l - tiny_eby
+
+#carbon nanotube 
+my_constants.CN_l = CN_ch_l + 2*CN_co_l  # 64 unit cells 
+my_constants.CN_h = GO_h + CM_h/2. #CNT center is at 11.5 nm
+my_constants.gap_CM_Boundary = (Ly - CN_l)/2. #0.368nm
+
+my_constants.epsilon_CN = epsilon_0 #vacuum
+
+my_constants.epsilon_domain = epsilon_0 #air
+#####################################
+##################################################
+###### TIME DEPENDENT SIMULATION PROPERTIES ######
+##################################################
+
+timestep = dt
+steps = Nsteps
+
+####################################
+###### EMBEDDED BOUNDARIES ######
+####################################
+
+domain.embedded_boundary = 1  #options: 1=true, 0=false (default)
+domain.specify_using_eb2 = 0  #options: 1=true, 0=false (default)
+
+ebgeom.objects = Source Drain
+ebgeom.specify_inhomo_dir = 1
+
+Source.geom_type = cntfet_contact
+Source.box_lo = (-CM_w/2.+ tiny_ebx)  source_lo_y (CM_lo_z-tiny_ebz)
+Source.box_hi = (CM_w/2. - tiny_ebx)  source_hi_y (CM_hi_z-tiny_ebz)
+Source.cyl_cavity_radius = R_CN + small_gap
+Source.cyl_cavity_direction = 1
+Source.surf_soln = SV #V
+
+Drain.geom_type = cntfet_contact
+Drain.box_lo = (-CM_w/2.+ tiny_ebx) drain_lo_y (CM_lo_z-tiny_ebz)
+Drain.box_hi = (CM_w/2. - tiny_ebx) drain_hi_y (CM_hi_z-tiny_ebz)
+Drain.cyl_cavity_radius = R_CN + small_gap
+Drain.cyl_cavity_direction = 1
+Drain.surf_soln = DV #V
+
+#################################
+###### BOUNDARY CONDITIONS ######
+#################################
+boundary.hi = neu(0) neu(0) neu(0)
+boundary.lo = neu(0) neu(0) dir(GV)
+
+boundary.GV_function = "GV_min + (GV_max-GV_min) * t" #V
+#boundary.GV_function = "0.5" #V
+
+####################################
+###### MACROSCOPIC PROPERTIES ######
+####################################
+macroscopic.fields_to_define = alpha epsilon charge_density phi 
+macroscopic.ghostcells_for_fields = alpha.0 epsilon.1 charge_density.0 phi.1
+
+macroscopic.alpha = 0.
+macroscopic.charge_density = 0.
+macroscopic.epsilon_function = "epsilon_0"
+macroscopic.phi = 0.
+macroscopic.atom_locations = 0.
+####################################
+###### MLMG SOLVER PROPERTIES ######
+####################################
+
+mlmg.ascalar=0
+mlmg.bscalar=1
+
+mlmg.soln   = phi
+mlmg.rhs    = charge_density
+mlmg.alpha  = alpha
+mlmg.beta   = epsilon
+
+mlmg.set_verbose=0
+mlmg.max_order=2
+mlmg.absolute_tolerance=0
+mlmg.relative_tolerance=1e-10
+
+diagnostics = 0
+use_negf = 0

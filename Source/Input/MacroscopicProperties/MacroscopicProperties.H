@@ -39,6 +39,7 @@ public:
     std::map<std::string,int> map_param_all;
 
     int num_params;
+    void ReInitializeMacroparam(std::string macro_str);
 
 private:
     void DefineParameterNameMap()

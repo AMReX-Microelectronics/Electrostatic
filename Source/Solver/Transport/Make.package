@@ -1,0 +1,22 @@
+CEXE_sources += Transport.cpp
+
+CEXE_sources += Broyden_Serial_General.cpp
+CEXE_sources += Broyden_Parallel_General.cpp
+
+CEXE_sources += Simple_Mixing_Serial.cpp
+CEXE_sources += Broyden_First_Serial.cpp
+CEXE_sources += Broyden_Second_Serial.cpp
+CEXE_sources += Broyden_Second_Parallel.cpp
+
+CEXE_headers += Transport.H
+CEXE_headers += Transport_Table_ReadWrite.H
+CEXE_headers += Transport_fwd.H
+
+CEXE_sources += Nanostructure.cpp
+CEXE_headers += Nanostructure.H
+CEXE_headers += Nanostructure_fwd.H
+
+VPATH_LOCATIONS += $(CODE_HOME)/Source/Solver/Transport
+INCLUDE_LOCATIONS += $(CODE_HOME)/Source/Solver/Transport
+
+include $(CODE_HOME)/Source/Solver/Transport/NEGF/Make.package

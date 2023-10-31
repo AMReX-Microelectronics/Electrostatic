@@ -4,8 +4,8 @@
 #include "Input/GeometryProperties/GeometryProperties_fwd.H"
 #include "Input/BoundaryConditions/BoundaryConditions_fwd.H"
 #include "Input/MacroscopicProperties/MacroscopicProperties_fwd.H"
-#ifdef USE_NEGF
-#include "Solver/NEGF/NEGF_fwd.H"
+#ifdef USE_TRANSPORT
+#include "Solver/Transport/Transport_fwd.H"
 #endif
 
 #include "Solver/Electrostatics/MLMG_fwd.H"
@@ -112,9 +112,7 @@ public:
     void ReadData ();
     void InitData ();
     void Solve_PostProcess_Output ();
-    //void Solve();
-    //void PostProcess();
-    //void Output();
+
     void EstimateOfRequiredMemory();
 
     static bool do_device_synchronize;
@@ -122,8 +120,8 @@ public:
     c_GeometryProperties& get_GeometryProperties () { return *m_pGeometryProperties;}
     c_BoundaryConditions& get_BoundaryConditions () { return *m_pBoundaryConditions;}
     c_MacroscopicProperties& get_MacroscopicProperties () { return *m_pMacroscopicProperties;}
-    #ifdef USE_NEGF
-    c_NEGFSolver& get_NEGFSolver () { return *m_pNEGFSolver;}
+    #ifdef USE_TRANSPORT
+    c_TransportSolver& get_TransportSolver () { return *m_pTransportSolver;}
     #endif
     c_MLMGSolver& get_MLMGSolver () { return *m_pMLMGSolver;}
     c_PostProcessor& get_PostProcessor () { return *m_pPostProcessor;}
@@ -131,9 +129,12 @@ public:
     c_Output& get_Output () { return *m_pOutput;}
     
     amrex::Real get_time() { return m_time_instant;}
+    int use_diagnostics;
+    int use_transport;
+    int use_electrostatic;
  
 private:
-    const amrex::Real set_time(int n) 
+    amrex::Real set_time(int n) 
     { m_time_instant = n*m_timestep; return m_time_instant;}
 
     static c_Code* m_instance;
@@ -141,6 +142,8 @@ private:
     amrex::Real m_time_instant = 0;
     amrex::Real m_timestep;
     int m_total_steps;
+    int m_flag_restart;
+    int m_restart_step;
 
     std::unique_ptr<c_GeometryProperties> m_pGeometryProperties;
     std::unique_ptr<c_BoundaryConditions> m_pBoundaryConditions;
@@ -148,12 +151,10 @@ private:
     std::unique_ptr<c_MLMGSolver> m_pMLMGSolver;
     std::unique_ptr<c_PostProcessor> m_pPostProcessor;
     std::unique_ptr<c_Output> m_pOutput;
-    #ifdef USE_NEGF
-    std::unique_ptr<c_NEGFSolver> m_pNEGFSolver;
+    #ifdef USE_TRANSPORT
+    std::unique_ptr<c_TransportSolver> m_pTransportSolver;
     #endif
 
-    int use_diagnostics;
-    int use_negf;
     std::unique_ptr<c_Diagnostics> m_pDiagnostics;
 
 };

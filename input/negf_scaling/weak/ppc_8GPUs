@@ -1,0 +1,38 @@
+use_electrostatic = 0
+use_transport = 1
+
+##################################
+##### USER DEFINED CONSTANTS #####
+##################################
+
+### Carbon nanotube
+my_constants.N_unitcells = 2000
+
+my_constants.m_index = 17
+my_constants.n_index = 0
+my_constants.bond_length = 0.142e-9
+######################################
+
+#################
+###### NEGF #####
+#################
+
+#nanostructure names
+transport.NS_names = cnt 
+transport.use_negf = 1
+
+cnt.type = CNT
+cnt.type_id = m_index n_index     
+cnt.acc = bond_length
+cnt.gamma = 2.5 
+cnt.num_unitcells = N_unitcells
+cnt.offset = 0 0 0 
+
+cnt.contact_potential = 0 1
+cnt.impose_potential = 1
+cnt.potential_profile_type = constant
+
+cnt.E_f = -1
+cnt.E_valence_min = -10
+cnt.E_pole_max    = 3
+######################################

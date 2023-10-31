@@ -13,8 +13,8 @@
 #include "PostProcessor/PostProcessor.H"
 #include "Diagnostics/Diagnostics.H"
 #include "Output/Output.H"
-#ifdef USE_NEGF
-#include "Solver/NEGF/NEGF.H"
+#ifdef USE_TRANSPORT
+#include "Solver/Transport/Transport.H"
 #endif
 
 
@@ -131,41 +131,70 @@ c_Code::ReadData ()
     amrex::Print() << "\n\n\t\t{************************c_Code::ReadData()************************\n";
     amrex::Print() << "\t\tin file: " << __FILE__ << " at line: " << __LINE__ << "\n";
 #endif
+    //amrex::ParmParse pp_const("my_constants");
+    //amrex::Real R_CN;
+    //queryWithParser(pp_const,"R_CN", R_CN);
+    //amrex::Print() << "my_constants.R_CN: " << R_CN << "\n";
 
     m_timestep = 0;
     m_total_steps = 1;
+    m_flag_restart = 0;
+    m_restart_step = 0;
     amrex::ParmParse pp;
 
     #ifdef TIME_DEPENDENT
         queryWithParser(pp,"timestep", m_timestep);
-        queryWithParser(pp,"steps", m_total_steps);
+	queryWithParser(pp,"steps", m_total_steps);
+        pp.query("restart", m_flag_restart);
+
+
+        amrex::Print() << "##### timestep: " << m_timestep << "\n";
+        amrex::Print() << "##### steps: " << m_total_steps << "\n";
+        amrex::Print() << "##### flag restart: " << m_flag_restart << "\n";
+
+	if(m_flag_restart) 
+	{
+	    getWithParser(pp,"restart_step", m_restart_step);
+            amrex::Print() << "##### restart_step: " << m_restart_step << "\n";
+	}
+
     #endif
+    use_electrostatic = 0;
+    pp.query("use_electrostatic", use_electrostatic);
+    amrex::Print() << "##### use_electrostatic: " << use_electrostatic << "\n";
 
-    m_pGeometryProperties = std::make_unique<c_GeometryProperties>();
 
-    m_pBoundaryConditions = std::make_unique<c_BoundaryConditions>();
+    if(use_electrostatic) 
+    {
+        m_pGeometryProperties = std::make_unique<c_GeometryProperties>();
+
+        m_pBoundaryConditions = std::make_unique<c_BoundaryConditions>();
+        
+        m_pMacroscopicProperties = std::make_unique<c_MacroscopicProperties>();
+    }
+
+    use_transport = 0;
+    pp.query("use_transport", use_transport);
+    amrex::Print() << "##### use_transport: " << use_transport << "\n";
     
-    m_pMacroscopicProperties = std::make_unique<c_MacroscopicProperties>();
-
-    use_negf = 0;
-    pp.query("use_negf", use_negf);
-    amrex::Print() << "##### use_negf: " << use_diagnostics << "\n";
-    
-    #ifdef USE_NEGF
-    if(use_negf) m_pNEGFSolver = std::make_unique<c_NEGFSolver>();
+    #ifdef USE_TRANSPORT
+    if(use_transport) m_pTransportSolver = std::make_unique<c_TransportSolver>();
     #endif
-    
-    m_pMLMGSolver = std::make_unique<c_MLMGSolver>();
-    
-    m_pPostProcessor = std::make_unique<c_PostProcessor>();
 
     use_diagnostics = 0;
-    pp.query("use_diagnostics", use_diagnostics);
-    amrex::Print() << "##### use_diagnostics: " << use_diagnostics << "\n";
 
-    if(use_diagnostics) m_pDiagnostics = std::make_unique<c_Diagnostics>();
+    if(use_electrostatic) 
+    {
+        m_pMLMGSolver = std::make_unique<c_MLMGSolver>();
+        
+        m_pPostProcessor = std::make_unique<c_PostProcessor>();
 
-    m_pOutput = std::make_unique<c_Output>();
+        pp.query("use_diagnostics", use_diagnostics);
+        amrex::Print() << "##### use_diagnostics: " << use_diagnostics << "\n";
+        if(use_diagnostics) m_pDiagnostics = std::make_unique<c_Diagnostics>();
+
+        m_pOutput = std::make_unique<c_Output>();
+    }
 
 #ifdef PRINT_NAME
     amrex::Print() << "\t\t}************************c_Code::ReadData()************************\n";
@@ -181,27 +210,33 @@ c_Code::InitData ()
     amrex::Print() << "\tin file: " << __FILE__ << " at line: " << __LINE__ << "\n";
 #endif
  
-    m_pGeometryProperties->InitData();
+    if(use_electrostatic) 
+    {
+        m_pGeometryProperties->InitData();
 
-    if(use_diagnostics==1) m_pDiagnostics->InitData();
+        if(use_diagnostics) m_pDiagnostics->InitData();
 
-    m_pMacroscopicProperties->InitData();
+        m_pMacroscopicProperties->InitData();
+    }  
 
-    #ifdef USE_NEGF
-    if(use_negf) m_pNEGFSolver->InitData();
+    #ifdef USE_TRANSPORT
+    if(use_transport) m_pTransportSolver->InitData();
     #endif
 
-    m_pMLMGSolver->InitData();
-
-    m_pPostProcessor->InitData();
-
-    m_pOutput->InitData();
-
-    if(m_pOutput->m_write_after_init) 
+    if(use_electrostatic) 
     {
-        m_pOutput->WriteOutput_AfterInit();
-    }
+        m_pMLMGSolver->InitData();
 
+        m_pPostProcessor->InitData();
+
+        m_pOutput->InitData();
+
+        if(m_pOutput->m_write_after_init) 
+        {
+            m_pOutput->WriteOutput_AfterInit();
+        }
+    }
+  
 #ifdef PRINT_NAME
     amrex::Print() << "\t}************************c_Code::InitData()************************\n";
 #endif
@@ -306,39 +341,52 @@ c_Code::Solve_PostProcess_Output()
     amrex::Print() << "\n\n\t{************************c_Code::Solve_PostProcess_Output()************************\n";
     amrex::Print() << "\tin file: " << __FILE__ << " at line: " << __LINE__ << "\n";
 #endif
+
     amrex::Real avg_mlmg_solve_time = 0.;
-    for(int step=0; step < m_total_steps; ++step) 
+    for(int step=m_restart_step; step < m_total_steps; ++step) 
     {
         auto time = set_time(step);
-
-        m_pMLMGSolver->UpdateBoundaryConditions();
-
-        auto mlmg_solve_time = m_pMLMGSolver->Solve_PoissonEqn();
-        avg_mlmg_solve_time += mlmg_solve_time;
         amrex::Print() << "step: "  << std::setw(5) 
                        << step      << std::setw(7) 
                        << "     time: " << std::setw(5) 
-                       << time << std::setw(15) 
-                       << "     mlmg_solve_time: " << std::setw(15) 
-                       << mlmg_solve_time << "\n";
+                       << time << std::setw(15) << "\n";
 
-        m_pPostProcessor->Compute(); 
+        #ifdef USE_TRANSPORT
+        if(use_transport) m_pTransportSolver->Solve(step, time);
+        if(use_electrostatic) 
+        {
+            m_pPostProcessor->Compute(); 
+	}
+	#else
+        if(use_electrostatic) 
+        {
+	    bool update_surface_soln_flag = true; 
+            m_pMLMGSolver->UpdateBoundaryConditions(update_surface_soln_flag);
+            auto mlmg_solve_time = m_pMLMGSolver->Solve_PoissonEqn();
+            avg_mlmg_solve_time += mlmg_solve_time;
 
-        #ifdef USE_NEGF
-        if(use_negf) m_pNEGFSolver->Solve();
+	    amrex::Print() << "    mlmg_solve_time: " << std::setw(15) 
+                           << mlmg_solve_time << "\n";
+
+            m_pPostProcessor->Compute(); 
+        } 
         #endif
 
+        amrex::Print() << "use diagnostics: " << use_diagnostics << "\n";
         if(use_diagnostics) m_pDiagnostics->ComputeAndWriteDiagnostics(step,time);
 
-        m_pOutput->WriteOutput(step, time);
+        if(use_electrostatic) m_pOutput->WriteOutput(step, time);
     }
 
-    avg_mlmg_solve_time = avg_mlmg_solve_time / m_total_steps;
-    amrex::Print() << "avg_mlmg_solve_time: "   
-                   << avg_mlmg_solve_time       
-                   << " calculated over " 
-                   << m_total_steps 
-                   << " total steps.\n";
+    if(use_electrostatic) 
+    {
+        avg_mlmg_solve_time = avg_mlmg_solve_time / m_total_steps;
+        amrex::Print() << "avg_mlmg_solve_time: "   
+                       << avg_mlmg_solve_time       
+                       << " calculated over " 
+                       << m_total_steps 
+                       << " total steps.\n";
+    }
 
 #ifdef PRINT_NAME
     amrex::Print() << "\t}************************c_Code::Solve()************************\n";

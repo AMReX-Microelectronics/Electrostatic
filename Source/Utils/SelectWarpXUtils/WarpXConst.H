@@ -30,6 +30,7 @@ namespace MathConst
 // as the corresponding Python definitions
 namespace PhysConst
 {
+    static constexpr auto h_eVperHz = static_cast<amrex::Real>( 4.135667696e-15 );
     static constexpr auto c     = static_cast<amrex::Real>( 299'792'458. );
     static constexpr auto ep0   = static_cast<amrex::Real>( 8.8541878128e-12 );
     static constexpr auto mu0   = static_cast<amrex::Real>( 1.25663706212e-06 );
@@ -50,6 +51,7 @@ namespace PhysConst
         static_cast<amrex::Real>(1.005);
 
     static constexpr auto kb   = static_cast<amrex::Real>( 1.380649e-23 );  // Boltzmann's constant, J/K (exact)
+    static constexpr auto kb_eVperK   = static_cast<amrex::Real>( 8.617333262e-5 );  // Boltzmann's constant, J/K (exact)
 }
 
 #endif

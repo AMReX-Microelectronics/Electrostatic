@@ -251,7 +251,6 @@ c_Diagnostics_Using_EB::ComputeAndWriteEBDiagnostics(int step, amrex::Real time)
     auto& rCode = c_Code::GetInstance();
     auto& rMprop = rCode.get_MacroscopicProperties();
     auto& rGprop = rCode.get_GeometryProperties();
-    auto& n_cell = rGprop.n_cell;
     auto& rOutput = rCode.get_Output();
     _foldername_str = rOutput.get_folder_name() + "_diag/";
 

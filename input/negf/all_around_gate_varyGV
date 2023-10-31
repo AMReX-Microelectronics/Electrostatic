@@ -1,0 +1,285 @@
+use_electrostatic = 1
+use_transport = 1
+amrex.the_arena_is_managed=1
+
+##################################
+##### USER DEFINED CONSTANTS #####
+##################################
+
+### Physical and Other Constants ###
+####################################
+
+my_constants.q = 1.602e-19
+my_constants.epsilon_0 = 8.8541878128e-12
+my_constants.tiny = 1e-12
+my_constants.pi = 3.141592653589793
+
+my_constants.Nsteps =  1
+my_constants.dt = 0.
+
+my_constants.epsilon_CN     = epsilon_0 #vacuum
+my_constants.epsilon_GO     = 3.9*epsilon_0
+my_constants.epsilon_domain = epsilon_0 #air
+my_constants.epsilon_CM     = epsilon_0 #Palladium
+
+my_constants.SV = 0.      #source voltage [V]
+my_constants.Vds = -0.1   #Drain-Source voltage [V]
+my_constants.Vgs_min = 0.8
+my_constants.Vgs_max = 0.8
+my_constants.Nsteps =  2
+my_constants.dt = 1./(Nsteps-1)
+
+
+my_constants.Ef = -1.       #Palladium Contact Fermi level [eV] 
+
+### Total domain dimensions ###
+###############################
+my_constants.Ly_offset_unitcells = 0
+
+my_constants.cells_per_unitcell = 14 #cell_size = 0.030428571 nm
+
+my_constants.unitcells_per_D_CN = ceil((R_CN*2)/(L_unitcell)) #unitcells per diameter
+
+my_constants.width_factor  = 5
+my_constants.height_factor = 5
+
+my_constants.ny = (N_unitcells + Ly_offset_unitcells) * cells_per_unitcell  
+my_constants.nx =  width_factor  * unitcells_per_D_CN * cells_per_unitcell  
+my_constants.nz =  height_factor * unitcells_per_D_CN * cells_per_unitcell  
+
+my_constants.Ly = (N_unitcells + Ly_offset_unitcells) * L_unitcell 
+my_constants.Lx = width_factor  * unitcells_per_D_CN  * L_unitcell 
+my_constants.Lz = height_factor * unitcells_per_D_CN  * L_unitcell
+
+
+my_constants.dx = Lx/nx
+my_constants.dy = Ly/ny
+my_constants.dz = Lz/nz
+
+my_constants.gx = 4
+my_constants.gy = 4
+my_constants.gz = 4
+
+### Carbon nanotube ###
+#######################
+
+my_constants.m_index = 17
+my_constants.n_index = 0
+
+my_constants.Channel_unitcells = 46 
+my_constants.Overlap_unitcells = 10 
+my_constants.N_unitcells = Channel_unitcells + 2*Overlap_unitcells 
+
+my_constants.bond_length = 0.142e-9
+my_constants.small_gap = 0.3e-9 #gap between nanotube and the contacts
+
+my_constants.CN_z = 0.
+my_constants.CN_x = 0.
+my_constants.CN_y = 0.
+
+my_constants.L_unitcell = 3*bond_length #0.426e-9
+my_constants.R_CN = bond_length*sqrt(3.*(m_index*m_index + n_index*n_index + m_index*n_index))/(2*pi)  #radius
+my_constants.CN_co_l = Overlap_unitcells*L_unitcell  #total contact overlap length on both sides 
+
+### contact metal ###
+#####################
+
+my_constants.source_lo_y = -Ly/2  - dy/5.
+my_constants.source_hi_y = source_lo_y + CN_co_l 
+
+my_constants.drain_hi_y  =  Ly/2 + dy/5.
+my_constants.drain_lo_y =  drain_hi_y - CN_co_l 
+
+my_constants.source_center_y = (source_lo_y + source_hi_y)/2 
+my_constants.drain_center_y = (drain_lo_y + drain_hi_y)/2  
+
+my_constants.CM_thickness = 50*dz
+
+### gate ###
+############
+
+my_constants.G_inner_rad = 3.e-9 #Gate_InnerRadius
+my_constants.G_thickness = 10*dz
+
+### gate oxide ###
+##################
+
+my_constants.GO_thickness = G_inner_rad - (R_CN + small_gap)
+
+### oxide-nanotube gap ###
+##########################
+
+my_constants.length_scale_lattice_const = 8.5e-12
+
+##################################################
+###### TIME DEPENDENT SIMULATION PROPERTIES ######
+##################################################
+
+timestep = dt
+steps = Nsteps
+
+####################################
+###### EMBEDDED BOUNDARIES #########
+####################################
+
+domain.embedded_boundary = 1  #options: 1=true, 0=false (default)
+domain.specify_using_eb2 = 0  #options: 1=true, 0=false (default)
+
+ebgeom.objects = Source Drain Gate 
+ebgeom.specify_inhomo_dir = 1
+
+Source.geom_type    = cntfet_contact_cyl
+Source.inner_radius = R_CN + small_gap
+Source.thickness    = CM_thickness
+Source.center       = CN_x source_center_y CN_z
+Source.height       = source_hi_y - source_lo_y
+Source.direction    = 1
+Source.surf_soln    = SV 
+
+Drain.geom_type     = cntfet_contact_cyl
+Drain.inner_radius  = R_CN + small_gap
+Drain.thickness     = CM_thickness
+Drain.center        = CN_x drain_center_y CN_z
+Drain.height        = drain_hi_y - drain_lo_y
+Drain.direction     = 1
+Drain.surf_soln     = Vds + SV 
+
+Gate.geom_type      = cntfet_contact_cyl
+Gate.inner_radius   = G_inner_rad
+Gate.thickness      = G_thickness
+Gate.center         = CN_x CN_y CN_z
+Gate.height         = drain_lo_y - source_hi_y
+Gate.direction      = 1
+Gate.surf_soln_parser   = 1
+#Gate.surf_soln_function = "SV + Vgs_min + (Vgs_max-Vgs_min) * t"
+Gate.surf_soln_function = "SV + Vgs_max - (Vgs_max-Vgs_min) * t"
+
+#################################
+###### GEOMETRY PROPERTIES ######
+#################################
+domain.n_cell = nx ny nz
+domain.max_grid_size = nx/gx ny/gy nz/gz
+domain.blocking_factor = nx/gx ny/gy nz/gz
+
+domain.prob_lo = -Lx/2. -Ly/2.  -Lz/2.
+domain.prob_hi =  Lx/2.  Ly/2.   Lz/2.
+
+domain.is_periodic = 0 0 0
+
+domain.coord_sys = cartesian
+
+#################################
+###### BOUNDARY CONDITIONS ######
+#################################
+boundary.hi = neu(0.) neu(0) neu(0.)
+boundary.lo = neu(0.) neu(0) neu(0.)
+
+#boundary.GV_function = "GV_min + (GV_max-GV_min) * t" #V
+
+####################################
+###### MACROSCOPIC PROPERTIES ######
+####################################
+macroscopic.fields_to_define = alpha epsilon charge_density phi atom_locations
+macroscopic.ghostcells_for_fields = alpha.0 epsilon.1 charge_density.1 phi.1  atom_locations.0
+
+macroscopic.alpha = 0.
+macroscopic.charge_density = 0.
+
+macroscopic.epsilon_function = 
+" epsilon_0 
++ (epsilon_GO - epsilon_0) 
+  * (sqrt( (x-CN_x)**2 + (z-CN_z)**2 )  < G_inner_rad) 
+  * (sqrt( (x-CN_x)**2 + (z-CN_z)**2 )  >= (R_CN + small_gap))  
+  * (y > source_hi_y) * (y < drain_lo_y)"
+#+ (((epsilon_GO + 1) + (epsilon_GO - 1) * tanh( (sqrt( (x-CN_x)**2 + (z-CN_z)**2 ) - R_CN - small_gap) / length_scale_lattice_const))   - epsilon_0 )
+#  * ( sqrt( (x-CN_x)**2 + (z-CN_z)**2 )  < (R_CN + small_gap) )
+#  * ( sqrt( (x-CN_x)**2 + (z-CN_z)**2 )  >= R_CN  ) 
+#  * ( y > source_hi_y + dy) 
+#  * ( y < drain_lo_y  - dy)"
+macroscopic.phi = 0.
+macroscopic.atom_locations = 0.
+
+#############################
+###### POST PROCESSING ######
+#############################
+
+#post_process.fields_to_process = vecField
+
+####################
+###### OUTPUT ######
+####################
+
+plot.folder_name = all_around_gate_Vds_mdot1
+plot.fields_to_plot = epsilon.1 charge_density.1 phi.1 atom_locations #vecField 
+plot.write_after_init = 1
+plot.write_interval = 1
+plot.rawfield_write_interval = 1000000
+
+########################
+###### DIAGNOSTICS #####
+########################
+use_diagnostics = 0
+
+diag.specify_using_eb = 1
+diag.objects = Surf1
+Surf1.geom_type = cylinder
+Surf1.center = 0 0 CN_z
+Surf1.radius = R_CN
+Surf1.axial_direction = 1
+Surf1.theta_reference_direction = 0
+Surf1.has_fluid_inside = 0
+Surf1.fields_to_plot = phi charge_density
+
+####################################
+###### MLMG SOLVER PROPERTIES ######
+####################################
+
+mlmg.ascalar=0
+mlmg.bscalar=1
+
+mlmg.soln   = phi
+mlmg.rhs    = charge_density
+mlmg.alpha  = alpha
+mlmg.beta   = epsilon
+
+mlmg.set_verbose=0
+mlmg.max_order=2
+mlmg.absolute_tolerance=0
+mlmg.relative_tolerance=1e-10
+
+#################
+###### NEGF #####
+#################
+
+#NS stands for nanostructure
+transport.NS_names = cnt 
+transport.use_negf = 1
+transport.NS_gather_field = phi            
+transport.NS_deposit_field  = charge_density 
+transport.NS_initial_deposit_value  = 1e-2
+transport.Broyden_fraction = 0.005
+transport.Broyden_max_norm = 1.e-6
+transport.Broyden_norm_type = absolute
+transport.selfconsistency_algorithm = broyden_second
+transport.reset_with_previous_charge_distribution = 1
+
+cnt.initialize_with_charge_distribution = 0
+
+cnt.type = CNT
+cnt.type_id = m_index n_index     #m n
+cnt.acc = bond_length
+cnt.gamma = 2.5       #coupling strength (eV)
+cnt.num_unitcells = N_unitcells
+cnt.offset = CN_x CN_y CN_z
+cnt.contact_mu_specified = 1
+cnt.contact_mu = Ef (Ef - Vds)
+cnt.contact_T  = 298. 298.
+
+cnt.contact_Fermi_level = Ef
+cnt.E_valence_min = -10
+cnt.E_pole_max    = 3
+cnt.eq_integration_pts = 30 30 30
+cnt.noneq_integration_pts = 100
+
+cnt.write_at_iter = 1
+#####################################

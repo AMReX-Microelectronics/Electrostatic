@@ -39,7 +39,7 @@ struct s_PARSER {
 };
 
 struct s_ObjectType {
-    enum object { sphere, box, cylinder, plane, torus, parser, stl, cntfet_contact };
+    enum object { sphere, box, cylinder, plane, torus, parser, stl, cntfet_contact, cntfet_contact_cyl };
 };
 
 class
@@ -70,16 +70,29 @@ public:
 
     amrex::MultiFab& get_soln_mf  (int i) {return (*m_p_soln_mf[i]);}
     //amrex::MultiFab& get_beta_mf  (int i) {return (*m_p_beta_mf[i]);}
-    void clear_soln_mf() { m_p_soln_mf.clear(); };
+    void clear_soln_mf() 
+    { 
+	for (int i=0; i < m_p_soln_mf.size(); ++i) 
+	{ 
+	    m_p_soln_mf[i].reset(); 
+	} 
+	m_p_soln_mf.clear(); 
+    };
     //void clear_beta_mf() { m_p_beta_mf.clear(); };
 
     void BuildGeometry(const amrex::Geometry* geom, const amrex::BoxArray* ba, const amrex::DistributionMapping* dm);
+
+    void Update_SurfaceSolution(const amrex::Real time);
+
+    amrex::Real Read_SurfSoln(const std::string name);
 
 private:
     amrex::Vector< std::string > vec_object_names;
     std::map<std::string,std::string> map_basic_objects_type;
     std::map<std::string,std::any> map_basic_objects_info;
     std::map<std::string,amrex::Real> map_basic_objects_soln;
+    std::map<std::string,int> map_basic_objects_soln_parser_flag;
+    std::map<std::string,std::unique_ptr<amrex::Parser>> map_basic_objects_soln_parser;
     std::map<std::string,amrex::Real> map_basic_objects_beta;
     const amrex::Array<amrex::Real, AMREX_SPACEDIM>* _dx;
 
@@ -93,6 +106,7 @@ private:
                                {"parser"         , s_ObjectType::object::parser},
                                {"stl"            , s_ObjectType::object::stl},
                                {"cntfet_contact" , s_ObjectType::object::cntfet_contact},
+                               {"cntfet_contact_cyl" , s_ObjectType::object::cntfet_contact_cyl},
 
                                {"Sphere"         , s_ObjectType::object::sphere},
                                {"Box"            , s_ObjectType::object::box},
@@ -102,11 +116,14 @@ private:
                                {"Parser"         , s_ObjectType::object::parser},
                                {"Stl"            , s_ObjectType::object::stl},
                                {"Cntfet_contact" , s_ObjectType::object::cntfet_contact},
+                               {"Cntfet_contact_cyl" , s_ObjectType::object::cntfet_contact_cyl},
 
                                {"STL"            , s_ObjectType::object::stl},
                                {"CNTFET_contact" , s_ObjectType::object::cntfet_contact},
+                               {"CNTFET_contact_cyl" , s_ObjectType::object::cntfet_contact_cyl},
                            };
     using cntfet_contact_type = amrex::EB2::IntersectionIF<amrex::EB2::CylinderIF, amrex::EB2::BoxIF>;
+    using cntfet_contact_cyl_type = amrex::EB2::IntersectionIF<amrex::EB2::CylinderIF, amrex::EB2::CylinderIF>;
 
     int num_final_objects;
     std::map<int,int> map_basic_objects;
@@ -121,6 +138,8 @@ private:
                  	     {"Volume", amrex::EBSupport::volume},
                      };
 
+    std::map<std::string, amrex::Real> map_SurfSoln_Name_Value;
+
     void ReadGeometry();
 
     void ReadObjectInfo(std::string object_name, std::string object_type, amrex::ParmParse pp_object);
@@ -134,6 +153,9 @@ private:
     template<typename ObjectType1, typename ObjectType2>
     void BuildUnionObject(std::string name1, std::string name2);
 
+    template<typename ObjectType1, typename ObjectType2, typename ObjectType3>
+    void BuildUnionObject(std::string name1, std::string name2, std::string name3);
+
     template<typename ObjectType1, typename ObjectType2>
     void BuildUnionParserObject(std::string name1, std::string name2);
 
@@ -144,5 +166,13 @@ private:
     amrex::Vector< std::unique_ptr<amrex::MultiFab> > m_p_soln_mf;
     //amrex::Vector< std::unique_ptr<amrex::MultiFab> > m_p_beta_mf;
     amrex::Vector< std::unique_ptr<amrex::EBFArrayBoxFactory> > m_p_factory;
+
+    #ifdef TIME_DEPENDENT
+    amrex::Vector<std::string> m_parser_varname_vector = {"x", "y", "z", "t"};
+    #else
+    amrex::Vector<std::string> m_parser_varname_vector = {"x", "y", "z"};
+    #endif
+
+    void Specify_SurfSolnOnCutcells(amrex::MultiFab& mf, const std::string name, const amrex::Real time);
 };
 #endif

@@ -4,8 +4,16 @@
 #define Max_Ncell_Azim 500
 #define Max_Ncell_Long 500
 #define VFRAC_THREASHOLD 1e-5
-//#define NUM_RING 280
-//#define ATOMS_PER_RING 17
+
+#define NUM_MODES 1
+#define NUM_CONTACTS 2
+#define NUM_ENERGY_PTS_REAL 10
+
+#include <AMReX_BoxArray.H>
+#include <AMReX_REAL.H>
+#include <AMReX_GpuComplex.H>
+
+using ComplexType = amrex::GpuComplex<amrex::Real>;
 
 template<typename T>
 class TD;

@@ -3,6 +3,6 @@ INCLUDE_LOCATIONS += $(CODE_HOME)/Source/Solver
 
 include $(CODE_HOME)/Source/Solver/Electrostatics/Make.package
 
-ifeq ($(USE_NEGF),TRUE)
-    include $(CODE_HOME)/Source/Solver/NEGF/Make.package
+ifeq ($(USE_TRANSPORT),TRUE)
+    include $(CODE_HOME)/Source/Solver/Transport/Make.package
 endif

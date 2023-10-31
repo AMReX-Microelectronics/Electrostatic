@@ -65,7 +65,7 @@ public:
 
     std::array<std::array<amrex::LinOpBCType,AMREX_SPACEDIM>,2> LinOpBCType_2d;
 
-    void UpdateBoundaryConditions();
+    void UpdateBoundaryConditions(bool update_surface_soln);
 
     /*The following is public for GPUs*/
     void Fill_Constant_Inhomogeneous_Boundaries(); 
