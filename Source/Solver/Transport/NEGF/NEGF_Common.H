@@ -324,6 +324,7 @@ public:
     void Set_IterationFilenameString(const int iter);
 
     amrex::Real initial_charge = 1e-3;
+    int num_recursive_parts = 1;
 
     void Initialize_ChargeAtFieldSites();
     virtual void ReadNanostructureProperties();
@@ -355,6 +356,7 @@ public:
     void Compute_GR_atPoles();
     void Compute_RhoEq();
     void Compute_RhoNonEq();
+    void Compute_RhoNonEqOld();
     void Compute_InducedCharge();
     void Compute_Current();
     //void GuessNewCharge_SimpleMixingAlg();

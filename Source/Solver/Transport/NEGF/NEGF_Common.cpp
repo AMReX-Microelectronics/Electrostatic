@@ -369,6 +369,8 @@ c_NEGF_Common<T>:: ReadNanostructureProperties ()
 	}
     }
 
+    num_recursive_parts = 1;
+    pp_ns.query("num_recursive_parts", num_recursive_parts);
     
     Set_Material_Specific_Parameters();
 
@@ -424,6 +426,7 @@ c_NEGF_Common<T>:: ReadNanostructureProperties ()
         amrex::Print() << noneq_percent_intercuts[c] << "  ";
     }
     amrex::Print() << "\n";
+    amrex::Print() << "##### num_recursive_parts: " << num_recursive_parts << "\n";
 
     
     Set_Arrays_OfSize_NumFieldSites();
@@ -1464,10 +1467,31 @@ void
 c_NEGF_Common<T>:: Compute_InducedCharge ()
 {
 
-    Compute_RhoEq();
+    amrex::Real proc_times[2] = {0.,0.};
+    amrex::Real max_times[2] = {0.,0.};
 
-    if(flag_noneq_exists) Compute_RhoNonEqOld();
-   
+    amrex::Real eq_time_begin = amrex::second();
+    Compute_RhoEq();
+    proc_times[0] = amrex::second() - eq_time_begin;
+
+    amrex::Real noneq_time_begin = amrex::second();
+    if(flag_noneq_exists) Compute_RhoNonEq();
+    proc_times[1] = amrex::second() - noneq_time_begin;
+    
+    MPI_Reduce(proc_times,
+               max_times,
+               2,
+               MPI_DOUBLE,
+               MPI_MAX,
+               ParallelDescriptor::IOProcessorNumber(),
+               ParallelDescriptor::Communicator());
+
+    if(ParallelDescriptor::IOProcessor())
+    {
+        amrex::Print() << "Max times for Compute_RhoEq and RhoNonEq: " 
+                       << std::setw(20) << proc_times[0] 
+                       << std::setw(20) << proc_times[1] << "\n";
+    }
 
     auto const& h_Rho0_loc     = h_Rho0_loc_data.const_table();
     auto const& h_RhoEq_loc    = h_RhoEq_loc_data.const_table();
@@ -1973,6 +1997,24 @@ c_NEGF_Common<T>:: Compute_RhoNonEqOld ()
                 h_X_contact(c) = h_X_glo(n);
             }
 
+            amrex::Print() << "h_Xtil_glo, Ytil_glo, X, Y\n";
+            for (int i=0; i < Hsize_glo; ++i) 
+            {
+                amrex::Print() << i << std::setprecision(3) 
+                               << std::setw(18) << h_Xtil_glo(i)
+                               << std::setw(18) << h_Ytil_glo(i)
+                               << std::setw(18) << h_X_glo(i)
+                               << std::setw(18) << h_Y_glo(i)
+                               << "\n";
+            }
+            amrex::Print() << "h_X_contact, h_Y_contact\n";
+            for (int c=0; c < NUM_CONTACTS; ++c) 
+            {
+                amrex::Print() << c << std::setprecision(3) 
+                               << std::setw(18) << h_X_contact(c)
+                               << std::setw(18) << h_Y_contact(c)
+                               << "\n";
+            }
 
             #ifdef AMREX_USE_GPU
             d_Alpha_loc_data.copy(h_Alpha_loc_data);
@@ -2132,9 +2174,13 @@ c_NEGF_Common<T>:: Compute_RhoNonEq ()
     /*constant references*/
     auto const& Alpha           = d_Alpha_loc_data.const_table();
     auto const& Xtil_glo        = d_Xtil_glo_data.const_table();
+    auto const& d_Xtil_glo      = d_Xtil_glo_data.table();
     auto const& Ytil_glo        = d_Ytil_glo_data.const_table();
+    auto const& d_Ytil_glo      = d_Ytil_glo_data.table();
     auto const& X               = d_X_loc_data.const_table();
+    auto const& d_X_loc         = d_X_loc_data.table();
     auto const& Y               = d_Y_loc_data.const_table();
+    auto const& d_Y_loc         = d_Y_loc_data.table();
 
     auto const& Alpha_contact   = d_Alpha_contact_data.const_table();
     auto const& X_contact       = d_X_contact_data.const_table();
@@ -2166,6 +2212,13 @@ c_NEGF_Common<T>:: Compute_RhoNonEq ()
     auto& degen_vec             = block_degen_vec;
     #endif
   
+    int Hsize_loc = ceil(Hsize_glo/num_recursive_parts);
+
+    amrex::Print() << "Hsize_glo/loc/sections: " 
+                   << Hsize_glo << "    " 
+                   << Hsize_loc << "    "
+                   << num_recursive_parts << "\n";
+
     for(int p=0; p < ContourPath_RhoNonEq.size(); ++p) 
     {
         for(int e=0; e < ContourPath_RhoNonEq[p].num_pts; ++e) 
@@ -2198,6 +2251,7 @@ c_NEGF_Common<T>:: Compute_RhoNonEq ()
             }
             #ifdef AMREX_USE_GPU
             d_Fermi_contact_data.copy(h_Fermi_contact_data);
+            d_Alpha_loc_data.copy(h_Alpha_loc_data);
             #endif        
 
             /*MPI_Allgather*/
@@ -2216,16 +2270,12 @@ c_NEGF_Common<T>:: Compute_RhoNonEq ()
                 h_Alpha_contact(c) = h_Alpha_glo(n_glo);
             }
             #ifdef AMREX_USE_GPU
-            d_Alpha_loc_data.copy(h_Alpha_loc_data);
             d_Alpha_contact_data.copy(h_Alpha_contact_data);
             #endif        
 
-            num_sections = 1; 
-            Hsize_loc = int((Hsize_glo+1)/num_sections);
-
             h_Y_glo(0) = 0;
             h_X_glo(Hsize_glo-1) = 0;
-            for(int section=0; e < num_sections; ++section) 
+            for(int section=0; section < num_recursive_parts; ++section) 
             {
                 for (int n = std::max(1, Hsize_loc*section); 
                          n < std::min(Hsize_loc*(section+1), Hsize_glo); 
@@ -2236,8 +2286,8 @@ c_NEGF_Common<T>:: Compute_RhoNonEq ()
                     h_Ytil_glo(n) = h_Hc_loc(p) / ( h_Alpha_glo(n-1) - h_Y_glo(n-1) );
                     h_Y_glo(n) = h_Hb_loc(p) * h_Ytil_glo(n);
                 }
-                for (int n = std::min(Hsize_glo-2, Hsize_loc*(num_sections-section)); 
-                        n >= Hsize_loc*(num_sections-section-1); 
+                for (int n = std::min(Hsize_glo-2, Hsize_loc*(num_recursive_parts-section)); 
+                        n >= Hsize_loc*(num_recursive_parts-section-1); 
                         n--)
                 //for (int n = Hsize_glo-2; n > -1; n--)
                 {
@@ -2247,23 +2297,42 @@ c_NEGF_Common<T>:: Compute_RhoNonEq ()
                 }
 
                 #ifdef AMREX_USE_GPU
-                int Xtil_begin = section*Hsize_loc;
-                int Xtil_end = std::min(Hsize_loc*(section+1), Hsize_glo);
+                int Ytil_begin = section*Hsize_loc;
+                int Ytil_end = std::min(Hsize_loc*(section+1), Hsize_glo);
                 
+                if(e==0) 
+                {
+                    amrex::Print() << "section/Ytil_begin/end: " << section << "  " << Ytil_begin << "   " << Ytil_end << "\n";   
+                }
                 amrex::Gpu::copyAsync(amrex::Gpu::hostToDevice, 
-                            h_Xtil_glo.p + Xtil_begin, 
-                            h_Xtil_glo.p + Xtil_end, 
-                            d_Xtil_glo.p + Xtil_begin);
+                                      h_Ytil_glo.p + Ytil_begin, 
+                                      h_Ytil_glo.p + Ytil_end, 
+                                      d_Ytil_glo.p + Ytil_begin);
 
-                int Ytil_begin = Hsize_loc * (num_sections-section-1);
-                int Ytil_end = std::min(Hsize_glo, Hsize_loc*(num_sections-section));
+                int Xtil_begin = Hsize_loc * (num_recursive_parts-section-1);
+                int Xtil_end = std::min(Hsize_glo, Hsize_loc*(num_recursive_parts-section));
+                if(e==0) 
+                {
+                    amrex::Print() << "section/Xtil_begin/end: " << section << "  " << Xtil_begin << "   " << Xtil_end << "\n";
+                }
 
                 amrex::Gpu::copyAsync(amrex::Gpu::hostToDevice, 
-                            h_Ytil_glo.p + Ytil_begin, h_Ytil_glo.p + Ytil_end, d_Ytil_glo.p + Ytil_begin);
-                //d_Xtil_glo_data.copy(h_Xtil_glo_data);
-                //d_Ytil_glo_data.copy(h_Ytil_glo_data);
+                                      h_Xtil_glo.p + Xtil_begin, 
+                                      h_Xtil_glo.p + Xtil_end, 
+                                      d_Xtil_glo.p + Xtil_begin);
                 #endif        
             }
+
+            //amrex::Print() << "h_Xtil_glo, Ytil_glo, X, Y\n";
+            //for (int i=0; i < Hsize_glo; ++i) 
+            //{
+            //    amrex::Print() << i << std::setprecision(3) 
+            //                   << std::setw(18) << h_Xtil_glo(i)
+            //                   << std::setw(18) << h_Ytil_glo(i)
+            //                   << std::setw(18) << h_X_glo(i)
+            //                   << std::setw(18) << h_Y_glo(i)
+            //                   << "\n";
+            //}
 
             #ifdef AMREX_USE_GPU
             int X_begin = vec_cumu_blkCol_size[my_rank];
@@ -2277,8 +2346,6 @@ c_NEGF_Common<T>:: Compute_RhoNonEq ()
                         h_Y_glo.p + X_begin, 
                         h_Y_glo.p + X_end, 
                         d_Y_loc.p);
-            //d_X_loc_data.copy(h_X_loc_data);
-            //d_Y_loc_data.copy(h_Y_loc_data);
             #else 
             for (int c = 0; c < blkCol_size_loc; ++c)
             {
@@ -2299,6 +2366,35 @@ c_NEGF_Common<T>:: Compute_RhoNonEq ()
             d_Y_contact_data.copy(h_Y_contact_data);
             amrex::Gpu::streamSynchronize();
             #endif        
+            
+            //Verification
+            h_Xtil_check_data.resize({0},{Hsize_glo}, The_Pinned_Arena());
+            SetVal_Table1D(h_Xtil_check_data,zero);
+            h_Ytil_check_data.resize({0},{Hsize_glo}, The_Pinned_Arena());
+            SetVal_Table1D(h_Ytil_check_data,zero);
+
+            h_Xtil_check_data.copy(d_Xtil_glo_data);
+            h_Ytil_check_data.copy(d_Ytil_glo_data);
+            amrex::Gpu::streamSynchronize();
+            
+            auto const& h_Xtil_check = h_Xtil_check_data.const_table();
+            auto const& h_Ytil_check = h_Ytil_check_data.const_table();
+
+            for(int h=0; h<Hsize_glo; ++h) 
+            {
+                if(h_Xtil_check(h) != h_Xtil_glo(h)) 
+                {
+                    amrex::Abort("Xtil failed to match at index: " + h);
+                }
+            }
+            for(int h=0; h<Hsize_glo; ++h) 
+            {
+                if(h_Ytil_check(h) != h_Ytil_glo(h)) 
+                {
+                    amrex::Abort("Ytil failed to match at index: " + h);
+                }
+            }
+            //End verification
 
     	    /*following is for lambda capture*/
             int cumulative_columns = vec_cumu_blkCol_size[my_rank];
@@ -2424,8 +2520,8 @@ c_NEGF_Common<T>:: Compute_RhoEq ()
     auto const& h_Ytil_glo = h_Ytil_glo_data.table();
     auto const& h_X_glo = h_X_glo_data.table();
     auto const& h_Y_glo = h_Y_glo_data.table();
-    //auto const& h_X_loc = h_X_loc_data.table();
-    //auto const& h_Y_loc = h_Y_loc_data.table();
+    auto const& h_X_loc = h_X_loc_data.table();
+    auto const& h_Y_loc = h_Y_loc_data.table();
     auto const& h_Sigma_contact = h_Sigma_contact_data.table();
 
     auto const& h_RhoEq_loc      = h_RhoEq_loc_data.table();
