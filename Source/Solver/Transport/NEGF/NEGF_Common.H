@@ -325,6 +325,7 @@ public:
 
     amrex::Real initial_charge = 1e-3;
     int num_recursive_parts = 1;
+    int Hsize_recur_part=-1; 
 
     void Initialize_ChargeAtFieldSites();
     virtual void ReadNanostructureProperties();
