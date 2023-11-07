@@ -1153,9 +1153,13 @@ c_NEGF_Common<T>:: Compute_DensityOfStates (std::string dos_foldername, bool fla
     /*constant references*/
     auto const& Alpha           = d_Alpha_loc_data.const_table();
     auto const& Xtil_glo        = d_Xtil_glo_data.const_table();
+    auto const& d_Xtil_glo      = d_Xtil_glo_data.table();
     auto const& Ytil_glo        = d_Ytil_glo_data.const_table();
+    auto const& d_Ytil_glo      = d_Ytil_glo_data.table();
     auto const& X               = d_X_loc_data.const_table();
+    auto const& d_X_loc         = d_X_loc_data.table();
     auto const& Y               = d_Y_loc_data.const_table();
+    auto const& d_Y_loc         = d_Y_loc_data.table();
 
     auto const& Alpha_contact   = d_Alpha_contact_data.const_table();
     auto const& X_contact       = d_X_contact_data.const_table();
@@ -1177,6 +1181,7 @@ c_NEGF_Common<T>:: Compute_DensityOfStates (std::string dos_foldername, bool fla
     /*constant references*/
     auto const& Alpha           = h_Alpha_loc_data.const_table();
     auto const& Xtil_glo        = h_Xtil_glo_data.const_table();
+
     auto const& Ytil_glo        = h_Ytil_glo_data.const_table();
     auto const& X               = h_X_loc_data.const_table();
     auto const& Y               = h_Y_loc_data.const_table();
@@ -2534,9 +2539,13 @@ c_NEGF_Common<T>:: Compute_RhoEq ()
     /*constant references*/
     auto const& Alpha           = d_Alpha_loc_data.const_table();
     auto const& Xtil_glo        = d_Xtil_glo_data.const_table();
+    auto const& d_Xtil_glo      = d_Xtil_glo_data.table();
     auto const& Ytil_glo        = d_Ytil_glo_data.const_table();
+    auto const& d_Ytil_glo      = d_Ytil_glo_data.table();
     auto const& X               = d_X_loc_data.const_table();
+    auto const& d_X_loc         = d_X_loc_data.table();
     auto const& Y               = d_Y_loc_data.const_table();
+    auto const& d_Y_loc         = d_Y_loc_data.table();
     auto const& Sigma_contact   = d_Sigma_contact_data.const_table();
     auto& degen_vec             = block_degen_gpuvec;
 
@@ -2741,9 +2750,13 @@ c_NEGF_Common<T>:: Compute_GR_atPoles ()
     /*constant references*/
     auto const& Alpha           = d_Alpha_loc_data.const_table();
     auto const& Xtil_glo        = d_Xtil_glo_data.const_table();
+    auto const& d_Xtil_glo      = d_Xtil_glo_data.table();
     auto const& Ytil_glo        = d_Ytil_glo_data.const_table();
+    auto const& d_Ytil_glo      = d_Ytil_glo_data.table();
     auto const& X               = d_X_loc_data.const_table();
+    auto const& d_X_loc         = d_X_loc_data.table();
     auto const& Y               = d_Y_loc_data.const_table();
+    auto const& d_Y_loc         = d_Y_loc_data.table();
     auto const& Sigma_contact   = d_Sigma_contact_data.const_table();
     auto& degen_vec             = block_degen_gpuvec;
     #else
@@ -3248,9 +3261,13 @@ c_NEGF_Common<T>:: Compute_Current ()
     /*constant references*/
     auto const& Alpha           = d_Alpha_loc_data.const_table();
     auto const& Xtil_glo        = d_Xtil_glo_data.const_table();
+    auto const& d_Xtil_glo      = d_Xtil_glo_data.table();
     auto const& Ytil_glo        = d_Ytil_glo_data.const_table();
+    auto const& d_Ytil_glo      = d_Ytil_glo_data.table();
     auto const& X               = d_X_loc_data.const_table();
+    auto const& d_X_loc         = d_X_loc_data.table();
     auto const& Y               = d_Y_loc_data.const_table();
+    auto const& d_Y_loc         = d_Y_loc_data.table();
 
     auto const& Alpha_contact   = d_Alpha_contact_data.const_table();
     auto const& X_contact       = d_X_contact_data.const_table();
