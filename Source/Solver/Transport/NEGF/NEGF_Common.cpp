@@ -370,7 +370,7 @@ c_NEGF_Common<T>:: ReadNanostructureProperties ()
     }
 
     num_recursive_parts = 1;
-    pp_ns.query("num_recursive_parts", num_recursive_parts);
+    queryWithParser(pp_ns, "num_recursive_parts", num_recursive_parts);
     
     Set_Material_Specific_Parameters();
 
