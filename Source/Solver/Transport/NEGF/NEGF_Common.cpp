@@ -283,25 +283,27 @@ c_NEGF_Common<T>:: ReadNanostructureProperties ()
     flag_contact_mu_specified = 1;
     pp_ns.query("contact_mu_specified", flag_contact_mu_specified);
 
+    flag_EC_potential_updated = false;
     if(flag_contact_mu_specified) 
     {
         amrex::Vector<amrex::Real> vec_mu;
         getArrWithParser(pp_ns, "contact_mu", vec_mu, 0, NUM_CONTACTS);
         for(int c=0; c<NUM_CONTACTS; ++c) 
-	{
+	    {
             Contact_Electrochemical_Potential[c] = vec_mu[c];
         }
-	vec_mu.clear();
+        flag_EC_potential_updated = true;
+	    vec_mu.clear();
     }
     else 
     {
         amrex::Vector<std::string> temp_vec;
         pp_ns.getarr("contact_parser_string", temp_vec);
         for(int c=0; c<NUM_CONTACTS; ++c) 
-	{
+	    {
             Contact_Parser_String[c] = temp_vec[c];
         }
-	temp_vec.clear();
+	    temp_vec.clear();
     }
     pp_ns.query("gate_string", Gate_String);
 

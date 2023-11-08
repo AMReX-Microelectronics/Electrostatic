@@ -475,6 +475,7 @@ c_TransportSolver:: Set_TerminalBiasesAndContactPotential(NSType const& NS)
               amrex::Print() << " Updated terminal voltage: " << k << "  " << V_contact[k] << " V\n";
     
              NS->Contact_Electrochemical_Potential[k] = NS->E_f - V_contact[k];
+             NS->flag_EC_potential_updated = true;
          }
     
          Vds = V_contact[1] - V_contact[0];

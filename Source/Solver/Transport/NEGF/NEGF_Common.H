@@ -276,6 +276,7 @@ public:
     amrex::Real Contact_Temperature[NUM_CONTACTS] = {298., 298.};
 
     int flag_contact_mu_specified = 1;
+    bool flag_EC_potential_updated = false;
     amrex::Real Contact_Electrochemical_Potential[NUM_CONTACTS] = {0., 0.};
     std::string Contact_Parser_String[NUM_CONTACTS];
     std::string Gate_String = "Gate";

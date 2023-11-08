@@ -613,16 +613,16 @@ c_Nanostructure<NSType>::Obtain_PotentialAtSites()
         } 
     }
 
-    for (int l=0; l<num_field_sites; ++l)
-    {
-        ParallelDescriptor::ReduceRealSum(p_V[l]);
-    }
-    //MPI_Allreduce( MPI_IN_PLACE,
-    //               &(p_V[0]),
-    //               num_field_sites,
-    //               MPI_DOUBLE,
-    //               MPI_SUM,
-    //               ParallelDescriptor::Communicator());
+    //for (int l=0; l<num_field_sites; ++l)
+    //{
+    //    ParallelDescriptor::ReduceRealSum(p_V[l]);
+    //}
+    MPI_Allreduce( MPI_IN_PLACE,
+                   &(p_V[0]),
+                   num_field_sites,
+                   MPI_DOUBLE,
+                   MPI_SUM,
+                   ParallelDescriptor::Communicator());
 
     //for(int i=0; i < num_field_sites; ++i)
     //{
@@ -796,20 +796,17 @@ void
 c_Nanostructure<NSType>:: Solve_NEGF ()
 {
 
-    BL_PROFILE_VAR("Other", compute_other);
-
     NSType::AddPotentialToHamiltonian();
-    NSType::Update_ContactElectrochemicalPotential(); 
-    NSType::Define_EnergyLimits();
-    NSType::Update_IntegrationPaths();
 
-    BL_PROFILE_VAR_STOP(compute_other);
-
-    BL_PROFILE_VAR("Compute_RhoInduced", compute_rho_ind);
+    if(NSType::flag_EC_potential_updated) 
+    {
+        NSType::Update_ContactElectrochemicalPotential(); 
+        NSType::Define_EnergyLimits();
+        NSType::Update_IntegrationPaths();
+        NSType::flag_EC_potential_updated = false;
+    }
 
     NSType::Compute_InducedCharge();
-
-    BL_PROFILE_VAR_STOP(compute_rho_ind);
 
 }
 
