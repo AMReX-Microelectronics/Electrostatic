@@ -344,9 +344,12 @@ c_TransportSolver::Solve(const int step, const amrex::Real time)
                }
                amrex::Print() << " Vds: " << Vds << " V, Vgs: " << Vgs << " V\n";
 
-               vp_CNT[c]->Solve_NEGF();
-
-               CopyFromNS_ChargeComputedFromNEGF(vp_CNT[c]);
+               #ifdef AMREX_USE_GPU
+               vp_CNT[c]->Solve_NEGF(d_n_curr_out_data);
+               #else
+               vp_CNT[c]->Solve_NEGF(h_n_curr_out_data);
+               #endif
+               //CopyFromNS_ChargeComputedFromNEGF(vp_CNT[c]);
             }
 
            BL_PROFILE_VAR_STOP(negf_couter);
@@ -437,7 +440,8 @@ c_TransportSolver::Solve(const int step, const amrex::Real time)
    {
        for (int c=0; c < vp_CNT.size(); ++c)
        {
-           vp_CNT[c]->Solve_NEGF();
+           RealTable1D RhoInduced; /*this is not correct but added just so Solve_NEGF compiles*/
+           vp_CNT[c]->Solve_NEGF(RhoInduced);
 
            bool compute_current = true;
            Write_DataComputedUsingSelfConsistencyAlgorithm(vp_CNT[c], vp_CNT[c]->step_filename_str, compute_current);

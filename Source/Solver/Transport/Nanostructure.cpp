@@ -793,9 +793,8 @@ c_Nanostructure<NSType>:: InitializeNEGF (std::string common_foldername_str)
 
 template<typename NSType>
 void
-c_Nanostructure<NSType>:: Solve_NEGF ()
+c_Nanostructure<NSType>:: Solve_NEGF (RealTable1D& n_curr_out_data)
 {
-
     NSType::AddPotentialToHamiltonian();
 
     if(NSType::flag_EC_potential_updated) 
@@ -806,7 +805,7 @@ c_Nanostructure<NSType>:: Solve_NEGF ()
         NSType::flag_EC_potential_updated = false;
     }
 
-    NSType::Compute_InducedCharge();
+    NSType::Compute_InducedCharge(n_curr_out_data);
 
 }
 

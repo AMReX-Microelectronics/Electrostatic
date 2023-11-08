@@ -359,7 +359,7 @@ public:
     void Compute_RhoEq();
     void Compute_RhoNonEq();
     void Compute_RhoNonEqOld();
-    void Compute_InducedCharge();
+    void Compute_InducedCharge(RealTable1D& n_curr_out_data);
     void Compute_Current();
     //void GuessNewCharge_SimpleMixingAlg();
     
