@@ -283,7 +283,7 @@ c_TransportSolver::Solve(const int step, const amrex::Real time)
     auto& rOutput  = rCode.get_Output();
     auto& rPostPro = rCode.get_PostProcessor();
 
-    max_iter = 1;
+    max_iter = 0;
     m_step = step;
 
     for (int c=0; c < vp_CNT.size(); ++c)
@@ -376,7 +376,7 @@ c_TransportSolver::Solve(const int step, const amrex::Real time)
                           vp_CNT[c]->iter_filename_str, compute_current);
     	      }
 
-              if(flag_write_LDOS_iter and max_iter%write_LDOS_iter_period == 0) 
+              if(flag_write_LDOS_iter and (max_iter+1)%write_LDOS_iter_period == 0) 
               {
                   std::string iter_dos_foldername_str 
                   = amrex::Concatenate(vp_CNT[c]->iter_foldername_str + "/LDOS_iter", 
@@ -736,7 +736,7 @@ c_TransportSolver:: Obtain_maximum_time(amrex::Real const* total_time_counter_di
                                    total_max_time_for_current_step[5]/max_iter
         };
 
-        amrex::Print() << "\nIterations in this step: " << max_iter-1 << "\n";
+        amrex::Print() << "\nIterations in this step: " << max_iter << "\n";
 
         amrex::Print() << "Avg. max times for: \n ";
         amrex::Print() << " Electrostatics:   " 
@@ -773,18 +773,18 @@ c_TransportSolver:: Obtain_maximum_time(amrex::Real const* total_time_counter_di
 
         total_iter += max_iter;
 
-        amrex::Real avg_all[6] = {total_max_time_across_all_steps[0]/(total_iter-1), 
-                                  total_max_time_across_all_steps[1]/(total_iter-1),
-                                  total_max_time_across_all_steps[2]/(total_iter-1),
-                                  total_max_time_across_all_steps[3]/(total_iter-1),
-                                  total_max_time_across_all_steps[4]/(total_iter-1),
-                                  total_max_time_across_all_steps[5]/(total_iter-1)
+        amrex::Real avg_all[6] = {total_max_time_across_all_steps[0]/total_iter, 
+                                  total_max_time_across_all_steps[1]/total_iter,
+                                  total_max_time_across_all_steps[2]/total_iter,
+                                  total_max_time_across_all_steps[3]/total_iter,
+                                  total_max_time_across_all_steps[4]/total_iter,
+                                  total_max_time_across_all_steps[5]/total_iter
                                  };
       
         amrex::Real avg_total = avg_all[0] + avg_all[1] + avg_all[2] +
                                 avg_all[3] + avg_all[4];
 
-        amrex::Print() << "\nTotal iterations so far: " << (total_iter-1) << "\n";
+        amrex::Print() << "\nTotal iterations so far: " << total_iter << "\n";
         amrex::Print() << "Avg. time over all steps for: \n";
         amrex::Print() << " Electrostatics:   "
                        << avg_all[0] << std::setw(15) << (avg_all[0]/avg_total)*100 << " %" << "\n";    
