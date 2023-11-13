@@ -292,12 +292,12 @@ c_TransportSolver::Solve(const int step, const amrex::Real time)
        Set_CommonStepFolder(step);
     }
 
-    amrex::Real time_counter[4] = {0., 0., 0., 0.};
-    amrex::Real total_time_counter_diff[3] = {0., 0., 0.};
+    amrex::Real time_counter[7] = {0., 0., 0., 0., 0., 0., 0.};
+    amrex::Real total_time_counter_diff[6] = {0., 0., 0., 0., 0., 0.};
 
     if(rCode.use_electrostatic) 
     {	
-        BL_PROFILE_VAR("Part1_to_3_sum", part1_to_3_sum_counter);
+        BL_PROFILE_VAR("Part1_to_6_sum", part1_to_6_sum_counter);
 
         bool update_surface_soln_flag = true;	   
         do 
@@ -311,33 +311,31 @@ c_TransportSolver::Solve(const int step, const amrex::Real time)
            //Part 1: Electrostatics
            time_counter[0] = amrex::second();
            
-           BL_PROFILE_VAR("Part1_Electrostatics", electrostatics_couter);
 
            rMprop.ReInitializeMacroparam(NS_gather_field_str);
-
            rMLMG.UpdateBoundaryConditions(update_surface_soln_flag);
 
            auto mlmg_solve_time = rMLMG.Solve_PoissonEqn();
 
            rPostPro.Compute();
 
-           BL_PROFILE_VAR_STOP(electrostatics_couter);
-
-           //Part 2: NEGF
            time_counter[1] = amrex::second();
 
-           BL_PROFILE_VAR("Part2_NEGF", negf_couter);
-
+           //Part 2: Gather
            for (int c=0; c < vp_CNT.size(); ++c)
            {
 	           if( vp_CNT[c]->write_at_iter )
 	           {
 	                vp_CNT[c]->Set_IterationFilenameString(max_iter);
-                    //Write_PredictedCharge(vp_CNT[c]);
                }
 
 	           vp_CNT[c]->Gather_MeshAttributeAtAtoms();  
+            }
+           time_counter[2] = amrex::second();
                 
+           //Part 3: NEGF
+           for (int c=0; c < vp_CNT.size(); ++c)
+           {
 	           if(update_surface_soln_flag)
 	           {
                    Set_TerminalBiasesAndContactPotential(vp_CNT[c]);   
@@ -351,87 +349,102 @@ c_TransportSolver::Solve(const int step, const amrex::Real time)
                #endif
                //CopyFromNS_ChargeComputedFromNEGF(vp_CNT[c]);
             }
+           time_counter[3] = amrex::second();
 
-           BL_PROFILE_VAR_STOP(negf_couter);
+           //Part 4: Self-consistency
+           Perform_SelfConsistencyAlgorithm();
 
-           //Part 3: Self-consistency
-           time_counter[2] = amrex::second();
-           
-           BL_PROFILE_VAR("Part3_Self_Consistency", self_consistency_counter);
+           time_counter[4] = amrex::second();
 
-           Choose_SelfConsistencyAlgorithm();
-
+           //Part 5: Deposit
            rMprop.ReInitializeMacroparam(NS_deposit_field_str);
 
-            for (int c=0; c < vp_CNT.size(); ++c)
-            {
-               CopyToNS_ChargeComputedUsingSelfConsistencyAlgorithm(vp_CNT[c]);
+           for (int c=0; c < vp_CNT.size(); ++c)
+           {
+              CopyToNS_ChargeComputedUsingSelfConsistencyAlgorithm(vp_CNT[c]);
+              vp_CNT[c]->Deposit_AtomAttributeToMesh();
+	       }
+           time_counter[5] = amrex::second();
 
-	           if( vp_CNT[c]->write_at_iter ) 
-               {
-                   bool compute_current = false;
-                   Write_DataComputedUsingSelfConsistencyAlgorithm(vp_CNT[c], vp_CNT[c]->iter_filename_str, compute_current);
-    	       }
+           //Part 6: Write data
+           for (int c=0; c < vp_CNT.size(); ++c)
+           {
+	          if( vp_CNT[c]->write_at_iter ) 
+              {
+                  bool compute_current = false;
+                  Write_DataComputedUsingSelfConsistencyAlgorithm(vp_CNT[c], 
+                          vp_CNT[c]->iter_filename_str, compute_current);
+    	      }
 
-               vp_CNT[c]->Deposit_AtomAttributeToMesh();
+              if(flag_write_LDOS_iter and max_iter%write_LDOS_iter_period == 0) 
+              {
+                  std::string iter_dos_foldername_str 
+                  = amrex::Concatenate(vp_CNT[c]->iter_foldername_str + "/LDOS_iter", 
+                          max_iter, negf_plt_name_digits);
 
-               if(flag_write_LDOS_iter and max_iter%write_LDOS_iter_period == 0) 
-               {
-                   std::string iter_dos_foldername_str 
-                   = amrex::Concatenate(vp_CNT[c]->iter_foldername_str + "/LDOS_iter", max_iter, negf_plt_name_digits);
+                  CreateDirectory(iter_dos_foldername_str);
+                  // e.g.: /negf/cnt/step0001_iter/LDOS_iter0002/
+                  
+                  vp_CNT[c]->Compute_DensityOfStates(iter_dos_foldername_str, 
+                          flag_write_LDOS_iter);
+              }
+	       }
+           time_counter[6] = amrex::second();
 
-                   CreateDirectory(iter_dos_foldername_str);
-                   // e.g.: /negf/cnt/step0001_iter/LDOS_iter0002/
-                   
-                   vp_CNT[c]->Compute_DensityOfStates(iter_dos_foldername_str, flag_write_LDOS_iter);
-               }
-	        }
-            update_surface_soln_flag = false;
-            max_iter += 1;
+           update_surface_soln_flag = false;
+           max_iter += 1;
 
-            BL_PROFILE_VAR_STOP(self_consistency_counter);
+           total_time_counter_diff[0] += time_counter[1] - time_counter[0];
+           total_time_counter_diff[1] += time_counter[2] - time_counter[1];
+           total_time_counter_diff[2] += time_counter[3] - time_counter[2];
+           total_time_counter_diff[3] += time_counter[4] - time_counter[3];
+           total_time_counter_diff[4] += time_counter[5] - time_counter[4];
+           total_time_counter_diff[5] += time_counter[6] - time_counter[5];
+           total_time_counter_diff[6] += time_counter[7] - time_counter[6];
 
-            time_counter[3] = amrex::second();
-
-            total_time_counter_diff[0] += time_counter[1] - time_counter[0];
-            total_time_counter_diff[1] += time_counter[2] - time_counter[1];
-            total_time_counter_diff[2] += time_counter[3] - time_counter[2];
-
-            amrex::Print() << " Time for electrostatics:   " << time_counter[1] - time_counter[0] << "\n";    
-            amrex::Print() << " Time for NEGF:             " << time_counter[2] - time_counter[1] << "\n";    
-            amrex::Print() << " Time for self-consistency: " << time_counter[3] - time_counter[2] << "\n";    
-
+           amrex::Print() << " Time for electrostatics:   " << time_counter[1] - time_counter[0] << "\n";    
+           amrex::Print() << " Time for Gathering field:  " << time_counter[2] - time_counter[1] << "\n";    
+           amrex::Print() << " Time for NEGF:             " << time_counter[3] - time_counter[2] << "\n";    
+           amrex::Print() << " Time for self-consistency: " << time_counter[4] - time_counter[3] << "\n";    
+           amrex::Print() << " Time for deposit charge:   " << time_counter[5] - time_counter[4] << "\n";    
+           amrex::Print() << " Time for writing at iter:  " << time_counter[6] - time_counter[5] << "\n";    
+           amrex::Print() << " Total time (write excluded):   " << time_counter[5] - time_counter[0] << "\n";    
 
         } while(Broyden_Norm > Broyden_max_norm);    
 
-
-        BL_PROFILE_VAR_STOP(part1_to_3_sum_counter);
+        BL_PROFILE_VAR_STOP(part1_to_6_sum_counter);
 
         Obtain_maximum_time(total_time_counter_diff);
 
-        //Part 4: current computation & writing data
+        //Part 7: current computation & writing data
         amrex::Real time_for_current = amrex::second();
-
-        BL_PROFILE_VAR("Part4_Current_Computation", current_computation_counter);
 
         for (int c=0; c < vp_CNT.size(); ++c)
         {
             bool compute_current = true;
-            Write_DataComputedUsingSelfConsistencyAlgorithm(vp_CNT[c], vp_CNT[c]->step_filename_str, compute_current);
+            Write_DataComputedUsingSelfConsistencyAlgorithm(vp_CNT[c], 
+                    vp_CNT[c]->step_filename_str, compute_current);
+        }
 
-            if(flag_write_LDOS) 
+        amrex::Print() << "Time for current computation & writing data:   " 
+                       << amrex::second() - time_for_current << "\n";    
+
+
+        if(flag_write_LDOS) 
+        {
+            for (int c=0; c < vp_CNT.size(); ++c)
             {
                 std::string 
                 dos_step_foldername_str 
-                = amrex::Concatenate(vp_CNT[c]->step_foldername_str + "/LDOS_step", step, negf_plt_name_digits);
+                = amrex::Concatenate(vp_CNT[c]->step_foldername_str + "/LDOS_step", 
+                        step, negf_plt_name_digits);
+
                 CreateDirectory(dos_step_foldername_str);
                 // e.g.: /negf/cnt/LDOS_step0001/
                 
                 vp_CNT[c]->Compute_DensityOfStates(dos_step_foldername_str,flag_write_LDOS);
             }
         }
-        BL_PROFILE_VAR_STOP(current_computation_counter);
-        amrex::Print() << "Time for current computation:   " << amrex::second() - time_for_current << "\n";    
 
         Reset_ForNextBiasStep();
 
@@ -561,13 +574,13 @@ c_TransportSolver:: Write_DataComputedUsingSelfConsistencyAlgorithm(NSType const
     //Note: n_curr_out_glo was output from negf and input to broyden.
     //n_curr_in is the broyden predicted charge for next iteration.
     //NEGF->n_curr_out -> Broyden->n_curr_in -> Electrostatics -> NEGF.
+    
     NS->Write_Data(write_filename, n_curr_out_glo_data, Norm_glo_data);
 	NS->Write_InputInducedCharge(write_filename, n_curr_in_glo_data); 
 
     #else
     NS->Write_Data(write_filename, h_n_curr_out_data, h_Norm_data);
 	NS->Write_InputInducedCharge(write_filename, h_n_curr_in_data); 
-
     //if(map_AlgorithmType[Algorithm_Type] == s_Algorithm::Type::broyden_first) 
 	//{
     //    Write_Table2D(h_Jinv_curr_data, common_step_folder_str + "/Jinv.dat", "Jinv");
@@ -654,7 +667,7 @@ c_TransportSolver:: Clear_Global_Output_Data()
 
 
 void
-c_TransportSolver:: Choose_SelfConsistencyAlgorithm() 
+c_TransportSolver:: Perform_SelfConsistencyAlgorithm() 
 {
    switch(map_AlgorithmType[Algorithm_Type])
    {
@@ -703,11 +716,11 @@ void
 c_TransportSolver:: Obtain_maximum_time(amrex::Real const* total_time_counter_diff)
 {
 
-    amrex::Real total_max_time_for_current_step[3] = {0., 0., 0.};
+    amrex::Real total_max_time_for_current_step[6] = {0., 0., 0., 0., 0., 0.};
 
     MPI_Reduce(total_time_counter_diff,
                total_max_time_for_current_step,
-               3,
+               6,
                MPI_DOUBLE,
                MPI_MAX,
                ParallelDescriptor::IOProcessorNumber(),
@@ -715,37 +728,79 @@ c_TransportSolver:: Obtain_maximum_time(amrex::Real const* total_time_counter_di
 
     if(ParallelDescriptor::IOProcessor()) 
     {
-        amrex::Real avg_curr[3] = {total_max_time_for_current_step[0]/max_iter, 
+        amrex::Real avg_curr[6] = {total_max_time_for_current_step[0]/max_iter, 
                                    total_max_time_for_current_step[1]/max_iter,
-                                   total_max_time_for_current_step[2]/max_iter};
+                                   total_max_time_for_current_step[2]/max_iter,
+                                   total_max_time_for_current_step[3]/max_iter,
+                                   total_max_time_for_current_step[4]/max_iter,
+                                   total_max_time_for_current_step[5]/max_iter
+        };
 
-        amrex::Print() << "\nIterations in this step: " << max_iter << "\n";
-        amrex::Print() << "Avg. max time for this step electrostatics:   " 
+        amrex::Print() << "\nIterations in this step: " << max_iter-1 << "\n";
+
+        amrex::Print() << "Avg. max times for: \n ";
+        amrex::Print() << " Electrostatics:   " 
                        << avg_curr[0] << "\n";    
-        amrex::Print() << "Avg. max time for this step NEGF:             " 
+
+        amrex::Print() << " Gather field:     " 
                        << avg_curr[1] << "\n";    
-        amrex::Print() << "Avg. max time for this step self-consistency: " 
+
+        amrex::Print() << " NEGF:             " 
                        << avg_curr[2] << "\n";    
-        amrex::Print() << "Sum of above three times: " << avg_curr[0] + avg_curr[1] + avg_curr[2] << "\n";
+
+        amrex::Print() << " self-consistency: " 
+                       << avg_curr[3] << "\n";    
+
+        amrex::Print() << " Deposit:          " 
+                       << avg_curr[4] << "\n";    
+
+        amrex::Print() << " Write at iter:    "
+                       << avg_curr[5] << "\n";    
+
+        amrex::Print() << " Total time (write excluded): " << avg_curr[0] + 
+                                                              avg_curr[1] + 
+                                                              avg_curr[2] +
+                                                              avg_curr[3] +
+                                                              avg_curr[4] << "\n";
+
 
         total_max_time_across_all_steps[0] += total_max_time_for_current_step[0];
         total_max_time_across_all_steps[1] += total_max_time_for_current_step[1];
         total_max_time_across_all_steps[2] += total_max_time_for_current_step[2];
+        total_max_time_across_all_steps[3] += total_max_time_for_current_step[3];
+        total_max_time_across_all_steps[4] += total_max_time_for_current_step[4];
+        total_max_time_across_all_steps[5] += total_max_time_for_current_step[5];
+
         total_iter += max_iter;
 
-        amrex::Real avg_all[3] = {total_max_time_across_all_steps[0]/(total_iter-1), 
+        amrex::Real avg_all[6] = {total_max_time_across_all_steps[0]/(total_iter-1), 
                                   total_max_time_across_all_steps[1]/(total_iter-1),
-                                  total_max_time_across_all_steps[2]/(total_iter-1)};
+                                  total_max_time_across_all_steps[2]/(total_iter-1),
+                                  total_max_time_across_all_steps[3]/(total_iter-1),
+                                  total_max_time_across_all_steps[4]/(total_iter-1),
+                                  total_max_time_across_all_steps[5]/(total_iter-1)
+                                 };
       
+        amrex::Real avg_total = avg_all[0] + avg_all[1] + avg_all[2] +
+                                avg_all[3] + avg_all[4];
+
         amrex::Print() << "\nTotal iterations so far: " << (total_iter-1) << "\n";
-        amrex::Real avg_total = avg_all[0] + avg_all[1] + avg_all[2];
-        amrex::Print() << "Avg. time over all steps electrostatics:   " 
+        amrex::Print() << "Avg. time over all steps for: \n";
+        amrex::Print() << " Electrostatics:   "
                        << avg_all[0] << std::setw(15) << (avg_all[0]/avg_total)*100 << " %" << "\n";    
-        amrex::Print() << "Avg. Time over all steps NEGF:             " 
+        amrex::Print() << " Gather field:     " 
                        << avg_all[1] << std::setw(15) << (avg_all[1]/avg_total)*100 << " %" << "\n";    
-        amrex::Print() << "Avg. Time over all steps self-consistency: " 
+        amrex::Print() << " NEGF:             " 
                        << avg_all[2] << std::setw(15) << (avg_all[2]/avg_total)*100 << " %" << "\n";    
-        amrex::Print() << "Sum of above three times: " << avg_total << "\n";
+        amrex::Print() << " Self-Consistency: " 
+                       << avg_all[3] << std::setw(15) << (avg_all[3]/avg_total)*100 << " %" << "\n";    
+        amrex::Print() << " Deposit:          " 
+                       << avg_all[4] << std::setw(15) << (avg_all[4]/avg_total)*100 << " %" << "\n";    
+        
+        amrex::Print() << " Write at iter:    " << avg_all[5]  << "\n";    
+
+        amrex::Print() << " Total time (write excluded): " << avg_total << "\n";
+
     }
 }
 

@@ -194,7 +194,7 @@ private:
     void Write_DataComputedUsingSelfConsistencyAlgorithm(NSType const& NS, std::string const& write_filename,
             bool const compute_current_flag);
 
-    void Choose_SelfConsistencyAlgorithm();
+    void Perform_SelfConsistencyAlgorithm();
 
     void Reset_ForNextBiasStep();
 
