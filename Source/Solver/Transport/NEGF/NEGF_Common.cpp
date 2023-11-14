@@ -683,42 +683,79 @@ c_NEGF_Common<T>::AllocateArrays ()
     SetVal_Table1D(h_Current_loc_data,0.);
 
     #if AMREX_USE_GPU
-    d_GR_loc_data.resize({0,0}, {Hsize_glo, blkCol_size_loc}, The_Arena());
-    d_A_loc_data.resize({0,0}, {Hsize_glo, blkCol_size_loc}, The_Arena());
-    d_Rho0_loc_data.resize({0},{blkCol_size_loc}, The_Arena());
-    d_RhoEq_loc_data.resize({0},{blkCol_size_loc}, The_Arena());
-    d_RhoNonEq_loc_data.resize({0},{blkCol_size_loc}, The_Arena());
-    d_GR_atPoles_loc_data.resize({0},{blkCol_size_loc}, The_Arena());
 
-    auto const& Rho0_loc        = d_Rho0_loc_data.table();
-    auto const& RhoEq_loc       = d_RhoEq_loc_data.table();
-    auto const& RhoNonEq_loc    = d_RhoNonEq_loc_data.table();
-    auto const& GR_atPoles_loc  = d_GR_atPoles_loc_data.table();
-    amrex::ParallelFor(blkCol_size_loc, [=] AMREX_GPU_DEVICE (int n) noexcept
-    {
-        Rho0_loc(n) = 0.;
-        RhoEq_loc(n) = 0.;
-        RhoNonEq_loc(n) = 0.;
-        GR_atPoles_loc(n) = 0.;
-    });
+        #ifdef COMPUTE_GREENS_FUNCTION_OFFDIAG_ELEMS
+        d_GR_loc_data.resize({0,0}, {Hsize_glo, blkCol_size_loc}, The_Arena());
+        #else
+        d_GR_loc_data.resize({0}, {blkCol_size_loc}, The_Arena());
+        #endif
+        #ifdef COMPUTE_SPECTRAL_FUNCTION_OFFDIAG_ELEMS
+        d_A_loc_data.resize({0,0}, {Hsize_glo, blkCol_size_loc}, The_Arena());
+        #else
+        d_A_loc_data.resize({0}, {blkCol_size_loc}, The_Arena());
+        #endif
+
+        d_Rho0_loc_data.resize({0},{blkCol_size_loc}, The_Arena());
+        d_RhoEq_loc_data.resize({0},{blkCol_size_loc}, The_Arena());
+        d_RhoNonEq_loc_data.resize({0},{blkCol_size_loc}, The_Arena());
+        d_GR_atPoles_loc_data.resize({0},{blkCol_size_loc}, The_Arena());
+
+        auto const& GR_loc          = d_GR_loc_data.table();
+        auto const& A_loc           = d_A_loc_data.table();
+        auto const& Rho0_loc        = d_Rho0_loc_data.table();
+        auto const& RhoEq_loc       = d_RhoEq_loc_data.table();
+        auto const& RhoNonEq_loc    = d_RhoNonEq_loc_data.table();
+        auto const& GR_atPoles_loc  = d_GR_atPoles_loc_data.table();
+        int Hsize = Hsize_glo;  
+        amrex::ParallelFor(blkCol_size_loc, [=] AMREX_GPU_DEVICE (int n) noexcept
+        {
+            #ifdef COMPUTE_GREENS_FUNCTION_OFFDIAG_ELEMS
+            for (int m=0; m<Hsize; ++m) {
+                GR_loc(m,n) = 0.;
+            }
+            #else
+            GR_loc(n) = 0.;
+            #endif
+            #ifdef COMPUTE_SPECTRAL_FUNCTION_OFFDIAG_ELEMS
+            for (int m=0; m<Hsize; ++m) {
+                A_loc(m,n) = 0.;
+            }
+            #else
+            A_loc(n) = 0.;
+            #endif
+
+            Rho0_loc(n) = 0.;
+            RhoEq_loc(n) = 0.;
+            RhoNonEq_loc(n) = 0.;
+            GR_atPoles_loc(n) = 0.;
+        });
     #else
-    h_GR_loc_data.resize({0,0}, {Hsize_glo, blkCol_size_loc}, The_Arena());
-    SetVal_Table2D(h_GR_loc_data, zero);
+        #ifdef COMPUTE_GREENS_FUNCTION_OFFDIAG_ELEMS
+        h_GR_loc_data.resize({0,0}, {Hsize_glo, blkCol_size_loc}, The_Arena());
+        SetVal_Table2D(h_GR_loc_data, zero);
+        #else
+        h_GR_loc_data.resize({0}, {blkCol_size_loc}, The_Pinned_Arena());
+        SetVal_Table1D(h_GR_loc_data, zero);
+        #endif
+        #ifdef COMPUTE_SPECTRAL_FUNCTION_OFFDIAG_ELEMS
+        h_A_loc_data.resize({0,0}, {Hsize_glo, blkCol_size_loc}, The_Arena());
+        SetVal_Table2D(h_A_loc_data, zero);
+        #else
+        h_A_loc_data.resize({0}, {blkCol_size_loc}, The_Pinned_Arena());
+        SetVal_Table1D(h_A_loc_data, zero);
+        #endif
 
-    h_A_loc_data.resize({0,0}, {Hsize_glo, blkCol_size_loc}, The_Arena());
-    SetVal_Table2D(h_A_loc_data, zero);
+        h_Rho0_loc_data.resize({0},{blkCol_size_loc}, The_Pinned_Arena());
+        SetVal_Table1D(h_Rho0_loc_data,zero);
 
-    h_Rho0_loc_data.resize({0},{blkCol_size_loc}, The_Pinned_Arena());
-    SetVal_Table1D(h_Rho0_loc_data,zero);
+        h_RhoEq_loc_data.resize({0},{blkCol_size_loc}, The_Pinned_Arena());
+        SetVal_Table1D(h_RhoEq_loc_data,zero);
 
-    h_RhoEq_loc_data.resize({0},{blkCol_size_loc}, The_Pinned_Arena());
-    SetVal_Table1D(h_RhoEq_loc_data,zero);
+        h_RhoNonEq_loc_data.resize({0},{blkCol_size_loc}, The_Pinned_Arena());
+        SetVal_Table1D(h_RhoNonEq_loc_data,zero);
 
-    h_RhoNonEq_loc_data.resize({0},{blkCol_size_loc}, The_Pinned_Arena());
-    SetVal_Table1D(h_RhoNonEq_loc_data,zero);
-
-    h_GR_atPoles_loc_data.resize({0},{blkCol_size_loc}, The_Pinned_Arena());
-    SetVal_Table1D(h_GR_atPoles_loc_data,zero);
+        h_GR_atPoles_loc_data.resize({0},{blkCol_size_loc}, The_Pinned_Arena());
+        SetVal_Table1D(h_GR_atPoles_loc_data,zero);
     #endif
 
     h_E_RealPath_data.resize({0},{NUM_ENERGY_PTS_REAL},The_Pinned_Arena());
@@ -1362,9 +1399,9 @@ c_NEGF_Common<T>:: Compute_DensityOfStates (std::string dos_foldername, bool fla
                 ComplexType minus_one(-1., 0.);
 	            ComplexType imag(0., 1.);
 
+                #ifdef COMPUTE_GREENS_FUNCTION_OFFDIAG_ELEMS
                 GR_loc(n_glo,n) =  one/(Alpha(n) - X(n) - Y(n));
 
-                #ifdef COMPUTE_GREENS_FUNCTION_OFFDIAG_ELEMS
                 for (int m = n_glo; m > 0; m--)
                 {
                     GR_loc(m-1,n) =  -1*Ytil_glo(m)*GR_loc(m,n);
@@ -1373,6 +1410,8 @@ c_NEGF_Common<T>:: Compute_DensityOfStates (std::string dos_foldername, bool fla
                 {
                     GR_loc(m+1,n) = -1*Xtil_glo(m)*GR_loc(m,n);
                 }
+                #else
+                GR_loc(n) =  one/(Alpha(n) - X(n) - Y(n));
                 #endif	
 
                 MatrixBlock<T> A_tk[NUM_CONTACTS];
@@ -1383,7 +1422,7 @@ c_NEGF_Common<T>:: Compute_DensityOfStates (std::string dos_foldername, bool fla
                     A_loc(m, n) = 0.;
                 }
                 #else
-                A_loc(n_glo,n) = 0.;
+                A_loc(n) = 0.;
                 #endif
                 for (int k=0; k < NUM_CONTACTS; ++k)
                 {
@@ -1426,13 +1465,18 @@ c_NEGF_Common<T>:: Compute_DensityOfStates (std::string dos_foldername, bool fla
                         A_tk[k] = A_kn;
                     }
                     #else
-                    A_loc(n_glo,n) = A_loc(n_glo,n) + A_nn;
+                    A_loc(n) = A_loc(n) + A_nn;
                     #endif
                 }
 
                 /*LDOS*/ 
 	         
+                #ifdef COMPUTE_SPECTRAL_FUNCTION_OFFDIAG_ELEMS
                 ComplexType val = A_loc(n_glo,n).DiagDotSum(degen_vec_ptr)/(2.*MathConst::pi);
+                #else
+                ComplexType val = A_loc(n).DiagDotSum(degen_vec_ptr)/(2.*MathConst::pi);
+                #endif
+
                 if(gpu_flag_write_LDOS) LDOS_loc(n) = val.real();
 
                 amrex::HostDevice::Atomic::Add(&(trace_r[0]), val.real());
@@ -2143,9 +2187,8 @@ c_NEGF_Common<T>:: Compute_RhoNonEq ()
                 int n_glo = n + cumulative_columns; /*global column number*/
                 ComplexType one(1., 0.);
 
-                GR_loc(n_glo,n) =  one/(Alpha(n) - X(n) - Y(n));
-
                 #ifdef COMPUTE_GREENS_FUNCTION_OFFDIAG_ELEMS
+                GR_loc(n_glo,n) =  one/(Alpha(n) - X(n) - Y(n));
                 for (int m = n_glo; m > 0; m--)
                 {
                     GR_loc(m-1,n) =  -1*Ytil_glo(m)*GR_loc(m,n);
@@ -2154,6 +2197,8 @@ c_NEGF_Common<T>:: Compute_RhoNonEq ()
                 {
                     GR_loc(m+1,n) = -1*Xtil_glo(m)*GR_loc(m,n);
                 }
+                #else
+                GR_loc(n) =  one/(Alpha(n) - X(n) - Y(n));
                 #endif
 
                 MatrixBlock<T> A_tk[NUM_CONTACTS];
@@ -2166,7 +2211,7 @@ c_NEGF_Common<T>:: Compute_RhoNonEq ()
                     A_loc(m, n) = 0.;
                 }
                 #else
-                A_loc(n_glo,n) = 0.;
+                A_loc(n) = 0.;
                 #endif
 	            ComplexType imag(0., 1.);
                 for (int k=0; k < NUM_CONTACTS; ++k)
@@ -2210,7 +2255,7 @@ c_NEGF_Common<T>:: Compute_RhoNonEq ()
                         A_tk[k] = A_kn;
                     }
                     #else 
-                    A_loc(n_glo,n) = A_loc(n_glo,n) + A_nn;
+                    A_loc(n) = A_loc(n) + A_nn;
                     #endif 
                     AnF_sum = AnF_sum + A_nn*Fermi_contact(k);
                 }
@@ -3141,11 +3186,10 @@ c_NEGF_Common<T>:: Compute_Current ()
                 int n_glo = n + cumulative_columns; /*global column number*/
                 ComplexType one(1., 0.);
                 ComplexType minus_one(-1., 0.);
-                    ComplexType imag(0., 1.);
-
-                GR_loc(n_glo,n) =  one/(Alpha(n) - X(n) - Y(n));
+                ComplexType imag(0., 1.);
 
                 #ifdef COMPUTE_GREENS_FUNCTION_OFFDIAG_ELEMS
+                GR_loc(n_glo,n) =  one/(Alpha(n) - X(n) - Y(n));
                 for (int m = n_glo; m > 0; m--)
                 {
                     GR_loc(m-1,n) =  -1*Ytil_glo(m)*GR_loc(m,n);
@@ -3154,6 +3198,8 @@ c_NEGF_Common<T>:: Compute_Current ()
                 {
                     GR_loc(m+1,n) = -1*Xtil_glo(m)*GR_loc(m,n);
                 }
+                #else
+                GR_loc(n) =  one/(Alpha(n) - X(n) - Y(n));
                 #endif 
 
                 MatrixBlock<T> A_tk[NUM_CONTACTS];
@@ -3166,7 +3212,7 @@ c_NEGF_Common<T>:: Compute_Current ()
                     A_loc(m, n) = 0.;
                 }
                 #else
-                A_loc(n_glo,n) = 0.;
+                A_loc(n) = 0.;
                 #endif
                 for (int k=0; k < NUM_CONTACTS; ++k)
                 {
@@ -3210,7 +3256,7 @@ c_NEGF_Common<T>:: Compute_Current ()
                         A_tk[k] = A_kn;
                     }
                     #else 
-                    A_loc(n_glo,n) = A_loc(n_glo,n) + A_nn;
+                    A_loc(n) = A_loc(n) + A_nn;
                     #endif 
 
                     Gn_nn  = Gn_nn + A_nn*Fermi_contact(k);
@@ -3222,11 +3268,15 @@ c_NEGF_Common<T>:: Compute_Current ()
                 {
                     if(n_glo == GC_ID[k])
                     {
+                        #ifdef COMPUTE_SPECTRAL_FUNCTION_OFFDIAG_ELEMS
                         MatrixBlock<T> IF = Gamma[k]*Fermi_contact(k)*A_loc(n_glo,n) - Gamma[k]*Gn_nn;
+                        #else
+                        MatrixBlock<T> IF = Gamma[k]*Fermi_contact(k)*A_loc(n) - Gamma[k]*Gn_nn;
+                        #endif
 
-			MatrixBlock<T> Current_atE = const_multiplier * IF.DiagMult(degen_vec_ptr) * weight * mul_factor; 
-			/*integrating*/
-			Current_loc(k)  = Current_loc(k) + Current_atE.DiagSum().real(); 
+			            MatrixBlock<T> Current_atE = const_multiplier * IF.DiagMult(degen_vec_ptr) * weight * mul_factor; 
+			            /*integrating*/
+			            Current_loc(k)  = Current_loc(k) + Current_atE.DiagSum().real(); 
                     }
 
                     //amrex::HostDevice::Atomic::Add(&(Current(k)), Current_AtE[k].real());

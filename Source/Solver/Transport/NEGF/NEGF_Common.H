@@ -179,8 +179,17 @@ public:
     BlkTable1D h_tau_glo_data;
 
     /*Tables required to store essential quantities and observables */
+
+    #ifdef COMPUTE_GREENS_FUNCTION_OFFDIAG_ELEMS
     BlkTable2D h_GR_loc_data;
+    #else
+    BlkTable1D h_GR_loc_data;
+    #endif
+    #ifdef COMPUTE_SPECTRAL_FUNCTION_OFFDIAG_ELEMS
     BlkTable2D h_A_loc_data;
+    #else
+    BlkTable1D h_A_loc_data;
+    #endif
 
     RealTable1D h_DOS_loc_data;
     RealTable1D h_Transmission_loc_data;
@@ -218,8 +227,16 @@ public:
     amrex::Gpu::HostVector<amrex::Real> h_Trace_i;
 
     #ifdef AMREX_USE_GPU
+    #ifdef COMPUTE_GREENS_FUNCTION_OFFDIAG_ELEMS
     BlkTable2D d_GR_loc_data;
+    #else
+    BlkTable1D d_GR_loc_data;
+    #endif
+    #ifdef COMPUTE_SPECTRAL_FUNCTION_OFFDIAG_ELEMS
     BlkTable2D d_A_loc_data;
+    #else
+    BlkTable1D d_A_loc_data;
+    #endif
     BlkTable1D d_Rho0_loc_data;
     BlkTable1D d_GR_atPoles_loc_data;
     BlkTable1D d_RhoEq_loc_data;

@@ -452,7 +452,9 @@ c_Nanostructure<NSType>::Gather_MeshAttributeAtAtoms()
 
     }
 
+    
     Obtain_PotentialAtSites();
+
 }
 
 

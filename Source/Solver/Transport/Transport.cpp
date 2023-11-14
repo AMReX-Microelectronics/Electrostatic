@@ -332,7 +332,7 @@ c_TransportSolver::Solve(const int step, const amrex::Real time)
 	           vp_CNT[c]->Gather_MeshAttributeAtAtoms();  
             }
            time_counter[2] = amrex::second();
-                
+
            //Part 3: NEGF
            for (int c=0; c < vp_CNT.size(); ++c)
            {
