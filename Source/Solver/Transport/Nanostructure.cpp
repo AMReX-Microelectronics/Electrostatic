@@ -452,7 +452,9 @@ c_Nanostructure<NSType>::Gather_MeshAttributeAtAtoms()
 
     }
 
+    
     Obtain_PotentialAtSites();
+
 }
 
 
@@ -613,16 +615,16 @@ c_Nanostructure<NSType>::Obtain_PotentialAtSites()
         } 
     }
 
-    for (int l=0; l<num_field_sites; ++l)
-    {
-        ParallelDescriptor::ReduceRealSum(p_V[l]);
-    }
-    //MPI_Allreduce( MPI_IN_PLACE,
-    //               &(p_V[0]),
-    //               num_field_sites,
-    //               MPI_DOUBLE,
-    //               MPI_SUM,
-    //               ParallelDescriptor::Communicator());
+    //for (int l=0; l<num_field_sites; ++l)
+    //{
+    //    ParallelDescriptor::ReduceRealSum(p_V[l]);
+    //}
+    MPI_Allreduce( MPI_IN_PLACE,
+                   &(p_V[0]),
+                   num_field_sites,
+                   MPI_DOUBLE,
+                   MPI_SUM,
+                   ParallelDescriptor::Communicator());
 
     //for(int i=0; i < num_field_sites; ++i)
     //{
@@ -793,23 +795,19 @@ c_Nanostructure<NSType>:: InitializeNEGF (std::string common_foldername_str)
 
 template<typename NSType>
 void
-c_Nanostructure<NSType>:: Solve_NEGF ()
+c_Nanostructure<NSType>:: Solve_NEGF (RealTable1D& n_curr_out_data)
 {
-
-    BL_PROFILE_VAR("Other", compute_other);
-
     NSType::AddPotentialToHamiltonian();
-    NSType::Update_ContactElectrochemicalPotential(); 
-    NSType::Define_EnergyLimits();
-    NSType::Update_IntegrationPaths();
 
-    BL_PROFILE_VAR_STOP(compute_other);
+    if(NSType::flag_EC_potential_updated) 
+    {
+        NSType::Update_ContactElectrochemicalPotential(); 
+        NSType::Define_EnergyLimits();
+        NSType::Update_IntegrationPaths();
+        NSType::flag_EC_potential_updated = false;
+    }
 
-    BL_PROFILE_VAR("Compute_RhoInduced", compute_rho_ind);
-
-    NSType::Compute_InducedCharge();
-
-    BL_PROFILE_VAR_STOP(compute_rho_ind);
+    NSType::Compute_InducedCharge(n_curr_out_data);
 
 }
 

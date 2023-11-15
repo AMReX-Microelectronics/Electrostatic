@@ -179,8 +179,17 @@ public:
     BlkTable1D h_tau_glo_data;
 
     /*Tables required to store essential quantities and observables */
+
+    #ifdef COMPUTE_GREENS_FUNCTION_OFFDIAG_ELEMS
     BlkTable2D h_GR_loc_data;
+    #else
+    BlkTable1D h_GR_loc_data;
+    #endif
+    #ifdef COMPUTE_SPECTRAL_FUNCTION_OFFDIAG_ELEMS
     BlkTable2D h_A_loc_data;
+    #else
+    BlkTable1D h_A_loc_data;
+    #endif
 
     RealTable1D h_DOS_loc_data;
     RealTable1D h_Transmission_loc_data;
@@ -218,8 +227,16 @@ public:
     amrex::Gpu::HostVector<amrex::Real> h_Trace_i;
 
     #ifdef AMREX_USE_GPU
+    #ifdef COMPUTE_GREENS_FUNCTION_OFFDIAG_ELEMS
     BlkTable2D d_GR_loc_data;
+    #else
+    BlkTable1D d_GR_loc_data;
+    #endif
+    #ifdef COMPUTE_SPECTRAL_FUNCTION_OFFDIAG_ELEMS
     BlkTable2D d_A_loc_data;
+    #else
+    BlkTable1D d_A_loc_data;
+    #endif
     BlkTable1D d_Rho0_loc_data;
     BlkTable1D d_GR_atPoles_loc_data;
     BlkTable1D d_RhoEq_loc_data;
@@ -276,6 +293,7 @@ public:
     amrex::Real Contact_Temperature[NUM_CONTACTS] = {298., 298.};
 
     int flag_contact_mu_specified = 1;
+    bool flag_EC_potential_updated = false;
     amrex::Real Contact_Electrochemical_Potential[NUM_CONTACTS] = {0., 0.};
     std::string Contact_Parser_String[NUM_CONTACTS];
     std::string Gate_String = "Gate";
@@ -324,6 +342,8 @@ public:
     void Set_IterationFilenameString(const int iter);
 
     amrex::Real initial_charge = 1e-3;
+    int num_recursive_parts = 1;
+    int Hsize_recur_part=-1; 
 
     void Initialize_ChargeAtFieldSites();
     virtual void ReadNanostructureProperties();
@@ -355,7 +375,8 @@ public:
     void Compute_GR_atPoles();
     void Compute_RhoEq();
     void Compute_RhoNonEq();
-    void Compute_InducedCharge();
+    void Compute_RhoNonEqOld();
+    void Compute_InducedCharge(RealTable1D& n_curr_out_data);
     void Compute_Current();
     //void GuessNewCharge_SimpleMixingAlg();
     
