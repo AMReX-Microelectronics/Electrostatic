@@ -647,6 +647,18 @@ c_TransportSolver:: Create_Global_Output_Data()
                 ParallelDescriptor::IOProcessorNumber(),
                 ParallelDescriptor::Communicator());
 
+    //if (ParallelDescriptor::IOProcessor())
+    //{
+    //    amrex::Print() << "\nPrinting n_curr_out_glo_data \n";
+    //    for (int n=0; n <num_field_sites_all_NS; ++n)
+    //    {
+    //        amrex::Print()
+    //        << n
+    //        << std::setw(20) <<  n_curr_out_glo(n)
+    //        << "\n";
+    //    }
+    //}
+    
     #ifndef BROYDEN_SKIP_GPU_OPTIMIZATION
     h_n_curr_out_data.clear();
     h_Norm_data.clear();
