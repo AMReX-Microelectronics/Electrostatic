@@ -415,6 +415,12 @@ public:
                        std::string filename,
                        std::string header);
 
+    template<typename TableType> 
+    void Write_Integrand(const amrex::Vector<ComplexType>& Vec,
+                         const TableType& Arr_data,
+                         std::string filename,
+                         std::string header);
+
     void Write_BlkTable1D_asaf_E(const amrex::Vector<ComplexType>& E_vec,
                                  const BlkTable1D& Arr_data,
                                  std::string filename,

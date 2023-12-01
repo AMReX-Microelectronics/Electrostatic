@@ -64,10 +64,15 @@ c_NEGF_Common<T>:: Set_IterationFilenameString(const int iter)
         /*eg. output/negf/cnt/step0001_iter/iter0001  for iteration 1*/
         //amrex::Print() << " iter_filename_str: " << iter_filename_str << "\n";
 
-    }
-    if(flag_write_integrand) 
-    {
-        integrand_filename_str  = amrex::Concatenate(iter_filename_prefix_str, iter, negf_plt_name_digits);
+        if(flag_write_integrand) 
+        {
+            std::string integrand_filename_prefix_str = iter_foldername_str + "integrand";
+            integrand_filename_str  = amrex::Concatenate(integrand_filename_prefix_str, 
+                                                         iter, 
+                                                         negf_plt_name_digits);
+            amrex::Print() << "integrand_filename: " << integrand_filename_str << "\n";
+              
+        }
     }
 }
 
@@ -972,6 +977,44 @@ c_NEGF_Common<T>:: Write_FermiFunction (const amrex::Vector<ComplexType> E_vec, 
 
 
 template<typename T>
+template<typename TableType>
+void 
+c_NEGF_Common<T>:: Write_Integrand (const amrex::Vector<ComplexType>& E_vec, 
+                                    const TableType& Arr_data, 
+                                    std::string filename,
+                                    std::string header)
+{
+    std::ofstream outfile;
+    outfile.open(filename.c_str());
+    outfile << header  << "\n";
+
+    auto const& Arr = Arr_data.const_table();
+    auto thi = Arr_data.hi();
+
+    if(E_vec.size() == thi[0]) 
+    {   
+        for (int e=0; e< thi[0]; ++e)
+        {
+            amrex::Real Fermi_Diff 
+                   = std::fabs(FermiFunction(E_vec[e]-mu_contact[0], kT_contact[0]).real() -
+                               FermiFunction(E_vec[e]-mu_contact[1], kT_contact[1]).real());
+            outfile << std::setprecision(15) 
+                    << std::setw(25) << E_vec[e].real()
+                    << std::setw(25) << Arr(e) 
+                    << std::setw(25) << (E_vec[e].real()- mu_contact[0])/kT_contact[0]
+                    << std::setw(25) << Fermi_Diff 
+                    << "\n";
+        }
+    }
+    else {
+        outfile << "In Write_Integrand: Mismatch in the size of Vec and Table1D_data!"  << "\n";
+    }
+
+    outfile.close();
+}
+
+
+template<typename T>
 void 
 c_NEGF_Common<T>:: Update_IntegrationPaths ()
 {
@@ -1556,7 +1599,7 @@ c_NEGF_Common<T>:: Compute_DensityOfStates (std::string dos_foldername, bool fla
         for(int e=0; e<path.num_pts; ++e) 
         {
             int e_glo = e_prev_pts + e;
-            E_total_vec[e_glo] = path.E_vec[e];
+            E_total_vec[e_glo] = path.E_vec[e].real();
         }
         e_prev_pts += path.num_pts;
     }
@@ -2353,9 +2396,9 @@ c_NEGF_Common<T>:: Compute_RhoNonEq ()
                    MPI_SUM,
                    ParallelDescriptor::Communicator());
 
-        Write_Table1D(E_total_vec, 
-                      h_NonEq_Integrand_data, 
-                      integrand_filename_str + "_integrand.dat",  "E_r Integrand_r");
+        Write_Integrand(E_total_vec, 
+                        h_NonEq_Integrand_data, 
+                        integrand_filename_str + ".dat",  "E_r Integrand_r E/kT-mu0 |F1-F2|");
     }
 
     Deallocate_TemporaryArraysForGFComputation();
