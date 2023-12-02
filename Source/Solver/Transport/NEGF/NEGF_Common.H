@@ -227,6 +227,8 @@ public:
     amrex::Gpu::HostVector<amrex::Real> h_Trace_i;
 
     RealTable1D h_NonEq_Integrand_data;
+    RealTable1D h_NonEq_Integrand_Source_data;
+    RealTable1D h_NonEq_Integrand_Drain_data;
 
     #ifdef AMREX_USE_GPU
     #ifdef COMPUTE_GREENS_FUNCTION_OFFDIAG_ELEMS
@@ -260,6 +262,8 @@ public:
     amrex::Gpu::DeviceVector<amrex::Real> d_Trace_i;
 
     RealTable1D d_NonEq_Integrand_data;
+    RealTable1D d_NonEq_Integrand_Source_data;
+    RealTable1D d_NonEq_Integrand_Drain_data;
     #endif
 
 
@@ -341,9 +345,9 @@ public:
     std::string iter_foldername_str;
     std::string iter_filename_prefix_str;
     std::string iter_filename_str;
-    std::string integrand_filename_str;
     int write_at_iter = 0;
-    int flag_write_integrand = 0;
+    int flag_write_integrand_main = 0;
+    int flag_write_integrand_iter = 0;
 
     void Set_StepFilenameString(const int step);
     void Set_IterationFilenameString(const int iter);
@@ -417,9 +421,10 @@ public:
 
     template<typename TableType> 
     void Write_Integrand(const amrex::Vector<ComplexType>& Vec,
-                         const TableType& Arr_data,
-                         std::string filename,
-                         std::string header);
+                         const TableType& Arr_Channel_data,
+                         const TableType& Arr_Source_data,
+                         const TableType& Arr_Drain_data,
+                         std::string filename);
 
     void Write_BlkTable1D_asaf_E(const amrex::Vector<ComplexType>& E_vec,
                                  const BlkTable1D& Arr_data,
