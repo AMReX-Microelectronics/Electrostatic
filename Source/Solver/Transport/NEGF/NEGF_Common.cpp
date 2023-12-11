@@ -37,7 +37,6 @@ c_NEGF_Common<T>:: Set_StepFilenameString(const int step)
     /*eg. output/negf/cnt/step0001 for step 1*/
     amrex::Print() << "step_filename_str: " << step_filename_str << "\n";
 
-
     if(write_at_iter) 
     {
          iter_foldername_str      = step_filename_str   + "_iter/";
@@ -63,6 +62,24 @@ c_NEGF_Common<T>:: Set_IterationFilenameString(const int iter)
         iter_filename_str  = amrex::Concatenate(iter_filename_prefix_str, iter, negf_plt_name_digits);
         /*eg. output/negf/cnt/step0001_iter/iter0001  for iteration 1*/
         //amrex::Print() << " iter_filename_str: " << iter_filename_str << "\n";
+
+        if(flag_write_integrand_main) 
+        {
+            if(iter==0) {
+                flag_write_integrand_iter = true;
+                amrex::Print() << " setting flag_write_integrand_iter to: " 
+                               << flag_write_integrand_iter << "\n";
+            }
+            else 
+            {
+                flag_write_integrand_iter = false;
+                if(iter==1) 
+                {
+                    amrex::Print() << " setting flag_write_integrand_iter to: " 
+                                   << flag_write_integrand_iter << "\n";
+                }
+            }
+        }
     }
 }
 
@@ -282,6 +299,7 @@ c_NEGF_Common<T>:: ReadNanostructureProperties ()
 
     flag_contact_mu_specified = 1;
     pp_ns.query("contact_mu_specified", flag_contact_mu_specified);
+    
 
     flag_EC_potential_updated = false;
     if(flag_contact_mu_specified) 
@@ -419,11 +437,16 @@ c_NEGF_Common<T>:: ReadNanostructureProperties ()
     }
     amrex::Print() << "\n";
     amrex::Print() << "##### num_noneq_paths: " << num_noneq_paths << "\n";
+
     amrex::Print() << "##### Nonequilibrium contour integration points, noneq_integration_pts: ";
+    total_noneq_integration_pts = 0;
     for(int c=0; c < num_noneq_paths; ++c) {
         amrex::Print() << noneq_integration_pts[c] << "  ";
+        total_noneq_integration_pts += noneq_integration_pts[c];
     }
     amrex::Print() << "\n";
+    amrex::Print() << "#####* Total nonequilibrium contour integration points: " << total_noneq_integration_pts << "\n";
+
     amrex::Print() << "##### Nonequilibrium path intercuts in percentage, noneq_percent_intercuts: ";
     for(int c=0; c < num_noneq_paths-1; ++c) {
         amrex::Print() << noneq_percent_intercuts[c] << "  ";
@@ -431,7 +454,10 @@ c_NEGF_Common<T>:: ReadNanostructureProperties ()
     amrex::Print() << "\n";
     amrex::Print() << "##### num_recursive_parts: " << num_recursive_parts << "\n";
 
-    
+    flag_write_integrand_main = 0;
+    pp_ns.query("flag_write_integrand", flag_write_integrand_main);
+    amrex::Print() << "##### flag_write_integrand (main): " << flag_write_integrand_main << "\n";
+
     Set_Arrays_OfSize_NumFieldSites();
 
     //h_n_curr_in_glo_data.resize({0},{num_field_sites}, The_Pinned_Arena());
@@ -958,6 +984,51 @@ c_NEGF_Common<T>:: Write_FermiFunction (const amrex::Vector<ComplexType> E_vec, 
 
 
 template<typename T>
+template<typename TableType>
+void 
+c_NEGF_Common<T>:: Write_Integrand (const amrex::Vector<ComplexType>& E_vec, 
+                                    const TableType& Arr_Channel_data, 
+                                    const TableType& Arr_Source_data, 
+                                    const TableType& Arr_Drain_data, 
+                                    std::string filename)
+{
+    if (amrex::ParallelDescriptor::IOProcessor())
+    {
+        std::ofstream outfile;
+        outfile.open(filename.c_str());
+        outfile << "(E_r-mu_0)/kT Intg_Channel Intg_Source Intg_Drain |F1-F2| E_r"  << "\n";
+
+        auto const& Channel = Arr_Channel_data.const_table();
+        auto const& Source = Arr_Source_data.const_table();
+        auto const& Drain = Arr_Drain_data.const_table();
+        auto thi = Arr_Channel_data.hi();
+
+        if(E_vec.size() == thi[0]) 
+        {   
+            for (int e=0; e< thi[0]; ++e)
+            {
+                amrex::Real Fermi_Diff 
+                       = std::fabs(FermiFunction(E_vec[e]-mu_contact[0], kT_contact[0]).real() -
+                                   FermiFunction(E_vec[e]-mu_contact[1], kT_contact[1]).real());
+                outfile << std::setprecision(15) 
+                        << std::setw(25) << (E_vec[e].real()- mu_contact[0])/kT_contact[0]
+                        << std::setw(25) << Channel(e) 
+                        << std::setw(25) << Source(e) 
+                        << std::setw(25) << Drain(e) 
+                        << std::setw(25) << Fermi_Diff 
+                        << std::setw(25) << E_vec[e].real()
+                        << "\n";
+            }
+        }
+        else {
+            outfile << "In Write_Integrand: Mismatch in the size of Vec and Table1D_data!"  << "\n";
+        }
+        outfile.close();
+    }
+}
+
+
+template<typename T>
 void 
 c_NEGF_Common<T>:: Update_IntegrationPaths ()
 {
@@ -992,9 +1063,9 @@ c_NEGF_Common<T>:: Update_IntegrationPaths ()
         }
         for(int p=0; p < num_noneq_paths; ++p) 
         {
-            //amrex::Print() << "creating noneq path between: " << noneq_path_min[p] << " and " 
-            //                                                  << noneq_path_max[p] << " with pts: "
-            //                                                  << noneq_integration_pts[p] << "\n";
+            amrex::Print() << "creating noneq path between: " << noneq_path_min[p] << " and " 
+                                                              << noneq_path_max[p] << " with pts: "
+                                                              << noneq_integration_pts[p] << "\n";
             ContourPath_RhoNonEq[p].Define_GaussLegendrePoints(noneq_path_min[p], noneq_path_max[p], 
                                                                noneq_integration_pts[p], 0);
         }
@@ -1542,7 +1613,7 @@ c_NEGF_Common<T>:: Compute_DensityOfStates (std::string dos_foldername, bool fla
         for(int e=0; e<path.num_pts; ++e) 
         {
             int e_glo = e_prev_pts + e;
-            E_total_vec[e_glo] = path.E_vec[e];
+            E_total_vec[e_glo] = path.E_vec[e].real();
         }
         e_prev_pts += path.num_pts;
     }
@@ -1625,63 +1696,81 @@ c_NEGF_Common<T>:: Compute_InducedCharge (RealTable1D& n_curr_out_data)
                             + RhoNonEq_loc(n).DiagSum().real() 
                             - Rho0_loc(n).DiagSum().imag() );
     });
-    //h_RhoInduced_loc_data.resize({0},{blkCol_size_loc}, The_Pinned_Arena());
-    //SetVal_Table1D(h_RhoInduced_loc_data,0.);
-    //h_RhoInduced_loc_data.copy(n_curr_out_data);
 
     #ifdef AMREX_USE_GPU
     amrex::Gpu::streamSynchronize();
     #endif
-    //auto const& h_RhoInduced_loc = h_RhoInduced_loc_data.const_table();
 
-    //RealTable1D RhoEq_loc_data({0}, {blkCol_size_loc}, The_Pinned_Arena());
-    //RealTable1D RhoNonEq_loc_data({0}, {blkCol_size_loc}, The_Pinned_Arena());
-    //RealTable1D Rho0_loc_data({0}, {blkCol_size_loc}, The_Pinned_Arena());
-    //auto const& Rho0_loc     = Rho0_loc_data.table();
-    //auto const& RhoEq_loc    = RhoEq_loc_data.table();
-    //auto const& RhoNonEq_loc = RhoNonEq_loc_data.table();
+ 
+    /*Printing individual components for debugging*/
+    //#ifdef AMREX_USE_GPU
+    //RealTable1D d_Rho0_Imag_loc_data({0}, {blkCol_size_loc}, The_Arena());
+    //RealTable1D d_RhoEq_Imag_loc_data({0}, {blkCol_size_loc}, The_Arena());
+    //RealTable1D d_RhoNonEq_Real_loc_data({0}, {blkCol_size_loc}, The_Arena());
 
-    //for (int n=0; n <blkCol_size_loc; ++n) 
+    //auto const& d_Rho0_Imag_loc     = d_Rho0_Imag_loc_data.table();
+    //auto const& d_RhoEq_Imag_loc    = d_RhoEq_Imag_loc_data.table();
+    //auto const& d_RhoNonEq_Real_loc = d_RhoNonEq_Real_loc_data.table();
+
+    //amrex::ParallelFor(blkCol_size_loc, [=] AMREX_GPU_DEVICE (int n) noexcept
     //{
-    //    Rho0_loc(n) = h_Rho0_loc(n).DiagSum().imag();
-    //    RhoEq_loc(n) = h_RhoEq_loc(n).DiagSum().imag();
-    //    RhoNonEq_loc(n) = h_RhoNonEq_loc(n).DiagSum().real();
-    //}
+    //    d_Rho0_Imag_loc(n)     = Rho0_loc(n).DiagSum().imag();
+    //    d_RhoEq_Imag_loc(n)    = RhoEq_loc(n).DiagSum().imag();
+    //    d_RhoNonEq_Real_loc(n) = RhoNonEq_loc(n).DiagSum().real();
+    //});
+    //amrex::Gpu::streamSynchronize();
+    //#endif
+
+    //RealTable1D h_RhoEq_loc_data({0}, {blkCol_size_loc}, The_Pinned_Arena());
+    //RealTable1D h_RhoNonEq_loc_data({0}, {blkCol_size_loc}, The_Pinned_Arena());
+    //RealTable1D h_Rho0_loc_data({0}, {blkCol_size_loc}, The_Pinned_Arena());
+    //RealTable1D h_RhoInduced_loc_data({0}, {blkCol_size_loc}, The_Pinned_Arena());
+
+    //RealTable1D h_RhoEq_data({0}, {Hsize_glo}, The_Pinned_Arena());
+    //RealTable1D h_RhoNonEq_data({0}, {Hsize_glo}, The_Pinned_Arena());
+    //RealTable1D h_Rho0_data({0}, {Hsize_glo}, The_Pinned_Arena());
+    //RealTable1D h_RhoInduced_data({0}, {Hsize_glo}, The_Pinned_Arena());
+    //
+    //auto const& h_Rho0_loc       = h_Rho0_loc_data.const_table();
+    //auto const& h_RhoEq_loc      = h_RhoEq_loc_data.const_table();
+    //auto const& h_RhoNonEq_loc   = h_RhoNonEq_loc_data.const_table();
+    //auto const& h_RhoInduced_loc = h_RhoInduced_loc_data.const_table();
+    //auto const& h_Rho0     = h_Rho0_data.table();
+    //auto const& h_RhoEq    = h_RhoEq_data.table();
+    //auto const& h_RhoNonEq = h_RhoNonEq_data.table();
+    //auto const& h_RhoInduced = h_RhoInduced_data.table();
+
+    //h_Rho0_loc_data.copy(d_Rho0_Imag_loc_data);
+    //h_RhoEq_loc_data.copy(d_RhoEq_Imag_loc_data);
+    //h_RhoNonEq_loc_data.copy(d_RhoNonEq_Real_loc_data);
+    //h_RhoInduced_loc_data.copy(n_curr_out_data);
+    //
     //MPI_Barrier(ParallelDescriptor::Communicator());
 
-    //RealTable1D RhoEq_data({0}, {Hsize_glo}, The_Pinned_Arena());
-    //RealTable1D RhoNonEq_data({0}, {Hsize_glo}, The_Pinned_Arena());
-    //RealTable1D Rho0_data({0}, {Hsize_glo}, The_Pinned_Arena());
-    //RealTable1D RhoInduced_data({0}, {Hsize_glo}, The_Pinned_Arena());
-    //auto const& Rho0     = Rho0_data.table();
-    //auto const& RhoEq    = RhoEq_data.table();
-    //auto const& RhoNonEq = RhoNonEq_data.table();
-    //auto const& RhoInduced = RhoInduced_data.table();
-
-    //MPI_Gatherv(&Rho0_loc(0),
+    //MPI_Gatherv(&h_Rho0_loc(0),
     //             blkCol_size_loc,
     //             MPI_DOUBLE,
-    //            &Rho0(0),
+    //            &h_Rho0(0),
     //             MPI_recv_count.data(),
     //             MPI_recv_disp.data(),
     //             MPI_DOUBLE,
     //    		 ParallelDescriptor::IOProcessorNumber(),
     //             ParallelDescriptor::Communicator());
 
-    //MPI_Gatherv(&RhoEq_loc(0),
+    //MPI_Gatherv(&h_RhoEq_loc(0),
     //             blkCol_size_loc,
     //             MPI_DOUBLE,
-    //            &RhoEq(0),
+    //            &h_RhoEq(0),
     //             MPI_recv_count.data(),
     //             MPI_recv_disp.data(),
     //             MPI_DOUBLE,
     //    		 ParallelDescriptor::IOProcessorNumber(),
     //             ParallelDescriptor::Communicator());
 
-    //MPI_Gatherv(&RhoNonEq_loc(0),
+    //MPI_Gatherv(&h_RhoNonEq_loc(0),
     //             blkCol_size_loc,
     //             MPI_DOUBLE,
-    //            &RhoNonEq(0),
+    //            &h_RhoNonEq(0),
     //             MPI_recv_count.data(),
     //             MPI_recv_disp.data(),
     //             MPI_DOUBLE,
@@ -1691,7 +1780,7 @@ c_NEGF_Common<T>:: Compute_InducedCharge (RealTable1D& n_curr_out_data)
     //MPI_Gatherv(&h_RhoInduced_loc(0),
     //             blkCol_size_loc,
     //             MPI_DOUBLE,
-    //            &RhoInduced(0),
+    //            &h_RhoInduced(0),
     //             MPI_recv_count.data(),
     //             MPI_recv_disp.data(),
     //             MPI_DOUBLE,
@@ -1704,10 +1793,10 @@ c_NEGF_Common<T>:: Compute_InducedCharge (RealTable1D& n_curr_out_data)
     //    {
     //        amrex::Print() 
     //        << n
-    //        << std::setw(20) <<  RhoEq(n) 
-    //        << std::setw(20) <<  RhoNonEq(n) 
-    //        << std::setw(20) << -Rho0(n) 
-    //        << std::setw(20) <<  RhoInduced(n) 
+    //        << std::setw(20) <<  h_RhoEq(n) 
+    //        << std::setw(20) <<  h_RhoNonEq(n) 
+    //        << std::setw(20) << -h_Rho0(n) 
+    //        << std::setw(20) <<  h_RhoInduced(n) 
     //        << "\n";
     //    }
     //}
@@ -2024,6 +2113,7 @@ c_NEGF_Common<T>:: Compute_RhoNonEq ()
     auto const& Fermi_contact   = d_Fermi_contact_data.const_table();
 
     auto& degen_vec             = block_degen_gpuvec;
+
     #else
     ComplexType zero(0.,0.); 
     SetVal_Table1D(h_RhoNonEq_loc_data,zero);
@@ -2044,8 +2134,43 @@ c_NEGF_Common<T>:: Compute_RhoNonEq ()
     auto const& Fermi_contact   = h_Fermi_contact_data.const_table();
 
     auto& degen_vec             = block_degen_vec;
+
     #endif
-  
+
+    amrex::Vector<ComplexType>E_total_vec;
+    if(flag_write_integrand_iter) 
+    {
+        h_NonEq_Integrand_data.resize({0},{total_noneq_integration_pts}, The_Pinned_Arena());
+        d_NonEq_Integrand_data.resize({0},{total_noneq_integration_pts}, The_Arena());
+      h_NonEq_Integrand_Source_data.resize({0},{total_noneq_integration_pts}, The_Pinned_Arena());
+      d_NonEq_Integrand_Source_data.resize({0},{total_noneq_integration_pts}, The_Arena());
+      h_NonEq_Integrand_Drain_data.resize({0},{total_noneq_integration_pts}, The_Pinned_Arena());
+      d_NonEq_Integrand_Drain_data.resize({0},{total_noneq_integration_pts}, The_Arena());
+        E_total_vec.resize(total_noneq_integration_pts);
+    }
+    auto const& h_NonEq_Integrand = h_NonEq_Integrand_data.table();
+    auto const& h_NonEq_Integrand_Source = h_NonEq_Integrand_Source_data.table();
+    auto const& h_NonEq_Integrand_Drain  = h_NonEq_Integrand_Drain_data.table();
+    #ifdef AMREX_USE_GPU
+    auto const& NonEq_Integrand        = d_NonEq_Integrand_data.table();
+    auto const& NonEq_Integrand_Source = d_NonEq_Integrand_Source_data.table();
+    auto const& NonEq_Integrand_Drain  = d_NonEq_Integrand_Drain_data.table();
+    #else
+    auto const& NonEq_Integrand        = h_NonEq_Integrand_data.table();
+    auto const& NonEq_Integrand_Source = h_NonEq_Integrand_Source_data.table();
+    auto const& NonEq_Integrand_Drain  = h_NonEq_Integrand_Drain_data.table();
+    #endif
+    if(flag_write_integrand_iter) 
+    {
+        amrex::ParallelFor(total_noneq_integration_pts, [=] AMREX_GPU_DEVICE (int e) noexcept
+        {
+            NonEq_Integrand(e) = 0.;
+            NonEq_Integrand_Source(e) = 0.;
+            NonEq_Integrand_Drain(e) = 0.;
+        });
+    }
+
+    int e_prev=0;
     for(int p=0; p < ContourPath_RhoNonEq.size(); ++p) 
     {
         for(int e=0; e < ContourPath_RhoNonEq[p].num_pts; ++e) 
@@ -2053,6 +2178,8 @@ c_NEGF_Common<T>:: Compute_RhoNonEq ()
             ComplexType E = ContourPath_RhoNonEq[p].E_vec[e];
             ComplexType weight = ContourPath_RhoNonEq[p].weight_vec[e];
             ComplexType mul_factor = ContourPath_RhoNonEq[p].mul_factor_vec[e];
+            int e_glo = e + e_prev;
+            if(flag_write_integrand_iter) E_total_vec[e_glo] = E;
 
             for(int n=0; n<blkCol_size_loc; ++n)
             {
@@ -2181,6 +2308,7 @@ c_NEGF_Common<T>:: Compute_RhoNonEq ()
             auto* degen_vec_ptr = degen_vec.dataPtr();
 
 	        amrex::Real const_multiplier = -1*spin_degen/(2*MathConst::pi);
+            int write_integrand = flag_write_integrand_iter;
 
             amrex::ParallelFor(blkCol_size_loc, [=] AMREX_GPU_DEVICE (int n) noexcept
             {
@@ -2263,11 +2391,76 @@ c_NEGF_Common<T>:: Compute_RhoNonEq ()
                 /*RhoNonEq*/
                 MatrixBlock<T> RhoNonEq_n = const_multiplier*AnF_sum*weight*mul_factor;
                 RhoNonEq_loc(n) = RhoNonEq_loc(n) + RhoNonEq_n.DiagMult(degen_vec_ptr);
+
+                if(write_integrand) 
+                {
+                    if(n_glo==int(Hsize/2)) 
+                    {
+                        MatrixBlock<T> Intermed = const_multiplier*AnF_sum; 
+                        NonEq_Integrand(e_glo) = Intermed.DiagMult(degen_vec_ptr).DiagSum().real();
+                    }
+                    else if(n_glo==0) 
+                    {
+                        MatrixBlock<T> Intermed = const_multiplier*AnF_sum; 
+                        NonEq_Integrand_Source(e_glo) = Intermed.DiagMult(degen_vec_ptr).DiagSum().real();
+                    }
+                    else if(n_glo==Hsize-1) 
+                    {
+                        MatrixBlock<T> Intermed = const_multiplier*AnF_sum; 
+                        NonEq_Integrand_Drain(e_glo) = Intermed.DiagMult(degen_vec_ptr).DiagSum().real();
+                    }
+                }
             }); 
             #ifdef AMREX_USE_GPU
             amrex::Gpu::streamSynchronize();
             #endif
+
         } 
+        e_prev = ContourPath_RhoNonEq[p].num_pts;
+    }
+
+    if(flag_write_integrand_iter) 
+    {
+        #ifdef AMREX_USE_GPU
+        h_NonEq_Integrand_data.copy(d_NonEq_Integrand_data);
+        h_NonEq_Integrand_Source_data.copy(d_NonEq_Integrand_Source_data);
+        h_NonEq_Integrand_Drain_data.copy(d_NonEq_Integrand_Drain_data);
+        amrex::Gpu::streamSynchronize();
+        #endif
+        MPI_Allreduce(MPI_IN_PLACE,
+                   &(h_NonEq_Integrand(0)),
+                   total_noneq_integration_pts,
+                   MPI_DOUBLE,
+                   MPI_SUM,
+                   ParallelDescriptor::Communicator());
+
+        MPI_Allreduce(MPI_IN_PLACE,
+                   &(h_NonEq_Integrand_Source(0)),
+                   total_noneq_integration_pts,
+                   MPI_DOUBLE,
+                   MPI_SUM,
+                   ParallelDescriptor::Communicator());
+
+        MPI_Allreduce(MPI_IN_PLACE,
+                   &(h_NonEq_Integrand_Drain(0)),
+                   total_noneq_integration_pts,
+                   MPI_DOUBLE,
+                   MPI_SUM,
+                   ParallelDescriptor::Communicator());
+
+        Write_Integrand(E_total_vec, 
+                        h_NonEq_Integrand_data, 
+                        h_NonEq_Integrand_Source_data, 
+                        h_NonEq_Integrand_Drain_data, 
+                        iter_filename_str + "_integrand.dat");
+
+        h_NonEq_Integrand_data.clear();
+        d_NonEq_Integrand_data.clear();
+        h_NonEq_Integrand_Source_data.clear();
+        d_NonEq_Integrand_Source_data.clear();
+        h_NonEq_Integrand_Drain_data.clear();
+        d_NonEq_Integrand_Drain_data.clear();
+        E_total_vec.clear();
     }
 
     Deallocate_TemporaryArraysForGFComputation();
@@ -3043,7 +3236,40 @@ c_NEGF_Common<T>:: Compute_Current ()
     auto& degen_vec             = block_degen_vec;
     #endif
 
+    amrex::Vector<ComplexType>E_total_vec;
+    if(flag_write_integrand_main)
+    {
+        h_NonEq_Integrand_data.resize({0},{total_noneq_integration_pts}, The_Pinned_Arena());
+        d_NonEq_Integrand_data.resize({0},{total_noneq_integration_pts}, The_Arena());
+      h_NonEq_Integrand_Source_data.resize({0},{total_noneq_integration_pts}, The_Pinned_Arena());
+      d_NonEq_Integrand_Source_data.resize({0},{total_noneq_integration_pts}, The_Arena());
+      h_NonEq_Integrand_Drain_data.resize({0},{total_noneq_integration_pts}, The_Pinned_Arena());
+      d_NonEq_Integrand_Drain_data.resize({0},{total_noneq_integration_pts}, The_Arena());
+        E_total_vec.resize(total_noneq_integration_pts);
+    }
+    auto const& h_NonEq_Integrand = h_NonEq_Integrand_data.table();
+    auto const& h_NonEq_Integrand_Source = h_NonEq_Integrand_Source_data.table();
+    auto const& h_NonEq_Integrand_Drain  = h_NonEq_Integrand_Drain_data.table();
+    #ifdef AMREX_USE_GPU
+    auto const& NonEq_Integrand        = d_NonEq_Integrand_data.table();
+    auto const& NonEq_Integrand_Source = d_NonEq_Integrand_Source_data.table();
+    auto const& NonEq_Integrand_Drain  = d_NonEq_Integrand_Drain_data.table();
+    #else
+    auto const& NonEq_Integrand        = h_NonEq_Integrand_data.table();
+    auto const& NonEq_Integrand_Source = h_NonEq_Integrand_Source_data.table();
+    auto const& NonEq_Integrand_Drain  = h_NonEq_Integrand_Drain_data.table();
+    #endif
+    if(flag_write_integrand_main)
+    {
+        amrex::ParallelFor(total_noneq_integration_pts, [=] AMREX_GPU_DEVICE (int e) noexcept
+        {
+            NonEq_Integrand(e) = 0.;
+            NonEq_Integrand_Source(e) = 0.;
+            NonEq_Integrand_Drain(e) = 0.;
+        });
+    }
 
+    int e_prev=0;
     for(int p=0; p < ContourPath_RhoNonEq.size(); ++p)
     {
         for(int e=0; e < ContourPath_RhoNonEq[p].num_pts; ++e)
@@ -3052,6 +3278,8 @@ c_NEGF_Common<T>:: Compute_Current ()
             ComplexType E = ContourPath_RhoNonEq[p].E_vec[e];
             ComplexType weight = ContourPath_RhoNonEq[p].weight_vec[e];
             ComplexType mul_factor = ContourPath_RhoNonEq[p].mul_factor_vec[e];
+            int e_glo = e + e_prev;
+            if(flag_write_integrand_main) E_total_vec[e_glo] = E;
 
             for(int n=0; n<blkCol_size_loc; ++n)
             {
@@ -3180,6 +3408,7 @@ c_NEGF_Common<T>:: Compute_Current ()
             auto* degen_vec_ptr = degen_vec.dataPtr();
 
             amrex::Real const_multiplier = spin_degen*(PhysConst::q_e)/(PhysConst::h_eVperHz);
+            int write_integrand = flag_write_integrand_main;
 
             amrex::ParallelFor(blkCol_size_loc, [=] AMREX_GPU_DEVICE (int n) noexcept
             {
@@ -3282,11 +3511,31 @@ c_NEGF_Common<T>:: Compute_Current ()
                     //amrex::HostDevice::Atomic::Add(&(Current(k)), Current_AtE[k].real());
                 }
 
+                if(write_integrand)
+                {
+                    if(n_glo==int(Hsize/2))
+                    {
+                        MatrixBlock<T> Intermed = const_multiplier*Gn_nn;
+                        NonEq_Integrand(e_glo) = Intermed.DiagMult(degen_vec_ptr).DiagSum().real();
+                    }
+                    else if(n_glo==0)
+                    {
+                        MatrixBlock<T> Intermed = const_multiplier*Gn_nn;
+                        NonEq_Integrand_Source(e_glo) = Intermed.DiagMult(degen_vec_ptr).DiagSum().real();
+                    }
+                    else if(n_glo==Hsize-1)
+                    {
+                        MatrixBlock<T> Intermed = const_multiplier*Gn_nn;
+                        NonEq_Integrand_Drain(e_glo) = Intermed.DiagMult(degen_vec_ptr).DiagSum().real();
+                    }
+                }
             });
+
             #ifdef AMREX_USE_GPU
             amrex::Gpu::streamSynchronize();
             #endif
         }
+        e_prev = ContourPath_RhoNonEq[p].num_pts;
     }
     #ifdef AMREX_USE_GPU
     h_Current_loc_data.copy(d_Current_loc_data);
@@ -3308,6 +3557,50 @@ c_NEGF_Common<T>:: Compute_Current ()
 		           << std::setprecision(5)  
 		           << std::setw(15) << h_Current_loc(k) << "\n";
         }
+    }
+
+    if(flag_write_integrand_main)
+    {
+        #ifdef AMREX_USE_GPU
+        h_NonEq_Integrand_data.copy(d_NonEq_Integrand_data);
+        h_NonEq_Integrand_Source_data.copy(d_NonEq_Integrand_Source_data);
+        h_NonEq_Integrand_Drain_data.copy(d_NonEq_Integrand_Drain_data);
+        amrex::Gpu::streamSynchronize();
+        #endif
+        MPI_Allreduce(MPI_IN_PLACE,
+                   &(h_NonEq_Integrand(0)),
+                   total_noneq_integration_pts,
+                   MPI_DOUBLE,
+                   MPI_SUM,
+                   ParallelDescriptor::Communicator());
+
+        MPI_Allreduce(MPI_IN_PLACE,
+                   &(h_NonEq_Integrand_Source(0)),
+                   total_noneq_integration_pts,
+                   MPI_DOUBLE,
+                   MPI_SUM,
+                   ParallelDescriptor::Communicator());
+
+        MPI_Allreduce(MPI_IN_PLACE,
+                   &(h_NonEq_Integrand_Drain(0)),
+                   total_noneq_integration_pts,
+                   MPI_DOUBLE,
+                   MPI_SUM,
+                   ParallelDescriptor::Communicator());
+
+        Write_Integrand(E_total_vec,
+                        h_NonEq_Integrand_data,
+                        h_NonEq_Integrand_Source_data,
+                        h_NonEq_Integrand_Drain_data,
+                        iter_filename_str + "_integrand.dat");
+
+        h_NonEq_Integrand_data.clear();
+        d_NonEq_Integrand_data.clear();
+        h_NonEq_Integrand_Source_data.clear();
+        d_NonEq_Integrand_Source_data.clear();
+        h_NonEq_Integrand_Drain_data.clear();
+        d_NonEq_Integrand_Drain_data.clear();
+        E_total_vec.clear();
     }
 
     Deallocate_TemporaryArraysForGFComputation();
