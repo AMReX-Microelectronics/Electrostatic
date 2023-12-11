@@ -229,6 +229,7 @@ public:
     RealTable1D h_NonEq_Integrand_data;
     RealTable1D h_NonEq_Integrand_Source_data;
     RealTable1D h_NonEq_Integrand_Drain_data;
+    amrex::Real E_at_max_noneq_integrand = 0;
 
     #ifdef AMREX_USE_GPU
     #ifdef COMPUTE_GREENS_FUNCTION_OFFDIAG_ELEMS
@@ -292,7 +293,7 @@ public:
     amrex::Vector<amrex::Real> noneq_percent_intercuts;
 
     int num_noneq_paths=1;
-
+    bool flag_adaptive_integration_limits = false;
     bool flag_compute_flatband_dos = false;
     int flatband_dos_integration_pts = 100;
     amrex::Vector<amrex::Real> flatband_dos_integration_limits = {-1., 1.};
@@ -376,6 +377,8 @@ public:
     virtual void Define_EnergyLimits ();
     virtual void Define_IntegrationPaths ();
     void Update_IntegrationPaths ();
+    void Generate_NonEq_Paths ();
+    void Find_NonEq_Percent_Intercuts_Adaptively();
     virtual void Define_ContactInfo();
     virtual 
     AMREX_GPU_HOST_DEVICE
@@ -392,7 +395,9 @@ public:
     //void GuessNewCharge_SimpleMixingAlg();
     
     void Gatherv_NEGFComputed_LocalCharge(RealTable1D& n_curr_out_glo_data);
-    void Fetch_InputLocalCharge_FromNanostructure(RealTable1D& container_data, const int disp, const int data_size);
+    void Fetch_InputLocalCharge_FromNanostructure(RealTable1D& container_data, 
+                                                  const int disp, 
+                                                  const int data_size);
     void Scatterv_BroydenComputed_GlobalCharge(RealTable1D& n_curr_in_glo_data);
 
     void Set_Arrays_OfSize_NumFieldSites();
@@ -418,6 +423,14 @@ public:
                        const TableType& Arr_data,
                        std::string filename,
                        std::string header);
+
+    template<typename TableType>
+    void
+    Write_ChargeComponents(std::string filename,
+                           const TableType& h_RhoEq_data,
+                           const TableType& h_RhoNonEq_data,
+                           const TableType& h_Rho0_data,
+                           const TableType& h_RhoInduced_data);
 
     template<typename TableType> 
     void Write_Integrand(const amrex::Vector<ComplexType>& Vec,
