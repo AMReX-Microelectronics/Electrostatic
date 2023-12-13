@@ -171,6 +171,13 @@ public:
     amrex::Vector<int> MPI_send_count;
     amrex::Vector<int> MPI_send_disp;
 
+    int NS_data_offset=0; 
+    /* offset in a global 1D table data of multiple structures
+     * e.g. if there are 2 nanotubes, then for the first and second nanotubes
+     * it is 0 and Hsize_glo of the first nanotube.
+     */
+
+
     /*Tables required to store Hamiltonian */
     BlkTable1D h_minusHa_loc_data;
     BlkTable1D h_Hb_loc_data;
@@ -421,6 +428,7 @@ public:
     template<typename VectorType, typename TableType> 
     void Write_Table1D(const amrex::Vector<VectorType>& Vec,
                        const TableType& Arr_data,
+                       bool write_at_offset,
                        std::string filename,
                        std::string header);
 
@@ -449,9 +457,9 @@ public:
                                  std::string header);
 
     void Write_PotentialAtSites(const std::string filename_prefix);
-    void Write_InputInducedCharge (const std::string filename_prefix, RealTable1D& n_curr_in_data);
-    void Write_InducedCharge (const std::string filename_prefix, RealTable1D& n_curr_out_data);
-    void Write_ChargeNorm(const std::string filename_prefix, RealTable1D& Norm_data);
+    void Write_InputInducedCharge (const std::string filename_prefix, const RealTable1D& n_curr_in_data);
+    void Write_InducedCharge (const std::string filename_prefix, const RealTable1D& n_curr_out_data);
+    void Write_ChargeNorm(const std::string filename_prefix, const RealTable1D& Norm_data);
     void Write_Current (const int step, 
                         const amrex::Real Vds,
                         const amrex::Real Vgs,
