@@ -434,7 +434,6 @@ public:
     template<typename VectorType, typename TableType> 
     void Write_Table1D(const amrex::Vector<VectorType>& Vec,
                        const TableType& Arr_data,
-                       bool write_at_offset,
                        std::string filename,
                        std::string header);
 
@@ -464,8 +463,12 @@ public:
 
     void Write_PotentialAtSites(const std::string filename_prefix);
     void Write_InputInducedCharge (const std::string filename_prefix, const RealTable1D& n_curr_in_data);
-    void Write_InducedCharge (const std::string filename_prefix, const RealTable1D& n_curr_out_data);
-    void Write_ChargeNorm(const std::string filename_prefix, const RealTable1D& Norm_data);
+    void Write_InducedCharge (const std::string filename_prefix, 
+                              const RealTable1D& n_curr_out_data);
+
+    void Write_ChargeNorm(const std::string filename_prefix, 
+                          const RealTable1D& Norm_data);
+
     void Write_Current (const int step, 
                         const amrex::Real Vds,
                         const amrex::Real Vgs,

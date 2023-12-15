@@ -25,11 +25,7 @@ c_TransportSolver::c_TransportSolver()
 
 c_TransportSolver::~c_TransportSolver()
 {
-    #ifdef BROYDEN_PARALLEL
     Deallocate_Broyden_Parallel();
-    #else
-    Deallocate_Broyden_Serial();
-    #endif
 }
 
 void 
@@ -191,9 +187,12 @@ c_TransportSolver::InitData()
                 amrex::Print() << "##### inverse_jacobian_filename: " << inverse_jacobian_filename << "\n";
             }
 
-        }
+    }
 
-        std::string type;
+    std::string type;
+
+    num_NS = vec_NS_names.size();
+    amrex::Print() << "#####* num_NS: " << num_NS << "\n";
 
     for (auto name: vec_NS_names)
     {
@@ -245,18 +244,14 @@ c_TransportSolver::InitData()
         }
     }
 
+
     Broyden_Original_Fraction = NS_Broyden_frac;
     Broyden_Norm_Type         = NS_Broyden_norm_type;
     amrex::Print() << "#####* Broyden_Original_Fraction: "  << Broyden_Original_Fraction  << "\n";
     amrex::Print() << "#####* Broyden_Norm_Type: "          << Broyden_Norm_Type          << "\n";
 
-    #ifdef BROYDEN_PARALLEL
     amrex::Print() << "\nSetting Broyden PARALLEL\n";
     Set_Broyden_Parallel();
-    #else
-    amrex::Print() << "\nSetting Broyden SERIAL\n";
-    Set_Broyden();
-    #endif
 
 }
 
@@ -362,20 +357,29 @@ c_TransportSolver::Solve(const int step, const amrex::Real time)
            for (int c=0; c < vp_CNT.size(); ++c)
            {
               CopyToNS_ChargeComputedUsingSelfConsistencyAlgorithm(vp_CNT[c]);
+
               vp_CNT[c]->Deposit_AtomAttributeToMesh();
+
+	           if( vp_CNT[c]->write_at_iter ) 
+               {
+	               vp_CNT[c]->Write_InputInducedCharge(vp_CNT[c]->iter_filename_str, 
+                                                       n_curr_in_glo_data); 
+               }
+               if(ParallelDescriptor::IOProcessor())
+               {
+                   n_curr_in_glo_data.clear();
+               }
 	       }
            time_counter[5] = amrex::second();
 
            //Part 6: Write data
-
            for (int c=0; c < vp_CNT.size(); ++c)
            {
 	          if( vp_CNT[c]->write_at_iter ) 
               {
                   bool compute_current = false;
-                  Write_DataComputedUsingSelfConsistencyAlgorithm(vp_CNT[c], 
-                                                                  vp_CNT[c]->iter_filename_str, 
-                                                                  compute_current);
+                  Write_MoreDataAndComputeCurrent
+                      (vp_CNT[c], vp_CNT[c]->iter_filename_str, compute_current);
     	      }
 
               if(flag_write_LDOS_iter and (max_iter+1)%write_LDOS_iter_period == 0) 
@@ -424,7 +428,7 @@ c_TransportSolver::Solve(const int step, const amrex::Real time)
         for (int c=0; c < vp_CNT.size(); ++c)
         {
             bool compute_current = true;
-            Write_DataComputedUsingSelfConsistencyAlgorithm(vp_CNT[c], 
+            Write_MoreDataAndComputeCurrent(vp_CNT[c], 
                     vp_CNT[c]->step_filename_str, compute_current);
         }
 
@@ -459,22 +463,14 @@ c_TransportSolver::Solve(const int step, const amrex::Real time)
            vp_CNT[c]->Solve_NEGF(RhoInduced, 0);
 
            bool compute_current = true;
-           Write_DataComputedUsingSelfConsistencyAlgorithm(vp_CNT[c], vp_CNT[c]->step_filename_str, compute_current);
+           Write_MoreDataAndComputeCurrent(vp_CNT[c], 
+                                           vp_CNT[c]->step_filename_str, 
+                                           compute_current);
        }
    }
 
 }
 
-template<typename NSType>
-void 
-c_TransportSolver:: Write_PredictedCharge(NSType const& NS)
-{
-    #ifdef BROYDEN_PARALLEL
-	NS->Write_InputInducedCharge(NS->iter_filename_str, n_curr_in_glo_data); 
-    #else
-	NS->Write_InputInducedCharge(NS->iter_filename_str, h_n_curr_in_data); 
-    #endif  
-}
 
 template<typename NSType>
 void
@@ -518,17 +514,13 @@ template<typename NSType>
 void
 c_TransportSolver:: CopyFromNS_ChargeComputedFromNEGF(NSType const& NS)
 {
-   #ifdef BROYDEN_PARALLEL
-       /* (?) Need a strategy to gather data for multiple CNTs*/
-       /* (?) Future: if condition to check if proc was used for charge computation of this nanostructure*/
-       /* (?) Future: for multiple nanotubes, then gather the data into a global array and then partition */
-       #ifdef BROYDEN_SKIP_GPU_OPTIMIZATION
-       h_n_curr_out_data.copy(NS->h_RhoInduced_loc_data); 
-       #else
-       d_n_curr_out_data.copy(NS->h_RhoInduced_loc_data); 
-       #endif
+   /* (?) Need a strategy to gather data for multiple CNTs*/
+   /* (?) Future: if condition to check if proc was used for charge computation of this nanostructure*/
+   /* (?) Future: for multiple nanotubes, then gather the data into a global array and then partition */
+   #ifdef BROYDEN_SKIP_GPU_OPTIMIZATION
+   h_n_curr_out_data.copy(NS->h_RhoInduced_loc_data); 
    #else
-   NS->Gatherv_NEGFComputed_LocalCharge(h_n_curr_out_data); 
+   d_n_curr_out_data.copy(NS->h_RhoInduced_loc_data); 
    #endif
 }
 
@@ -538,19 +530,26 @@ void
 c_TransportSolver:: CopyToNS_ChargeComputedUsingSelfConsistencyAlgorithm(NSType const& NS)
 {
     /*(?) Future: Need generalization for multiple CNTs*/
-    #ifdef BROYDEN_PARALLEL	
     auto const& n_curr_in      = h_n_curr_in_data.table();
+
+    if(ParallelDescriptor::IOProcessor())
+    {
+        n_curr_in_glo_data.resize({0},{NS->num_field_sites}, The_Pinned_Arena());
+    }
+
     auto const& n_curr_in_glo  = n_curr_in_glo_data.table();
 
+    /*offset necessary for multiple NS*/
     MPI_Gatherv(&n_curr_in(0),
-                 site_size_loc,
+                 NS->MPI_recv_count[my_rank],
                  MPI_DOUBLE,
                 &n_curr_in_glo(0),
-                 MPI_recv_count.data(),
-                 MPI_recv_disp.data(),
+                 NS->MPI_recv_count.data(),
+                 NS->MPI_recv_disp.data(),
                  MPI_DOUBLE,
                  ParallelDescriptor::IOProcessorNumber(),
                  ParallelDescriptor::Communicator());
+
     //if (ParallelDescriptor::IOProcessor())
     //{
     //    for(int n=0; n < num_field_sites_all_NS; ++n) {
@@ -558,31 +557,27 @@ c_TransportSolver:: CopyToNS_ChargeComputedUsingSelfConsistencyAlgorithm(NSType 
     //    }
     //}
     NS->Scatterv_BroydenComputed_GlobalCharge(n_curr_in_glo_data); 
-    #else
-    NS->Scatterv_BroydenComputed_GlobalCharge(h_n_curr_in_data);
-    #endif
 }
 
 
 template<typename NSType>
 void
-c_TransportSolver:: Write_DataComputedUsingSelfConsistencyAlgorithm(NSType const& NS, 
-                                                                    std::string const& write_filename,
-                                                                    bool const compute_current_flag)
+c_TransportSolver:: Write_MoreDataAndComputeCurrent(NSType const& NS, 
+                                                    std::string const& write_filename,
+                                                    bool const compute_current_flag)
 {
-    #ifdef BROYDEN_PARALLEL
     //Note: n_curr_out_glo was output from negf and input to broyden.
     //n_curr_in is the broyden predicted charge for next iteration.
     //NEGF->n_curr_out -> Broyden->n_curr_in -> Electrostatics -> NEGF.
-	Create_Global_Output_Data(); 
-    NS->Write_Data(write_filename, n_curr_in_glo_data, n_curr_out_glo_data, Norm_glo_data);
-    #else
-    NS->Write_Data(write_filename, h_n_curr_in_data, h_n_curr_out_data, h_Norm_data);
-    //if(map_AlgorithmType[Algorithm_Type] == s_Algorithm::Type::broyden_first) 
-	//{
-    //    Write_Table2D(h_Jinv_curr_data, common_step_folder_str + "/Jinv.dat", "Jinv");
-	//}
-    #endif
+	Create_Global_Output_Data(NS); 
+
+    NS->Write_Data(write_filename, n_curr_out_glo_data, Norm_glo_data);
+
+    if (ParallelDescriptor::IOProcessor())
+    {
+        n_curr_out_glo_data.clear();
+        Norm_glo_data.clear();
+    }
 
     if(compute_current_flag) 
     {
@@ -592,11 +587,12 @@ c_TransportSolver:: Write_DataComputedUsingSelfConsistencyAlgorithm(NSType const
 }
 
 
-#ifdef BROYDEN_PARALLEL
+template<typename NSType>
 void
-c_TransportSolver:: Create_Global_Output_Data() 
+c_TransportSolver:: Create_Global_Output_Data(NSType const& NS) 
 {
     #ifndef BROYDEN_SKIP_GPU_OPTIMIZATION
+    /*only select data need to be copied for multiple NS*/
     h_n_curr_out_data.resize({0}, {site_size_loc}, The_Pinned_Arena());
     h_Norm_data.resize({0}, {site_size_loc}, The_Pinned_Arena());
 
@@ -610,35 +606,31 @@ c_TransportSolver:: Create_Global_Output_Data()
 
     if (ParallelDescriptor::IOProcessor())
     {
-        if(n_curr_out_glo_data.size() != 0) 
-        {
-           n_curr_out_glo_data.resize({0},{num_field_sites_all_NS}, The_Pinned_Arena());
-        }
-        if(Norm_glo_data.size() != 0) 
-        {
-           Norm_glo_data.resize({0},{num_field_sites_all_NS}, The_Pinned_Arena());
-        }
+        n_curr_out_glo_data.resize({0},{NS->num_field_sites}, The_Pinned_Arena());
+        Norm_glo_data.resize({0},{NS->num_field_sites}, The_Pinned_Arena());
     }
  
     auto const& n_curr_out_glo = n_curr_out_glo_data.table();
     auto const& Norm_glo       = Norm_glo_data.table();
  
+    /*offset necessary for multiple NS*/
     MPI_Gatherv(&n_curr_out(0),
-                site_size_loc,
+                NS->MPI_recv_count[my_rank],
                 MPI_DOUBLE,
                &n_curr_out_glo(0),
-                MPI_recv_count.data(),
-                MPI_recv_disp.data(),
+                NS->MPI_recv_count.data(),
+                NS->MPI_recv_disp.data(),
                 MPI_DOUBLE,
                 ParallelDescriptor::IOProcessorNumber(),
                 ParallelDescriptor::Communicator());
 
+    /*offset necessary for multiple NS*/
     MPI_Gatherv(&Norm(0),
-                site_size_loc,
+                NS->MPI_recv_count[my_rank],
                 MPI_DOUBLE,
                &Norm_glo(0),
-                MPI_recv_count.data(),
-                MPI_recv_disp.data(),
+                NS->MPI_recv_count.data(),
+                NS->MPI_recv_disp.data(),
                 MPI_DOUBLE,
                 ParallelDescriptor::IOProcessorNumber(),
                 ParallelDescriptor::Communicator());
@@ -659,19 +651,8 @@ c_TransportSolver:: Create_Global_Output_Data()
     h_n_curr_out_data.clear();
     h_Norm_data.clear();
     #endif
-}
 
-
-void
-c_TransportSolver:: Clear_Global_Output_Data() 
-{
-    if (ParallelDescriptor::IOProcessor())
-    {
-        n_curr_out_glo_data.clear();
-        Norm_glo_data.clear();
-    }
 }
-#endif
 
 
 void
@@ -681,35 +662,23 @@ c_TransportSolver:: Perform_SelfConsistencyAlgorithm()
    {
        case s_Algorithm::Type::broyden_first:
        {
-           #ifdef BROYDEN_PARALLEL	
            amrex::Abort("At present, `Broyden's first' algorithm exists with only\
                          serial implementation (BROYDEN_PARALLEL=FALSE).");
-           #else
-           Execute_Broyden_First_Algorithm(); 
-           #endif
            break;
        }
        case s_Algorithm::Type::broyden_second:
        {
-           #ifdef BROYDEN_PARALLEL	
-               #ifdef BROYDEN_SKIP_GPU_OPTIMIZATION
-               Execute_Broyden_Modified_Second_Algorithm_Parallel_SkipGPU();
-               #else
-               Execute_Broyden_Modified_Second_Algorithm_Parallel(); 
-               #endif
+           #ifdef BROYDEN_SKIP_GPU_OPTIMIZATION
+           Execute_Broyden_Modified_Second_Algorithm_Parallel_SkipGPU();
            #else
-           Execute_Broyden_Modified_Second_Algorithm(); 
+           Execute_Broyden_Modified_Second_Algorithm_Parallel(); 
            #endif
            break;
        }
        case s_Algorithm::Type::simple_mixing:
        {
-           #ifdef BROYDEN_PARALLEL	
            amrex::Abort("At present, the `simple mixing' algorithm exists with only\
                          serial implementation (BROYDEN_PARALLEL=FALSE).");
-           #else
-           Execute_Simple_Mixing_Algorithm(); 
-           #endif
            break;
        }
        default:
@@ -815,12 +784,8 @@ c_TransportSolver:: Obtain_maximum_time(amrex::Real const* total_time_counter_di
 void
 c_TransportSolver:: Reset_ForNextBiasStep() 
 {
-    #ifdef BROYDEN_PARALLEL
     Reset_Broyden_Parallel();
-    Clear_Global_Output_Data();
-    #else
-    Reset_Broyden();
-    #endif
+
     //rMprop.ReInitializeMacroparam(NS_deposit_field_str);
     MPI_Barrier(ParallelDescriptor::Communicator());
 }

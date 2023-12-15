@@ -134,9 +134,8 @@ public:
     void Mark_CellsWithAtoms(); 
     void Solve_NEGF(RealTable1D& n_curr_out_data, const int iter);
     void Write_Data (const std::string filename_prefix, 
-                     RealTable1D& n_curr_in_data, 
-                     RealTable1D& n_curr_out_data, 
-                     RealTable1D& Norm_data);
+                     const RealTable1D& n_curr_out_data, 
+                     const RealTable1D& Norm_data);
 
 //    const amrex::Vector<amrex::Real>* get_avg_gatherField() { &avg_gatherField };
 

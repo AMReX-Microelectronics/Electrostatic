@@ -17,7 +17,6 @@ using namespace amrex;
     
             /*vectors*/
             auto const& n_curr_in      = h_n_curr_in_data.table();
-            //auto const& n_curr_in_glo  = n_curr_in_glo_data.table();
             auto const& n_curr_out     = h_n_curr_out_data.table();
             auto const& n_prev_in      = h_n_prev_in_data.table();
             
@@ -228,15 +227,6 @@ using namespace amrex;
             /*Increment Broyden_Step*/
             Broyden_Step += 1;
 
-           // MPI_Gatherv(&n_curr_in(0),
-           //              site_size_loc,
-           //              MPI_DOUBLE,
-           //             &n_curr_in_glo(0),
-           //              MPI_recv_count.data(),
-           //              MPI_recv_disp.data(),
-           //              MPI_DOUBLE,
-           //              ParallelDescriptor::IOProcessorNumber(),
-           //              ParallelDescriptor::Communicator());
     }
   #else
     void 
@@ -250,7 +240,6 @@ using namespace amrex;
             //		       << ",  scalar: " << Broyden_Scalar<< "\n";
     
             auto const& h_n_curr_in       = h_n_curr_in_data.table();
-            auto const& n_curr_in_glo     = n_curr_in_glo_data.table();
             auto const& h_intermed_vector = h_intermed_vector_data.table();
             auto* h_Intermed_values       = h_Intermed_values_vec.dataPtr();
     
@@ -508,15 +497,6 @@ using namespace amrex;
             amrex::Gpu::streamSynchronize();
     
             Broyden_Step += 1;
-            // MPI_Gatherv(&n_curr_in(0),
-            //              site_size_loc,
-            //              MPI_DOUBLE,
-            //             &n_curr_in_glo(0),
-            //              MPI_recv_count.data(),
-            //              MPI_recv_disp.data(),
-            //              MPI_DOUBLE,
-            //              ParallelDescriptor::IOProcessorNumber(),
-            //              ParallelDescriptor::Communicator());
     }
   #endif
 #endif

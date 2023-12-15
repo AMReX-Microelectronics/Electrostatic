@@ -1674,10 +1674,8 @@ c_NEGF_Common<T>:: Compute_DensityOfStates (std::string dos_foldername, bool fla
 
                 std::string spatialdos_filename = dos_foldername + "/Ept_" + std::to_string(e_glo) + ".dat";
 
-                bool write_at_offset = false;
                 Write_Table1D(h_PTD_glo_vec,
                               h_LDOS_glo_data,
-                              write_at_offset,
                               spatialdos_filename,  "PTD LDOS_r at E="+std::to_string(E.real()));
             }
         }
@@ -1696,16 +1694,13 @@ c_NEGF_Common<T>:: Compute_DensityOfStates (std::string dos_foldername, bool fla
         e_prev_pts += path.num_pts;
     }
     amrex::Print() << "Writing DOS: \n";
-    bool write_at_offset = false;
     Write_Table1D(E_total_vec, 
                   h_DOS_loc_data, 
-                  write_at_offset,
                   dos_foldername+"/DOS.dat", "E_r DOS_r");
 
     amrex::Print() << "Writing Transmission: \n";
     Write_Table1D(E_total_vec, 
                   h_Transmission_loc_data, 
-                  write_at_offset,
                   dos_foldername+"/Transmission.dat",  "E_r T_r");
 
     Write_FermiFunction(E_total_vec, dos_foldername + "/Fermi_Function.dat");
@@ -2028,8 +2023,7 @@ c_NEGF_Common<T>:: Write_InputInducedCharge (const std::string filename_prefix, 
     {
         std::string filename = filename_prefix + "_Qin.dat";
         
-        bool write_at_offset = true;
-        Write_Table1D(h_PTD_glo_vec, n_curr_in_data, write_at_offset, filename.c_str(), 
+        Write_Table1D(h_PTD_glo_vec, n_curr_in_data, filename.c_str(), 
                       "'axial location / (nm)', 'Induced charge per site / (e)'");
     }
 
@@ -2043,8 +2037,7 @@ c_NEGF_Common<T>:: Write_InducedCharge (const std::string filename_prefix, const
 
     std::string filename = filename_prefix + "_Qout.dat";
 
-    bool write_at_offset = true;
-    Write_Table1D(h_PTD_glo_vec, n_curr_out_data, write_at_offset, filename.c_str(), 
+    Write_Table1D(h_PTD_glo_vec, n_curr_out_data, filename.c_str(), 
                       "'axial location / (nm)', 'Induced charge per site / (e)'");
 }
 
@@ -2056,8 +2049,7 @@ c_NEGF_Common<T>:: Write_ChargeNorm (const std::string filename_prefix, const Re
 
     std::string filename = filename_prefix + "_norm.dat";
 
-    bool write_at_offset = true;
-    Write_Table1D(h_PTD_glo_vec, Norm_data, write_at_offset, filename.c_str(), 
+    Write_Table1D(h_PTD_glo_vec, Norm_data, filename.c_str(), 
                   "'axial location / (nm)', 'norm");
 
 }
@@ -2258,11 +2250,14 @@ c_NEGF_Common<T>:: Compute_RhoNonEq ()
     if(flag_compute_integrand) 
     {
         h_NonEq_Integrand_data.resize({0},{total_noneq_integration_pts}, The_Pinned_Arena());
-        d_NonEq_Integrand_data.resize({0},{total_noneq_integration_pts}, The_Arena());
         h_NonEq_Integrand_Source_data.resize({0},{total_noneq_integration_pts}, The_Pinned_Arena());
-        d_NonEq_Integrand_Source_data.resize({0},{total_noneq_integration_pts}, The_Arena());
+
         h_NonEq_Integrand_Drain_data.resize({0},{total_noneq_integration_pts}, The_Pinned_Arena());
+        #ifdef AMREX_USE_GPU
+        d_NonEq_Integrand_data.resize({0},{total_noneq_integration_pts}, The_Arena());
+        d_NonEq_Integrand_Source_data.resize({0},{total_noneq_integration_pts}, The_Arena());
         d_NonEq_Integrand_Drain_data.resize({0},{total_noneq_integration_pts}, The_Arena());
+        #endif
     }
     auto const& h_NonEq_Integrand        = h_NonEq_Integrand_data.table();
     auto const& h_NonEq_Integrand_Source = h_NonEq_Integrand_Source_data.table();
@@ -2603,11 +2598,13 @@ c_NEGF_Common<T>:: Compute_RhoNonEq ()
         ParallelDescriptor::Bcast(&E_at_max_noneq_integrand, 1, ParallelDescriptor::IOProcessorNumber());
 
         h_NonEq_Integrand_data.clear();
-        d_NonEq_Integrand_data.clear();
         h_NonEq_Integrand_Source_data.clear();
-        d_NonEq_Integrand_Source_data.clear();
         h_NonEq_Integrand_Drain_data.clear();
+        #ifdef AMREX_USE_GPU
+        d_NonEq_Integrand_data.clear();
+        d_NonEq_Integrand_Source_data.clear();
         d_NonEq_Integrand_Drain_data.clear();
+        #endif
     }
 
     Deallocate_TemporaryArraysForGFComputation();
@@ -3205,7 +3202,6 @@ template<typename VectorType, typename TableType>
 void
 c_NEGF_Common<T>::Write_Table1D(const amrex::Vector<VectorType>& Vec,
                                 const TableType& Arr_data, 
-                                bool write_at_offset,
                                 std::string filename, 
                                 std::string header)
 { 
@@ -3220,16 +3216,20 @@ c_NEGF_Common<T>::Write_Table1D(const amrex::Vector<VectorType>& Vec,
 
         outfile << header  << "\n";
 
-        int Offset=0;
-        if(write_at_offset) Offset = NS_data_offset;
-
-        for (int e=0; e< Vec.size(); ++e)
+        if(Vec.size() == thi[0]) 
         {
-            int e_off = Offset + e;
-            outfile << std::setprecision(15) 
-	        		<< std::setw(35) << Vec[e] 
-                    << std::setw(35) << Arr(e_off) << "\n";
+            for (int e=0; e< Vec.size(); ++e)
+            {
+                outfile << std::setprecision(15) 
+	            		<< std::setw(35) << Vec[e] 
+                        << std::setw(35) << Arr(e) << "\n";
+            }
         }
+        else {
+            outfile << "Mismatch in the size of Vec size: " << Vec.size() 
+                    << " and Table1D_data: " << thi[0]  << "\n";
+        }
+
         outfile.close();
     }
 }
@@ -3387,11 +3387,13 @@ c_NEGF_Common<T>:: Compute_Current ()
     if(flag_write_integrand_main)
     {
         h_NonEq_Integrand_data.resize({0},{total_noneq_integration_pts}, The_Pinned_Arena());
-        d_NonEq_Integrand_data.resize({0},{total_noneq_integration_pts}, The_Arena());
         h_NonEq_Integrand_Source_data.resize({0},{total_noneq_integration_pts}, The_Pinned_Arena());
-        d_NonEq_Integrand_Source_data.resize({0},{total_noneq_integration_pts}, The_Arena());
         h_NonEq_Integrand_Drain_data.resize({0},{total_noneq_integration_pts}, The_Pinned_Arena());
+        #ifdef AMREX_USE_GPU
+        d_NonEq_Integrand_data.resize({0},{total_noneq_integration_pts}, The_Arena());
+        d_NonEq_Integrand_Source_data.resize({0},{total_noneq_integration_pts}, The_Arena());
         d_NonEq_Integrand_Drain_data.resize({0},{total_noneq_integration_pts}, The_Arena());
+        #endif
     }
     auto const& h_NonEq_Integrand = h_NonEq_Integrand_data.table();
     auto const& h_NonEq_Integrand_Source = h_NonEq_Integrand_Source_data.table();
@@ -3771,11 +3773,13 @@ c_NEGF_Common<T>:: Compute_Current ()
         ParallelDescriptor::Bcast(&E_at_max_noneq_integrand, 1, ParallelDescriptor::IOProcessorNumber());
 
         h_NonEq_Integrand_data.clear();
-        d_NonEq_Integrand_data.clear();
         h_NonEq_Integrand_Source_data.clear();
-        d_NonEq_Integrand_Source_data.clear();
         h_NonEq_Integrand_Drain_data.clear();
+        #ifdef AMREX_USE_GPU
+        d_NonEq_Integrand_data.clear();
+        d_NonEq_Integrand_Source_data.clear();
         d_NonEq_Integrand_Drain_data.clear();
+        #endif
     }
 
     Deallocate_TemporaryArraysForGFComputation();

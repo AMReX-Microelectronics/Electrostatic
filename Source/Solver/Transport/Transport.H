@@ -134,8 +134,10 @@ private:
     int my_rank;
     int num_procs_with_sites;
     int site_size_loc;
-    amrex::Vector<int> MPI_recv_count;
-    amrex::Vector<int> MPI_recv_disp;
+    //std::map<std::string, amrex::Vector<int>> MPI_recv_count;
+    //std::map<std::string, amrex::Vector<int>> MPI_recv_disp;
+    //amrex::Vector<int> MPI_recv_count;
+    //amrex::Vector<int> MPI_recv_disp;
 
     RealTable1D h_n_curr_in_data; 
     RealTable1D h_n_curr_out_data; 
@@ -179,9 +181,6 @@ private:
     #endif
 
     template<typename NSType>
-    void Write_PredictedCharge(NSType const& NS);
-
-    template<typename NSType>
     void Set_TerminalBiasesAndContactPotential(NSType const& NS);
 
     template<typename NSType>
@@ -191,7 +190,7 @@ private:
     void CopyToNS_ChargeComputedUsingSelfConsistencyAlgorithm(NSType const& NS);
 
     template<typename NSType>
-    void Write_DataComputedUsingSelfConsistencyAlgorithm(NSType const& NS, std::string const& write_filename,
+    void Write_MoreDataAndComputeCurrent(NSType const& NS, std::string const& write_filename,
             bool const compute_current_flag);
 
     void Perform_SelfConsistencyAlgorithm();
@@ -230,8 +229,8 @@ private:
             B[i] += A[i];
         }
     }
-    void Create_Global_Output_Data();
-    void Clear_Global_Output_Data();
+    template<typename NSType>
+    void Create_Global_Output_Data(NSType const& NS);
     #else
     void Set_Broyden();
     void Reset_Broyden();

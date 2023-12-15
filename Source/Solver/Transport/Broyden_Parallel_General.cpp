@@ -48,39 +48,24 @@ c_TransportSolver::Define_Broyden_Partition()
      * num_field_sites_all_NS
      * my_rank
      * total_proc
-     *
-     * MPI_recv_count
-     * MPI_recv_disp
-     *
      * site_size_loc
-     * num_procs_with_sites
      */
 
     num_field_sites_all_NS = 0;
     total_proc = amrex::ParallelDescriptor::NProcs();
     my_rank = amrex::ParallelDescriptor::MyProc();
 
-    MPI_recv_count.resize(total_proc);
-    MPI_recv_disp.resize(total_proc);
-    num_procs_with_sites=total_proc;
+    // MPI_recv_count.resize(total_proc);
+    // MPI_recv_disp.resize(total_proc);
+    // num_procs_with_sites=total_proc;
 
     int g=0;
     for (int c=0; c < vp_CNT.size(); ++c)
     {
 	    num_field_sites_all_NS += vp_CNT[c]->num_field_sites;
 
-	    /*We assume that only a subset of procs work on each nanostructure.*/
-	    for(int i=0; i < vp_CNT[c]->num_proc; ++i) 
-	    {
-            int recv_count    = vp_CNT[c]->MPI_recv_count[i];
-	        if(recv_count == 0) num_procs_with_sites--;
-
-	        MPI_recv_count[g] = recv_count;
-	        MPI_recv_disp[g]  = vp_CNT[c]->MPI_recv_disp[i];
-
-	        g++;
-	    }
-	    site_size_loc = MPI_recv_count[my_rank];
+        /*need correction here for multiple nanotubes*/
+	    site_size_loc = vp_CNT[c]->MPI_recv_count[my_rank];
     }
     //if (ParallelDescriptor::IOProcessor()) 
     //{
@@ -107,22 +92,18 @@ c_TransportSolver:: Set_Broyden_Parallel ()
     Broyden_NormSum_Prev = 1.e10;
     Broyden_fraction = Broyden_Original_Fraction;
 
-    if(ParallelDescriptor::IOProcessor()) 
-    {
-        n_curr_in_glo_data.resize({0},{num_field_sites_all_NS}, The_Pinned_Arena());
-        SetVal_RealTable1D(n_curr_in_glo_data,0.);
-    }
 
     h_n_curr_in_data.resize({0}, {site_size_loc}, The_Pinned_Arena());
     SetVal_RealTable1D(h_n_curr_in_data,0.);
 
     auto const& h_n_curr_in    = h_n_curr_in_data.table();
-    auto const& n_curr_in_glo  = n_curr_in_glo_data.table();
 
     /*Need generalization for multiple CNTs*/
     for (int c=0; c < vp_CNT.size(); ++c)
     {
-        vp_CNT[c]->Fetch_InputLocalCharge_FromNanostructure(h_n_curr_in_data, MPI_recv_disp[my_rank], site_size_loc);
+        vp_CNT[c]->Fetch_InputLocalCharge_FromNanostructure(h_n_curr_in_data, 
+                                                            vp_CNT[c]->MPI_recv_disp[my_rank], 
+                                                            site_size_loc);
 	}
 
     #ifdef BROYDEN_SKIP_GPU_OPTIMIZATION
@@ -376,10 +357,7 @@ c_TransportSolver::Deallocate_Broyden_Parallel ()
     h_F_curr_data.clear();
     h_delta_F_curr_data.clear();
     h_Norm_data.clear();
-
-    n_curr_in_glo_data.clear();
     h_intermed_vector_data.clear();
-
 
     #ifdef BROYDEN_SKIP_GPU_OPTIMIZATION
     h_Wmat_data.clear();
