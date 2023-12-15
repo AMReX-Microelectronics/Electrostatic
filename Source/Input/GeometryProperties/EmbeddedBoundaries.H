@@ -39,7 +39,7 @@ struct s_PARSER {
 };
 
 struct s_ObjectType {
-    enum object { sphere, box, cylinder, plane, torus, parser, stl, cntfet_contact, cntfet_contact_cyl };
+    enum object { sphere, box, cylinder, plane, torus, parser, stl, cntfet_contact, cntfet_contact_cyl, cntfet_contact_rect };
 };
 
 class
@@ -107,6 +107,7 @@ private:
                                {"stl"            , s_ObjectType::object::stl},
                                {"cntfet_contact" , s_ObjectType::object::cntfet_contact},
                                {"cntfet_contact_cyl" , s_ObjectType::object::cntfet_contact_cyl},
+                               {"cntfet_contact_rect" , s_ObjectType::object::cntfet_contact_rect},
 
                                {"Sphere"         , s_ObjectType::object::sphere},
                                {"Box"            , s_ObjectType::object::box},
@@ -117,13 +118,16 @@ private:
                                {"Stl"            , s_ObjectType::object::stl},
                                {"Cntfet_contact" , s_ObjectType::object::cntfet_contact},
                                {"Cntfet_contact_cyl" , s_ObjectType::object::cntfet_contact_cyl},
+                               {"Cntfet_contact_rect" , s_ObjectType::object::cntfet_contact_rect},
 
                                {"STL"            , s_ObjectType::object::stl},
                                {"CNTFET_contact" , s_ObjectType::object::cntfet_contact},
                                {"CNTFET_contact_cyl" , s_ObjectType::object::cntfet_contact_cyl},
+                               {"CNTFET_contact_rect" , s_ObjectType::object::cntfet_contact_rect},
                            };
     using cntfet_contact_type = amrex::EB2::IntersectionIF<amrex::EB2::CylinderIF, amrex::EB2::BoxIF>;
     using cntfet_contact_cyl_type = amrex::EB2::IntersectionIF<amrex::EB2::CylinderIF, amrex::EB2::CylinderIF>;
+    using cntfet_contact_rect_type = amrex::EB2::IntersectionIF<amrex::EB2::BoxIF, amrex::EB2::BoxIF>;
 
     int num_final_objects;
     std::map<int,int> map_basic_objects;

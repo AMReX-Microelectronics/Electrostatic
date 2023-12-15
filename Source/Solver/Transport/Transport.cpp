@@ -367,13 +367,21 @@ c_TransportSolver::Solve(const int step, const amrex::Real time)
            time_counter[5] = amrex::second();
 
            //Part 6: Write data
+	       if( write_at_iter_any ) 
+           {
+               #ifdef BROYDEN_PARALLEL
+	           Create_Global_Output_Data(); 
+               #endif
+    	   }
+
            for (int c=0; c < vp_CNT.size(); ++c)
            {
 	          if( vp_CNT[c]->write_at_iter ) 
               {
                   bool compute_current = false;
                   Write_DataComputedUsingSelfConsistencyAlgorithm(vp_CNT[c], 
-                          vp_CNT[c]->iter_filename_str, compute_current);
+                                                                  vp_CNT[c]->iter_filename_str, 
+                                                                  compute_current);
     	      }
 
               if(flag_write_LDOS_iter and (max_iter+1)%write_LDOS_iter_period == 0) 
@@ -569,18 +577,12 @@ c_TransportSolver:: Write_DataComputedUsingSelfConsistencyAlgorithm(NSType const
                                                                     bool const compute_current_flag)
 {
     #ifdef BROYDEN_PARALLEL
-	Create_Global_Output_Data(); 
-    /*May need to be before & outside the forloop for multiple NS*/
     //Note: n_curr_out_glo was output from negf and input to broyden.
     //n_curr_in is the broyden predicted charge for next iteration.
     //NEGF->n_curr_out -> Broyden->n_curr_in -> Electrostatics -> NEGF.
-    
-    NS->Write_Data(write_filename, n_curr_out_glo_data, Norm_glo_data);
-	NS->Write_InputInducedCharge(write_filename, n_curr_in_glo_data); 
-
+    NS->Write_Data(write_filename, n_curr_in_glo_data, n_curr_out_glo_data, Norm_glo_data);
     #else
-    NS->Write_Data(write_filename, h_n_curr_out_data, h_Norm_data);
-	NS->Write_InputInducedCharge(write_filename, h_n_curr_in_data); 
+    NS->Write_Data(write_filename, h_n_curr_in_data, h_n_curr_out_data, h_Norm_data);
     //if(map_AlgorithmType[Algorithm_Type] == s_Algorithm::Type::broyden_first) 
 	//{
     //    Write_Table2D(h_Jinv_curr_data, common_step_folder_str + "/Jinv.dat", "Jinv");
@@ -592,7 +594,6 @@ c_TransportSolver:: Write_DataComputedUsingSelfConsistencyAlgorithm(NSType const
         NS->Compute_Current();
         NS->Write_Current(m_step, Vds, Vgs, Broyden_Step, max_iter, Broyden_fraction, Broyden_Scalar);
     }
-
 }
 
 

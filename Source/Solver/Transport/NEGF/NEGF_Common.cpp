@@ -1674,8 +1674,10 @@ c_NEGF_Common<T>:: Compute_DensityOfStates (std::string dos_foldername, bool fla
 
                 std::string spatialdos_filename = dos_foldername + "/Ept_" + std::to_string(e_glo) + ".dat";
 
+                bool write_at_offset = false;
                 Write_Table1D(h_PTD_glo_vec,
                               h_LDOS_glo_data,
+                              write_at_offset,
                               spatialdos_filename,  "PTD LDOS_r at E="+std::to_string(E.real()));
             }
         }
@@ -1694,13 +1696,16 @@ c_NEGF_Common<T>:: Compute_DensityOfStates (std::string dos_foldername, bool fla
         e_prev_pts += path.num_pts;
     }
     amrex::Print() << "Writing DOS: \n";
+    bool write_at_offset = false;
     Write_Table1D(E_total_vec, 
                   h_DOS_loc_data, 
+                  write_at_offset,
                   dos_foldername+"/DOS.dat", "E_r DOS_r");
 
     amrex::Print() << "Writing Transmission: \n";
     Write_Table1D(E_total_vec, 
                   h_Transmission_loc_data, 
+                  write_at_offset,
                   dos_foldername+"/Transmission.dat",  "E_r T_r");
 
     Write_FermiFunction(E_total_vec, dos_foldername + "/Fermi_Function.dat");
@@ -1972,23 +1977,6 @@ c_NEGF_Common<T>:: Scatterv_BroydenComputed_GlobalCharge (RealTable1D& n_curr_in
 
 template<typename T>
 void 
-c_NEGF_Common<T>:: Write_InputInducedCharge (const std::string filename_prefix, RealTable1D& n_curr_in_data)
-{
-
-    if (ParallelDescriptor::IOProcessor())
-    {
-
-        std::string filename = filename_prefix + "_Qin.dat";
-
-        Write_Table1D(h_PTD_glo_vec, n_curr_in_data, filename.c_str(), 
-                      "'axial location / (nm)', 'Induced charge per site / (e)'");
-    }
-
-}
-
-
-template<typename T>
-void 
 c_NEGF_Common<T>:: Write_PotentialAtSites (const std::string filename_prefix)
 {
 
@@ -2034,24 +2022,42 @@ c_NEGF_Common<T>:: Write_PotentialAtSites (const std::string filename_prefix)
 
 template<typename T>
 void 
-c_NEGF_Common<T>:: Write_InducedCharge (const std::string filename_prefix, RealTable1D& n_curr_out_data)
+c_NEGF_Common<T>:: Write_InputInducedCharge (const std::string filename_prefix, const RealTable1D& n_curr_in_data)
+{
+    if (ParallelDescriptor::IOProcessor())
+    {
+        std::string filename = filename_prefix + "_Qin.dat";
+        
+        bool write_at_offset = true;
+        Write_Table1D(h_PTD_glo_vec, n_curr_in_data, write_at_offset, filename.c_str(), 
+                      "'axial location / (nm)', 'Induced charge per site / (e)'");
+    }
+
+}
+
+
+template<typename T>
+void 
+c_NEGF_Common<T>:: Write_InducedCharge (const std::string filename_prefix, const RealTable1D& n_curr_out_data)
 {
 
     std::string filename = filename_prefix + "_Qout.dat";
 
-    Write_Table1D(h_PTD_glo_vec, n_curr_out_data, filename.c_str(), 
+    bool write_at_offset = true;
+    Write_Table1D(h_PTD_glo_vec, n_curr_out_data, write_at_offset, filename.c_str(), 
                       "'axial location / (nm)', 'Induced charge per site / (e)'");
 }
 
 
 template<typename T>
 void 
-c_NEGF_Common<T>:: Write_ChargeNorm (const std::string filename_prefix, RealTable1D& Norm_data)
+c_NEGF_Common<T>:: Write_ChargeNorm (const std::string filename_prefix, const RealTable1D& Norm_data)
 {
 
     std::string filename = filename_prefix + "_norm.dat";
 
-    Write_Table1D(h_PTD_glo_vec, Norm_data, filename.c_str(), 
+    bool write_at_offset = true;
+    Write_Table1D(h_PTD_glo_vec, Norm_data, write_at_offset, filename.c_str(), 
                   "'axial location / (nm)', 'norm");
 
 }
@@ -3199,6 +3205,7 @@ template<typename VectorType, typename TableType>
 void
 c_NEGF_Common<T>::Write_Table1D(const amrex::Vector<VectorType>& Vec,
                                 const TableType& Arr_data, 
+                                bool write_at_offset,
                                 std::string filename, 
                                 std::string header)
 { 
@@ -3212,16 +3219,16 @@ c_NEGF_Common<T>::Write_Table1D(const amrex::Vector<VectorType>& Vec,
         auto thi = Arr_data.hi();
 
         outfile << header  << "\n";
-        if(Vec.size() == thi[0]) {   
-            for (int e=0; e< thi[0]; ++e)
-            {
-                outfile << std::setprecision(15) 
-			<< std::setw(35) << Vec[e] 
-                        << std::setw(35) << Arr(e) << "\n";
-            }
-        }
-        else {
-            outfile << "Mismatch in the size of Vec and Table1D_data!"  << "\n";
+
+        int Offset=0;
+        if(write_at_offset) Offset = NS_data_offset;
+
+        for (int e=0; e< Vec.size(); ++e)
+        {
+            int e_off = Offset + e;
+            outfile << std::setprecision(15) 
+	        		<< std::setw(35) << Vec[e] 
+                    << std::setw(35) << Arr(e_off) << "\n";
         }
         outfile.close();
     }
