@@ -367,12 +367,6 @@ c_TransportSolver::Solve(const int step, const amrex::Real time)
            time_counter[5] = amrex::second();
 
            //Part 6: Write data
-	       if( write_at_iter_any ) 
-           {
-               #ifdef BROYDEN_PARALLEL
-	           Create_Global_Output_Data(); 
-               #endif
-    	   }
 
            for (int c=0; c < vp_CNT.size(); ++c)
            {
@@ -580,6 +574,7 @@ c_TransportSolver:: Write_DataComputedUsingSelfConsistencyAlgorithm(NSType const
     //Note: n_curr_out_glo was output from negf and input to broyden.
     //n_curr_in is the broyden predicted charge for next iteration.
     //NEGF->n_curr_out -> Broyden->n_curr_in -> Electrostatics -> NEGF.
+	Create_Global_Output_Data(); 
     NS->Write_Data(write_filename, n_curr_in_glo_data, n_curr_out_glo_data, Norm_glo_data);
     #else
     NS->Write_Data(write_filename, h_n_curr_in_data, h_n_curr_out_data, h_Norm_data);

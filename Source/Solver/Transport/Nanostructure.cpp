@@ -825,6 +825,7 @@ c_Nanostructure<NSType>:: Solve_NEGF (RealTable1D& n_curr_out_data, const int it
 template<typename NSType>
 void
 c_Nanostructure<NSType>:: Write_Data (const std::string filename_prefix, 
+                                      RealTable1D& n_curr_in_data, 
                                       RealTable1D& n_curr_out_data, 
                                       RealTable1D& Norm_data)
 {
@@ -833,6 +834,7 @@ c_Nanostructure<NSType>:: Write_Data (const std::string filename_prefix,
     NSType::Write_PotentialAtSites(filename_prefix);
     if (ParallelDescriptor::IOProcessor())
     {
+	    NSType::Write_InputInducedCharge(filename_prefix, n_curr_in_data); 
         NSType::Write_InducedCharge(filename_prefix, n_curr_out_data);
         NSType::Write_ChargeNorm(filename_prefix, Norm_data);
     }
