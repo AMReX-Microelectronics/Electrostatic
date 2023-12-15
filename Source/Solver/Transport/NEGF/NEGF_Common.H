@@ -293,7 +293,6 @@ public:
     amrex::Vector<amrex::Real> noneq_percent_intercuts;
 
     int num_noneq_paths=1;
-    bool flag_adaptive_integration_limits = false;
     bool flag_compute_flatband_dos = false;
     int flatband_dos_integration_pts = 100;
     amrex::Vector<amrex::Real> flatband_dos_integration_limits = {-1., 1.};
@@ -346,9 +345,16 @@ public:
     std::string iter_foldername_str;
     std::string iter_filename_prefix_str;
     std::string iter_filename_str;
+
     int write_at_iter = 0;
-    int flag_write_integrand_main = 0;
-    int flag_write_integrand_iter = 0;
+    bool flag_adaptive_integration_limits = false;
+    bool flag_correct_integration_limits = false;
+    bool flag_write_integrand_main = false;
+    bool flag_write_integrand_iter = false;
+    int integrand_correction_interval = 500;
+    int write_integrand_interval = 500;
+    amrex::Vector<amrex::Real> kT_window_around_singularity = {1., 1.};
+    
 
     void Set_StepFilenameString(const int step);
     void Set_IterationFilenameString(const int iter);

@@ -795,14 +795,24 @@ c_Nanostructure<NSType>:: InitializeNEGF (std::string common_foldername_str)
 
 template<typename NSType>
 void
-c_Nanostructure<NSType>:: Solve_NEGF (RealTable1D& n_curr_out_data)
+c_Nanostructure<NSType>:: Solve_NEGF (RealTable1D& n_curr_out_data, const int iter)
 {
     NSType::AddPotentialToHamiltonian();
 
-    if(NSType::flag_EC_potential_updated) 
+    if(NSType::flag_adaptive_integration_limits and iter%NSType::integrand_correction_interval == 0) {
+        NSType::flag_correct_integration_limits = true;
+    } 
+    else {
+        NSType::flag_correct_integration_limits = false;
+    }
+
+    if(NSType::flag_EC_potential_updated)
     {
         NSType::Update_ContactElectrochemicalPotential(); 
         NSType::Define_EnergyLimits();
+    }
+    if(NSType::flag_EC_potential_updated or NSType::flag_correct_integration_limits) 
+    {
         NSType::Update_IntegrationPaths();
         NSType::flag_EC_potential_updated = false;
     }

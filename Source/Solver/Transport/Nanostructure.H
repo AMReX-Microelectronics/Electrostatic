@@ -132,7 +132,7 @@ public:
     void Deposit_AtomAttributeToMesh();
     void Obtain_PotentialAtSites();
     void Mark_CellsWithAtoms(); 
-    void Solve_NEGF(RealTable1D& n_curr_out_data);
+    void Solve_NEGF(RealTable1D& n_curr_out_data, const int iter);
     void Write_Data (const std::string filename_prefix, 
                      RealTable1D& n_curr_out_data, 
                      RealTable1D& Norm_data);

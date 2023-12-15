@@ -65,7 +65,7 @@ c_NEGF_Common<T>:: Set_IterationFilenameString(const int iter)
 
         if(flag_write_integrand_main) 
         {
-            if(iter==0) {
+            if(iter==0 or iter%write_integrand_interval == 0) {
                 flag_write_integrand_iter = true;
                 amrex::Print() << " setting flag_write_integrand_iter to: " 
                                << flag_write_integrand_iter << "\n";
@@ -343,8 +343,6 @@ c_NEGF_Common<T>:: ReadNanostructureProperties ()
     auto flag_noneq_integration_pts = queryArrWithParser(pp_ns, "noneq_integration_pts", 
                                                                  noneq_integration_pts, 0, num_noneq_paths);
 
-    flag_adaptive_integration_limits = false;
-    pp_ns.query("flag_adaptive_integration_limits", flag_adaptive_integration_limits);
     
     if(num_noneq_paths > 1) {
         auto flag_noneq_percent_intercuts = queryArrWithParser(pp_ns, "noneq_percent_intercuts", 
@@ -452,8 +450,6 @@ c_NEGF_Common<T>:: ReadNanostructureProperties ()
     amrex::Print() << "\n";
     amrex::Print() << "#####* Total nonequilibrium contour integration points: " << total_noneq_integration_pts << "\n";
 
-    amrex::Print() << "##### flag_adaptive_integration_limits: " << flag_adaptive_integration_limits << "\n";
-
     amrex::Print() << "##### Nonequilibrium path intercuts in percentage, noneq_percent_intercuts: ";
     for(int c=0; c < num_noneq_paths-1; ++c) {
         amrex::Print() << noneq_percent_intercuts[c] << "  ";
@@ -461,9 +457,26 @@ c_NEGF_Common<T>:: ReadNanostructureProperties ()
     amrex::Print() << "\n";
     amrex::Print() << "##### num_recursive_parts: " << num_recursive_parts << "\n";
 
-    flag_write_integrand_main = 0;
+
+    flag_adaptive_integration_limits = false;
+    pp_ns.query("flag_adaptive_integration_limits", flag_adaptive_integration_limits);
+    amrex::Print() << "##### flag_adaptive_integration_limits: " << flag_adaptive_integration_limits << "\n";
+
+    integrand_correction_interval = 500;
+    pp_ns.query("integrand_correction_interval", integrand_correction_interval);
+    amrex::Print() << "##### integrand_correction_interval: " << integrand_correction_interval << "\n";
+
+    auto flag_kT_window_around_singularity = queryArrWithParser(pp_ns, "kT_window_around_singularity", 
+                                                           kT_window_around_singularity, 0, 1);
+    amrex::Print() << "##### kT_window_around_singularity: " << "\n";
+    for(int i=0; i < 2; ++i) {
+        amrex::Print() << kT_window_around_singularity[i] << "  ";
+    }
+    amrex::Print() << "\n";
+
+    flag_write_integrand_main = false;
     pp_ns.query("flag_write_integrand", flag_write_integrand_main);
-    amrex::Print() << "##### flag_write_integrand (main): " << flag_write_integrand_main << "\n";
+    amrex::Print() << "##### flag_write_integrand: " << flag_write_integrand_main << "\n";
 
     Set_Arrays_OfSize_NumFieldSites();
 
@@ -1004,8 +1017,6 @@ c_NEGF_Common<T>:: Write_Integrand (const amrex::Vector<ComplexType>& E_vec,
                                     const TableType& Arr_Drain_data, 
                                     std::string filename)
 {
-    if (amrex::ParallelDescriptor::IOProcessor())
-    {
         amrex::Print() << "Writing integrand in file: " << filename << "\n";
         std::ofstream outfile;
         outfile.open(filename.c_str());
@@ -1037,7 +1048,6 @@ c_NEGF_Common<T>:: Write_Integrand (const amrex::Vector<ComplexType>& E_vec,
             outfile << "In Write_Integrand: Mismatch in the size of Vec and Table1D_data!"  << "\n";
         }
         outfile.close();
-    }
 }
 
 
@@ -1089,8 +1099,8 @@ c_NEGF_Common<T>:: Find_NonEq_Percent_Intercuts_Adaptively ()
 
     if(num_noneq_paths == 3) 
     {
-        amrex::Real E_lower = std::max(E_star - 2, E_min);
-        amrex::Real E_upper = std::min(E_star + 1, E_max);
+        amrex::Real E_lower = std::max(E_star - kT_window_around_singularity[0], E_min);
+        amrex::Real E_upper = std::min(E_star + kT_window_around_singularity[1], E_max);
         
         amrex::Print() << "\nE_min/max/star/lower/upper: " << E_min << " " << E_max << " " 
                                       << E_star<< " " << E_lower << " " << E_upper << "\n";
@@ -1130,7 +1140,7 @@ c_NEGF_Common<T>:: Update_IntegrationPaths ()
     if(flag_noneq_exists) 
     {
         Generate_NonEq_Paths ();
-        if(flag_adaptive_integration_limits and flag_noneq_exists) 
+        if(flag_correct_integration_limits) 
         { 
             Compute_RhoNonEq(); 
             Find_NonEq_Percent_Intercuts_Adaptively();
@@ -2233,9 +2243,13 @@ c_NEGF_Common<T>:: Compute_RhoNonEq ()
     auto& degen_vec             = block_degen_vec;
 
     #endif
+    bool flag_compute_integrand = false;
+    if(flag_write_integrand_iter or flag_correct_integration_limits)
+    {
+        flag_compute_integrand = true;
+    }
 
-    amrex::Vector<ComplexType>E_total_vec;
-    if(flag_write_integrand_iter) 
+    if(flag_compute_integrand) 
     {
         h_NonEq_Integrand_data.resize({0},{total_noneq_integration_pts}, The_Pinned_Arena());
         d_NonEq_Integrand_data.resize({0},{total_noneq_integration_pts}, The_Arena());
@@ -2243,7 +2257,6 @@ c_NEGF_Common<T>:: Compute_RhoNonEq ()
         d_NonEq_Integrand_Source_data.resize({0},{total_noneq_integration_pts}, The_Arena());
         h_NonEq_Integrand_Drain_data.resize({0},{total_noneq_integration_pts}, The_Pinned_Arena());
         d_NonEq_Integrand_Drain_data.resize({0},{total_noneq_integration_pts}, The_Arena());
-        E_total_vec.resize(total_noneq_integration_pts);
     }
     auto const& h_NonEq_Integrand        = h_NonEq_Integrand_data.table();
     auto const& h_NonEq_Integrand_Source = h_NonEq_Integrand_Source_data.table();
@@ -2257,7 +2270,7 @@ c_NEGF_Common<T>:: Compute_RhoNonEq ()
     auto const& NonEq_Integrand_Source = h_NonEq_Integrand_Source_data.table();
     auto const& NonEq_Integrand_Drain  = h_NonEq_Integrand_Drain_data.table();
     #endif
-    if(flag_write_integrand_iter) 
+    if(flag_compute_integrand) 
     {
         amrex::ParallelFor(total_noneq_integration_pts, [=] AMREX_GPU_DEVICE (int e) noexcept
         {
@@ -2275,8 +2288,6 @@ c_NEGF_Common<T>:: Compute_RhoNonEq ()
             ComplexType E = ContourPath_RhoNonEq[p].E_vec[e];
             ComplexType weight = ContourPath_RhoNonEq[p].weight_vec[e];
             ComplexType mul_factor = ContourPath_RhoNonEq[p].mul_factor_vec[e];
-            int e_glo = e + e_prev;
-            if(flag_write_integrand_iter) E_total_vec[e_glo] = E;
 
             for(int n=0; n<blkCol_size_loc; ++n)
             {
@@ -2405,7 +2416,8 @@ c_NEGF_Common<T>:: Compute_RhoNonEq ()
             auto* degen_vec_ptr = degen_vec.dataPtr();
 
 	        amrex::Real const_multiplier = -1*spin_degen/(2*MathConst::pi);
-            int write_integrand = flag_write_integrand_iter;
+            bool compute_integrand = flag_compute_integrand;
+            int e_glo = e + e_prev;
 
             amrex::ParallelFor(blkCol_size_loc, [=] AMREX_GPU_DEVICE (int n) noexcept
             {
@@ -2489,19 +2501,19 @@ c_NEGF_Common<T>:: Compute_RhoNonEq ()
                 MatrixBlock<T> RhoNonEq_n = const_multiplier*AnF_sum*weight*mul_factor;
                 RhoNonEq_loc(n) = RhoNonEq_loc(n) + RhoNonEq_n.DiagMult(degen_vec_ptr);
 
-                if(write_integrand) 
+                if(compute_integrand) 
                 {
                     if(n_glo==int(Hsize/2)) 
                     {
                         MatrixBlock<T> Intermed = const_multiplier*AnF_sum; 
                         NonEq_Integrand(e_glo) = Intermed.DiagMult(degen_vec_ptr).DiagSum().real();
                     }
-                    else if(n_glo==0) 
+                    else if(n_glo==int(Hsize/4)) 
                     {
                         MatrixBlock<T> Intermed = const_multiplier*AnF_sum; 
                         NonEq_Integrand_Source(e_glo) = Intermed.DiagMult(degen_vec_ptr).DiagSum().real();
                     }
-                    else if(n_glo==Hsize-1) 
+                    else if(n_glo==int(Hsize*3/4)) 
                     {
                         MatrixBlock<T> Intermed = const_multiplier*AnF_sum; 
                         NonEq_Integrand_Drain(e_glo) = Intermed.DiagMult(degen_vec_ptr).DiagSum().real();
@@ -2513,10 +2525,10 @@ c_NEGF_Common<T>:: Compute_RhoNonEq ()
             #endif
 
         } 
-        e_prev = ContourPath_RhoNonEq[p].num_pts;
+        e_prev += ContourPath_RhoNonEq[p].num_pts;
     }
 
-    if(flag_write_integrand_iter) 
+    if(flag_compute_integrand) 
     {
         #ifdef AMREX_USE_GPU
         h_NonEq_Integrand_data.copy(d_NonEq_Integrand_data);
@@ -2524,6 +2536,7 @@ c_NEGF_Common<T>:: Compute_RhoNonEq ()
         h_NonEq_Integrand_Drain_data.copy(d_NonEq_Integrand_Drain_data);
         amrex::Gpu::streamSynchronize();
         #endif
+
         MPI_Allreduce(MPI_IN_PLACE,
                    &(h_NonEq_Integrand(0)),
                    total_noneq_integration_pts,
@@ -2545,26 +2558,43 @@ c_NEGF_Common<T>:: Compute_RhoNonEq ()
                    MPI_SUM,
                    ParallelDescriptor::Communicator());
 
-        Write_Integrand(E_total_vec, 
-                        h_NonEq_Integrand_data, 
-                        h_NonEq_Integrand_Source_data, 
-                        h_NonEq_Integrand_Drain_data, 
-                        iter_filename_str + "_integrand.dat");
-
-
-        amrex::Real max_noneq_integrand = 0;
-        for (int e=0; e< E_total_vec.size(); ++e) 
+        if (amrex::ParallelDescriptor::IOProcessor())
         {
-            if(max_noneq_integrand < fabs(h_NonEq_Integrand(e)) ) 
-            {
-                max_noneq_integrand      = fabs(h_NonEq_Integrand(e)); 
-                E_at_max_noneq_integrand = E_total_vec[e].real(); 
+            amrex::Vector<ComplexType>E_total_vec(total_noneq_integration_pts);
+            int e_prev_pts = 0;
+            amrex::Real max_noneq_integrand = 0;
+            for(auto& path: ContourPath_RhoNonEq)
+            {   
+                for(int e=0; e<path.num_pts; ++e) 
+                {
+                    int e_glo = e_prev_pts + e;
+                    E_total_vec[e_glo] = path.E_vec[e];
+
+                    if(max_noneq_integrand < fabs(h_NonEq_Integrand(e_glo)) ) 
+                    {
+                        max_noneq_integrand      = fabs(h_NonEq_Integrand(e_glo)); 
+                        E_at_max_noneq_integrand = E_total_vec[e_glo].real(); 
+                    }
+                }
+                e_prev_pts += path.num_pts;
             }
+            amrex::Print() << "\n Abs. value of max integrand: " << max_noneq_integrand 
+                           << " at E (eV): " << E_at_max_noneq_integrand 
+                           << " i.e., (E-mu_0)/kT_0: " 
+                           << (E_at_max_noneq_integrand - mu_contact[0])/kT_contact[0] << "\n";
+
+            if(flag_write_integrand_iter) 
+            {
+                Write_Integrand(E_total_vec, 
+                                h_NonEq_Integrand_data, 
+                                h_NonEq_Integrand_Source_data, 
+                                h_NonEq_Integrand_Drain_data, 
+                                iter_filename_str + "_integrand.dat");
+            }
+            E_total_vec.clear();
         }
-        amrex::Print() << "\n Abs. value of max integrand: " << max_noneq_integrand 
-                       << " at E (eV): " << E_at_max_noneq_integrand 
-                       << " i.e., (E-mu_0)/kT_0: " 
-                       << (E_at_max_noneq_integrand - mu_contact[0])/kT_contact[0] << "\n";
+
+        ParallelDescriptor::Bcast(&E_at_max_noneq_integrand, 1, ParallelDescriptor::IOProcessorNumber());
 
         h_NonEq_Integrand_data.clear();
         d_NonEq_Integrand_data.clear();
@@ -2572,7 +2602,6 @@ c_NEGF_Common<T>:: Compute_RhoNonEq ()
         d_NonEq_Integrand_Source_data.clear();
         h_NonEq_Integrand_Drain_data.clear();
         d_NonEq_Integrand_Drain_data.clear();
-        E_total_vec.clear();
     }
 
     Deallocate_TemporaryArraysForGFComputation();
@@ -3348,16 +3377,14 @@ c_NEGF_Common<T>:: Compute_Current ()
     auto& degen_vec             = block_degen_vec;
     #endif
 
-    amrex::Vector<ComplexType>E_total_vec;
     if(flag_write_integrand_main)
     {
         h_NonEq_Integrand_data.resize({0},{total_noneq_integration_pts}, The_Pinned_Arena());
         d_NonEq_Integrand_data.resize({0},{total_noneq_integration_pts}, The_Arena());
-      h_NonEq_Integrand_Source_data.resize({0},{total_noneq_integration_pts}, The_Pinned_Arena());
-      d_NonEq_Integrand_Source_data.resize({0},{total_noneq_integration_pts}, The_Arena());
-      h_NonEq_Integrand_Drain_data.resize({0},{total_noneq_integration_pts}, The_Pinned_Arena());
-      d_NonEq_Integrand_Drain_data.resize({0},{total_noneq_integration_pts}, The_Arena());
-        E_total_vec.resize(total_noneq_integration_pts);
+        h_NonEq_Integrand_Source_data.resize({0},{total_noneq_integration_pts}, The_Pinned_Arena());
+        d_NonEq_Integrand_Source_data.resize({0},{total_noneq_integration_pts}, The_Arena());
+        h_NonEq_Integrand_Drain_data.resize({0},{total_noneq_integration_pts}, The_Pinned_Arena());
+        d_NonEq_Integrand_Drain_data.resize({0},{total_noneq_integration_pts}, The_Arena());
     }
     auto const& h_NonEq_Integrand = h_NonEq_Integrand_data.table();
     auto const& h_NonEq_Integrand_Source = h_NonEq_Integrand_Source_data.table();
@@ -3386,12 +3413,9 @@ c_NEGF_Common<T>:: Compute_Current ()
     {
         for(int e=0; e < ContourPath_RhoNonEq[p].num_pts; ++e)
         {
-
             ComplexType E = ContourPath_RhoNonEq[p].E_vec[e];
             ComplexType weight = ContourPath_RhoNonEq[p].weight_vec[e];
             ComplexType mul_factor = ContourPath_RhoNonEq[p].mul_factor_vec[e];
-            int e_glo = e + e_prev;
-            if(flag_write_integrand_main) E_total_vec[e_glo] = E;
 
             for(int n=0; n<blkCol_size_loc; ++n)
             {
@@ -3520,7 +3544,8 @@ c_NEGF_Common<T>:: Compute_Current ()
             auto* degen_vec_ptr = degen_vec.dataPtr();
 
             amrex::Real const_multiplier = spin_degen*(PhysConst::q_e)/(PhysConst::h_eVperHz);
-            int write_integrand = flag_write_integrand_main;
+            bool write_integrand = flag_write_integrand_main;
+            int e_glo = e + e_prev;
 
             amrex::ParallelFor(blkCol_size_loc, [=] AMREX_GPU_DEVICE (int n) noexcept
             {
@@ -3647,7 +3672,7 @@ c_NEGF_Common<T>:: Compute_Current ()
             amrex::Gpu::streamSynchronize();
             #endif
         }
-        e_prev = ContourPath_RhoNonEq[p].num_pts;
+        e_prev += ContourPath_RhoNonEq[p].num_pts;
     }
     #ifdef AMREX_USE_GPU
     h_Current_loc_data.copy(d_Current_loc_data);
@@ -3700,11 +3725,43 @@ c_NEGF_Common<T>:: Compute_Current ()
                    MPI_SUM,
                    ParallelDescriptor::Communicator());
 
-        Write_Integrand(E_total_vec,
-                        h_NonEq_Integrand_data,
-                        h_NonEq_Integrand_Source_data,
-                        h_NonEq_Integrand_Drain_data,
-                        step_filename_str + "_integrand.dat");
+        if (amrex::ParallelDescriptor::IOProcessor())
+        {
+            amrex::Vector<ComplexType>E_total_vec(total_noneq_integration_pts);
+            int e_prev_pts = 0;
+            for(auto& path: ContourPath_RhoNonEq)
+            {   
+                for(int e=0; e<path.num_pts; ++e) 
+                {
+                    int e_glo = e_prev_pts + e;
+                    E_total_vec[e_glo] = path.E_vec[e];
+                }
+                e_prev_pts += path.num_pts;
+            }
+
+            Write_Integrand(E_total_vec, 
+                            h_NonEq_Integrand_data, 
+                            h_NonEq_Integrand_Source_data, 
+                            h_NonEq_Integrand_Drain_data, 
+                            step_filename_str + "_integrand.dat");
+
+            amrex::Real max_noneq_integrand = 0;
+            for (int e=0; e< E_total_vec.size(); ++e) 
+            {
+                if(max_noneq_integrand < fabs(h_NonEq_Integrand(e)) ) 
+                {
+                    max_noneq_integrand      = fabs(h_NonEq_Integrand(e)); 
+                    E_at_max_noneq_integrand = E_total_vec[e].real(); 
+                }
+            }
+            E_total_vec.clear();
+
+            amrex::Print() << "\n Abs. value of max integrand: " << max_noneq_integrand 
+                           << " at E (eV): " << E_at_max_noneq_integrand 
+                           << " i.e., (E-mu_0)/kT_0: " 
+                           << (E_at_max_noneq_integrand - mu_contact[0])/kT_contact[0] << "\n";
+        }
+        ParallelDescriptor::Bcast(&E_at_max_noneq_integrand, 1, ParallelDescriptor::IOProcessorNumber());
 
         h_NonEq_Integrand_data.clear();
         d_NonEq_Integrand_data.clear();
@@ -3712,7 +3769,6 @@ c_NEGF_Common<T>:: Compute_Current ()
         d_NonEq_Integrand_Source_data.clear();
         h_NonEq_Integrand_Drain_data.clear();
         d_NonEq_Integrand_Drain_data.clear();
-        E_total_vec.clear();
     }
 
     Deallocate_TemporaryArraysForGFComputation();
