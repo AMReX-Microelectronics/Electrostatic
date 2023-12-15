@@ -786,7 +786,6 @@ c_EmbeddedBoundaries::BuildGeometry(const amrex::Geometry* GEOM, const amrex::Bo
             auto geom_type2 = map_basic_objects_type[name2];  
             auto name3 = vec_object_names[2];
             auto geom_type3 = map_basic_objects_type[name3];  
-
 	        if( (map_object_type_enum[geom_type1] == s_ObjectType::object::cntfet_contact_cyl) && 
                 (map_object_type_enum[geom_type2] == s_ObjectType::object::cntfet_contact_cyl) &&
                 (map_object_type_enum[geom_type3] == s_ObjectType::object::cntfet_contact_cyl) ) 
@@ -797,7 +796,7 @@ c_EmbeddedBoundaries::BuildGeometry(const amrex::Geometry* GEOM, const amrex::Bo
 
                 BuildUnionObject<ObjectType1, ObjectType2, ObjectType3>(name1, name2, name3);
             }
-	        if( (map_object_type_enum[geom_type1] == s_ObjectType::object::cntfet_contact_rect) && 
+            else if( (map_object_type_enum[geom_type1] == s_ObjectType::object::cntfet_contact_rect) && 
                 (map_object_type_enum[geom_type2] == s_ObjectType::object::cntfet_contact_rect) &&
                 (map_object_type_enum[geom_type3] == s_ObjectType::object::cntfet_contact_rect) ) 
             {  
@@ -807,7 +806,7 @@ c_EmbeddedBoundaries::BuildGeometry(const amrex::Geometry* GEOM, const amrex::Bo
 
                 BuildUnionObject<ObjectType1, ObjectType2, ObjectType3>(name1, name2, name3);
             }
-	        if( (map_object_type_enum[geom_type1] == s_ObjectType::object::cntfet_contact_rect) && 
+            else if( (map_object_type_enum[geom_type1] == s_ObjectType::object::cntfet_contact_rect) && 
                 (map_object_type_enum[geom_type2] == s_ObjectType::object::cntfet_contact_rect) &&
                 (map_object_type_enum[geom_type3] == s_ObjectType::object::box) ) 
             {  

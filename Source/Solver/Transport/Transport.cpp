@@ -534,7 +534,8 @@ c_TransportSolver:: CopyToNS_ChargeComputedUsingSelfConsistencyAlgorithm(NSType 
 
     if(ParallelDescriptor::IOProcessor())
     {
-        n_curr_in_glo_data.resize({0},{NS->num_field_sites}, The_Pinned_Arena());
+        const int Hsize = NS->num_field_sites;
+        n_curr_in_glo_data.resize({0},{Hsize}, The_Pinned_Arena());
     }
 
     auto const& n_curr_in_glo  = n_curr_in_glo_data.table();
@@ -606,8 +607,9 @@ c_TransportSolver:: Create_Global_Output_Data(NSType const& NS)
 
     if (ParallelDescriptor::IOProcessor())
     {
-        n_curr_out_glo_data.resize({0},{NS->num_field_sites}, The_Pinned_Arena());
-        Norm_glo_data.resize({0},{NS->num_field_sites}, The_Pinned_Arena());
+        const int Hsize = NS->num_field_sites;
+        n_curr_out_glo_data.resize({0},{Hsize}, The_Pinned_Arena());
+        Norm_glo_data.resize({0},{Hsize}, The_Pinned_Arena());
     }
  
     auto const& n_curr_out_glo = n_curr_out_glo_data.table();

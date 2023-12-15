@@ -64,7 +64,6 @@ c_TransportSolver::Define_Broyden_Partition()
     {
 	    num_field_sites_all_NS += vp_CNT[c]->num_field_sites;
 
-        /*need correction here for multiple nanotubes*/
 	    site_size_loc = vp_CNT[c]->MPI_recv_count[my_rank];
     }
     //if (ParallelDescriptor::IOProcessor()) 
@@ -103,7 +102,7 @@ c_TransportSolver:: Set_Broyden_Parallel ()
     {
         vp_CNT[c]->Fetch_InputLocalCharge_FromNanostructure(h_n_curr_in_data, 
                                                             vp_CNT[c]->MPI_recv_disp[my_rank], 
-                                                            site_size_loc);
+                                                            vp_CNT[c]->MPI_recv_count[my_rank]);
 	}
 
     #ifdef BROYDEN_SKIP_GPU_OPTIMIZATION
