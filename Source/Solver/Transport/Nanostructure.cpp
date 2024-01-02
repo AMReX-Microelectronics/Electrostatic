@@ -801,6 +801,7 @@ c_Nanostructure<NSType>:: Solve_NEGF (RealTable1D& n_curr_out_data, const int it
 
     if(NSType::flag_adaptive_integration_limits and iter%NSType::integrand_correction_interval == 0) {
         NSType::flag_correct_integration_limits = true;
+        amrex::Print() << "\n setting flag_correct_integration_limits: " << NSType::flag_correct_integration_limits << "\n";
     } 
     else {
         NSType::flag_correct_integration_limits = false;

@@ -20,9 +20,6 @@ c_NEGF_Common<T>:: ~c_NEGF_Common<T>()
     d_n_curr_in_loc_data.clear();
     #endif
 
-    eq_integration_pts.clear();
-    noneq_integration_pts.clear();
-
     outfile_I.close();
 
 }
@@ -340,11 +337,8 @@ c_NEGF_Common<T>:: ReadNanostructureProperties ()
     auto flag_num_noneq_paths = queryWithParser(pp_ns, "num_noneq_paths", 
                                                         num_noneq_paths);
 
-    auto flag_noneq_integration_pts = queryArrWithParser(pp_ns, "noneq_integration_pts", 
-                                                                 noneq_integration_pts, 0, num_noneq_paths);
-
-    
-    if(num_noneq_paths > 1) {
+    if(num_noneq_paths > 1) 
+    {
         auto flag_noneq_percent_intercuts = queryArrWithParser(pp_ns, "noneq_percent_intercuts", 
                                                                      noneq_percent_intercuts, 0, num_noneq_paths-1);
         if(!flag_noneq_percent_intercuts) 
@@ -356,6 +350,33 @@ c_NEGF_Common<T>:: ReadNanostructureProperties ()
                 noneq_percent_intercuts[c] = (c+1)*uniform_percent_val;
             }
         }
+    }
+
+    auto flag_noneq_intg_pts = queryArrWithParser(pp_ns, "noneq_integration_pts", 
+                                                          noneq_integration_pts, 0, 
+                                                          num_noneq_paths);
+
+    flag_adaptive_integration_limits = false;
+    pp_ns.query("flag_adaptive_integration_limits", flag_adaptive_integration_limits);
+    if(flag_adaptive_integration_limits) 
+    {
+        integrand_correction_interval = 500;
+        pp_ns.query("integrand_correction_interval", integrand_correction_interval);
+
+        auto flag_kT_window_around_singularity = queryArrWithParser(pp_ns, "kT_window_around_singularity", 
+                                                               kT_window_around_singularity, 0, 2);
+
+        flag_noneq_integration_pts_density = false;
+        flag_noneq_integration_pts_density = queryArrWithParser(pp_ns, "noneq_integration_pts_density", 
+                                                                        noneq_integration_pts_density, 0, 
+                                                                        num_noneq_paths);
+    }
+    flag_write_integrand_main = false;
+    pp_ns.query("flag_write_integrand", flag_write_integrand_main);
+    if(flag_write_integrand_main) 
+    {
+        write_integrand_interval = 500;
+        pp_ns.query("write_integrand_interval", write_integrand_interval);
     }
 
     write_at_iter = 0;
@@ -440,43 +461,49 @@ c_NEGF_Common<T>:: ReadNanostructureProperties ()
     }
     amrex::Print() << "\n";
     amrex::Print() << "##### num_noneq_paths: " << num_noneq_paths << "\n";
-
-    amrex::Print() << "##### Nonequilibrium contour integration points, noneq_integration_pts: ";
+    if(num_noneq_paths > 1) 
+    {
+        amrex::Print() << "##### Nonequilibrium path intercuts in percentage, noneq_percent_intercuts: ";
+        for(int c=0; c < num_noneq_paths-1; ++c) {
+            amrex::Print() << noneq_percent_intercuts[c] << "  ";
+        }
+        amrex::Print() << "\n";
+    }
+    amrex::Print() << "##### noneq_integration_pts: ";
     total_noneq_integration_pts = 0;
-    for(int c=0; c < num_noneq_paths; ++c) {
+    for(int c=0; c < num_noneq_paths; ++c) 
+    {
         amrex::Print() << noneq_integration_pts[c] << "  ";
         total_noneq_integration_pts += noneq_integration_pts[c];
     }
     amrex::Print() << "\n";
     amrex::Print() << "#####* Total nonequilibrium contour integration points: " << total_noneq_integration_pts << "\n";
 
-    amrex::Print() << "##### Nonequilibrium path intercuts in percentage, noneq_percent_intercuts: ";
-    for(int c=0; c < num_noneq_paths-1; ++c) {
-        amrex::Print() << noneq_percent_intercuts[c] << "  ";
+    amrex::Print() << "##### flag_adaptive_integration_limits: " << flag_adaptive_integration_limits << "\n";
+    if(flag_adaptive_integration_limits) 
+    {
+        amrex::Print() << "##### integrand_correction_interval: " << integrand_correction_interval << "\n";
+        amrex::Print() << "##### kT_window_around_singularity: " << "\n";
+        for(int i=0; i < 2; ++i) {
+            amrex::Print() << kT_window_around_singularity[i] << "  ";
+        }
+        amrex::Print() << "\n";
+        if(flag_noneq_integration_pts_density) 
+        {
+            amrex::Print() << "##### noneq_integration_pts_density specified: ";
+            for(int c=0; c < num_noneq_paths; ++c) 
+            {
+                amrex::Print() << noneq_integration_pts_density[c] << "  ";
+            }
+            amrex::Print() << "\n";
+        }
     }
-    amrex::Print() << "\n";
+    amrex::Print() << "##### flag_write_integrand: " << flag_write_integrand_main << "\n";
+    if(flag_write_integrand_main) {
+        amrex::Print() << "##### write_integrand_interval: " << write_integrand_interval << "\n";
+    }
     amrex::Print() << "##### num_recursive_parts: " << num_recursive_parts << "\n";
 
-
-    flag_adaptive_integration_limits = false;
-    pp_ns.query("flag_adaptive_integration_limits", flag_adaptive_integration_limits);
-    amrex::Print() << "##### flag_adaptive_integration_limits: " << flag_adaptive_integration_limits << "\n";
-
-    integrand_correction_interval = 500;
-    pp_ns.query("integrand_correction_interval", integrand_correction_interval);
-    amrex::Print() << "##### integrand_correction_interval: " << integrand_correction_interval << "\n";
-
-    auto flag_kT_window_around_singularity = queryArrWithParser(pp_ns, "kT_window_around_singularity", 
-                                                           kT_window_around_singularity, 0, 1);
-    amrex::Print() << "##### kT_window_around_singularity: " << "\n";
-    for(int i=0; i < 2; ++i) {
-        amrex::Print() << kT_window_around_singularity[i] << "  ";
-    }
-    amrex::Print() << "\n";
-
-    flag_write_integrand_main = false;
-    pp_ns.query("flag_write_integrand", flag_write_integrand_main);
-    amrex::Print() << "##### flag_write_integrand: " << flag_write_integrand_main << "\n";
 
     Set_Arrays_OfSize_NumFieldSites();
 
@@ -1072,14 +1099,17 @@ c_NEGF_Common<T>:: Generate_NonEq_Paths ()
     {
         noneq_path_min[p] = noneq_path_max[p-1];
     }
+
+    amrex::Print() << "\n creating noneq paths:\n"; 
     for(int p=0; p < num_noneq_paths; ++p) 
     {
-        amrex::Print() << "\ncreating noneq path between: " << noneq_path_min[p] << " and " 
-                                                          << noneq_path_max[p] << " with pts: "
-                                                          << noneq_integration_pts[p] << "\n";
-        amrex::Print() << "  i.e. (E-mu_0)/kT[0], between: " 
+        amrex::Print() << "\npath_id: " << p << " "
+                                        << noneq_path_min[p].real() << " to " 
+                                        << noneq_path_max[p].real() << " Pts: "
+                                        << noneq_integration_pts[p] << "\n";
+        amrex::Print() << "  i.e. (E-mu_0)/kT[0]: " 
                        << (noneq_path_min[p].real()- mu_contact[0])/kT_contact[0] 
-                       << " and " 
+                       << " to " 
                        << (noneq_path_max[p].real()- mu_contact[0])/kT_contact[0]<< "\n";
 
         ContourPath_RhoNonEq[p].Define_GaussLegendrePoints(noneq_path_min[p], noneq_path_max[p], 
@@ -1099,18 +1129,79 @@ c_NEGF_Common<T>:: Find_NonEq_Percent_Intercuts_Adaptively ()
 
     if(num_noneq_paths == 3) 
     {
+        amrex::Print() << "\n original noneq_integration_pts: ";
+        for(int c=0; c < num_noneq_paths; ++c) 
+        {
+            amrex::Print() << noneq_integration_pts[c] << "  ";
+        }
+        if(!flag_noneq_integration_pts_density) 
+        {
+            noneq_integration_pts_density.resize(num_noneq_paths);
+
+            noneq_integration_pts_density[0] = noneq_integration_pts[0]/((noneq_percent_intercuts[0]/100.)
+                                               *(E_max-E_min));
+
+            noneq_integration_pts_density[1] = noneq_integration_pts[1]/(((noneq_percent_intercuts[1]-noneq_percent_intercuts[0])/100.)
+                                               *(E_max-E_min));
+
+            noneq_integration_pts_density[2] = noneq_integration_pts[2]/(((100.-noneq_percent_intercuts[1])/100.)*(E_max-E_min));
+            flag_noneq_integration_pts_density = true;
+        }
+        amrex::Print() << "\n noneq_integration_pts_density (per kT): ";
+        for(int c=0; c < num_noneq_paths; ++c) 
+        {
+            amrex::Print() << noneq_integration_pts_density[c] << "  ";
+        }
+
         amrex::Real E_lower = std::max(E_star - kT_window_around_singularity[0], E_min);
         amrex::Real E_upper = std::min(E_star + kT_window_around_singularity[1], E_max);
-        
+
         amrex::Print() << "\nE_min/max/star/lower/upper: " << E_min << " " << E_max << " " 
-                                      << E_star<< " " << E_lower << " " << E_upper << "\n";
+                                       << E_star<< " " << E_lower << " " << E_upper << "\n";
+        if(fabs(E_min - E_lower) < 1e-8) 
+        {
+            amrex::Print() << " Note: E_min == E_lower: First path has 0 pts\n";
+        }
 
         noneq_percent_intercuts[0] = 100*(E_lower - E_min)/(E_max - E_min);
         noneq_percent_intercuts[1] = 100*(E_upper - E_min)/(E_max - E_min);
-    }
+        
+        noneq_integration_pts[0] = round(((E_lower-E_min)  *noneq_integration_pts_density[0]) / 2) * 2;
+        noneq_integration_pts[1] = round(((E_upper-E_lower)*noneq_integration_pts_density[1]) / 2) * 2;
+        noneq_integration_pts[2] = round(((E_max  -E_upper)*noneq_integration_pts_density[2]) / 2) * 2;
+    } 
     else if(num_noneq_paths == 2) 
     {
-        noneq_percent_intercuts[0] = 100*(E_star - E_min)/(E_max - E_min);
+        if(!flag_noneq_integration_pts_density) 
+        {
+
+            noneq_integration_pts_density.resize(num_noneq_paths);
+            noneq_integration_pts_density[0] = noneq_integration_pts[0]/((noneq_percent_intercuts[0]/100.)
+                                               *(E_max-E_min));
+
+            noneq_integration_pts_density[1] = noneq_integration_pts[1]/(((100-noneq_percent_intercuts[0])/100.)
+                                               *(E_max-E_min));
+
+            flag_noneq_integration_pts_density = true;
+        }
+        amrex::Print() << "\n noneq_integration_pts_density (per kT): ";
+        for(int c=0; c < num_noneq_paths; ++c) 
+        {
+            amrex::Print() << noneq_integration_pts_density[c] << "  ";
+        }
+        amrex::Real E_upper = E_star + kT_window_around_singularity[1];
+        amrex::Print() << "\nE_min/max/star/upper: "<< E_min <<" "<< E_max <<" "<< E_star << " " << E_upper<< "\n";
+
+        noneq_percent_intercuts[0] = 100*(E_upper - E_min)/(E_max - E_min);
+
+        noneq_integration_pts[0] = round(((E_upper - E_min) * noneq_integration_pts_density[0]) / 2) * 2;
+        noneq_integration_pts[1] = round(((E_max - E_upper) * noneq_integration_pts_density[1]) / 2) * 2;
+    }
+
+    total_noneq_integration_pts = 0;
+    for(int c=0; c < num_noneq_paths; ++c)
+    {
+        total_noneq_integration_pts += noneq_integration_pts[c];
     }
 
     amrex::Print() << "\n Updated noneq_percent_intercuts: ";
@@ -1119,6 +1210,13 @@ c_NEGF_Common<T>:: Find_NonEq_Percent_Intercuts_Adaptively ()
         amrex::Print() << noneq_percent_intercuts[c] << "  ";
     }
     amrex::Print() << "\n";
+    amrex::Print() << "\n Updated noneq_integration_pts: ";
+    for(int c=0; c < num_noneq_paths; ++c) 
+    {
+        amrex::Print() << noneq_integration_pts[c] << "  ";
+    }
+    amrex::Print() << "\n";
+    amrex::Print() << " total_noneq_integration_pts: " << total_noneq_integration_pts << "\n";
 
 }
 
@@ -2245,6 +2343,7 @@ c_NEGF_Common<T>:: Compute_RhoNonEq ()
     if(flag_write_integrand_iter or flag_correct_integration_limits)
     {
         flag_compute_integrand = true;
+        amrex::Print() << "\n setting flag_compute_integrand: " << flag_compute_integrand << "\n";
     }
 
     if(flag_compute_integrand) 

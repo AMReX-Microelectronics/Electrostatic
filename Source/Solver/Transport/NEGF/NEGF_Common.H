@@ -296,6 +296,9 @@ public:
     amrex::Vector<ComplexType> E_poles_vec;
     amrex::Vector<int> eq_integration_pts;
     amrex::Vector<int> noneq_integration_pts;
+    amrex::Vector<int> noneq_integration_pts_density;
+    bool flag_noneq_integration_pts_density = false;
+
     int total_noneq_integration_pts=0;
     amrex::Vector<amrex::Real> noneq_percent_intercuts;
 
