@@ -2010,14 +2010,14 @@ c_NEGF_Common<T>:: Write_ChargeComponents(std::string filename,
 
 template<typename T>
 void 
-c_NEGF_Common<T>:: Fetch_InputLocalCharge_FromNanostructure (RealTable1D& container_data, const int disp, const int data_size)
+c_NEGF_Common<T>:: Fetch_InputLocalCharge_FromNanostructure (RealTable1D& container_data, const int NS_offset, const int disp, const int data_size)
 {
     auto const& h_n_curr_in_glo = h_n_curr_in_glo_data.table();
     auto const& container       = container_data.table();
     for(int i=0; i < data_size; ++i)
     {
         int gid = disp + i;
-        container(i) = h_n_curr_in_glo(gid);
+        container(i + NS_offset) = h_n_curr_in_glo(gid);
     }
     h_n_curr_in_glo_data.clear();
 }

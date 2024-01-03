@@ -356,7 +356,7 @@ c_TransportSolver::Solve(const int step, const amrex::Real time)
 
            for (int c=0; c < vp_CNT.size(); ++c)
            {
-              CopyToNS_ChargeComputedUsingSelfConsistencyAlgorithm(vp_CNT[c]);
+              CopyToNS_ChargeComputedUsingSelfConsistencyAlgorithm(vp_CNT[c], site_size_loc_cumulative[c]);
 
               vp_CNT[c]->Deposit_AtomAttributeToMesh();
 
@@ -379,7 +379,9 @@ c_TransportSolver::Solve(const int step, const amrex::Real time)
               {
                   bool compute_current = false;
                   Write_MoreDataAndComputeCurrent
-                      (vp_CNT[c], vp_CNT[c]->iter_filename_str, compute_current);
+                      (vp_CNT[c], 
+                       site_size_loc_cumulative[c], 
+                       vp_CNT[c]->iter_filename_str, compute_current);
     	      }
 
               if(flag_write_LDOS_iter and (max_iter+1)%write_LDOS_iter_period == 0) 
@@ -428,8 +430,10 @@ c_TransportSolver::Solve(const int step, const amrex::Real time)
         for (int c=0; c < vp_CNT.size(); ++c)
         {
             bool compute_current = true;
-            Write_MoreDataAndComputeCurrent(vp_CNT[c], 
-                    vp_CNT[c]->step_filename_str, compute_current);
+            Write_MoreDataAndComputeCurrent(vp_CNT[c],
+                                            site_size_loc_cumulative[c],
+                                            vp_CNT[c]->step_filename_str, 
+                                            compute_current);
         }
 
         amrex::Print() << "Time for current computation & writing data:   " 
@@ -463,7 +467,9 @@ c_TransportSolver::Solve(const int step, const amrex::Real time)
            vp_CNT[c]->Solve_NEGF(RhoInduced, 0);
 
            bool compute_current = true;
+
            Write_MoreDataAndComputeCurrent(vp_CNT[c], 
+                                           site_size_loc_cumulative[c],
                                            vp_CNT[c]->step_filename_str, 
                                            compute_current);
        }
@@ -527,7 +533,7 @@ c_TransportSolver:: CopyFromNS_ChargeComputedFromNEGF(NSType const& NS)
 
 template<typename NSType>
 void
-c_TransportSolver:: CopyToNS_ChargeComputedUsingSelfConsistencyAlgorithm(NSType const& NS)
+c_TransportSolver:: CopyToNS_ChargeComputedUsingSelfConsistencyAlgorithm(NSType const& NS, const int NS_offset)
 {
     /*(?) Future: Need generalization for multiple CNTs*/
     auto const& n_curr_in      = h_n_curr_in_data.table();
@@ -541,7 +547,7 @@ c_TransportSolver:: CopyToNS_ChargeComputedUsingSelfConsistencyAlgorithm(NSType 
     auto const& n_curr_in_glo  = n_curr_in_glo_data.table();
 
     /*offset necessary for multiple NS*/
-    MPI_Gatherv(&n_curr_in(0),
+    MPI_Gatherv(&n_curr_in(NS_offset),
                  NS->MPI_recv_count[my_rank],
                  MPI_DOUBLE,
                 &n_curr_in_glo(0),
@@ -564,14 +570,14 @@ c_TransportSolver:: CopyToNS_ChargeComputedUsingSelfConsistencyAlgorithm(NSType 
 template<typename NSType>
 void
 c_TransportSolver:: Write_MoreDataAndComputeCurrent(NSType const& NS, 
+                                                    const int NS_offset,
                                                     std::string const& write_filename,
                                                     bool const compute_current_flag)
 {
     //Note: n_curr_out_glo was output from negf and input to broyden.
     //n_curr_in is the broyden predicted charge for next iteration.
     //NEGF->n_curr_out -> Broyden->n_curr_in -> Electrostatics -> NEGF.
-	Create_Global_Output_Data(NS); 
-
+	Create_Global_Output_Data(NS, NS_offset); 
     NS->Write_Data(write_filename, n_curr_out_glo_data, Norm_glo_data);
 
     if (ParallelDescriptor::IOProcessor())
@@ -590,12 +596,12 @@ c_TransportSolver:: Write_MoreDataAndComputeCurrent(NSType const& NS,
 
 template<typename NSType>
 void
-c_TransportSolver:: Create_Global_Output_Data(NSType const& NS) 
+c_TransportSolver:: Create_Global_Output_Data(NSType const& NS, const int NS_offset) 
 {
     #ifndef BROYDEN_SKIP_GPU_OPTIMIZATION
     /*only select data need to be copied for multiple NS*/
-    h_n_curr_out_data.resize({0}, {site_size_loc}, The_Pinned_Arena());
-    h_Norm_data.resize({0}, {site_size_loc}, The_Pinned_Arena());
+    h_n_curr_out_data.resize({0}, {site_size_loc_all_NS}, The_Pinned_Arena());
+    h_Norm_data.resize({0}, {site_size_loc_all_NS}, The_Pinned_Arena());
 
     h_n_curr_out_data.copy(d_n_curr_out_data); 
     h_Norm_data.copy(d_Norm_data); 
@@ -614,9 +620,9 @@ c_TransportSolver:: Create_Global_Output_Data(NSType const& NS)
  
     auto const& n_curr_out_glo = n_curr_out_glo_data.table();
     auto const& Norm_glo       = Norm_glo_data.table();
- 
+
     /*offset necessary for multiple NS*/
-    MPI_Gatherv(&n_curr_out(0),
+    MPI_Gatherv(&n_curr_out(NS_offset),
                 NS->MPI_recv_count[my_rank],
                 MPI_DOUBLE,
                &n_curr_out_glo(0),
@@ -627,7 +633,7 @@ c_TransportSolver:: Create_Global_Output_Data(NSType const& NS)
                 ParallelDescriptor::Communicator());
 
     /*offset necessary for multiple NS*/
-    MPI_Gatherv(&Norm(0),
+    MPI_Gatherv(&Norm(NS_offset),
                 NS->MPI_recv_count[my_rank],
                 MPI_DOUBLE,
                &Norm_glo(0),

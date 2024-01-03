@@ -59,13 +59,19 @@ c_TransportSolver::Define_Broyden_Partition()
     // MPI_recv_disp.resize(total_proc);
     // num_procs_with_sites=total_proc;
 
+    site_size_loc_cumulative.resize(vp_CNT.size());
+    site_size_loc_cumulative[0] = 0;
+
     int g=0;
     for (int c=0; c < vp_CNT.size(); ++c)
     {
 	    num_field_sites_all_NS += vp_CNT[c]->num_field_sites;
 
-	    site_size_loc = vp_CNT[c]->MPI_recv_count[my_rank];
+        site_size_loc_cumulative[c+1] = site_size_loc_cumulative[c] + vp_CNT[c]->MPI_recv_count[my_rank];
     }
+
+    site_size_loc_all_NS = site_size_loc_cumulative[vp_CNT.size()];
+
     //if (ParallelDescriptor::IOProcessor()) 
     //{
     //    amrex::Print() << "recv_count/recv_disp: \n";
@@ -92,7 +98,7 @@ c_TransportSolver:: Set_Broyden_Parallel ()
     Broyden_fraction = Broyden_Original_Fraction;
 
 
-    h_n_curr_in_data.resize({0}, {site_size_loc}, The_Pinned_Arena());
+    h_n_curr_in_data.resize({0}, {site_size_loc_all_NS}, The_Pinned_Arena());
     SetVal_RealTable1D(h_n_curr_in_data,0.);
 
     auto const& h_n_curr_in    = h_n_curr_in_data.table();
@@ -100,17 +106,19 @@ c_TransportSolver:: Set_Broyden_Parallel ()
     /*Need generalization for multiple CNTs*/
     for (int c=0; c < vp_CNT.size(); ++c)
     {
+        int NS_offset = site_size_loc_cumulative[c];
         vp_CNT[c]->Fetch_InputLocalCharge_FromNanostructure(h_n_curr_in_data, 
+                                                            NS_offset,
                                                             vp_CNT[c]->MPI_recv_disp[my_rank], 
                                                             vp_CNT[c]->MPI_recv_count[my_rank]);
 	}
 
     #ifdef BROYDEN_SKIP_GPU_OPTIMIZATION
-    h_n_curr_out_data.resize({0}, {site_size_loc}, The_Pinned_Arena());
-    h_n_prev_in_data.resize({0}, {site_size_loc}, The_Pinned_Arena());
-    h_F_curr_data.resize({0}, {site_size_loc}, The_Pinned_Arena());
-    h_delta_F_curr_data.resize({0}, {site_size_loc}, The_Pinned_Arena());
-    h_Norm_data.resize({0}, {site_size_loc}, The_Pinned_Arena());
+    h_n_curr_out_data.resize(  {0}, {site_size_loc_all_NS}, The_Pinned_Arena());
+    h_n_prev_in_data.resize(   {0}, {site_size_loc_all_NS}, The_Pinned_Arena());
+    h_F_curr_data.resize(      {0}, {site_size_loc_all_NS}, The_Pinned_Arena());
+    h_delta_F_curr_data.resize({0}, {site_size_loc_all_NS}, The_Pinned_Arena());
+    h_Norm_data.resize(        {0}, {site_size_loc_all_NS}, The_Pinned_Arena());
 
     SetVal_RealTable1D(h_n_curr_out_data,0.);
     SetVal_RealTable1D(h_n_prev_in_data,0.);
@@ -118,14 +126,14 @@ c_TransportSolver:: Set_Broyden_Parallel ()
     SetVal_RealTable1D(h_delta_F_curr_data, 0.);
     SetVal_RealTable1D(h_Norm_data, 0.);
     #else
-    d_n_curr_in_data.resize({0}, {site_size_loc}, The_Arena());
+    d_n_curr_in_data.resize({0}, {site_size_loc_all_NS}, The_Arena());
     d_n_curr_in_data.copy(h_n_curr_in_data);
 
-    d_n_curr_out_data.resize({0}, {site_size_loc}, The_Arena());
-    d_n_prev_in_data.resize({0}, {site_size_loc}, The_Arena());
-    d_F_curr_data.resize({0}, {site_size_loc}, The_Arena());
-    d_delta_F_curr_data.resize({0}, {site_size_loc}, The_Arena());
-    d_Norm_data.resize({0}, {site_size_loc}, The_Arena());
+    d_n_curr_out_data.resize({0}, {site_size_loc_all_NS}, The_Arena());
+    d_n_prev_in_data.resize({0}, {site_size_loc_all_NS}, The_Arena());
+    d_F_curr_data.resize({0}, {site_size_loc_all_NS}, The_Arena());
+    d_delta_F_curr_data.resize({0}, {site_size_loc_all_NS}, The_Arena());
+    d_Norm_data.resize({0}, {site_size_loc_all_NS}, The_Arena());
 
     auto const& n_curr_out      = d_n_curr_out_data.table();
     auto const& n_prev_in       = d_n_prev_in_data.table();
@@ -134,7 +142,7 @@ c_TransportSolver:: Set_Broyden_Parallel ()
     auto const& Norm            = d_Norm_data.table();
 
 
-    amrex::ParallelFor(site_size_loc, [=] AMREX_GPU_DEVICE (int site) noexcept
+    amrex::ParallelFor(site_size_loc_all_NS, [=] AMREX_GPU_DEVICE (int site) noexcept
     {
         n_curr_out(site)   = 0.;
         n_prev_in(site)    = 0.;
@@ -166,7 +174,7 @@ c_TransportSolver:: Set_Broyden_Parallel ()
 	    	//
 	    	// VmatTran is a matrix of size (rows x columns): (number of iterations x num_field_sites_all_NS)
     		// We set a limit on number of iterations using input parameter, 'Broyden_Threshold_MaxStep'.
-	        // Note that locally, each process stores only 'site_size_loc' portion out of num_field_sites_all_NS.
+	        // Note that locally, each process stores only 'site_size_loc_all_NS' portion out of num_field_sites_all_NS.
 	    	//
     		// (VmatTran x delta_F_curr) is a vector of size Broyden_Threshold_MaxStep.
 	    	//
@@ -176,19 +184,19 @@ c_TransportSolver:: Set_Broyden_Parallel ()
 	        // Similar considerations went into storing W, which is used in the multiplication,
 	    	// W(*,site)*VmatTran_DeltaF(*), where VmatTran_DeltaF is a vector of size Broyden_Threshold_MaxStep.  		
             #ifdef BROYDEN_SKIP_GPU_OPTIMIZATION
-            h_sum_vector_data.resize({0}, {site_size_loc}, The_Pinned_Arena());
-            h_VmatTran_data.resize({0,0},{site_size_loc, Broyden_Threshold_MaxStep}, The_Pinned_Arena());
-            h_Wmat_data.resize({0,0},{Broyden_Threshold_MaxStep, site_size_loc}, The_Pinned_Arena());
+            h_sum_vector_data.resize({0}, {site_size_loc_all_NS}, The_Pinned_Arena());
+            h_VmatTran_data.resize({0,0},{site_size_loc_all_NS, Broyden_Threshold_MaxStep}, The_Pinned_Arena());
+            h_Wmat_data.resize({0,0},{Broyden_Threshold_MaxStep, site_size_loc_all_NS}, The_Pinned_Arena());
 
             SetVal_RealTable1D(h_sum_vector_data, 0.);
             SetVal_RealTable2D(h_VmatTran_data,0.);
             SetVal_RealTable2D(h_Wmat_data,0.);
             #else
-            d_sum_vector_data.resize({0}, {site_size_loc}, The_Arena());
+            d_sum_vector_data.resize({0}, {site_size_loc_all_NS}, The_Arena());
             d_intermed_vector_data.resize({0}, {Broyden_Threshold_MaxStep}, The_Arena());
 
-            d_VmatTran_data.resize({0,0},{site_size_loc, Broyden_Threshold_MaxStep}, The_Arena());
-            d_Wmat_data.resize({0,0},{Broyden_Threshold_MaxStep, site_size_loc}, The_Arena());
+            d_VmatTran_data.resize({0,0},{site_size_loc_all_NS, Broyden_Threshold_MaxStep}, The_Arena());
+            d_Wmat_data.resize({0,0},{Broyden_Threshold_MaxStep, site_size_loc_all_NS}, The_Arena());
 
             auto const& sum_vector      = d_sum_vector_data.table();
             auto const& intermed_vector = d_intermed_vector_data.table();
@@ -196,8 +204,8 @@ c_TransportSolver:: Set_Broyden_Parallel ()
             auto const& Wmat           = d_Wmat_data.table();
 
             const int BTM = Broyden_Threshold_MaxStep;
-            const int SSL = site_size_loc;
-            amrex::ParallelFor(site_size_loc, [=] AMREX_GPU_DEVICE (int site) noexcept
+            const int SSL = site_size_loc_all_NS;
+            amrex::ParallelFor(site_size_loc_all_NS, [=] AMREX_GPU_DEVICE (int site) noexcept
             {
                 for(int iter=0; iter < BTM; ++iter) 
                 {
@@ -267,7 +275,7 @@ c_TransportSolver:: Reset_Broyden_Parallel ()
     auto const& delta_F_curr    = d_delta_F_curr_data.table();
     auto const& Norm            = d_Norm_data.table();
 
-    amrex::ParallelFor(site_size_loc, [=] AMREX_GPU_DEVICE (int site) noexcept
+    amrex::ParallelFor(site_size_loc_all_NS, [=] AMREX_GPU_DEVICE (int site) noexcept
     {
         n_curr_out(site)   = 0.;
         n_prev_in(site)    = 0.;
@@ -298,8 +306,8 @@ c_TransportSolver:: Reset_Broyden_Parallel ()
             auto const& Wmat           = d_Wmat_data.table();
 
             const int BTM = Broyden_Threshold_MaxStep;
-            const int SSL = site_size_loc;
-            amrex::ParallelFor(site_size_loc, [=] AMREX_GPU_DEVICE (int site) noexcept
+            const int SSL = site_size_loc_all_NS;
+            amrex::ParallelFor(site_size_loc_all_NS, [=] AMREX_GPU_DEVICE (int site) noexcept
             {
                 for(int iter=0; iter < BTM; ++iter) 
                 {

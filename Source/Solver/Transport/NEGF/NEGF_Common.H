@@ -412,6 +412,7 @@ public:
     
     void Gatherv_NEGFComputed_LocalCharge(RealTable1D& n_curr_out_glo_data);
     void Fetch_InputLocalCharge_FromNanostructure(RealTable1D& container_data, 
+                                                  const int NS_offset,
                                                   const int disp, 
                                                   const int data_size);
     void Scatterv_BroydenComputed_GlobalCharge(RealTable1D& n_curr_in_glo_data);

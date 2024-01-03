@@ -133,7 +133,8 @@ private:
     int total_proc;
     int my_rank;
     int num_procs_with_sites;
-    int site_size_loc;
+    int site_size_loc_all_NS = 0;
+    amrex::Vector<int> site_size_loc_cumulative;
     //std::map<std::string, amrex::Vector<int>> MPI_recv_count;
     //std::map<std::string, amrex::Vector<int>> MPI_recv_disp;
     //amrex::Vector<int> MPI_recv_count;
@@ -187,11 +188,13 @@ private:
     void CopyFromNS_ChargeComputedFromNEGF(NSType const& NS);
 
     template<typename NSType>
-    void CopyToNS_ChargeComputedUsingSelfConsistencyAlgorithm(NSType const& NS);
+    void CopyToNS_ChargeComputedUsingSelfConsistencyAlgorithm(NSType const& NS, const int NS_offset);
 
     template<typename NSType>
-    void Write_MoreDataAndComputeCurrent(NSType const& NS, std::string const& write_filename,
-            bool const compute_current_flag);
+    void Write_MoreDataAndComputeCurrent(NSType const& NS, 
+                                         const int NS_offset,
+                                         std::string const& write_filename,
+                                         bool const compute_current_flag);
 
     void Perform_SelfConsistencyAlgorithm();
 
@@ -230,7 +233,7 @@ private:
         }
     }
     template<typename NSType>
-    void Create_Global_Output_Data(NSType const& NS);
+    void Create_Global_Output_Data(NSType const& NS, const int NS_offset);
     #else
     void Set_Broyden();
     void Reset_Broyden();
