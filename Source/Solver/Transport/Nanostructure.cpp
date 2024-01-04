@@ -24,17 +24,25 @@ c_Nanostructure<NSType>::c_Nanostructure (const amrex::Geometry            & geo
                                   const amrex::DistributionMapping & dm,
                                   const amrex::BoxArray            & ba,
                                   const std::string NS_name_str,
+                                  const int NS_id_counter,
                                   const std::string NS_gather_str,
                                   const std::string NS_deposit_str,
                                   const amrex::Real NS_initial_deposit_value,
                                   const int use_negf,
-                  				  const std::string negf_foldername_str
+                  				  const std::string negf_foldername_str,
+                                  const int NS_field_sites_offset
 		                 		  )
                  : amrex::ParticleContainer<realPD::NUM, intPD::NUM, 
                                             realPA::NUM, intPA::NUM> (geom, dm, ba)
 {
     NSType::name = NS_name_str;
     amrex::Print() << "Nanostructure: " << NS_name_str << "\n";
+
+    NSType::NS_Id = NS_id_counter;
+    amrex::Print() << "NS_Id: " << NSType::NS_Id << "\n";
+
+    NSType::NS_field_sites_offset = NS_field_sites_offset;
+    amrex::Print() << "NS_field_sites_offset: " << NS_field_sites_offset << "\n";
 
     NSType::step_foldername_str = negf_foldername_str + "/" + NSType::name;
     /*eg. output/negf/cnt for nanostructure named cnt */
@@ -145,7 +153,7 @@ c_Nanostructure<NSType>::Fill_AtomLocations()
     if (ParallelDescriptor::IOProcessor()) 
     {
         auto get_1D_site_id = NSType::get_1D_site_id();
-
+        
         for(int i=0; i < NSType::num_atoms; ++i) 
         {
             ParticleType p;
@@ -373,7 +381,6 @@ c_Nanostructure<NSType>::Mark_CellsWithAtoms()
 
         const auto& particles = pti.GetArrayOfStructs();
         const auto p_par = particles().data();
-
         auto mf_arr = mf.array(pti);
         amrex::ParallelFor(np, [=] AMREX_GPU_DEVICE (int p) noexcept 
         {
@@ -407,7 +414,7 @@ c_Nanostructure<NSType>::Gather_MeshAttributeAtAtoms()
     for (MyParIter pti(*this, lev); pti.isValid(); ++pti) 
     { 
         auto np = pti.numParticles();
-
+        amrex::Print() << "np in Gather: " << np << "\n";
         const auto& particles = pti.GetArrayOfStructs();
         const auto p_par = particles().data();
 
@@ -417,10 +424,11 @@ c_Nanostructure<NSType>::Gather_MeshAttributeAtAtoms()
         auto phi = p_mf_gather->array(pti);
         auto get_1D_site_id = NSType::get_1D_site_id();
 
+        amrex::Print() << "p_par[0].pos: " << p_par[0].pos(0) << " "
+                                           << p_par[0].pos(1) << " "
+                                           << p_par[0].pos(2) << "\n";
         amrex::ParallelFor(np, [=] AMREX_GPU_DEVICE (int p) noexcept 
         {
-            int global_id = p_par[p].id();
-
 	        amrex::Real lx = (p_par[p].pos(0) - plo[0] - dx[0]*0.5)/dx[0];
 	        amrex::Real ly = (p_par[p].pos(1) - plo[1] - dx[1]*0.5)/dx[1];
 	        amrex::Real lz = (p_par[p].pos(2) - plo[2] - dx[2]*0.5)/dx[2];
@@ -449,9 +457,7 @@ c_Nanostructure<NSType>::Gather_MeshAttributeAtAtoms()
 
 			                + wx_hi*wy_hi*wz_hi*phi(i+1, j+1, k+1, 0);
         });
-
     }
-
     
     Obtain_PotentialAtSites();
 
@@ -492,6 +498,10 @@ c_Nanostructure<NSType>::Deposit_AtomAttributeToMesh()
     	amrex::Real unit_charge = PhysConst::q_e;
         int atoms_per_field_site =  NSType::num_atoms_per_field_site;
         int SIO = NSType::site_id_offset;
+
+        amrex::Print() << " p, global_id, site_id: "<< 0 << " " << p_par[0].id()
+                                                         << " " << get_1D_site_id(p_par[0].id()) << "\n";
+        amrex::Print() << " SIO: "<< SIO << "\n";
 
         amrex::ParallelFor(np, [=] AMREX_GPU_DEVICE (int p) noexcept 
         {
@@ -549,10 +559,17 @@ c_Nanostructure<NSType>::Obtain_PotentialAtSites()
     const int blkCol_size_loc          = NSType::blkCol_size_loc;
 
     amrex::Gpu::DeviceVector<amrex::Real> d_vec_V(num_field_sites);
+    amrex::Gpu::HostVector<amrex::Real> h_vec_V(num_field_sites);
     std::fill(d_vec_V.begin(), d_vec_V.end(), 0);
+    std::fill(h_vec_V.begin(), h_vec_V.end(), 0);
 
-    amrex::Real* p_V   = d_vec_V.dataPtr();  
+    amrex::Real* p_dV   = d_vec_V.dataPtr();  
+    amrex::Real* p_hV   = h_vec_V.dataPtr();  
+
+    int NS_offset = NSType::NS_field_sites_offset;
     
+    amrex::Print() << "\n";
+
     int lev = 0;
     for (MyParIter pti(*this, lev); pti.isValid(); ++pti)
     {
@@ -564,17 +581,23 @@ c_Nanostructure<NSType>::Obtain_PotentialAtSites()
         auto& par_gather    = pti.get_realPA_comp(realPA::gather);
         auto p_par_gather   = par_gather.data();
         auto get_1D_site_id = NSType::get_1D_site_id();
+        amrex::Print() << "np: " << np << "\n";
+        amrex::Print() << "p_par_gather: " << p_par_gather[0] << "\n";
+        amrex::Print() << "num_field_sites: " << num_field_sites << "\n";
           
         if(average_field_flag) 
         {
+            amrex::Print() << "average_field_flag: " << average_field_flag << "\n";
             if(NSType::avg_type == s_AVG_TYPE::ALL) 
             {
+                amrex::Print() << "average_type: " << NSType::avg_type << "\n";
+
                 amrex::ParallelFor(np, [=] AMREX_GPU_DEVICE (int p) noexcept 
                 {
                     int global_id = p_par[p].id();
                     int site_id = get_1D_site_id(global_id); 
 
-                    amrex::HostDevice::Atomic::Add(&(p_V[site_id]), p_par_gather[p]);
+                    amrex::HostDevice::Atomic::Add(&(p_dV[site_id-NS_offset]), p_par_gather[p]);
                 });
             }
             else if(NSType::avg_type == s_AVG_TYPE::SPECIFIC) 
@@ -598,7 +621,7 @@ c_Nanostructure<NSType>::Obtain_PotentialAtSites()
 	                {
                         if(remainder == avg_indices_ptr[m]) 
 	                    {
-                            amrex::HostDevice::Atomic::Add(&(p_V[site_id]), p_par_gather[p]);
+                            amrex::HostDevice::Atomic::Add(&(p_dV[site_id-NS_offset]), p_par_gather[p]);
                         }
                     } 
                 });
@@ -608,38 +631,45 @@ c_Nanostructure<NSType>::Obtain_PotentialAtSites()
         { 
             amrex::ParallelFor(np, [=] AMREX_GPU_DEVICE (int p) noexcept 
             {
-                int global_id      = p_par[p].id();
-                int site_id        = get_1D_site_id(global_id); 
-                p_V[site_id]       = p_par_gather[p];
+                int global_id           = p_par[p].id();
+                int site_id             = get_1D_site_id(global_id); 
+                p_dV[site_id-NS_offset] = p_par_gather[p];
             });
         } 
     }
-
+    amrex::Gpu::copy(amrex::Gpu::deviceToHost, d_vec_V.begin(),
+                                               d_vec_V.end(),
+                                               h_vec_V.begin() );
+    amrex::Gpu::streamSynchronize();
     //for (int l=0; l<num_field_sites; ++l)
     //{
     //    ParallelDescriptor::ReduceRealSum(p_V[l]);
     //}
     MPI_Allreduce( MPI_IN_PLACE,
-                   &(p_V[0]),
+                   &(p_hV[0]),
                    num_field_sites,
                    MPI_DOUBLE,
                    MPI_SUM,
                    ParallelDescriptor::Communicator());
 
-    //for(int i=0; i < num_field_sites; ++i)
-    //{
-    //    amrex::Print() << "proc/i/h_vec_V: " << NSType::my_rank << " " << i << "  " << p_V[i] << "\n";
-    //}
+    for(int i=0; i < 1; ++i)
+    {
+        std::cout << "NSType::name/proc/i/h_vec_V: "<< NSType::name << " " << NSType::my_rank << " " << i << "  " << p_hV[i] << "\n";
+    }
+    amrex::Print() << "\n";
+    MPI_Barrier(ParallelDescriptor::Communicator());
     auto const& h_U_loc = NSType::h_U_loc_data.table();
     for (int l=0; l < blkCol_size_loc; ++l) 
     {
         int gid = NSType::vec_blkCol_gids[l];
-        h_U_loc(l) = -p_V[gid] / num_atoms_to_avg_over;
+        h_U_loc(l) = -p_hV[gid] / num_atoms_to_avg_over;
     }
     for(int c=0; c < NUM_CONTACTS; ++c)
     {
-        NSType::U_contact[c] = -p_V[NSType::global_contact_index[c]] / num_atoms_to_avg_over;
+        NSType::U_contact[c] = -p_hV[NSType::global_contact_index[c]] / num_atoms_to_avg_over;
     }
+    d_vec_V.clear();
+    h_vec_V.clear();
     //for (int l=0; l < blkCol_size_loc; ++l) 
     //{
     //    int gid = vec_blkCol_gids(l);

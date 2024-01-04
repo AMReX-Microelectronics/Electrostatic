@@ -55,6 +55,8 @@ public:
     /* This is the name of the nanostructure specified by user in the input file. */
     std::string name;
 
+    int NS_Id;
+
     /* rank number of current process */
     int my_rank;
 
@@ -78,6 +80,14 @@ public:
     
     /*number of all sites*/
     int num_field_sites = 0; 
+
+    /* This offsets global number of field sites for different nanostructures
+     * set in the constructor of c_nanostructure.*/
+    int NS_field_sites_offset = 0;
+
+    /* This offsets data in local number of field sites of different nanostructures
+     * set on Broyden_Parallel_General.cpp */ 
+    int site_size_loc_offset = 0;
 
     /* number of field sites this processor gets
      * Note: a field site can be shared by multiple processors,

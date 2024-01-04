@@ -1865,12 +1865,12 @@ c_NEGF_Common<T>:: Compute_InducedCharge (RealTable1D& n_curr_out_data)
     #endif
     auto const& RhoInduced_loc = n_curr_out_data.table();
     
-    int offset = 0; /*changes for multiple nanotube*/
+    int SSL_offset = site_size_loc_offset; /*changes for multiple nanotube*/
     amrex::ParallelFor(blkCol_size_loc, [=] AMREX_GPU_DEVICE (int n) noexcept
     {
-        RhoInduced_loc(n) = ( RhoEq_loc(n).DiagSum().imag() 
-                            + RhoNonEq_loc(n).DiagSum().real() 
-                            - Rho0_loc(n).DiagSum().imag() );
+        RhoInduced_loc(n + SSL_offset) = ( RhoEq_loc(n).DiagSum().imag() 
+                                         + RhoNonEq_loc(n).DiagSum().real() 
+                                         - Rho0_loc(n).DiagSum().imag() );
     });
 
     #ifdef AMREX_USE_GPU
@@ -1879,98 +1879,98 @@ c_NEGF_Common<T>:: Compute_InducedCharge (RealTable1D& n_curr_out_data)
 
 
     /*Printing individual components for debugging*/
-    //#ifdef AMREX_USE_GPU
-    //RealTable1D d_Rho0_Imag_loc_data({0}, {blkCol_size_loc}, The_Arena());
-    //RealTable1D d_RhoEq_Imag_loc_data({0}, {blkCol_size_loc}, The_Arena());
-    //RealTable1D d_RhoNonEq_Real_loc_data({0}, {blkCol_size_loc}, The_Arena());
+    #ifdef AMREX_USE_GPU
+    RealTable1D d_Rho0_Imag_loc_data({0}, {blkCol_size_loc}, The_Arena());
+    RealTable1D d_RhoEq_Imag_loc_data({0}, {blkCol_size_loc}, The_Arena());
+    RealTable1D d_RhoNonEq_Real_loc_data({0}, {blkCol_size_loc}, The_Arena());
 
-    //auto const& d_Rho0_Imag_loc     = d_Rho0_Imag_loc_data.table();
-    //auto const& d_RhoEq_Imag_loc    = d_RhoEq_Imag_loc_data.table();
-    //auto const& d_RhoNonEq_Real_loc = d_RhoNonEq_Real_loc_data.table();
+    auto const& d_Rho0_Imag_loc     = d_Rho0_Imag_loc_data.table();
+    auto const& d_RhoEq_Imag_loc    = d_RhoEq_Imag_loc_data.table();
+    auto const& d_RhoNonEq_Real_loc = d_RhoNonEq_Real_loc_data.table();
 
-    //amrex::ParallelFor(blkCol_size_loc, [=] AMREX_GPU_DEVICE (int n) noexcept
-    //{
-    //    d_Rho0_Imag_loc(n)     = Rho0_loc(n).DiagSum().imag();
-    //    d_RhoEq_Imag_loc(n)    = RhoEq_loc(n).DiagSum().imag();
-    //    d_RhoNonEq_Real_loc(n) = RhoNonEq_loc(n).DiagSum().real();
-    //});
-    //amrex::Gpu::streamSynchronize();
-    //#endif
+    amrex::ParallelFor(blkCol_size_loc, [=] AMREX_GPU_DEVICE (int n) noexcept
+    {
+        d_Rho0_Imag_loc(n)     = Rho0_loc(n).DiagSum().imag();
+        d_RhoEq_Imag_loc(n)    = RhoEq_loc(n).DiagSum().imag();
+        d_RhoNonEq_Real_loc(n) = RhoNonEq_loc(n).DiagSum().real();
+    });
+    amrex::Gpu::streamSynchronize();
+    #endif
 
-    //RealTable1D h_RhoEq_loc_data({0}, {blkCol_size_loc}, The_Pinned_Arena());
-    //RealTable1D h_RhoNonEq_loc_data({0}, {blkCol_size_loc}, The_Pinned_Arena());
-    //RealTable1D h_Rho0_loc_data({0}, {blkCol_size_loc}, The_Pinned_Arena());
-    //RealTable1D h_RhoInduced_loc_data({0}, {blkCol_size_loc}, The_Pinned_Arena());
+    RealTable1D h_RhoEq_loc_data({0}, {blkCol_size_loc}, The_Pinned_Arena());
+    RealTable1D h_RhoNonEq_loc_data({0}, {blkCol_size_loc}, The_Pinned_Arena());
+    RealTable1D h_Rho0_loc_data({0}, {blkCol_size_loc}, The_Pinned_Arena());
+    RealTable1D h_RhoInduced_loc_data({0}, {blkCol_size_loc}, The_Pinned_Arena());
 
-    //RealTable1D h_RhoEq_data({0}, {Hsize_glo}, The_Pinned_Arena());
-    //RealTable1D h_RhoNonEq_data({0}, {Hsize_glo}, The_Pinned_Arena());
-    //RealTable1D h_Rho0_data({0}, {Hsize_glo}, The_Pinned_Arena());
-    //RealTable1D h_RhoInduced_data({0}, {Hsize_glo}, The_Pinned_Arena());
-    //
-    //auto const& h_Rho0_loc       = h_Rho0_loc_data.const_table();
-    //auto const& h_RhoEq_loc      = h_RhoEq_loc_data.const_table();
-    //auto const& h_RhoNonEq_loc   = h_RhoNonEq_loc_data.const_table();
-    //auto const& h_RhoInduced_loc = h_RhoInduced_loc_data.const_table();
-    //auto const& h_Rho0     = h_Rho0_data.table();
-    //auto const& h_RhoEq    = h_RhoEq_data.table();
-    //auto const& h_RhoNonEq = h_RhoNonEq_data.table();
-    //auto const& h_RhoInduced = h_RhoInduced_data.table();
+    RealTable1D h_RhoEq_data({0}, {Hsize_glo}, The_Pinned_Arena());
+    RealTable1D h_RhoNonEq_data({0}, {Hsize_glo}, The_Pinned_Arena());
+    RealTable1D h_Rho0_data({0}, {Hsize_glo}, The_Pinned_Arena());
+    RealTable1D h_RhoInduced_data({0}, {Hsize_glo}, The_Pinned_Arena());
+    
+    auto const& h_Rho0_loc       = h_Rho0_loc_data.const_table();
+    auto const& h_RhoEq_loc      = h_RhoEq_loc_data.const_table();
+    auto const& h_RhoNonEq_loc   = h_RhoNonEq_loc_data.const_table();
+    auto const& h_RhoInduced_loc = h_RhoInduced_loc_data.const_table();
+    auto const& h_Rho0     = h_Rho0_data.table();
+    auto const& h_RhoEq    = h_RhoEq_data.table();
+    auto const& h_RhoNonEq = h_RhoNonEq_data.table();
+    auto const& h_RhoInduced = h_RhoInduced_data.table();
 
-    //h_Rho0_loc_data.copy(d_Rho0_Imag_loc_data);
-    //h_RhoEq_loc_data.copy(d_RhoEq_Imag_loc_data);
-    //h_RhoNonEq_loc_data.copy(d_RhoNonEq_Real_loc_data);
-    //h_RhoInduced_loc_data.copy(n_curr_out_data);
-    //
-    //MPI_Barrier(ParallelDescriptor::Communicator());
+    h_Rho0_loc_data.copy(d_Rho0_Imag_loc_data);
+    h_RhoEq_loc_data.copy(d_RhoEq_Imag_loc_data);
+    h_RhoNonEq_loc_data.copy(d_RhoNonEq_Real_loc_data);
+    h_RhoInduced_loc_data.copy(n_curr_out_data);
+    
+    MPI_Barrier(ParallelDescriptor::Communicator());
 
-    //MPI_Gatherv(&h_Rho0_loc(0),
-    //             blkCol_size_loc,
-    //             MPI_DOUBLE,
-    //            &h_Rho0(0),
-    //             MPI_recv_count.data(),
-    //             MPI_recv_disp.data(),
-    //             MPI_DOUBLE,
-    //    		 ParallelDescriptor::IOProcessorNumber(),
-    //             ParallelDescriptor::Communicator());
+    MPI_Gatherv(&h_Rho0_loc(0),
+                 blkCol_size_loc,
+                 MPI_DOUBLE,
+                &h_Rho0(0),
+                 MPI_recv_count.data(),
+                 MPI_recv_disp.data(),
+                 MPI_DOUBLE,
+        		 ParallelDescriptor::IOProcessorNumber(),
+                 ParallelDescriptor::Communicator());
 
-    //MPI_Gatherv(&h_RhoEq_loc(0),
-    //             blkCol_size_loc,
-    //             MPI_DOUBLE,
-    //            &h_RhoEq(0),
-    //             MPI_recv_count.data(),
-    //             MPI_recv_disp.data(),
-    //             MPI_DOUBLE,
-    //    		 ParallelDescriptor::IOProcessorNumber(),
-    //             ParallelDescriptor::Communicator());
+    MPI_Gatherv(&h_RhoEq_loc(0),
+                 blkCol_size_loc,
+                 MPI_DOUBLE,
+                &h_RhoEq(0),
+                 MPI_recv_count.data(),
+                 MPI_recv_disp.data(),
+                 MPI_DOUBLE,
+        		 ParallelDescriptor::IOProcessorNumber(),
+                 ParallelDescriptor::Communicator());
 
-    //MPI_Gatherv(&h_RhoNonEq_loc(0),
-    //             blkCol_size_loc,
-    //             MPI_DOUBLE,
-    //            &h_RhoNonEq(0),
-    //             MPI_recv_count.data(),
-    //             MPI_recv_disp.data(),
-    //             MPI_DOUBLE,
-    //    		 ParallelDescriptor::IOProcessorNumber(),
-    //             ParallelDescriptor::Communicator());
+    MPI_Gatherv(&h_RhoNonEq_loc(0),
+                 blkCol_size_loc,
+                 MPI_DOUBLE,
+                &h_RhoNonEq(0),
+                 MPI_recv_count.data(),
+                 MPI_recv_disp.data(),
+                 MPI_DOUBLE,
+        		 ParallelDescriptor::IOProcessorNumber(),
+                 ParallelDescriptor::Communicator());
 
-    //MPI_Gatherv(&h_RhoInduced_loc(0),
-    //             blkCol_size_loc,
-    //             MPI_DOUBLE,
-    //            &h_RhoInduced(0),
-    //             MPI_recv_count.data(),
-    //             MPI_recv_disp.data(),
-    //             MPI_DOUBLE,
-    //    		 ParallelDescriptor::IOProcessorNumber(),
-    //             ParallelDescriptor::Communicator());
+    MPI_Gatherv(&h_RhoInduced_loc(0),
+                 blkCol_size_loc,
+                 MPI_DOUBLE,
+                &h_RhoInduced(0),
+                 MPI_recv_count.data(),
+                 MPI_recv_disp.data(),
+                 MPI_DOUBLE,
+        		 ParallelDescriptor::IOProcessorNumber(),
+                 ParallelDescriptor::Communicator());
 
-    //if (ParallelDescriptor::IOProcessor()) 
-    //{
-    //    Write_ChargeComponents(iter_filename_str + "_chargeComp.dat", 
-    //                           h_RhoEq_data, 
-    //                           h_RhoNonEq_data, 
-    //                           h_Rho0_data,
-    //                           h_RhoInduced_data);
-    //}
+    if (ParallelDescriptor::IOProcessor()) 
+    {
+        Write_ChargeComponents(iter_filename_str + "_chargeComp.dat", 
+                               h_RhoEq_data, 
+                               h_RhoNonEq_data, 
+                               h_Rho0_data,
+                               h_RhoInduced_data);
+    }
 }
 
 

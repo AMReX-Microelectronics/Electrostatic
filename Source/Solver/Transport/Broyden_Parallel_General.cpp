@@ -65,11 +65,9 @@ c_TransportSolver::Define_Broyden_Partition()
     int g=0;
     for (int c=0; c < vp_CNT.size(); ++c)
     {
-	    num_field_sites_all_NS += vp_CNT[c]->num_field_sites;
-
+        vp_CNT[c]->site_size_loc_offset = site_size_loc_cumulative[c];
         site_size_loc_cumulative[c+1] = site_size_loc_cumulative[c] + vp_CNT[c]->MPI_recv_count[my_rank];
     }
-
     site_size_loc_all_NS = site_size_loc_cumulative[vp_CNT.size()];
 
     //if (ParallelDescriptor::IOProcessor()) 
@@ -80,8 +78,6 @@ c_TransportSolver::Define_Broyden_Partition()
     //    }
     //}
 
-    amrex::Print() << "#####* Number of field_sites at all nanostructures, num_field_sites_all_NS: " 
-                   << num_field_sites_all_NS << "\n";
 }
 
 
@@ -111,7 +107,13 @@ c_TransportSolver:: Set_Broyden_Parallel ()
                                                             NS_offset,
                                                             vp_CNT[c]->MPI_recv_disp[my_rank], 
                                                             vp_CNT[c]->MPI_recv_count[my_rank]);
+
+        amrex::Print() << "Fetching h_n_curr_in for NS_id: " << vp_CNT[c]->NS_Id << "\n";
+        for(int i=NS_offset; i< NS_offset + vp_CNT[c]->MPI_recv_count[my_rank]; ++i) {
+            amrex::Print() << i << " " << h_n_curr_in(i) << "\n";
+        }
 	}
+
 
     #ifdef BROYDEN_SKIP_GPU_OPTIMIZATION
     h_n_curr_out_data.resize(  {0}, {site_size_loc_all_NS}, The_Pinned_Arena());

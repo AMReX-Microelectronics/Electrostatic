@@ -188,11 +188,10 @@ private:
     void CopyFromNS_ChargeComputedFromNEGF(NSType const& NS);
 
     template<typename NSType>
-    void CopyToNS_ChargeComputedUsingSelfConsistencyAlgorithm(NSType const& NS, const int NS_offset);
+    void CopyToNS_ChargeComputedUsingSelfConsistencyAlgorithm(NSType const& NS);
 
     template<typename NSType>
     void Write_MoreDataAndComputeCurrent(NSType const& NS, 
-                                         const int NS_offset,
                                          std::string const& write_filename,
                                          bool const compute_current_flag);
 
@@ -233,7 +232,7 @@ private:
         }
     }
     template<typename NSType>
-    void Create_Global_Output_Data(NSType const& NS, const int NS_offset);
+    void Create_Global_Output_Data(NSType const& NS);
     #else
     void Set_Broyden();
     void Reset_Broyden();

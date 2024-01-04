@@ -194,6 +194,9 @@ c_TransportSolver::InitData()
     num_NS = vec_NS_names.size();
     amrex::Print() << "#####* num_NS: " << num_NS << "\n";
 
+    amrex::Vector<int> NS_field_sites_cumulative(1,0);
+
+    int NS_id_counter = 0;
     for (auto name: vec_NS_names)
     {
 
@@ -202,20 +205,24 @@ c_TransportSolver::InitData()
         amrex::Print() << "\n##### name: " << name << "\n";
         amrex::Print() << "##### type: " << type << "\n";
 
+        int field_sites = 0;
+        int NS_field_sites_offset = NS_field_sites_cumulative.back();
         switch (map_NSType_enum[type])
         {
             case s_NS::Type::CNT:
             {
                 using T = c_CNT;
- 
                 vp_CNT.push_back(std::make_unique<c_Nanostructure<T>>(*_geom, *_dm, *_ba,
                                                                        name, 
+                                                                       NS_id_counter,
                                                                        NS_gather_field_str, 
                                                                        NS_deposit_field_str, 
                                                                        NS_initial_deposit_value,
                                                                        use_negf,
-								                                       negf_foldername_str
+								                                       negf_foldername_str,
+                                                                       NS_field_sites_offset
                                                                       ));
+                field_sites = vp_CNT.back()->num_field_sites;
                 break;
             }
             case s_NS::Type::Graphene:
@@ -224,12 +231,15 @@ c_TransportSolver::InitData()
  
                 vp_Graphene.push_back(std::make_unique<c_Nanostructure<T>>(*_geom, *_dm, *_ba,
                                                                             name, 
+                                                                            NS_id_counter,
                                                                             NS_gather_field_str, 
                                                                             NS_deposit_field_str, 
                                                                             NS_initial_deposit_value,
                                                                             use_negf,
-	                                    								    negf_foldername_str
+	                                    								    negf_foldername_str,
+                                                                            NS_field_sites_offset
                                                                            ));
+                field_sites = vp_Graphene.back()->num_field_sites;
                 amrex::Abort("NS_type " + type + " is not yet defined.");
                 break; 
             }
@@ -242,8 +252,18 @@ c_TransportSolver::InitData()
                 amrex::Abort("NS_type " + type + " is not supported.");
             }
         }
-    }
+        int cumulative_sites = NS_field_sites_cumulative.back() + field_sites;
+        NS_field_sites_cumulative.push_back(cumulative_sites);
 
+        NS_id_counter++;
+    }
+    num_field_sites_all_NS = NS_field_sites_cumulative.back();
+
+    amrex::Print() << "NS_field_sites_cumulative: \n";
+    for (auto offset: NS_field_sites_cumulative) 
+    {
+        amrex::Print() << " " << offset << "\n";
+    }
 
     Broyden_Original_Fraction = NS_Broyden_frac;
     Broyden_Norm_Type         = NS_Broyden_norm_type;
@@ -313,6 +333,7 @@ c_TransportSolver::Solve(const int step, const amrex::Real time)
            auto mlmg_solve_time = rMLMG.Solve_PoissonEqn();
 
            rPostPro.Compute();
+           rOutput.WriteOutput(max_iter+100, time);
 
            time_counter[1] = amrex::second();
 
@@ -356,7 +377,7 @@ c_TransportSolver::Solve(const int step, const amrex::Real time)
 
            for (int c=0; c < vp_CNT.size(); ++c)
            {
-              CopyToNS_ChargeComputedUsingSelfConsistencyAlgorithm(vp_CNT[c], site_size_loc_cumulative[c]);
+              CopyToNS_ChargeComputedUsingSelfConsistencyAlgorithm(vp_CNT[c]);
 
               vp_CNT[c]->Deposit_AtomAttributeToMesh();
 
@@ -380,7 +401,6 @@ c_TransportSolver::Solve(const int step, const amrex::Real time)
                   bool compute_current = false;
                   Write_MoreDataAndComputeCurrent
                       (vp_CNT[c], 
-                       site_size_loc_cumulative[c], 
                        vp_CNT[c]->iter_filename_str, compute_current);
     	      }
 
@@ -431,7 +451,6 @@ c_TransportSolver::Solve(const int step, const amrex::Real time)
         {
             bool compute_current = true;
             Write_MoreDataAndComputeCurrent(vp_CNT[c],
-                                            site_size_loc_cumulative[c],
                                             vp_CNT[c]->step_filename_str, 
                                             compute_current);
         }
@@ -469,7 +488,6 @@ c_TransportSolver::Solve(const int step, const amrex::Real time)
            bool compute_current = true;
 
            Write_MoreDataAndComputeCurrent(vp_CNT[c], 
-                                           site_size_loc_cumulative[c],
                                            vp_CNT[c]->step_filename_str, 
                                            compute_current);
        }
@@ -493,7 +511,7 @@ c_TransportSolver:: Set_TerminalBiasesAndContactPotential(NSType const& NS)
          {    
              V_contact[k] = rGprop.pEB->Read_SurfSoln(NS->Contact_Parser_String[k]);
                 
-              amrex::Print() << " Updated terminal voltage: " << k << "  " << V_contact[k] << " V\n";
+              amrex::Print() << "\n Updated terminal voltage: " << k << "  " << V_contact[k] << " V\n";
     
              NS->Contact_Electrochemical_Potential[k] = NS->E_f - V_contact[k];
              NS->flag_EC_potential_updated = true;
@@ -510,7 +528,7 @@ c_TransportSolver:: Set_TerminalBiasesAndContactPotential(NSType const& NS)
         
          amrex::Real GV = rGprop.pEB->Read_SurfSoln(NS->Gate_String);
 
-         amrex::Print() << " Updated gate voltage: " << GV << " V\n";
+         amrex::Print() << "\n Updated gate voltage: " << GV << " V\n";
          Vgs = GV - (NS->E_f - NS->Contact_Electrochemical_Potential[0]);
     }
 }
@@ -533,7 +551,7 @@ c_TransportSolver:: CopyFromNS_ChargeComputedFromNEGF(NSType const& NS)
 
 template<typename NSType>
 void
-c_TransportSolver:: CopyToNS_ChargeComputedUsingSelfConsistencyAlgorithm(NSType const& NS, const int NS_offset)
+c_TransportSolver:: CopyToNS_ChargeComputedUsingSelfConsistencyAlgorithm(NSType const& NS)
 {
     /*(?) Future: Need generalization for multiple CNTs*/
     auto const& n_curr_in      = h_n_curr_in_data.table();
@@ -546,8 +564,11 @@ c_TransportSolver:: CopyToNS_ChargeComputedUsingSelfConsistencyAlgorithm(NSType 
 
     auto const& n_curr_in_glo  = n_curr_in_glo_data.table();
 
+    const int SSL_offset = NS->site_size_loc_offset;
+
+    amrex::Print() << "CopyToNS: SSL_offset: " << SSL_offset << "\n";
     /*offset necessary for multiple NS*/
-    MPI_Gatherv(&n_curr_in(NS_offset),
+    MPI_Gatherv(&n_curr_in(SSL_offset),
                  NS->MPI_recv_count[my_rank],
                  MPI_DOUBLE,
                 &n_curr_in_glo(0),
@@ -570,14 +591,13 @@ c_TransportSolver:: CopyToNS_ChargeComputedUsingSelfConsistencyAlgorithm(NSType 
 template<typename NSType>
 void
 c_TransportSolver:: Write_MoreDataAndComputeCurrent(NSType const& NS, 
-                                                    const int NS_offset,
                                                     std::string const& write_filename,
                                                     bool const compute_current_flag)
 {
     //Note: n_curr_out_glo was output from negf and input to broyden.
     //n_curr_in is the broyden predicted charge for next iteration.
     //NEGF->n_curr_out -> Broyden->n_curr_in -> Electrostatics -> NEGF.
-	Create_Global_Output_Data(NS, NS_offset); 
+	Create_Global_Output_Data(NS); 
     NS->Write_Data(write_filename, n_curr_out_glo_data, Norm_glo_data);
 
     if (ParallelDescriptor::IOProcessor())
@@ -596,21 +616,39 @@ c_TransportSolver:: Write_MoreDataAndComputeCurrent(NSType const& NS,
 
 template<typename NSType>
 void
-c_TransportSolver:: Create_Global_Output_Data(NSType const& NS, const int NS_offset) 
+c_TransportSolver:: Create_Global_Output_Data(NSType const& NS) 
 {
     #ifndef BROYDEN_SKIP_GPU_OPTIMIZATION
     /*only select data need to be copied for multiple NS*/
-    h_n_curr_out_data.resize({0}, {site_size_loc_all_NS}, The_Pinned_Arena());
-    h_Norm_data.resize({0}, {site_size_loc_all_NS}, The_Pinned_Arena());
 
-    h_n_curr_out_data.copy(d_n_curr_out_data); 
-    h_Norm_data.copy(d_Norm_data); 
+    int begin = site_size_loc_cumulative[NS->NS_Id]; /*same as site_size_loc_offset*/
+    int end = site_size_loc_cumulative[NS->NS_Id + 1];
+    int site_size_loc = end - begin;
+
+    amrex::Print() << "Create_Global: begin/end/site_size_loc: " << begin << " " << end << " " 
+                                                                 << site_size_loc << "\n";
+
+    h_n_curr_out_data.resize({0}, {site_size_loc}, The_Pinned_Arena());
+    h_Norm_data.resize({0}, {site_size_loc}, The_Pinned_Arena());
+    
+    auto const& h_n_curr_out = h_n_curr_out_data.table();
+    auto const& h_Norm = h_Norm_data.table();
+
+    auto const& d_n_curr_out = d_n_curr_out_data.const_table();
+    auto const& d_Norm = d_Norm_data.const_table();
+    
+    amrex::Gpu::copyAsync(amrex::Gpu::deviceToHost, 
+                          d_n_curr_out.p + begin , d_n_curr_out.p + end, h_n_curr_out.p);
+
+    amrex::Gpu::copyAsync(amrex::Gpu::deviceToHost, 
+                          d_Norm.p + begin , d_Norm.p + end, h_Norm.p);
+
     amrex::Gpu::streamSynchronize();
+
+    amrex::Print() << "h_n_curr_out(0): " << h_n_curr_out(0) << "\n";
+    amrex::Print() << "h_Norm(0): " << h_Norm(0) << "\n";
     #endif
  
-    auto const& n_curr_out = h_n_curr_out_data.table();
-    auto const& Norm       = h_Norm_data.table();
-
     if (ParallelDescriptor::IOProcessor())
     {
         const int Hsize = NS->num_field_sites;
@@ -622,7 +660,7 @@ c_TransportSolver:: Create_Global_Output_Data(NSType const& NS, const int NS_off
     auto const& Norm_glo       = Norm_glo_data.table();
 
     /*offset necessary for multiple NS*/
-    MPI_Gatherv(&n_curr_out(NS_offset),
+    MPI_Gatherv(&h_n_curr_out(0),
                 NS->MPI_recv_count[my_rank],
                 MPI_DOUBLE,
                &n_curr_out_glo(0),
@@ -633,7 +671,7 @@ c_TransportSolver:: Create_Global_Output_Data(NSType const& NS, const int NS_off
                 ParallelDescriptor::Communicator());
 
     /*offset necessary for multiple NS*/
-    MPI_Gatherv(&Norm(NS_offset),
+    MPI_Gatherv(&h_Norm(0),
                 NS->MPI_recv_count[my_rank],
                 MPI_DOUBLE,
                &Norm_glo(0),
