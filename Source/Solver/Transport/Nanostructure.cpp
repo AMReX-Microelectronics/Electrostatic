@@ -245,10 +245,12 @@ c_Nanostructure<NSType>::Evaluate_LocalFieldSites()
 
         //#else
         //hashmap solution
+        
+        const int FSO = NSType::NS_field_sites_offset;
         for(int p=0; p < np; ++p) 
         {   
             int global_id = p_par[p].id();
-            int site_id   = get_1D_site_id(global_id);
+            int site_id   = get_1D_site_id(global_id) - FSO;
 
             if(map.find(site_id) == map.end()) 
             {
@@ -414,7 +416,7 @@ c_Nanostructure<NSType>::Gather_MeshAttributeAtAtoms()
     for (MyParIter pti(*this, lev); pti.isValid(); ++pti) 
     { 
         auto np = pti.numParticles();
-        amrex::Print() << "np in Gather: " << np << "\n";
+        //amrex::Print() << "np in Gather: " << np << "\n";
         const auto& particles = pti.GetArrayOfStructs();
         const auto p_par = particles().data();
 
@@ -422,11 +424,10 @@ c_Nanostructure<NSType>::Gather_MeshAttributeAtAtoms()
         auto p_par_gather = par_gather.data();
 
         auto phi = p_mf_gather->array(pti);
-        auto get_1D_site_id = NSType::get_1D_site_id();
 
-        amrex::Print() << "p_par[0].pos: " << p_par[0].pos(0) << " "
-                                           << p_par[0].pos(1) << " "
-                                           << p_par[0].pos(2) << "\n";
+        //amrex::Print() << "p_par[0].pos: " << p_par[0].pos(0) << " "
+        //                                   << p_par[0].pos(1) << " "
+        //                                   << p_par[0].pos(2) << "\n";
         amrex::ParallelFor(np, [=] AMREX_GPU_DEVICE (int p) noexcept 
         {
 	        amrex::Real lx = (p_par[p].pos(0) - plo[0] - dx[0]*0.5)/dx[0];
@@ -499,16 +500,25 @@ c_Nanostructure<NSType>::Deposit_AtomAttributeToMesh()
         int atoms_per_field_site =  NSType::num_atoms_per_field_site;
         int SIO = NSType::site_id_offset;
 
-        amrex::Print() << " p, global_id, site_id: "<< 0 << " " << p_par[0].id()
-                                                         << " " << get_1D_site_id(p_par[0].id()) << "\n";
-        amrex::Print() << " SIO: "<< SIO << "\n";
+        auto const& h_n_curr_in_loc = NSType::h_n_curr_in_loc_data.table();
+        //amrex::Print() << " SIO: "<< SIO << "\n";
 
+        const int FSO = NSType::NS_field_sites_offset;
+
+        //for(int p=0; p < 80; ++p) {
+        //int site_id = get_1D_site_id(p_par[p].id()) - FSO;
+        //amrex::Print() << " p, global_id, site_id: "<< p << " " << p_par[p].id()
+        //                                                 << " " << site_id
+        //                                                 << " " << h_n_curr_in_loc(site_id) 
+        //                                                 << "\n";
+        //}
+    
         amrex::ParallelFor(np, [=] AMREX_GPU_DEVICE (int p) noexcept 
         {
     	    amrex::Real vol = AMREX_D_TERM(dx[0], *dx[1], *dx[2]);
 
             int global_id = p_par[p].id();
-            int site_id   = get_1D_site_id(global_id); 
+            int site_id   = get_1D_site_id(global_id) - FSO; 
            
             amrex::Real qp = n_curr_in_loc(site_id - SIO) * unit_charge/vol/atoms_per_field_site; 
 
@@ -542,11 +552,10 @@ c_Nanostructure<NSType>::Deposit_AtomAttributeToMesh()
 
         });
     }
-    p_mf_deposit->SumBoundary(_geom->periodicity());
+    //p_mf_deposit->SumBoundary(_geom->periodicity());
 
 
 }
-
 
 template<typename NSType>
 void 
@@ -566,7 +575,7 @@ c_Nanostructure<NSType>::Obtain_PotentialAtSites()
     amrex::Real* p_dV   = d_vec_V.dataPtr();  
     amrex::Real* p_hV   = h_vec_V.dataPtr();  
 
-    int NS_offset = NSType::NS_field_sites_offset;
+    const int FSO = NSType::NS_field_sites_offset;
     
     amrex::Print() << "\n";
 
@@ -595,9 +604,9 @@ c_Nanostructure<NSType>::Obtain_PotentialAtSites()
                 amrex::ParallelFor(np, [=] AMREX_GPU_DEVICE (int p) noexcept 
                 {
                     int global_id = p_par[p].id();
-                    int site_id = get_1D_site_id(global_id); 
+                    int site_id = get_1D_site_id(global_id) - FSO; 
 
-                    amrex::HostDevice::Atomic::Add(&(p_dV[site_id-NS_offset]), p_par_gather[p]);
+                    amrex::HostDevice::Atomic::Add(&(p_dV[site_id]), p_par_gather[p]);
                 });
             }
             else if(NSType::avg_type == s_AVG_TYPE::SPECIFIC) 
@@ -612,7 +621,7 @@ c_Nanostructure<NSType>::Obtain_PotentialAtSites()
                 amrex::ParallelFor(np, [=] AMREX_GPU_DEVICE (int p) noexcept 
                 {
                     int global_id = p_par[p].id();
-                    int site_id = get_1D_site_id(global_id); 
+                    int site_id = get_1D_site_id(global_id) - FSO; 
 
                     int atom_id_at_site = get_atom_id_at_site(global_id); 
                     int remainder = atom_id_at_site%num_atoms_per_field_site;
@@ -621,7 +630,7 @@ c_Nanostructure<NSType>::Obtain_PotentialAtSites()
 	                {
                         if(remainder == avg_indices_ptr[m]) 
 	                    {
-                            amrex::HostDevice::Atomic::Add(&(p_dV[site_id-NS_offset]), p_par_gather[p]);
+                            amrex::HostDevice::Atomic::Add(&(p_dV[site_id]), p_par_gather[p]);
                         }
                     } 
                 });
@@ -632,8 +641,8 @@ c_Nanostructure<NSType>::Obtain_PotentialAtSites()
             amrex::ParallelFor(np, [=] AMREX_GPU_DEVICE (int p) noexcept 
             {
                 int global_id           = p_par[p].id();
-                int site_id             = get_1D_site_id(global_id); 
-                p_dV[site_id-NS_offset] = p_par_gather[p];
+                int site_id             = get_1D_site_id(global_id) - FSO; 
+                p_dV[site_id] = p_par_gather[p];
             });
         } 
     }

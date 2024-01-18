@@ -2053,6 +2053,8 @@ c_NEGF_Common<T>:: Scatterv_BroydenComputed_GlobalCharge (RealTable1D& n_curr_in
     auto const& n_curr_in_glo = n_curr_in_glo_data.table();
     auto const& h_n_curr_in_loc = h_n_curr_in_loc_data.table();
 
+    //amrex::Print() << "In Scatterv: num_local_field_sites, " << num_local_field_sites << "\n";
+
     MPI_Scatterv(&n_curr_in_glo(0),
                  MPI_send_count.data(),
                  MPI_send_disp.data(),
@@ -2063,6 +2065,14 @@ c_NEGF_Common<T>:: Scatterv_BroydenComputed_GlobalCharge (RealTable1D& n_curr_in
                  ParallelDescriptor::IOProcessorNumber(),
                  ParallelDescriptor::Communicator());
 
+    //amrex::Print() << "h_n_curr_in_loc in CopyToNS: \n";
+    //amrex::Print() << "MPI_send_count/disp: " << MPI_send_count[0] << " " << MPI_send_disp[0] << "\n";
+    //if (ParallelDescriptor::IOProcessor())
+    //{
+    //    for(int n=0; n < 5; ++n) {
+    //       amrex::Print() << n << "  " <<  h_n_curr_in_loc(n) << "\n";
+    //    }
+    //}
     //MPI_Barrier(ParallelDescriptor::Communicator());
 
 }

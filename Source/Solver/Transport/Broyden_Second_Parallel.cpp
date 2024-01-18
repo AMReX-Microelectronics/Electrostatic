@@ -493,8 +493,8 @@ using namespace amrex;
     		                     - BS * BF * F_curr(site) 
                     			 - BS * sum_vector(site);
             });
-            h_n_curr_in_data.copy(d_n_curr_in_data); /*from device to host*/
-            amrex::Gpu::streamSynchronize();
+            //h_n_curr_in_data.copy(d_n_curr_in_data); /*from device to host*/
+            //amrex::Gpu::streamSynchronize();
     
             Broyden_Step += 1;
     }

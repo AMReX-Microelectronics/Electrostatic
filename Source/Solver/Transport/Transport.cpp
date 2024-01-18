@@ -257,6 +257,15 @@ c_TransportSolver::InitData()
 
         NS_id_counter++;
     }
+
+    if(rCode.use_electrostatic)
+    {
+        auto& rGprop = rCode.get_GeometryProperties();
+        auto& rMprop   = rCode.get_MacroscopicProperties();
+        amrex::MultiFab* p_mf_deposit = rMprop.get_p_mf(NS_deposit_field_str);
+        p_mf_deposit->SumBoundary(rGprop.geom.periodicity());
+    }
+
     num_field_sites_all_NS = NS_field_sites_cumulative.back();
 
     amrex::Print() << "NS_field_sites_cumulative: \n";
@@ -391,6 +400,12 @@ c_TransportSolver::Solve(const int step, const amrex::Real time)
                    n_curr_in_glo_data.clear();
                }
 	       }
+
+           auto& rGprop = rCode.get_GeometryProperties();
+           auto& rMprop = rCode.get_MacroscopicProperties();
+           auto* p_mf_deposit = rMprop.get_p_mf(NS_deposit_field_str);
+           p_mf_deposit->SumBoundary(rGprop.geom.periodicity());
+
            time_counter[5] = amrex::second();
 
            //Part 6: Write data
@@ -553,22 +568,31 @@ template<typename NSType>
 void
 c_TransportSolver:: CopyToNS_ChargeComputedUsingSelfConsistencyAlgorithm(NSType const& NS)
 {
-    /*(?) Future: Need generalization for multiple CNTs*/
-    auto const& n_curr_in      = h_n_curr_in_data.table();
+    //const int SSL_offset = NS->site_size_loc_offset;
+    //amrex::Print() << "CopyToNS: SSL_offset: " << SSL_offset << "\n";
+
+    int begin = site_size_loc_cumulative[NS->NS_Id]; /*same as site_size_loc_offset*/
+    int end = site_size_loc_cumulative[NS->NS_Id + 1];
+    int site_size_loc = end - begin;
+
+    auto const& d_n_curr_in      = d_n_curr_in_data.table();
+    auto const& h_n_curr_in      = h_n_curr_in_data.table();
+
+    h_n_curr_in_data.resize({0}, {site_size_loc}, The_Pinned_Arena());
+
+    amrex::Gpu::copyAsync(amrex::Gpu::deviceToHost, 
+                          d_n_curr_in.p + begin , d_n_curr_in.p + end, h_n_curr_in.p);
+    amrex::Gpu::streamSynchronize();
 
     if(ParallelDescriptor::IOProcessor())
     {
         const int Hsize = NS->num_field_sites;
         n_curr_in_glo_data.resize({0},{Hsize}, The_Pinned_Arena());
     }
-
     auto const& n_curr_in_glo  = n_curr_in_glo_data.table();
 
-    const int SSL_offset = NS->site_size_loc_offset;
-
-    amrex::Print() << "CopyToNS: SSL_offset: " << SSL_offset << "\n";
     /*offset necessary for multiple NS*/
-    MPI_Gatherv(&n_curr_in(SSL_offset),
+    MPI_Gatherv(&h_n_curr_in(0),
                  NS->MPI_recv_count[my_rank],
                  MPI_DOUBLE,
                 &n_curr_in_glo(0),
@@ -578,9 +602,10 @@ c_TransportSolver:: CopyToNS_ChargeComputedUsingSelfConsistencyAlgorithm(NSType 
                  ParallelDescriptor::IOProcessorNumber(),
                  ParallelDescriptor::Communicator());
 
+    //amrex::Print() << "n_curr_in_glo in CopyToNS: \n";
     //if (ParallelDescriptor::IOProcessor())
     //{
-    //    for(int n=0; n < num_field_sites_all_NS; ++n) {
+    //    for(int n=0; n < 5; ++n) {
     //       amrex::Print() << n << "  " <<  n_curr_in_glo(n) << "\n";
     //    }
     //}
