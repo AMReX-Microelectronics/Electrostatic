@@ -36,36 +36,6 @@ c_EmbeddedBoundaries::c_EmbeddedBoundaries(const amrex::Array<amrex::Real, AMREX
 }
 
 
-c_EmbeddedBoundaries::~c_EmbeddedBoundaries()
-{
-#ifdef PRINT_NAME
-    amrex::Print() << "\n\n\t\t\t{************************c_EmbeddedBoundaries() Destructor************************\n";
-    amrex::Print() << "\t\t\tin file: " << __FILE__ << " at line: " << __LINE__ << "\n";
-#endif
-
-    m_p_soln_mf.clear();
-    //m_p_beta_mf.clear();
-    m_p_factory.clear();
-    vec_object_names.clear();
-    map_basic_objects_type.clear();
-    map_basic_objects_info.clear();
-    map_basic_objects_soln.clear();
-    map_basic_objects_beta.clear(); 
-    map_basic_objects_soln_parser_flag.clear();
-    //for (auto it: map_basic_objects_soln_parser) {it.second.reset();} 
-
-    map_basic_objects_soln_parser.clear();
-
-    geom = nullptr;
-    ba = nullptr;
-    dm = nullptr;
-
-#ifdef PRINT_NAME
-    amrex::Print() << "\n\n\t\t\t}************************c_EmbeddedBoundaries() Destructor************************\n";
-#endif
-}
-
-
 void
 c_EmbeddedBoundaries::ReadGeometry()
 {
@@ -812,6 +782,36 @@ c_EmbeddedBoundaries::BuildGeometry(const amrex::Geometry* GEOM, const amrex::Bo
             {  
                 using ObjectType1 = cntfet_contact_rect_type;
                 using ObjectType2 = cntfet_contact_rect_type;
+                using ObjectType3 = amrex::EB2::BoxIF;
+
+                BuildUnionObject<ObjectType1, ObjectType2, ObjectType3>(name1, name2, name3);
+            }
+            else if( (map_object_type_enum[geom_type1] == s_ObjectType::object::box) && 
+                     (map_object_type_enum[geom_type2] == s_ObjectType::object::box) &&
+                     (map_object_type_enum[geom_type3] == s_ObjectType::object::box) ) 
+            {  
+                using ObjectType1 = amrex::EB2::BoxIF;
+                using ObjectType2 = amrex::EB2::BoxIF;
+                using ObjectType3 = amrex::EB2::BoxIF;
+
+                BuildUnionObject<ObjectType1, ObjectType2, ObjectType3>(name1, name2, name3);
+            }
+            else if( (map_object_type_enum[geom_type1] == s_ObjectType::object::cntfet_contact) && 
+                     (map_object_type_enum[geom_type2] == s_ObjectType::object::cntfet_contact) &&
+                     (map_object_type_enum[geom_type3] == s_ObjectType::object::cntfet_contact_cyl) ) 
+            {  
+                using ObjectType1 = cntfet_contact_type;
+                using ObjectType2 = cntfet_contact_type;
+                using ObjectType3 = cntfet_contact_cyl_type;
+
+                BuildUnionObject<ObjectType1, ObjectType2, ObjectType3>(name1, name2, name3);
+            }
+            else if( (map_object_type_enum[geom_type1] == s_ObjectType::object::cntfet_contact_cyl) && 
+                     (map_object_type_enum[geom_type2] == s_ObjectType::object::cntfet_contact_cyl) &&
+                     (map_object_type_enum[geom_type3] == s_ObjectType::object::box) ) 
+            {  
+                using ObjectType1 = cntfet_contact_cyl_type;
+                using ObjectType2 = cntfet_contact_cyl_type;
                 using ObjectType3 = amrex::EB2::BoxIF;
 
                 BuildUnionObject<ObjectType1, ObjectType2, ObjectType3>(name1, name2, name3);

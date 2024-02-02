@@ -4,6 +4,7 @@
 
 using namespace amrex;
 
+enum class s_Algorithm_Type : int { broyden_first, broyden_second, simple_mixing };
 
 #ifdef BROYDEN_PARALLEL
 void
@@ -24,7 +25,7 @@ c_TransportSolver::Define_MPI_Vector_Type_and_MPI_Vector_Sum ()
      * Also, note: https://stackoverflow.com/questions/29285883/mpi-allreduce-sum-over-a-derived-datatype-vector
      */
 
-    MPI_Op_create((MPI_User_function *)Vector_Add_Func_wrapper, true, &Vector_Add);
+    MPI_Op_create((MPI_User_function*)Vector_Add_Func, true, &Vector_Add);
 
 }
 
@@ -62,7 +63,6 @@ c_TransportSolver::Define_Broyden_Partition()
     site_size_loc_cumulative.resize(vp_CNT.size());
     site_size_loc_cumulative[0] = 0;
 
-    int g=0;
     for (int c=0; c < vp_CNT.size(); ++c)
     {
         vp_CNT[c]->site_size_loc_offset = site_size_loc_cumulative[c];
@@ -108,10 +108,10 @@ c_TransportSolver:: Set_Broyden_Parallel ()
                                                             vp_CNT[c]->MPI_recv_disp[my_rank], 
                                                             vp_CNT[c]->MPI_recv_count[my_rank]);
 
-        amrex::Print() << "Fetching h_n_curr_in for NS_id: " << vp_CNT[c]->NS_Id << "\n";
-        for(int i=NS_offset; i< NS_offset + vp_CNT[c]->MPI_recv_count[my_rank]; ++i) {
-            amrex::Print() << i << " " << h_n_curr_in(i) << "\n";
-        }
+        //amrex::Print() << "Fetching h_n_curr_in for NS_id: " << vp_CNT[c]->NS_Id << "\n";
+        //for(int i=NS_offset; i< NS_offset + vp_CNT[c]->MPI_recv_count[my_rank]; ++i) {
+        //    amrex::Print() << i << " " << h_n_curr_in(i) << "\n";
+        //}
 	}
 
 
@@ -155,14 +155,14 @@ c_TransportSolver:: Set_Broyden_Parallel ()
     amrex::Gpu::streamSynchronize();
     #endif
 
-    switch(map_AlgorithmType[Algorithm_Type])
+    switch(c_TransportSolver::map_AlgorithmType.at(Algorithm_Type))
     {
-        case s_Algorithm::Type::broyden_first:
+        case s_Algorithm_Type::broyden_first:
         {
             amrex::Abort("Algorithm, broyden_first is not parallelized. Compile with preprocessor directive, BROYDEN_PARALLEL=False, or use broyden_second algorithm.");
             break;
         }
-        case s_Algorithm::Type::broyden_second:
+        case s_Algorithm_Type::broyden_second:
         {
             h_intermed_vector_data.resize({0}, {Broyden_Threshold_MaxStep}, The_Pinned_Arena());
             SetVal_RealTable1D(h_intermed_vector_data, 0.);
@@ -225,7 +225,7 @@ c_TransportSolver:: Set_Broyden_Parallel ()
 
             break;
         }
-        case s_Algorithm::Type::simple_mixing:
+        case s_Algorithm_Type::simple_mixing:
         {
             amrex::Abort("Algorithm, simple_Mixing is not parallelized. Compile with preprocessor directive, BROYDEN_PARALLEL=False, or use broyden_second algorithm.");
             break;
@@ -288,13 +288,13 @@ c_TransportSolver:: Reset_Broyden_Parallel ()
     amrex::Gpu::streamSynchronize();
     #endif
 
-    switch(map_AlgorithmType[Algorithm_Type])
+    switch(c_TransportSolver::map_AlgorithmType.at(Algorithm_Type))
     {
-        case s_Algorithm::Type::broyden_first:
+        case s_Algorithm_Type::broyden_first:
         {
             break;
         }
-        case s_Algorithm::Type::broyden_second:
+        case s_Algorithm_Type::broyden_second:
         {
             #ifdef BROYDEN_SKIP_GPU_OPTIMIZATION
             SetVal_RealTable1D(h_sum_vector_data, 0.);
@@ -329,7 +329,7 @@ c_TransportSolver:: Reset_Broyden_Parallel ()
 
             break;
         }
-        case s_Algorithm::Type::simple_mixing:
+        case s_Algorithm_Type::simple_mixing:
         {
             break;
         }

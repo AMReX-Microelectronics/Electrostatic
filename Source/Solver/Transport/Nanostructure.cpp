@@ -59,7 +59,7 @@ c_Nanostructure<NSType>::c_Nanostructure (const amrex::Geometry            & geo
         {
 	    	NSType::outfile_I << ", 'I at contact_" << k+1 << "',";
         }
-	    NSType::outfile_I << "'Broyden_Step', 'Max_Iter', 'Broyden_Fraction', 'Broyden_Scalar'" << "\n";
+	    NSType::outfile_I << "'Avg_intg_pts', 'Total_Iter', 'Broyden_Fraction', 'Broyden_Scalar', 'Conductance / (2q^2/h)'" << "\n";
     	NSType::outfile_I.close();
     }
 

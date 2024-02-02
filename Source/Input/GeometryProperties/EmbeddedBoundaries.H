@@ -47,7 +47,6 @@ c_EmbeddedBoundaries
 {
 public:
     c_EmbeddedBoundaries(const amrex::Array<amrex::Real, AMREX_SPACEDIM>* dx);
-    ~c_EmbeddedBoundaries();
 
     int required_coarsening_level;
     int max_coarsening_level;

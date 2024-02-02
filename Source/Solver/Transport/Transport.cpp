@@ -8,6 +8,7 @@
 #include "../../Code.H"
 #include "../../Input/GeometryProperties/GeometryProperties.H"
 #include "../../Input/MacroscopicProperties/MacroscopicProperties.H"
+#include "../../Input/BoundaryConditions/BoundaryConditions.H"
 #include "../Electrostatics/MLMG.H"
 #include "../Output/Output.H"
 #include "../PostProcessor/PostProcessor.H"
@@ -15,7 +16,44 @@
 #include <AMReX.H>
 #include <AMReX_GpuContainers.H>
 
+
 using namespace amrex;
+
+enum class s_NS_Type : int { CNT, Graphene, Silicon };
+enum class s_Algorithm_Type : int { broyden_first, broyden_second, simple_mixing };
+enum class Gate_Terminal_Type : int {EB, Boundary};
+
+const std::map<std::string, s_NS_Type>
+c_TransportSolver::map_NSType_enum =
+{
+   {"carbon nanotube" , s_NS_Type::CNT},
+   {"Carbon Nanotube" , s_NS_Type::CNT},
+   {"CNT"             , s_NS_Type::CNT},
+   {"graphene"        , s_NS_Type::Graphene},
+   {"Graphene"        , s_NS_Type::Graphene},
+   {"silicon"         , s_NS_Type::Silicon},
+   {"Silicon"         , s_NS_Type::Silicon}
+};
+
+const std::map<std::string, s_Algorithm_Type> 
+c_TransportSolver::map_AlgorithmType =
+{
+   {"broyden_first"   , s_Algorithm_Type::broyden_first},
+   {"Broyden_first"   , s_Algorithm_Type::broyden_first},
+   {"broyden_second"  , s_Algorithm_Type::broyden_second},
+   {"Broyden_second"  , s_Algorithm_Type::broyden_second},
+   {"simple_mixing"   , s_Algorithm_Type::simple_mixing},
+};
+
+const std::map<std::string, Gate_Terminal_Type>
+c_TransportSolver::map_S_GateTerminalType =
+{
+   {"eb"       , Gate_Terminal_Type::EB},
+   {"EB"       , Gate_Terminal_Type::EB},
+   {"boundary" , Gate_Terminal_Type::Boundary},
+   {"Boundary" , Gate_Terminal_Type::Boundary}
+};
+
 
 c_TransportSolver::c_TransportSolver()
 {
@@ -185,8 +223,11 @@ c_TransportSolver::InitData()
                     pp_transport.get("inverse_jacobian_filename", inverse_jacobian_filename);
 	        }
                 amrex::Print() << "##### inverse_jacobian_filename: " << inverse_jacobian_filename << "\n";
-            }
+        }
 
+        std::string gate_terminal_type_str = "EB";
+        pp_transport.query("gate_terminal_type", gate_terminal_type_str);
+        Set_gate_terminal_type(gate_terminal_type_str);
     }
 
     std::string type;
@@ -207,9 +248,9 @@ c_TransportSolver::InitData()
 
         int field_sites = 0;
         int NS_field_sites_offset = NS_field_sites_cumulative.back();
-        switch (map_NSType_enum[type])
+        switch (c_TransportSolver::map_NSType_enum.at(type))
         {
-            case s_NS::Type::CNT:
+            case s_NS_Type::CNT:
             {
                 using T = c_CNT;
                 vp_CNT.push_back(std::make_unique<c_Nanostructure<T>>(*_geom, *_dm, *_ba,
@@ -225,7 +266,7 @@ c_TransportSolver::InitData()
                 field_sites = vp_CNT.back()->num_field_sites;
                 break;
             }
-            case s_NS::Type::Graphene:
+            case s_NS_Type::Graphene:
             {
                 using T = c_Graphene;
  
@@ -243,7 +284,7 @@ c_TransportSolver::InitData()
                 amrex::Abort("NS_type " + type + " is not yet defined.");
                 break; 
             }
-            case s_NS::Type::Silicon:
+            case s_NS_Type::Silicon:
             {
                 amrex::Abort("NS_type " + type + " is not yet defined.");
             }
@@ -284,6 +325,19 @@ c_TransportSolver::InitData()
 
 }
 
+void 
+c_TransportSolver::Set_gate_terminal_type(const std::string gate_terminal_type_str) 
+{
+    if(doesKeyExist(gate_terminal_type_str))
+    {
+        amrex::Print() << "##### gate_terminal_type: " << gate_terminal_type_str   << "\n";
+        gate_terminal_type = c_TransportSolver::map_S_GateTerminalType.at(gate_terminal_type_str);
+    }
+    else {
+        amrex::Abort("gate_terminal_type: " + Algorithm_Type 
+                  + " is invalid. Valid type: EB or Boundary.");
+    }
+}
 
 void
 c_TransportSolver::Set_CommonStepFolder(const int step)
@@ -308,6 +362,7 @@ c_TransportSolver::Solve(const int step, const amrex::Real time)
     auto& rPostPro = rCode.get_PostProcessor();
 
     max_iter = 0;
+    total_intg_pts_in_all_iter = 0;
     m_step = step;
 
     for (int c=0; c < vp_CNT.size(); ++c)
@@ -317,7 +372,7 @@ c_TransportSolver::Solve(const int step, const amrex::Real time)
     }
 
     amrex::Real time_counter[7] = {0., 0., 0., 0., 0., 0., 0.};
-    amrex::Real total_time_counter_diff[6] = {0., 0., 0., 0., 0., 0.};
+    amrex::Real total_time_counter_diff[7] = {0., 0., 0., 0., 0., 0., 0.};
 
     if(rCode.use_electrostatic) 
     {	
@@ -359,6 +414,7 @@ c_TransportSolver::Solve(const int step, const amrex::Real time)
            time_counter[2] = amrex::second();
 
            //Part 3: NEGF
+           int total_intg_pts_in_this_iter = 0;
            for (int c=0; c < vp_CNT.size(); ++c)
            {
 	           if(update_surface_soln_flag)
@@ -372,8 +428,10 @@ c_TransportSolver::Solve(const int step, const amrex::Real time)
                #else
                vp_CNT[c]->Solve_NEGF(h_n_curr_out_data, max_iter);
                #endif
+               total_intg_pts_in_this_iter += vp_CNT[c]->Total_Integration_Pts();
                //CopyFromNS_ChargeComputedFromNEGF(vp_CNT[c]);
-            }
+           }
+           total_intg_pts_in_all_iter += total_intg_pts_in_this_iter;
            time_counter[3] = amrex::second();
 
            //Part 4: Self-consistency
@@ -443,14 +501,18 @@ c_TransportSolver::Solve(const int step, const amrex::Real time)
            total_time_counter_diff[3] += time_counter[4] - time_counter[3];
            total_time_counter_diff[4] += time_counter[5] - time_counter[4];
            total_time_counter_diff[5] += time_counter[6] - time_counter[5];
-           total_time_counter_diff[6] += time_counter[7] - time_counter[6];
+           total_time_counter_diff[6] += (time_counter[3] - time_counter[2])/total_intg_pts_in_this_iter;
 
-           amrex::Print() << " Time for electrostatics:   " << time_counter[1] - time_counter[0] << "\n";    
-           amrex::Print() << " Time for Gathering field:  " << time_counter[2] - time_counter[1] << "\n";    
-           amrex::Print() << " Time for NEGF:             " << time_counter[3] - time_counter[2] << "\n";    
-           amrex::Print() << " Time for self-consistency: " << time_counter[4] - time_counter[3] << "\n";    
-           amrex::Print() << " Time for deposit charge:   " << time_counter[5] - time_counter[4] << "\n";    
-           amrex::Print() << " Time for writing at iter:  " << time_counter[6] - time_counter[5] << "\n";    
+           amrex::Print() << " Times for: \n";
+           amrex::Print() << " Electrostatics:   " << time_counter[1] - time_counter[0] << "\n";    
+           amrex::Print() << " Gathering field:  " << time_counter[2] - time_counter[1] << "\n";    
+           amrex::Print() << " NEGF:             " << time_counter[3] - time_counter[2] << "\n";    
+           amrex::Print() << " NEGF (per intg pt.), intg_pts:" 
+                                  << (time_counter[3] - time_counter[2])/total_intg_pts_in_this_iter << "  "
+                                  << total_intg_pts_in_this_iter << "\n";    
+           amrex::Print() << " Self-consistency: " << time_counter[4] - time_counter[3] << "\n";    
+           amrex::Print() << " Deposit charge:   " << time_counter[5] - time_counter[4] << "\n";    
+           amrex::Print() << " Writing at iter:  " << time_counter[6] - time_counter[5] << "\n";           
            amrex::Print() << " Total time (write excluded):   " << time_counter[5] - time_counter[0] << "\n";    
 
         } while(Broyden_Norm > Broyden_max_norm);    
@@ -459,21 +521,11 @@ c_TransportSolver::Solve(const int step, const amrex::Real time)
 
         Obtain_maximum_time(total_time_counter_diff);
 
-        //Part 7: current computation & writing data
-        amrex::Real time_for_current = amrex::second();
 
-        for (int c=0; c < vp_CNT.size(); ++c)
-        {
-            bool compute_current = true;
-            Write_MoreDataAndComputeCurrent(vp_CNT[c],
-                                            vp_CNT[c]->step_filename_str, 
-                                            compute_current);
-        }
-
-        amrex::Print() << "Time for current computation & writing data:   " 
-                       << amrex::second() - time_for_current << "\n";    
-
-
+        /* LDOS computation is before current computation because
+         * if total conductance is calculated during LDOS computation,
+         * and it is written in the same file used for writing current
+         * after current computation.*/
         if(flag_write_LDOS) 
         {
             for (int c=0; c < vp_CNT.size(); ++c)
@@ -489,6 +541,21 @@ c_TransportSolver::Solve(const int step, const amrex::Real time)
                 vp_CNT[c]->Compute_DensityOfStates(dos_step_foldername_str,flag_write_LDOS);
             }
         }
+
+        //Part 7: current computation & writing data
+        amrex::Real time_for_current = amrex::second();
+        for (int c=0; c < vp_CNT.size(); ++c)
+        {
+            bool compute_current = true;
+            Write_MoreDataAndComputeCurrent(vp_CNT[c],
+                                            vp_CNT[c]->step_filename_str, 
+                                            compute_current);
+        }
+
+        amrex::Print() << "Time for current computation & writing data:   " 
+                       << amrex::second() - time_for_current << "\n";    
+
+
 
         Reset_ForNextBiasStep();
 
@@ -517,6 +584,7 @@ c_TransportSolver:: Set_TerminalBiasesAndContactPotential(NSType const& NS)
 {
     auto& rCode  = c_Code::GetInstance();
     auto& rGprop = rCode.get_GeometryProperties();
+    auto& rBC    = rCode.get_BoundaryConditions();
 
     if(NS->flag_contact_mu_specified == 0) 
     {
@@ -533,15 +601,31 @@ c_TransportSolver:: Set_TerminalBiasesAndContactPotential(NSType const& NS)
          }
     
          Vds = V_contact[1] - V_contact[0];
-    
-         Vgs = rGprop.pEB->Read_SurfSoln(NS->Gate_String) - V_contact[0];
+
+         if(gate_terminal_type == Gate_Terminal_Type::EB) 
+         {
+            Vgs = rGprop.pEB->Read_SurfSoln(NS->Gate_String) - V_contact[0];
+         }
+         else if (gate_terminal_type == Gate_Terminal_Type::Boundary)
+         {
+            Vgs = rBC.Read_BoundarySoln(NS->Gate_String) - V_contact[0];
+         }
+
     }
     else 
     {
          Vds = NS->Contact_Electrochemical_Potential[0] - 
                NS->Contact_Electrochemical_Potential[1]; 
         
-         amrex::Real GV = rGprop.pEB->Read_SurfSoln(NS->Gate_String);
+         amrex::Real GV = 0.;
+         if(gate_terminal_type == Gate_Terminal_Type::EB) 
+         {
+            GV  = rGprop.pEB->Read_SurfSoln(NS->Gate_String);
+         }
+         else if (gate_terminal_type == Gate_Terminal_Type::Boundary)
+         {
+            GV = rBC.Read_BoundarySoln(NS->Gate_String);
+         }
 
          amrex::Print() << "\n Updated gate voltage: " << GV << " V\n";
          Vgs = GV - (NS->E_f - NS->Contact_Electrochemical_Potential[0]);
@@ -634,7 +718,7 @@ c_TransportSolver:: Write_MoreDataAndComputeCurrent(NSType const& NS,
     if(compute_current_flag) 
     {
         NS->Compute_Current();
-        NS->Write_Current(m_step, Vds, Vgs, Broyden_Step, max_iter, Broyden_fraction, Broyden_Scalar);
+        NS->Write_Current(m_step, Vds, Vgs, total_intg_pts_in_all_iter, max_iter, Broyden_fraction, Broyden_Scalar);
     }
 }
 
@@ -729,15 +813,15 @@ c_TransportSolver:: Create_Global_Output_Data(NSType const& NS)
 void
 c_TransportSolver:: Perform_SelfConsistencyAlgorithm() 
 {
-   switch(map_AlgorithmType[Algorithm_Type])
+   switch(c_TransportSolver::map_AlgorithmType.at(Algorithm_Type))
    {
-       case s_Algorithm::Type::broyden_first:
+       case s_Algorithm_Type::broyden_first:
        {
            amrex::Abort("At present, `Broyden's first' algorithm exists with only\
                          serial implementation (BROYDEN_PARALLEL=FALSE).");
            break;
        }
-       case s_Algorithm::Type::broyden_second:
+       case s_Algorithm_Type::broyden_second:
        {
            #ifdef BROYDEN_SKIP_GPU_OPTIMIZATION
            Execute_Broyden_Modified_Second_Algorithm_Parallel_SkipGPU();
@@ -746,7 +830,7 @@ c_TransportSolver:: Perform_SelfConsistencyAlgorithm()
            #endif
            break;
        }
-       case s_Algorithm::Type::simple_mixing:
+       case s_Algorithm_Type::simple_mixing:
        {
            amrex::Abort("At present, the `simple mixing' algorithm exists with only\
                          serial implementation (BROYDEN_PARALLEL=FALSE).");
@@ -764,11 +848,12 @@ void
 c_TransportSolver:: Obtain_maximum_time(amrex::Real const* total_time_counter_diff)
 {
 
-    amrex::Real total_max_time_for_current_step[6] = {0., 0., 0., 0., 0., 0.};
+    const int num_var = 7;
+    amrex::Real total_max_time_for_current_step[num_var] = {0., 0., 0., 0., 0., 0., 0.};
 
     MPI_Reduce(total_time_counter_diff,
                total_max_time_for_current_step,
-               6,
+               num_var,
                MPI_DOUBLE,
                MPI_MAX,
                ParallelDescriptor::IOProcessorNumber(),
@@ -776,14 +861,14 @@ c_TransportSolver:: Obtain_maximum_time(amrex::Real const* total_time_counter_di
 
     if(ParallelDescriptor::IOProcessor()) 
     {
-        amrex::Real avg_curr[6] = {total_max_time_for_current_step[0]/max_iter, 
-                                   total_max_time_for_current_step[1]/max_iter,
-                                   total_max_time_for_current_step[2]/max_iter,
-                                   total_max_time_for_current_step[3]/max_iter,
-                                   total_max_time_for_current_step[4]/max_iter,
-                                   total_max_time_for_current_step[5]/max_iter
-        };
-
+        amrex::Real avg_curr[num_var] = {total_max_time_for_current_step[0]/max_iter, 
+                                         total_max_time_for_current_step[1]/max_iter,
+                                         total_max_time_for_current_step[2]/max_iter,
+                                         total_max_time_for_current_step[3]/max_iter,
+                                         total_max_time_for_current_step[4]/max_iter,
+                                         total_max_time_for_current_step[5]/max_iter,
+                                         total_max_time_for_current_step[6]/max_iter
+                                        };
         amrex::Print() << "\nIterations in this step: " << max_iter << "\n";
 
         amrex::Print() << "Avg. max times for: \n ";
@@ -796,7 +881,10 @@ c_TransportSolver:: Obtain_maximum_time(amrex::Real const* total_time_counter_di
         amrex::Print() << " NEGF:             " 
                        << avg_curr[2] << "\n";    
 
-        amrex::Print() << " self-consistency: " 
+        amrex::Print() << " NEGF (per intg pt):    "
+                       << avg_curr[6] << "\n";    
+
+        amrex::Print() << " Self-consistency: "             
                        << avg_curr[3] << "\n";    
 
         amrex::Print() << " Deposit:          " 
@@ -811,23 +899,20 @@ c_TransportSolver:: Obtain_maximum_time(amrex::Real const* total_time_counter_di
                                                               avg_curr[3] +
                                                               avg_curr[4] << "\n";
 
-
-        total_max_time_across_all_steps[0] += total_max_time_for_current_step[0];
-        total_max_time_across_all_steps[1] += total_max_time_for_current_step[1];
-        total_max_time_across_all_steps[2] += total_max_time_for_current_step[2];
-        total_max_time_across_all_steps[3] += total_max_time_for_current_step[3];
-        total_max_time_across_all_steps[4] += total_max_time_for_current_step[4];
-        total_max_time_across_all_steps[5] += total_max_time_for_current_step[5];
+        for (int i=0; i<num_var; ++i) {
+           total_max_time_across_all_steps[i] += total_max_time_for_current_step[i];
+        }
 
         total_iter += max_iter;
 
-        amrex::Real avg_all[6] = {total_max_time_across_all_steps[0]/total_iter, 
-                                  total_max_time_across_all_steps[1]/total_iter,
-                                  total_max_time_across_all_steps[2]/total_iter,
-                                  total_max_time_across_all_steps[3]/total_iter,
-                                  total_max_time_across_all_steps[4]/total_iter,
-                                  total_max_time_across_all_steps[5]/total_iter
-                                 };
+        amrex::Real avg_all[num_var] = {total_max_time_across_all_steps[0]/total_iter, 
+                                        total_max_time_across_all_steps[1]/total_iter,
+                                        total_max_time_across_all_steps[2]/total_iter,
+                                        total_max_time_across_all_steps[3]/total_iter,
+                                        total_max_time_across_all_steps[4]/total_iter,
+                                        total_max_time_across_all_steps[5]/total_iter,
+                                        total_max_time_across_all_steps[6]/total_iter
+                                       };        
       
         amrex::Real avg_total = avg_all[0] + avg_all[1] + avg_all[2] +
                                 avg_all[3] + avg_all[4];
@@ -840,6 +925,7 @@ c_TransportSolver:: Obtain_maximum_time(amrex::Real const* total_time_counter_di
                        << avg_all[1] << std::setw(15) << (avg_all[1]/avg_total)*100 << " %" << "\n";    
         amrex::Print() << " NEGF:             " 
                        << avg_all[2] << std::setw(15) << (avg_all[2]/avg_total)*100 << " %" << "\n";    
+        amrex::Print() << " NEGF (per intg pt):" << avg_all[6] << "\n";    
         amrex::Print() << " Self-Consistency: " 
                        << avg_all[3] << std::setw(15) << (avg_all[3]/avg_total)*100 << " %" << "\n";    
         amrex::Print() << " Deposit:          " 

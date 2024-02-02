@@ -187,6 +187,7 @@ public:
      * it is 0 and Hsize_glo of the first nanotube.
      */
 
+    amrex::Real total_conductance = -1;
 
     /*Tables required to store Hamiltonian */
     BlkTable1D h_minusHa_loc_data;
@@ -410,7 +411,14 @@ public:
     AMREX_GPU_HOST_DEVICE
     void Compute_SurfaceGreensFunction (MatrixBlock<T>& gr, const ComplexType EmU);
     void Compute_DensityOfStates(std::string DOS_foldername, bool flag_write_LDOS);
-    void Write_FermiFunction (const amrex::Vector<ComplexType> E_vec, std::string filename);
+    amrex::Real Compute_Conductance(const amrex::Vector<ComplexType> E_vec,
+                                    const RealTable1D& Transmission_data,
+                                    RealTable1D& Conductance_data);
+    void Write_Eql_Characteristics (const amrex::Vector<ComplexType> E_vec,
+                                    const RealTable1D& DOS_data,
+                                    const RealTable1D& Transmission_data,
+                                    const RealTable1D& Conductance_data,
+                                    std::string filename);
     void Compute_Rho0();
     void Compute_GR_atPoles();
     void Compute_RhoEq();
@@ -428,8 +436,9 @@ public:
     void Scatterv_BroydenComputed_GlobalCharge(RealTable1D& n_curr_in_glo_data);
 
     void Set_Arrays_OfSize_NumFieldSites();
-
     //virtual void DeallocateArrays();
+
+    int Total_Integration_Pts ();
 
     AMREX_GPU_HOST_DEVICE
     ComplexType FermiFunction(ComplexType E_minus_Mu, const amrex::Real kT);

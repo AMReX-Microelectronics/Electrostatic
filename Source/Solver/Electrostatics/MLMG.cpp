@@ -766,11 +766,12 @@ c_MLMGSolver:: Fill_FunctionBased_Inhomogeneous_Boundaries()
                             std::string macro_str = main_str + it_rob.first; 
 
                             auto pParser = rBC.get_p_parser(macro_str);
-			    #ifdef TIME_DEPENDENT
-			        const auto& macro_parser = pParser->compile<4>();
-			    #else
-			        const auto& macro_parser = pParser->compile<3>();
-			    #endif
+			                #ifdef TIME_DEPENDENT
+			                    const auto& macro_parser = pParser->compile<4>();
+			                #else
+			                    const auto& macro_parser = pParser->compile<3>();
+			                #endif
+                            rBC.map_BoundarySoln_Name_Value[macro_str] = macro_parser(0.,0.,0.,time);
 
                             switch(it_rob.second)
                             {
@@ -821,11 +822,14 @@ c_MLMGSolver:: Fill_FunctionBased_Inhomogeneous_Boundaries()
                         std::string macro_str = std::any_cast<std::string>(bcAny_2d[0][dir]);
 
                         auto pParser = rBC.get_p_parser(macro_str);
-			#ifdef TIME_DEPENDENT
-			    const auto& macro_parser = pParser->compile<4>();
-			#else
-			    const auto& macro_parser = pParser->compile<3>();
-			#endif
+			            #ifdef TIME_DEPENDENT
+			                const auto& macro_parser = pParser->compile<4>();
+			            #else
+			                const auto& macro_parser = pParser->compile<3>();
+			            #endif
+
+                        rBC.map_BoundarySoln_Name_Value[macro_str] = macro_parser(0.,0.,0.,time);
+
 
                         amrex::ParallelFor(bxlo,
                         [=] AMREX_GPU_DEVICE (int i, int j, int k) noexcept
@@ -861,11 +865,12 @@ c_MLMGSolver:: Fill_FunctionBased_Inhomogeneous_Boundaries()
                             std::string macro_str = main_str + it_rob.first; 
 
                             auto pParser = rBC.get_p_parser(macro_str);
-			    #ifdef TIME_DEPENDENT
-			        const auto& macro_parser = pParser->compile<4>();
-			    #else
-			        const auto& macro_parser = pParser->compile<3>();
-			    #endif
+			                #ifdef TIME_DEPENDENT
+			                    const auto& macro_parser = pParser->compile<4>();
+			                #else
+			                    const auto& macro_parser = pParser->compile<3>();
+			                #endif
+                            rBC.map_BoundarySoln_Name_Value[macro_str] = macro_parser(0.,0.,0.,time);
 
                             switch(it_rob.second)
                             {
@@ -916,11 +921,13 @@ c_MLMGSolver:: Fill_FunctionBased_Inhomogeneous_Boundaries()
                         std::string macro_str = std::any_cast<std::string>(bcAny_2d[1][dir]);
 
                         auto pParser = rBC.get_p_parser(macro_str);
-			#ifdef TIME_DEPENDENT
-			    const auto& macro_parser = pParser->compile<4>();
-			#else
-			    const auto& macro_parser = pParser->compile<3>();
-			#endif
+			            #ifdef TIME_DEPENDENT
+			                const auto& macro_parser = pParser->compile<4>();
+			            #else
+			                const auto& macro_parser = pParser->compile<3>();
+			            #endif
+
+                        rBC.map_BoundarySoln_Name_Value[macro_str] = macro_parser(0.,0.,0.,time);
 
                         amrex::ParallelFor(bxhi,
                         [=] AMREX_GPU_DEVICE (int i, int j, int k) noexcept

@@ -164,7 +164,7 @@ c_NEGF_Common<T>:: Initialize_ChargeAtFieldSites()
         //   // for(int i=0; i < num_local_field_sites; ++i) 
         //   // {
         //   //     if(h_n_curr_in_loc(i) != h_n_curr_in_glo(i+site_id_offset) )
-        //   //     {
+        
         //   //         full_match = false;
         //   //         amrex::Abort("n_curr_in_loc doesn't match with glo: " 
         //   //                 + std::to_string(i) + " " + std::to_string(h_n_curr_in_loc(i)) + " " 
@@ -1016,20 +1016,131 @@ c_NEGF_Common<T>:: Define_IntegrationPaths ()
     }
 }
 
+template<typename T>
+int
+c_NEGF_Common<T>:: Total_Integration_Pts ()
+{
+    return std::accumulate(noneq_integration_pts.begin(), noneq_integration_pts.end(), 0);
+}
+
+
+//template<typename T>
+//amrex::Real
+//c_NEGF_Common<T>::FermiFunction_real(const amrex::Real E_minus_Mu, const amrex::Real kT)
+//{
+//    ComplexType one(1., 0.);
+//    return one / (exp(E_minus_Mu / kT) + one);
+//}
+//
+//template<typename T>
+//amrex::Real
+//c_NEGF_Common<T>::Derivative
+//    ( amrex::Real (*f) (const std::vector<amrex::Real>& E_vec, const amrex::Real kT), 
+//      const std::vector<amrex::Real>& v, 
+//      double epsilon=1e-8)
+//{
+//    int size = v.size();
+//    std::vector<amrex::Real> derivative(size, 0.);
+//    std::vector<amrex::Real> perturbation(size, epsilon);
+//
+//    amrex::Real fPlus
+//    for(int i=0; i<size; ++i) 
+//    {
+//        derivative[i] = (fPlus - fMinus) / (2*epsilon);
+//    }
+//    return derivative;
+//}
+
+template<typename T>
+amrex::Real
+c_NEGF_Common<T>:: Compute_Conductance (const amrex::Vector<ComplexType> E_vec, 
+                                        const RealTable1D& Transmission_data,
+                                        RealTable1D& Conductance_data)
+{
+    amrex::Real sum_conductance = 0.;
+    auto const& Tran = Transmission_data.const_table();
+    auto const& Cond = Conductance_data.table();
+    /* G_quantum = 2*q^2/h.
+     * This quantum of conductance, G_quantum, includes spin degeneracy
+     * The subband degeneracy factor is taken into account in calculation of transmission.
+     * T(E) in the calculation formula is not transmission probability but transmission.
+     * For e.g. for (17,0) nanotube, the first subband is double degenerate. So if we use 
+     * 1 mode for calculation, then is extra factor would be 2.
+     * We take G_quantum=1, i.e., outputted results are already normalized by (2q^2/h);
+     */
+    amrex::Real G_quantum = 1.;
+
+    std::vector<amrex::Real> dFdE(E_vec.size(), 0.);
+    amrex::Real deltaE = E_vec[0].real() - E_vec[1].real();
+
+    amrex::Real denom_inv = 1./(2*deltaE);
+
+    amrex::Real f_0 = FermiFunction(E_vec[0]-mu_contact[0], kT_contact[0]).real();
+    amrex::Real f_1 = FermiFunction(E_vec[1]-mu_contact[0], kT_contact[0]).real();
+    amrex::Real f_2 = FermiFunction(E_vec[2]-mu_contact[0], kT_contact[0]).real();
+    dFdE[0] = (-3*f_0 + 4*f_1 - f_2) * denom_inv;
+
+    int n = E_vec.size()-1;
+    amrex::Real f_n   = FermiFunction(E_vec[n]  -mu_contact[0], kT_contact[0]).real();
+    amrex::Real f_nm1 = FermiFunction(E_vec[n-1]-mu_contact[0], kT_contact[0]).real();
+    amrex::Real f_nm2 = FermiFunction(E_vec[n-2]-mu_contact[0], kT_contact[0]).real();
+    dFdE[n] = (3*f_n - 4*f_nm1 + f_nm2) * denom_inv;
+
+    for(int i=1; i < n; ++i) 
+    {
+        amrex::Real F_im1 = FermiFunction(E_vec[i-1]-mu_contact[0], kT_contact[0]).real();
+        amrex::Real F_ip1 = FermiFunction(E_vec[i+1]-mu_contact[0], kT_contact[0]).real();
+        dFdE[i] = (F_ip1 - F_im1) * denom_inv;
+    }
+    
+    for(int i=0; i<E_vec.size(); ++i) 
+    {
+        Cond(i) = -G_quantum * Tran(i) * dFdE[i];
+        sum_conductance += Cond(i) * deltaE;
+    }
+    return sum_conductance;
+}
 
 template<typename T>
 void 
-c_NEGF_Common<T>:: Write_FermiFunction (const amrex::Vector<ComplexType> E_vec, std::string filename)
+c_NEGF_Common<T>:: Write_Eql_Characteristics (const amrex::Vector<ComplexType> E_vec, 
+                                              const RealTable1D& DOS_data, 
+                                              const RealTable1D& Transmission_data, 
+                                              const RealTable1D& Conductance_data, 
+                                              std::string filename)
 {
-    amrex::Print() << "Writing Fermi Functions over points" << E_vec.size() << "\n"; 
+    amrex::Print() << "Writing Fermi Functions, Trasmission, Conductance as E. E.size(): " << E_vec.size() << "\n"; 
     std::ofstream outfile;
     outfile.open(filename.c_str());
-    for(int i=0; i<E_vec.size(); ++i) 
+
+    auto const& DOS  = DOS_data.const_table();
+    auto const& Tran = Transmission_data.const_table();
+    auto const& Cond = Conductance_data.const_table();
+    auto thi_dos  = DOS_data.hi();
+    auto thi_tran = Transmission_data.hi();
+    auto thi_cond = Conductance_data.hi();
+
+    outfile << " E_r, Fermi_Contact1, Fermi_Contact2, DOS_r, Transmission_r, Conductance_r \n";
+    if(E_vec.size() != thi_dos[0] || E_vec.size() != thi_tran[0] || E_vec.size() != thi_cond[0]) 
     {
-        outfile << std::setw(20) << E_vec[i].real()
-                << std::setw(20) << FermiFunction(E_vec[i]-mu_contact[0], kT_contact[0]).real() 
-                << std::setw(20) << FermiFunction(E_vec[i]-mu_contact[1], kT_contact[1]).real()
-                << "\n";
+        outfile << "Mismatch in the size of Vec size: " << E_vec.size() 
+                << " and Table1D_data for DOS, transmission, or conductance: " 
+                << thi_dos[0]  << ", " 
+                << thi_tran[0] << ", " 
+                << thi_cond[0] << "\n";
+    }
+    else 
+    {
+        for(int i=0; i<E_vec.size(); ++i) 
+        {
+            outfile << std::setw(20) << E_vec[i].real()
+                    << std::setw(20) << FermiFunction(E_vec[i]-mu_contact[0], kT_contact[0]).real() 
+                    << std::setw(20) << FermiFunction(E_vec[i]-mu_contact[1], kT_contact[1]).real()
+                    << std::setw(35) << DOS(i) 
+                    << std::setw(35) << Tran(i) 
+                    << std::setw(35) << Cond(i)
+                    << "\n";
+        }
     }
     outfile.close();
 }
@@ -1115,6 +1226,7 @@ c_NEGF_Common<T>:: Generate_NonEq_Paths ()
         ContourPath_RhoNonEq[p].Define_GaussLegendrePoints(noneq_path_min[p], noneq_path_max[p], 
                                                            noneq_integration_pts[p], 0);
     }
+    amrex::Print() << " total noneq integration pts: " << Total_Integration_Pts() << "\n";
 }
 
 
@@ -1689,10 +1801,8 @@ c_NEGF_Common<T>:: Compute_DensityOfStates (std::string dos_foldername, bool fla
                     Gamma[k] = imag*(Sigma_contact(k) - Sigma_contact(k).Dagger());
 
                     MatrixBlock<T> A_nn  = G_contact_nk * Gamma[k] *  G_contact_nk.Dagger();
-
-                    #ifdef COMPUTE_SPECTRAL_FUNCTION_OFFDIAG_ELEMS
                     MatrixBlock<T> A_kn  = G_contact_kk * Gamma[k] *  G_contact_nk.Dagger();
-
+                    #ifdef COMPUTE_SPECTRAL_FUNCTION_OFFDIAG_ELEMS
                     A_loc(k_glo, n) = A_loc(k_glo, n) + A_kn;
                     for (int m = k_glo+1; m < Hsize; ++m)
                     {
@@ -1710,8 +1820,22 @@ c_NEGF_Common<T>:: Compute_DensityOfStates (std::string dos_foldername, bool fla
                         A_tk[k] = A_kn;
                     }
                     #else
+                    for (int m = k_glo+1; m < Hsize; ++m)
+                    {
+                        A_kn = -1*Xtil_glo(m-1)*A_kn;
+                    }
+                    for (int m = k_glo-1; m >= 0; m--)
+                    {
+                        A_kn = -1*Ytil_glo(m+1)*A_kn;
+                    }
+                    A_tk[k] = 0.;
+                    if(n_glo == CT_ID[k])
+                    {
+                        A_tk[k] = A_kn;
+                    }
                     A_loc(n) = A_loc(n) + A_nn;
                     #endif
+
                 }
 
                 /*LDOS*/ 
@@ -1791,17 +1915,24 @@ c_NEGF_Common<T>:: Compute_DensityOfStates (std::string dos_foldername, bool fla
         }
         e_prev_pts += path.num_pts;
     }
-    amrex::Print() << "Writing DOS: \n";
-    Write_Table1D(E_total_vec, 
-                  h_DOS_loc_data, 
-                  dos_foldername+"/DOS.dat", "E_r DOS_r");
 
-    amrex::Print() << "Writing Transmission: \n";
-    Write_Table1D(E_total_vec, 
-                  h_Transmission_loc_data, 
-                  dos_foldername+"/Transmission.dat",  "E_r T_r");
+    if (amrex::ParallelDescriptor::IOProcessor())
+    {
+        RealTable1D h_Conductance_loc_data({0}, {E_total_pts}, The_Pinned_Arena());
+        total_conductance = Compute_Conductance(E_total_vec, 
+                                                            h_Transmission_loc_data,
+                                                            h_Conductance_loc_data);
 
-    Write_FermiFunction(E_total_vec, dos_foldername + "/Fermi_Function.dat");
+        amrex::Print() << "Total conductance: " << total_conductance << "\n";
+
+        
+        Write_Eql_Characteristics(E_total_vec, 
+                                  h_DOS_loc_data, 
+                                  h_Transmission_loc_data, 
+                                  h_Conductance_loc_data, 
+                                  dos_foldername + "/Equilibrium_Characteristics.dat");
+    }
+
     Deallocate_TemporaryArraysForGFComputation();
 
     //if(e==0) 
@@ -3421,15 +3552,15 @@ template<typename T>
 void
 c_NEGF_Common<T>:: Compute_Current ()
 {
+    SetVal_Table1D(h_Current_loc_data, 0.);
+
     auto const& h_minusHa_loc  = h_minusHa_loc_data.table();
     auto const& h_Hb_loc  = h_Hb_loc_data.table();
     auto const& h_Hc_loc  = h_Hc_loc_data.table();
     auto const& h_tau     = h_tau_glo_data.table();
+    auto const& h_Current_loc   = h_Current_loc_data.table();
 
     Allocate_TemporaryArraysForGFComputation();
-
-    SetVal_Table1D(h_Current_loc_data, 0.);
-    auto const& h_Current_loc   = h_Current_loc_data.table();
 
     auto const& h_Alpha_loc = h_Alpha_loc_data.table();
     auto const& h_Alpha_glo = h_Alpha_glo_data.table();
@@ -3469,6 +3600,8 @@ c_NEGF_Common<T>:: Compute_Current ()
     auto const& Sigma_contact   = d_Sigma_contact_data.const_table();
     auto const& Fermi_contact   = d_Fermi_contact_data.const_table();
 
+    auto* trace_r               = d_Trace_r.dataPtr();
+    auto* trace_i               = d_Trace_i.dataPtr();
     auto& degen_vec             = block_degen_gpuvec;
 
     #else
@@ -3489,7 +3622,8 @@ c_NEGF_Common<T>:: Compute_Current ()
     auto const& Sigma_contact   = h_Sigma_contact_data.const_table();
     auto const& Fermi_contact   = h_Fermi_contact_data.const_table();
 
-
+    auto* trace_r               = h_Trace_r.dataPtr();
+    auto* trace_i               = h_Trace_i.dataPtr();
     auto& degen_vec             = block_degen_vec;
     #endif
 
@@ -3718,10 +3852,8 @@ c_NEGF_Common<T>:: Compute_Current ()
                     Gamma[k] = imag*(Sigma_contact(k) - Sigma_contact(k).Dagger());
 
                     MatrixBlock<T> A_nn  = G_contact_nk * Gamma[k] *  G_contact_nk.Dagger();
-
-                    #ifdef COMPUTE_SPECTRAL_FUNCTION_OFFDIAG_ELEMS
                     MatrixBlock<T> A_kn  = G_contact_kk * Gamma[k] *  G_contact_nk.Dagger();
-
+                    #ifdef COMPUTE_SPECTRAL_FUNCTION_OFFDIAG_ELEMS
                     A_loc(k_glo, n) = A_loc(k_glo, n) + A_kn;
                     for (int m = k_glo+1; m < Hsize; ++m)
                     {
@@ -3742,12 +3874,11 @@ c_NEGF_Common<T>:: Compute_Current ()
                     #else 
                     A_loc(n) = A_loc(n) + A_nn;
                     #endif 
-
                     Gn_nn  = Gn_nn + A_nn*Fermi_contact(k);
-
                 }
 
 
+                /*Current calculation*/
                 for (int k=0; k < NUM_CONTACTS; ++k)
                 {
                     if(n_glo == GC_ID[k])
@@ -3762,8 +3893,6 @@ c_NEGF_Common<T>:: Compute_Current ()
 			            /*integrating*/
 			            Current_loc(k)  = Current_loc(k) + Current_atE.DiagSum().real(); 
                     }
-
-                    //amrex::HostDevice::Atomic::Add(&(Current(k)), Current_AtE[k].real());
                 }
 
                 if(write_integrand)
@@ -3801,7 +3930,6 @@ c_NEGF_Common<T>:: Compute_Current ()
     {
         amrex::ParallelDescriptor::ReduceRealSum(h_Current_loc(k));
     }
-
     if(ParallelDescriptor::IOProcessor())
     {
         amrex::Print() << "\nCurrent: \n";
@@ -3845,18 +3973,18 @@ c_NEGF_Common<T>:: Compute_Current ()
 
         if (amrex::ParallelDescriptor::IOProcessor())
         {
-            amrex::Vector<ComplexType>E_total_vec(total_noneq_integration_pts);
+            amrex::Vector<ComplexType>E_total_vec; 
+            E_total_vec.resize(total_noneq_integration_pts);
             int e_prev_pts = 0;
             for(auto& path: ContourPath_RhoNonEq)
-            {   
-                for(int e=0; e<path.num_pts; ++e) 
+            {
+                for(int e=0; e<path.num_pts; ++e)
                 {
                     int e_glo = e_prev_pts + e;
-                    E_total_vec[e_glo] = path.E_vec[e];
+                    E_total_vec[e_glo] = path.E_vec[e].real();
                 }
                 e_prev_pts += path.num_pts;
             }
-
             Write_Integrand(E_total_vec, 
                             h_NonEq_Integrand_data, 
                             h_NonEq_Integrand_Source_data, 
@@ -3872,7 +4000,6 @@ c_NEGF_Common<T>:: Compute_Current ()
                     E_at_max_noneq_integrand = E_total_vec[e].real(); 
                 }
             }
-            E_total_vec.clear();
 
             amrex::Print() << "\n Abs. value of max integrand: " << max_noneq_integrand 
                            << " at E (eV): " << E_at_max_noneq_integrand 
@@ -3901,7 +4028,7 @@ void
 c_NEGF_Common<T>:: Write_Current (const int step, 
 		                  const amrex::Real Vds,
 		                  const amrex::Real Vgs,
-		                  const int Broyden_Step,
+		                  const int avg_intg_pts,
 				  const int max_iter,
 				  const amrex::Real Broyden_fraction,
 				  const int Broyden_Scalar)
@@ -3917,12 +4044,13 @@ c_NEGF_Common<T>:: Write_Current (const int step,
         outfile_I << std::setw(10) << step << std::setw(15) << Vds << std::setw(15) << Vgs;
         for (int k=0; k <NUM_CONTACTS; ++k)
         {
-		outfile_I << std::setw(20) << h_Current_loc(k);
-	}
-		outfile_I << std::setw(10) << Broyden_Step 
+	    	outfile_I << std::setw(20) << h_Current_loc(k);
+	    }
+		outfile_I << std::setw(10) << avg_intg_pts
 			  << std::setw(10) << max_iter 
 			  << std::setw(10) << Broyden_fraction
 			  << std::setw(10) << Broyden_Scalar
+			  << std::setw(20) << total_conductance
 			  << "\n";
 	outfile_I.close();
 

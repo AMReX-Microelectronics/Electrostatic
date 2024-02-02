@@ -11,13 +11,9 @@
 
 #include <string>
 
-struct s_NS {
-    enum Type { CNT, Graphene, Silicon };
-};
-
-struct s_Algorithm { 
-    enum Type { broyden_first, broyden_second, simple_mixing };
-};
+enum class s_NS_Type : int;
+enum class s_Algorithm_Type : int;
+enum class Gate_Terminal_Type : int;
 
 class 
 c_TransportSolver
@@ -45,12 +41,22 @@ private:
     using RealTable1D    = TableData<amrex::Real, 1>;
     using RealTable2D    = TableData<amrex::Real, 2>;
 
+    Gate_Terminal_Type gate_terminal_type;
+
+    static const std::map<std::string, Gate_Terminal_Type> map_S_GateTerminalType;
+
+    static bool doesKeyExist(std::string key) 
+    {
+        return map_S_GateTerminalType.find(key) != map_S_GateTerminalType.end();
+    }
+    void Set_gate_terminal_type(const std::string);
+
     int num_NS=0;
     int m_step=0;
     amrex::Geometry  dummy_geom;
     amrex::BoxArray  dummy_ba;
     amrex::DistributionMapping  dummy_dm;
-    amrex::Real total_max_time_across_all_steps[6] = {0., 0., 0., 0., 0., 0.};
+    amrex::Real total_max_time_across_all_steps[7] = {0., 0., 0., 0., 0., 0., 0.};
     int total_iter = 0;
 
     amrex::Geometry const * _geom = &dummy_geom;
@@ -62,20 +68,11 @@ private:
     amrex::Real Vds = 0;
     amrex::Real Vgs = 0;
     int max_iter = 1;
+    int total_intg_pts_in_all_iter = 0;
 
     void ReadData();
 
-    std::map<std::string, s_NS::Type>
-    map_NSType_enum = 
-        {
-           {"carbon nanotube" , s_NS::Type::CNT},
-           {"Carbon Nanotube" , s_NS::Type::CNT},
-           {"CNT"             , s_NS::Type::CNT},
-           {"graphene"        , s_NS::Type::Graphene},
-           {"Graphene"        , s_NS::Type::Graphene},
-           {"silicon"         , s_NS::Type::Silicon},
-           {"Silicon"         , s_NS::Type::Silicon}
-        };
+    static const std::map<std::string, s_NS_Type> map_NSType_enum;
 
     std::string NS_gather_field_str;
     std::string NS_deposit_field_str;
@@ -99,15 +96,7 @@ private:
     int  write_LDOS_iter_period = 1e6;
     /*For Broyden*/
     std::string Algorithm_Type = "broyden_second";
-    std::map<std::string, s_Algorithm::Type>
-    map_AlgorithmType =
-        {
-           {"broyden_first"        , s_Algorithm::Type::broyden_first},
-           {"Broyden_first"        , s_Algorithm::Type::broyden_first},
-           {"broyden_second"        , s_Algorithm::Type::broyden_second},
-           {"Broyden_second"        , s_Algorithm::Type::broyden_second},
-           {"simple_mixing"         , s_Algorithm::Type::simple_mixing},
-        };
+    static const std::map<std::string, s_Algorithm_Type> map_AlgorithmType;
     
     std::string Broyden_Norm_Type = "relative";
     std::map<std::string, s_Norm::Type>
@@ -210,12 +199,14 @@ private:
     MPI_Datatype MPI_Vector_Type;
     MPI_Op Vector_Add;
 
-    static void Vector_Add_Func_wrapper(double* A, double* B, int* veclen, MPI_Datatype* dtype) 
-    {
-        reinterpret_cast<c_TransportSolver*>(A,B,veclen,dtype)->Vector_Add_Func(A,B,veclen,dtype);
-    }
-
-    void Vector_Add_Func(double* A, double* B, int* veclen, MPI_Datatype* dtype)
+    //static void Vector_Add_Func_wrapper(double* A, double* B, int* veclen, MPI_Datatype* dtype) 
+    //{
+    //    //reinterpret_cast<c_TransportSolver*>(A,B,veclen,dtype)->Vector_Add_Func(A,B,veclen,dtype);
+    //    //static_cast<c_TransportSolver*>(A,B,veclen,dtype)->Vector_Add_Func(A,B,veclen,dtype);
+    //    Vector_Add_Func(A,B,veclen,dtype);
+    //}
+ 
+    static void Vector_Add_Func(double* A, double* B, int* veclen, MPI_Datatype* dtype)
     {
         /* Note: https://www.mpich.org/static/docs/v3.2/www3/MPI_Op_create.html
          * The calling list for the user function type is
