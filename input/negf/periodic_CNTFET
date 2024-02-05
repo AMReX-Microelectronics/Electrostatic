@@ -35,9 +35,9 @@ cntA.write_at_iter = 0
 cntA.initialize_charge_distribution = 0
 #cntA.charge_distribution_filename = 
 
-plot.folder_name = Run0_periodic_CNTFET
-plot.write_after_init = 1
-plot.write_interval = 1
+plot.folder_name = /global/cfs/projectdirs/m3766/SaurabhTests/eXstatic_Run/PeriodicRuns/periodic_CNTFET_d3
+plot.write_after_init = 0
+plot.write_interval = 0
 
 transport.flag_write_LDOS = 1
 transport.flag_write_LDOS_iter = 0
@@ -189,7 +189,8 @@ macroscopic.ghostcells_for_fields = alpha.0 epsilon.1 charge_density.1 phi.1  at
 
 macroscopic.alpha = 0.
 macroscopic.charge_density = 0.
-macroscopic.epsilon_function = "epsilon_0 + (epsilon_GO - epsilon_0) * (z >= GO_bottom ) * (z < GO_middle) + (epsilon_GO - epsilon_0) * (z >= GO_middle) * (z < GO_top) * (y >= (-Ly/2. + CM_length) ) * (y < (Ly/2. - CM_length)  ) "
+macroscopic.epsilon_function = "epsilon_0 + (epsilon_GO - epsilon_0) * (z < GO_middle) + (epsilon_GO - epsilon_0) * (z >= GO_middle) * (z < GO_top) * (y >= (-Ly/2. + CM_length) ) * (y < (Ly/2. - CM_length)  ) "
+#macroscopic.epsilon_function = "epsilon_0 + (epsilon_GO - epsilon_0) * (z >= GO_bottom ) * (z < GO_middle) + (epsilon_GO - epsilon_0) * (z >= GO_middle) * (z < GO_top) * (y >= (-Ly/2. + CM_length) ) * (y < (Ly/2. - CM_length)  ) "
 macroscopic.phi = 0.
 macroscopic.atom_locations = 0.
 
@@ -233,7 +234,7 @@ mlmg.rhs    = charge_density
 mlmg.alpha  = alpha
 mlmg.beta   = epsilon
 
-mlmg.set_verbose=0
+mlmg.set_verbose=10
 mlmg.max_order=2
 mlmg.absolute_tolerance=0
 mlmg.relative_tolerance=1e-10
