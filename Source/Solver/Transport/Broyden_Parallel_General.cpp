@@ -60,7 +60,7 @@ c_TransportSolver::Define_Broyden_Partition()
     // MPI_recv_disp.resize(total_proc);
     // num_procs_with_sites=total_proc;
 
-    site_size_loc_cumulative.resize(vp_CNT.size());
+    site_size_loc_cumulative.resize(vp_CNT.size()+1);
     site_size_loc_cumulative[0] = 0;
 
     for (int c=0; c < vp_CNT.size(); ++c)
