@@ -55,6 +55,8 @@ public:
     /* This is the name of the nanostructure specified by user in the input file. */
     std::string name;
 
+    int NS_Id;
+
     /* rank number of current process */
     int my_rank;
 
@@ -78,6 +80,14 @@ public:
     
     /*number of all sites*/
     int num_field_sites = 0; 
+
+    /* This offsets global number of field sites for different nanostructures
+     * set in the constructor of c_nanostructure.*/
+    int NS_field_sites_offset = 0;
+
+    /* This offsets data in local number of field sites of different nanostructures
+     * set on Broyden_Parallel_General.cpp */ 
+    int site_size_loc_offset = 0;
 
     /* number of field sites this processor gets
      * Note: a field site can be shared by multiple processors,
@@ -170,6 +180,14 @@ public:
      */
     amrex::Vector<int> MPI_send_count;
     amrex::Vector<int> MPI_send_disp;
+
+    int NS_data_offset=0; 
+    /* offset in a global 1D table data of multiple structures
+     * e.g. if there are 2 nanotubes, then for the first and second nanotubes
+     * it is 0 and Hsize_glo of the first nanotube.
+     */
+
+    amrex::Real total_conductance = -1;
 
     /*Tables required to store Hamiltonian */
     BlkTable1D h_minusHa_loc_data;
@@ -289,11 +307,13 @@ public:
     amrex::Vector<ComplexType> E_poles_vec;
     amrex::Vector<int> eq_integration_pts;
     amrex::Vector<int> noneq_integration_pts;
+    amrex::Vector<int> noneq_integration_pts_density;
+    bool flag_noneq_integration_pts_density = false;
+
     int total_noneq_integration_pts=0;
     amrex::Vector<amrex::Real> noneq_percent_intercuts;
 
     int num_noneq_paths=1;
-    bool flag_adaptive_integration_limits = false;
     bool flag_compute_flatband_dos = false;
     int flatband_dos_integration_pts = 100;
     amrex::Vector<amrex::Real> flatband_dos_integration_limits = {-1., 1.};
@@ -346,9 +366,17 @@ public:
     std::string iter_foldername_str;
     std::string iter_filename_prefix_str;
     std::string iter_filename_str;
+
     int write_at_iter = 0;
-    int flag_write_integrand_main = 0;
-    int flag_write_integrand_iter = 0;
+    bool flag_adaptive_integration_limits = false;
+    bool flag_correct_integration_limits = false;
+    bool flag_write_integrand_main = false;
+    bool flag_write_integrand_iter = false;
+    bool flag_write_charge_components = false;
+    int integrand_correction_interval = 500;
+    int write_integrand_interval = 500;
+    amrex::Vector<amrex::Real> kT_window_around_singularity = {1., 1.};
+    
 
     void Set_StepFilenameString(const int step);
     void Set_IterationFilenameString(const int iter);
@@ -384,7 +412,14 @@ public:
     AMREX_GPU_HOST_DEVICE
     void Compute_SurfaceGreensFunction (MatrixBlock<T>& gr, const ComplexType EmU);
     void Compute_DensityOfStates(std::string DOS_foldername, bool flag_write_LDOS);
-    void Write_FermiFunction (const amrex::Vector<ComplexType> E_vec, std::string filename);
+    amrex::Real Compute_Conductance(const amrex::Vector<ComplexType> E_vec,
+                                    const RealTable1D& Transmission_data,
+                                    RealTable1D& Conductance_data);
+    void Write_Eql_Characteristics (const amrex::Vector<ComplexType> E_vec,
+                                    const RealTable1D& DOS_data,
+                                    const RealTable1D& Transmission_data,
+                                    const RealTable1D& Conductance_data,
+                                    std::string filename);
     void Compute_Rho0();
     void Compute_GR_atPoles();
     void Compute_RhoEq();
@@ -396,13 +431,15 @@ public:
     
     void Gatherv_NEGFComputed_LocalCharge(RealTable1D& n_curr_out_glo_data);
     void Fetch_InputLocalCharge_FromNanostructure(RealTable1D& container_data, 
+                                                  const int NS_offset,
                                                   const int disp, 
                                                   const int data_size);
     void Scatterv_BroydenComputed_GlobalCharge(RealTable1D& n_curr_in_glo_data);
 
     void Set_Arrays_OfSize_NumFieldSites();
-
     //virtual void DeallocateArrays();
+
+    int Total_Integration_Pts ();
 
     AMREX_GPU_HOST_DEVICE
     ComplexType FermiFunction(ComplexType E_minus_Mu, const amrex::Real kT);
@@ -449,9 +486,13 @@ public:
                                  std::string header);
 
     void Write_PotentialAtSites(const std::string filename_prefix);
-    void Write_InputInducedCharge (const std::string filename_prefix, RealTable1D& n_curr_in_data);
-    void Write_InducedCharge (const std::string filename_prefix, RealTable1D& n_curr_out_data);
-    void Write_ChargeNorm(const std::string filename_prefix, RealTable1D& Norm_data);
+    void Write_InputInducedCharge (const std::string filename_prefix, const RealTable1D& n_curr_in_data);
+    void Write_InducedCharge (const std::string filename_prefix, 
+                              const RealTable1D& n_curr_out_data);
+
+    void Write_ChargeNorm(const std::string filename_prefix, 
+                          const RealTable1D& Norm_data);
+
     void Write_Current (const int step, 
                         const amrex::Real Vds,
                         const amrex::Real Vgs,

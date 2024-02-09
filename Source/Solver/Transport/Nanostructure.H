@@ -118,12 +118,14 @@ public:
     c_Nanostructure (const amrex::Geometry            & geom,
                      const amrex::DistributionMapping & dm,
                      const amrex::BoxArray            & ba,
-                     const std::string ns_name,
+                     const std::string NS_name,
+                     const int NS_id,
                      const std::string NS_gather_str,
                      const std::string NS_deposit_str,
                      const amrex::Real NS_initial_deposit_value,
                      const int use_negf,
-		             const std::string negf_foldername_str    );
+		             const std::string negf_foldername_str,
+                     const int NS_field_sites_offset);
 
     virtual void ReadNanostructureProperties () override;
 
@@ -132,10 +134,10 @@ public:
     void Deposit_AtomAttributeToMesh();
     void Obtain_PotentialAtSites();
     void Mark_CellsWithAtoms(); 
-    void Solve_NEGF(RealTable1D& n_curr_out_data);
+    void Solve_NEGF(RealTable1D& n_curr_out_data, const int iter);
     void Write_Data (const std::string filename_prefix, 
-                     RealTable1D& n_curr_out_data, 
-                     RealTable1D& Norm_data);
+                     const RealTable1D& n_curr_out_data, 
+                     const RealTable1D& Norm_data);
 
 //    const amrex::Vector<amrex::Real>* get_avg_gatherField() { &avg_gatherField };
 

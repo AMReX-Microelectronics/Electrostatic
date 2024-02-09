@@ -17,7 +17,6 @@ using namespace amrex;
     
             /*vectors*/
             auto const& n_curr_in      = h_n_curr_in_data.table();
-            //auto const& n_curr_in_glo  = n_curr_in_glo_data.table();
             auto const& n_curr_out     = h_n_curr_out_data.table();
             auto const& n_prev_in      = h_n_prev_in_data.table();
             
@@ -44,7 +43,7 @@ using namespace amrex;
             {
                 case s_Norm::Type::Absolute:
                 {
-                    for(int site=0; site < site_size_loc; ++site)
+                    for(int site=0; site < site_size_loc_all_NS; ++site)
                     {
                         amrex::Real Fcurr = n_curr_in(site) - n_curr_out(site);
                         Norm(site) = fabs(Fcurr);
@@ -54,7 +53,7 @@ using namespace amrex;
                 }
                 case s_Norm::Type::Relative:
                 {
-                    for(int site=0; site < site_size_loc; ++site)
+                    for(int site=0; site < site_size_loc_all_NS; ++site)
                     {
                         amrex::Real Fcurr = n_curr_in(site) - n_curr_out(site);
                         Norm(site) = fabs(Fcurr/(n_curr_in(site) + n_curr_out(site)));
@@ -70,7 +69,7 @@ using namespace amrex;
     
             /*find maximum local norm*/
             Broyden_Norm = Norm(0);
-            for(int site=1; site < site_size_loc; ++site)
+            for(int site=1; site < site_size_loc_all_NS; ++site)
             {
                 if(Broyden_Norm < Norm(site))
                 {
@@ -94,7 +93,7 @@ using namespace amrex;
 
             /*Evaluate denom = delta_F_curr^T * delta_F_curr */
             amrex::Real Broyden_Denom = 0.;
-            for(int site=0; site < site_size_loc; ++site)
+            for(int site=0; site < site_size_loc_all_NS; ++site)
             {
                 amrex::Real Fcurr = n_curr_in(site) - n_curr_out(site);
                 delta_F_curr(site) = Fcurr - F_curr(site);
@@ -126,7 +125,7 @@ using namespace amrex;
                 for(int iter=1; iter <= m-1; ++iter)
                 {
                     amrex::Real sum = 0.;   
-                    for(int site=0; site < site_size_loc; ++site)
+                    for(int site=0; site < site_size_loc_all_NS; ++site)
                     {
     	                sum += VmatTran(site,iter) * delta_F_curr(site);  		
     	            }
@@ -142,7 +141,7 @@ using namespace amrex;
     
     	        /*Use sum_vector to temporarily store Wmat*intermed_vector */
     
-                for(int site=0; site < site_size_loc; ++site)
+                for(int site=0; site < site_size_loc_all_NS; ++site)
                 {
             		amrex::Real sum = 0.;   
                     for(int iter=1; iter <= m-1; ++iter)
@@ -153,7 +152,7 @@ using namespace amrex;
     	        }
     
                 /*Evaluate Wmat and VmatTran at iteration m*/
-                for(int site=0; site < site_size_loc; ++site)
+                for(int site=0; site < site_size_loc_all_NS; ++site)
                 {
                     amrex::Real delta_n = n_curr_in(site) - n_prev_in(site);
     
@@ -172,7 +171,7 @@ using namespace amrex;
                 for(int iter=1; iter <= m; ++iter)
                 {
             		amrex::Real sum = 0.;   
-                    for(int site=0; site < site_size_loc; ++site)
+                    for(int site=0; site < site_size_loc_all_NS; ++site)
                     {
     	                sum += VmatTran(site, iter) * F_curr(site);  		
     	            }
@@ -201,7 +200,7 @@ using namespace amrex;
                 SetVal_RealTable1D(h_sum_vector_data, 0.);
     
     
-                for(int site=0; site < site_size_loc; ++site)
+                for(int site=0; site < site_size_loc_all_NS; ++site)
                 {
     	        	amrex::Real sum = 0.;   
                     for(int iter=1; iter <= m; ++iter)
@@ -215,7 +214,7 @@ using namespace amrex;
     
     
             /*Store current n in previous n, predict next n and store it in current n*/
-            for(int site=0; site < site_size_loc; ++site)
+            for(int site=0; site < site_size_loc_all_NS; ++site)
             {
                 n_prev_in(site) =  n_curr_in(site);
                 n_curr_in(site) =  n_prev_in(site) 
@@ -228,15 +227,6 @@ using namespace amrex;
             /*Increment Broyden_Step*/
             Broyden_Step += 1;
 
-           // MPI_Gatherv(&n_curr_in(0),
-           //              site_size_loc,
-           //              MPI_DOUBLE,
-           //             &n_curr_in_glo(0),
-           //              MPI_recv_count.data(),
-           //              MPI_recv_disp.data(),
-           //              MPI_DOUBLE,
-           //              ParallelDescriptor::IOProcessorNumber(),
-           //              ParallelDescriptor::Communicator());
     }
   #else
     void 
@@ -250,7 +240,6 @@ using namespace amrex;
             //		       << ",  scalar: " << Broyden_Scalar<< "\n";
     
             auto const& h_n_curr_in       = h_n_curr_in_data.table();
-            auto const& n_curr_in_glo     = n_curr_in_glo_data.table();
             auto const& h_intermed_vector = h_intermed_vector_data.table();
             auto* h_Intermed_values       = h_Intermed_values_vec.dataPtr();
     
@@ -283,8 +272,8 @@ using namespace amrex;
                 case s_Norm::Type::Absolute:
                 {
                     const int BTM = Broyden_Threshold_MaxStep;
-                    const int SSL = site_size_loc;
-                    amrex::ParallelFor(site_size_loc, [=] AMREX_GPU_DEVICE (int site) noexcept
+                    const int SSL = site_size_loc_all_NS;
+                    amrex::ParallelFor(site_size_loc_all_NS, [=] AMREX_GPU_DEVICE (int site) noexcept
                     {
                         Norm(site) = 0.;
                         sum_vector(site) = 0.;
@@ -311,8 +300,8 @@ using namespace amrex;
                 case s_Norm::Type::Relative:
                 {
                     const int BTM = Broyden_Threshold_MaxStep;
-                    const int SSL = site_size_loc;
-                    amrex::ParallelFor(site_size_loc, [=] AMREX_GPU_DEVICE (int site) noexcept
+                    const int SSL = site_size_loc_all_NS;
+                    amrex::ParallelFor(site_size_loc_all_NS, [=] AMREX_GPU_DEVICE (int site) noexcept
                     {
                         Norm(site) = 0.;
                         sum_vector(site) = 0.;
@@ -388,7 +377,7 @@ using namespace amrex;
                 /*First, evaluate W*(V^T*deltaF), i.e. Wmat*(VmatTran*delta_F_curr)*/
                 /*Use intermed_vector to temporarily store vector (VmatTran*delta_F_curr)*/
     
-                amrex::ParallelFor(site_size_loc, [=] AMREX_GPU_DEVICE (int site) noexcept
+                amrex::ParallelFor(site_size_loc_all_NS, [=] AMREX_GPU_DEVICE (int site) noexcept
                 {
                     for(int iter=1; iter <= m-1; ++iter)
                     {
@@ -412,7 +401,7 @@ using namespace amrex;
     
                 const amrex::Real BF = Broyden_fraction;
                 const amrex::Real Denom = Broyden_Denom; 
-                amrex::ParallelFor(site_size_loc, [=] AMREX_GPU_DEVICE (int site) noexcept
+                amrex::ParallelFor(site_size_loc_all_NS, [=] AMREX_GPU_DEVICE (int site) noexcept
                 {
     	            /*Use sum_vector to temporarily store Wmat*intermed_vector */
             		amrex::Real sum = 0.;   
@@ -440,7 +429,7 @@ using namespace amrex;
                 /*Next, evaluate W*(V^T*F_curr), i.e. Wmat*(VmatTran*F_curr)*/
                 /*Reuse intermed_vector to temporarily store vector (VmatTran*F_curr)*/
     
-                amrex::ParallelFor(site_size_loc, [=] AMREX_GPU_DEVICE (int site) noexcept
+                amrex::ParallelFor(site_size_loc_all_NS, [=] AMREX_GPU_DEVICE (int site) noexcept
                 {
                     for(int iter=1; iter <= m; ++iter)
                     {
@@ -481,7 +470,7 @@ using namespace amrex;
                 //}
     
         	    /*Reuse sum_vector to temporarily store Wmat*intermed_vector */
-                amrex::ParallelFor(site_size_loc, [=] AMREX_GPU_DEVICE (int site) noexcept
+                amrex::ParallelFor(site_size_loc_all_NS, [=] AMREX_GPU_DEVICE (int site) noexcept
                 {
     	        	amrex::Real sum = 0.;   
                     for(int iter=1; iter <= m; ++iter)
@@ -497,26 +486,17 @@ using namespace amrex;
             const amrex::Real BS = Broyden_Scalar;
             const amrex::Real BF = Broyden_fraction;
             const int my_rank = amrex::ParallelDescriptor::MyProc();
-            amrex::ParallelFor(site_size_loc, [=] AMREX_GPU_DEVICE (int site) noexcept
+            amrex::ParallelFor(site_size_loc_all_NS, [=] AMREX_GPU_DEVICE (int site) noexcept
             {
                 n_prev_in(site) =  n_curr_in(site);
                 n_curr_in(site) =  n_prev_in(site) 
     		                     - BS * BF * F_curr(site) 
                     			 - BS * sum_vector(site);
             });
-            h_n_curr_in_data.copy(d_n_curr_in_data); /*from device to host*/
-            amrex::Gpu::streamSynchronize();
+            //h_n_curr_in_data.copy(d_n_curr_in_data); /*from device to host*/
+            //amrex::Gpu::streamSynchronize();
     
             Broyden_Step += 1;
-            // MPI_Gatherv(&n_curr_in(0),
-            //              site_size_loc,
-            //              MPI_DOUBLE,
-            //             &n_curr_in_glo(0),
-            //              MPI_recv_count.data(),
-            //              MPI_recv_disp.data(),
-            //              MPI_DOUBLE,
-            //              ParallelDescriptor::IOProcessorNumber(),
-            //              ParallelDescriptor::Communicator());
     }
   #endif
 #endif

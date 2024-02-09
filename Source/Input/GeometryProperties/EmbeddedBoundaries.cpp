@@ -36,36 +36,6 @@ c_EmbeddedBoundaries::c_EmbeddedBoundaries(const amrex::Array<amrex::Real, AMREX
 }
 
 
-c_EmbeddedBoundaries::~c_EmbeddedBoundaries()
-{
-#ifdef PRINT_NAME
-    amrex::Print() << "\n\n\t\t\t{************************c_EmbeddedBoundaries() Destructor************************\n";
-    amrex::Print() << "\t\t\tin file: " << __FILE__ << " at line: " << __LINE__ << "\n";
-#endif
-
-    m_p_soln_mf.clear();
-    //m_p_beta_mf.clear();
-    m_p_factory.clear();
-    vec_object_names.clear();
-    map_basic_objects_type.clear();
-    map_basic_objects_info.clear();
-    map_basic_objects_soln.clear();
-    map_basic_objects_beta.clear(); 
-    map_basic_objects_soln_parser_flag.clear();
-    //for (auto it: map_basic_objects_soln_parser) {it.second.reset();} 
-
-    map_basic_objects_soln_parser.clear();
-
-    geom = nullptr;
-    ba = nullptr;
-    dm = nullptr;
-
-#ifdef PRINT_NAME
-    amrex::Print() << "\n\n\t\t\t}************************c_EmbeddedBoundaries() Destructor************************\n";
-#endif
-}
-
-
 void
 c_EmbeddedBoundaries::ReadGeometry()
 {
@@ -477,7 +447,72 @@ c_EmbeddedBoundaries::ReadObjectInfo(std::string object_name, std::string object
             map_basic_objects_info[object_name] = cntfet_contact_cyl;  
 
             break;
+        }
+        case s_ObjectType::object::cntfet_contact_rect:
+        {
+            amrex::Vector<amrex::Real> inner_lo;
+            getArrWithParser(pp_object,"inner_box_lo", inner_lo,0,AMREX_SPACEDIM);
 
+            amrex::Print() << "##### inner_box_lo: ";
+            for (int i=0; i<AMREX_SPACEDIM; ++i) amrex::Print() << inner_lo[i] << "  ";
+            amrex::Print() << "\n";
+            amrex::Print() << "##### inner_box_lo/cell_size: ";
+            for (int i=0; i<AMREX_SPACEDIM; ++i) amrex::Print() << inner_lo[i]/(*_dx)[i] << "  ";
+            amrex::Print() << "\n";
+
+
+            amrex::Vector<amrex::Real> inner_hi;
+            getArrWithParser(pp_object,"inner_box_hi", inner_hi,0,AMREX_SPACEDIM);
+
+            amrex::Print() << "##### inner_box_hi: ";
+            for (int i=0; i<AMREX_SPACEDIM; ++i) amrex::Print() << inner_hi[i] << "  ";
+            amrex::Print() << "\n";
+            amrex::Print() << "##### inner_box_hi/cell_size: ";
+            for (int i=0; i<AMREX_SPACEDIM; ++i) amrex::Print() << inner_hi[i]/(*_dx)[i] << "  ";
+            amrex::Print() << "\n";
+
+            amrex::Real thickness;
+            getWithParser(pp_object,"thickness", thickness);
+            amrex::Print() << "##### box thickness: " << thickness << "\n";
+            amrex::Print() << "##### box thickness/dy: " << thickness/(*_dx)[1] << "\n";
+
+            int direction;
+            pp_object.get("direction", direction);
+            AMREX_ALWAYS_ASSERT_WITH_MESSAGE(direction >=0 && direction < 3,
+                                             "cavity direction is invalid");
+            amrex::Print() << "##### cavity direction: " << direction << "\n";
+
+            amrex::Vector<amrex::Real> outer_lo(AMREX_SPACEDIM);
+            amrex::Vector<amrex::Real> outer_hi(AMREX_SPACEDIM);
+
+            for(int i=0; i<AMREX_SPACEDIM; ++i) 
+            {
+                if( i!=direction ) {
+                    outer_lo[i] = inner_lo[i] - thickness;
+                    outer_hi[i] = inner_hi[i] + thickness;
+                }
+                else {
+                    outer_lo[i] = inner_lo[i];
+                    outer_hi[i] = inner_hi[i];
+                }
+            }
+            amrex::Print() << "##### outer_box_lo: ";
+            for (int i=0; i<AMREX_SPACEDIM; ++i) amrex::Print() << outer_lo[i] << "  ";
+            amrex::Print() << "\n";
+            amrex::Print() << "##### outer_box_hi: ";
+            for (int i=0; i<AMREX_SPACEDIM; ++i) amrex::Print() << outer_hi[i] << "  ";
+            amrex::Print() << "\n";
+
+            bool outer_box_has_fluid_inside=0;
+            bool inner_box_has_fluid_inside=1;
+
+            amrex::EB2::BoxIF outer_box(vecToArr(outer_lo), vecToArr(outer_hi), outer_box_has_fluid_inside);
+            amrex::EB2::BoxIF inner_box(vecToArr(inner_lo), vecToArr(inner_hi), inner_box_has_fluid_inside);
+
+            auto cntfet_contact_rect = amrex::EB2::makeIntersection(outer_box, inner_box);
+
+            map_basic_objects_info[object_name] = cntfet_contact_rect;  
+            break;
         }
         default:
         {
@@ -597,6 +632,12 @@ c_EmbeddedBoundaries::BuildGeometry(const amrex::Geometry* GEOM, const amrex::Bo
                     BuildSingleObject<ObjectType>(name);
                     break;
                 }
+                case s_ObjectType::object::cntfet_contact_rect:
+                {
+                    using ObjectType = cntfet_contact_rect_type;
+                    BuildSingleObject<ObjectType>(name);
+                    break;
+                }
             }
 
             //if(specify_separate_surf_beta == 1) 
@@ -640,11 +681,19 @@ c_EmbeddedBoundaries::BuildGeometry(const amrex::Geometry* GEOM, const amrex::Bo
 
                 BuildUnionObject<ObjectType1, ObjectType2>(name1, name2);
             }
-	    else if( (map_object_type_enum[geom_type1] == s_ObjectType::object::cntfet_contact_cyl) && 
+	        else if( (map_object_type_enum[geom_type1] == s_ObjectType::object::cntfet_contact_cyl) && 
                 (map_object_type_enum[geom_type2] == s_ObjectType::object::cntfet_contact_cyl) ) 
             {  
                 using ObjectType1 = cntfet_contact_cyl_type;
                 using ObjectType2 = cntfet_contact_cyl_type;
+
+                BuildUnionObject<ObjectType1, ObjectType2>(name1, name2);
+            }
+	        else if( (map_object_type_enum[geom_type1] == s_ObjectType::object::cntfet_contact_rect) && 
+                (map_object_type_enum[geom_type2] == s_ObjectType::object::cntfet_contact_rect) ) 
+            {  
+                using ObjectType1 = cntfet_contact_rect_type;
+                using ObjectType2 = cntfet_contact_rect_type;
 
                 BuildUnionObject<ObjectType1, ObjectType2>(name1, name2);
             }
@@ -707,8 +756,7 @@ c_EmbeddedBoundaries::BuildGeometry(const amrex::Geometry* GEOM, const amrex::Bo
             auto geom_type2 = map_basic_objects_type[name2];  
             auto name3 = vec_object_names[2];
             auto geom_type3 = map_basic_objects_type[name3];  
-
-	    if( (map_object_type_enum[geom_type1] == s_ObjectType::object::cntfet_contact_cyl) && 
+	        if( (map_object_type_enum[geom_type1] == s_ObjectType::object::cntfet_contact_cyl) && 
                 (map_object_type_enum[geom_type2] == s_ObjectType::object::cntfet_contact_cyl) &&
                 (map_object_type_enum[geom_type3] == s_ObjectType::object::cntfet_contact_cyl) ) 
             {  
@@ -718,10 +766,60 @@ c_EmbeddedBoundaries::BuildGeometry(const amrex::Geometry* GEOM, const amrex::Bo
 
                 BuildUnionObject<ObjectType1, ObjectType2, ObjectType3>(name1, name2, name3);
             }
+            else if( (map_object_type_enum[geom_type1] == s_ObjectType::object::cntfet_contact_rect) && 
+                (map_object_type_enum[geom_type2] == s_ObjectType::object::cntfet_contact_rect) &&
+                (map_object_type_enum[geom_type3] == s_ObjectType::object::cntfet_contact_rect) ) 
+            {  
+                using ObjectType1 = cntfet_contact_rect_type;
+                using ObjectType2 = cntfet_contact_rect_type;
+                using ObjectType3 = cntfet_contact_rect_type;
+
+                BuildUnionObject<ObjectType1, ObjectType2, ObjectType3>(name1, name2, name3);
+            }
+            else if( (map_object_type_enum[geom_type1] == s_ObjectType::object::cntfet_contact_rect) && 
+                (map_object_type_enum[geom_type2] == s_ObjectType::object::cntfet_contact_rect) &&
+                (map_object_type_enum[geom_type3] == s_ObjectType::object::box) ) 
+            {  
+                using ObjectType1 = cntfet_contact_rect_type;
+                using ObjectType2 = cntfet_contact_rect_type;
+                using ObjectType3 = amrex::EB2::BoxIF;
+
+                BuildUnionObject<ObjectType1, ObjectType2, ObjectType3>(name1, name2, name3);
+            }
+            else if( (map_object_type_enum[geom_type1] == s_ObjectType::object::box) && 
+                     (map_object_type_enum[geom_type2] == s_ObjectType::object::box) &&
+                     (map_object_type_enum[geom_type3] == s_ObjectType::object::box) ) 
+            {  
+                using ObjectType1 = amrex::EB2::BoxIF;
+                using ObjectType2 = amrex::EB2::BoxIF;
+                using ObjectType3 = amrex::EB2::BoxIF;
+
+                BuildUnionObject<ObjectType1, ObjectType2, ObjectType3>(name1, name2, name3);
+            }
+            else if( (map_object_type_enum[geom_type1] == s_ObjectType::object::cntfet_contact) && 
+                     (map_object_type_enum[geom_type2] == s_ObjectType::object::cntfet_contact) &&
+                     (map_object_type_enum[geom_type3] == s_ObjectType::object::cntfet_contact_cyl) ) 
+            {  
+                using ObjectType1 = cntfet_contact_type;
+                using ObjectType2 = cntfet_contact_type;
+                using ObjectType3 = cntfet_contact_cyl_type;
+
+                BuildUnionObject<ObjectType1, ObjectType2, ObjectType3>(name1, name2, name3);
+            }
+            else if( (map_object_type_enum[geom_type1] == s_ObjectType::object::cntfet_contact_cyl) && 
+                     (map_object_type_enum[geom_type2] == s_ObjectType::object::cntfet_contact_cyl) &&
+                     (map_object_type_enum[geom_type3] == s_ObjectType::object::box) ) 
+            {  
+                using ObjectType1 = cntfet_contact_cyl_type;
+                using ObjectType2 = cntfet_contact_cyl_type;
+                using ObjectType3 = amrex::EB2::BoxIF;
+
+                BuildUnionObject<ObjectType1, ObjectType2, ObjectType3>(name1, name2, name3);
+            }
             else 
             {
                 amrex::Abort("Error: 1) For more than 3 objects, one must code the operation such as union, intersection, etc.\
-                              2) At present, union operation is performed only when 3 geometries are of type cntfet_contact_cyl");
+                              2) At present, union operation is performed only when 3 geometries are of type cntfet_contact_cyl or cntfet_contact_rect");
             }   
         }
         //if(specify_separate_surf_beta == 1)

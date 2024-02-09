@@ -4,6 +4,7 @@
 
 using namespace amrex;
 
+enum class s_Algorithm_Type : int { broyden_first, broyden_second, simple_mixing };
 
 #ifdef BROYDEN_PARALLEL
 void
@@ -24,7 +25,7 @@ c_TransportSolver::Define_MPI_Vector_Type_and_MPI_Vector_Sum ()
      * Also, note: https://stackoverflow.com/questions/29285883/mpi-allreduce-sum-over-a-derived-datatype-vector
      */
 
-    MPI_Op_create((MPI_User_function *)Vector_Add_Func_wrapper, true, &Vector_Add);
+    MPI_Op_create((MPI_User_function*)Vector_Add_Func, true, &Vector_Add);
 
 }
 
@@ -48,40 +49,27 @@ c_TransportSolver::Define_Broyden_Partition()
      * num_field_sites_all_NS
      * my_rank
      * total_proc
-     *
-     * MPI_recv_count
-     * MPI_recv_disp
-     *
      * site_size_loc
-     * num_procs_with_sites
      */
 
     num_field_sites_all_NS = 0;
     total_proc = amrex::ParallelDescriptor::NProcs();
     my_rank = amrex::ParallelDescriptor::MyProc();
 
-    MPI_recv_count.resize(total_proc);
-    MPI_recv_disp.resize(total_proc);
-    num_procs_with_sites=total_proc;
+    // MPI_recv_count.resize(total_proc);
+    // MPI_recv_disp.resize(total_proc);
+    // num_procs_with_sites=total_proc;
 
-    int g=0;
+    site_size_loc_cumulative.resize(vp_CNT.size()+1);
+    site_size_loc_cumulative[0] = 0;
+
     for (int c=0; c < vp_CNT.size(); ++c)
     {
-	    num_field_sites_all_NS += vp_CNT[c]->num_field_sites;
-
-	    /*We assume that only a subset of procs work on each nanostructure.*/
-	    for(int i=0; i < vp_CNT[c]->num_proc; ++i) 
-	    {
-            int recv_count    = vp_CNT[c]->MPI_recv_count[i];
-	        if(recv_count == 0) num_procs_with_sites--;
-
-	        MPI_recv_count[g] = recv_count;
-	        MPI_recv_disp[g]  = vp_CNT[c]->MPI_recv_disp[i];
-
-	        g++;
-	    }
-	    site_size_loc = MPI_recv_count[my_rank];
+        vp_CNT[c]->site_size_loc_offset = site_size_loc_cumulative[c];
+        site_size_loc_cumulative[c+1] = site_size_loc_cumulative[c] + vp_CNT[c]->MPI_recv_count[my_rank];
     }
+    site_size_loc_all_NS = site_size_loc_cumulative[vp_CNT.size()];
+
     //if (ParallelDescriptor::IOProcessor()) 
     //{
     //    amrex::Print() << "recv_count/recv_disp: \n";
@@ -90,8 +78,6 @@ c_TransportSolver::Define_Broyden_Partition()
     //    }
     //}
 
-    amrex::Print() << "#####* Number of field_sites at all nanostructures, num_field_sites_all_NS: " 
-                   << num_field_sites_all_NS << "\n";
 }
 
 
@@ -107,30 +93,34 @@ c_TransportSolver:: Set_Broyden_Parallel ()
     Broyden_NormSum_Prev = 1.e10;
     Broyden_fraction = Broyden_Original_Fraction;
 
-    if(ParallelDescriptor::IOProcessor()) 
-    {
-        n_curr_in_glo_data.resize({0},{num_field_sites_all_NS}, The_Pinned_Arena());
-        SetVal_RealTable1D(n_curr_in_glo_data,0.);
-    }
 
-    h_n_curr_in_data.resize({0}, {site_size_loc}, The_Pinned_Arena());
+    h_n_curr_in_data.resize({0}, {site_size_loc_all_NS}, The_Pinned_Arena());
     SetVal_RealTable1D(h_n_curr_in_data,0.);
 
     auto const& h_n_curr_in    = h_n_curr_in_data.table();
-    auto const& n_curr_in_glo  = n_curr_in_glo_data.table();
 
     /*Need generalization for multiple CNTs*/
     for (int c=0; c < vp_CNT.size(); ++c)
     {
-        vp_CNT[c]->Fetch_InputLocalCharge_FromNanostructure(h_n_curr_in_data, MPI_recv_disp[my_rank], site_size_loc);
+        int NS_offset = site_size_loc_cumulative[c];
+        vp_CNT[c]->Fetch_InputLocalCharge_FromNanostructure(h_n_curr_in_data, 
+                                                            NS_offset,
+                                                            vp_CNT[c]->MPI_recv_disp[my_rank], 
+                                                            vp_CNT[c]->MPI_recv_count[my_rank]);
+
+        //amrex::Print() << "Fetching h_n_curr_in for NS_id: " << vp_CNT[c]->NS_Id << "\n";
+        //for(int i=NS_offset; i< NS_offset + vp_CNT[c]->MPI_recv_count[my_rank]; ++i) {
+        //    amrex::Print() << i << " " << h_n_curr_in(i) << "\n";
+        //}
 	}
 
+
     #ifdef BROYDEN_SKIP_GPU_OPTIMIZATION
-    h_n_curr_out_data.resize({0}, {site_size_loc}, The_Pinned_Arena());
-    h_n_prev_in_data.resize({0}, {site_size_loc}, The_Pinned_Arena());
-    h_F_curr_data.resize({0}, {site_size_loc}, The_Pinned_Arena());
-    h_delta_F_curr_data.resize({0}, {site_size_loc}, The_Pinned_Arena());
-    h_Norm_data.resize({0}, {site_size_loc}, The_Pinned_Arena());
+    h_n_curr_out_data.resize(  {0}, {site_size_loc_all_NS}, The_Pinned_Arena());
+    h_n_prev_in_data.resize(   {0}, {site_size_loc_all_NS}, The_Pinned_Arena());
+    h_F_curr_data.resize(      {0}, {site_size_loc_all_NS}, The_Pinned_Arena());
+    h_delta_F_curr_data.resize({0}, {site_size_loc_all_NS}, The_Pinned_Arena());
+    h_Norm_data.resize(        {0}, {site_size_loc_all_NS}, The_Pinned_Arena());
 
     SetVal_RealTable1D(h_n_curr_out_data,0.);
     SetVal_RealTable1D(h_n_prev_in_data,0.);
@@ -138,14 +128,14 @@ c_TransportSolver:: Set_Broyden_Parallel ()
     SetVal_RealTable1D(h_delta_F_curr_data, 0.);
     SetVal_RealTable1D(h_Norm_data, 0.);
     #else
-    d_n_curr_in_data.resize({0}, {site_size_loc}, The_Arena());
+    d_n_curr_in_data.resize({0}, {site_size_loc_all_NS}, The_Arena());
     d_n_curr_in_data.copy(h_n_curr_in_data);
 
-    d_n_curr_out_data.resize({0}, {site_size_loc}, The_Arena());
-    d_n_prev_in_data.resize({0}, {site_size_loc}, The_Arena());
-    d_F_curr_data.resize({0}, {site_size_loc}, The_Arena());
-    d_delta_F_curr_data.resize({0}, {site_size_loc}, The_Arena());
-    d_Norm_data.resize({0}, {site_size_loc}, The_Arena());
+    d_n_curr_out_data.resize({0}, {site_size_loc_all_NS}, The_Arena());
+    d_n_prev_in_data.resize({0}, {site_size_loc_all_NS}, The_Arena());
+    d_F_curr_data.resize({0}, {site_size_loc_all_NS}, The_Arena());
+    d_delta_F_curr_data.resize({0}, {site_size_loc_all_NS}, The_Arena());
+    d_Norm_data.resize({0}, {site_size_loc_all_NS}, The_Arena());
 
     auto const& n_curr_out      = d_n_curr_out_data.table();
     auto const& n_prev_in       = d_n_prev_in_data.table();
@@ -154,7 +144,7 @@ c_TransportSolver:: Set_Broyden_Parallel ()
     auto const& Norm            = d_Norm_data.table();
 
 
-    amrex::ParallelFor(site_size_loc, [=] AMREX_GPU_DEVICE (int site) noexcept
+    amrex::ParallelFor(site_size_loc_all_NS, [=] AMREX_GPU_DEVICE (int site) noexcept
     {
         n_curr_out(site)   = 0.;
         n_prev_in(site)    = 0.;
@@ -165,14 +155,14 @@ c_TransportSolver:: Set_Broyden_Parallel ()
     amrex::Gpu::streamSynchronize();
     #endif
 
-    switch(map_AlgorithmType[Algorithm_Type])
+    switch(c_TransportSolver::map_AlgorithmType.at(Algorithm_Type))
     {
-        case s_Algorithm::Type::broyden_first:
+        case s_Algorithm_Type::broyden_first:
         {
             amrex::Abort("Algorithm, broyden_first is not parallelized. Compile with preprocessor directive, BROYDEN_PARALLEL=False, or use broyden_second algorithm.");
             break;
         }
-        case s_Algorithm::Type::broyden_second:
+        case s_Algorithm_Type::broyden_second:
         {
             h_intermed_vector_data.resize({0}, {Broyden_Threshold_MaxStep}, The_Pinned_Arena());
             SetVal_RealTable1D(h_intermed_vector_data, 0.);
@@ -186,7 +176,7 @@ c_TransportSolver:: Set_Broyden_Parallel ()
 	    	//
 	    	// VmatTran is a matrix of size (rows x columns): (number of iterations x num_field_sites_all_NS)
     		// We set a limit on number of iterations using input parameter, 'Broyden_Threshold_MaxStep'.
-	        // Note that locally, each process stores only 'site_size_loc' portion out of num_field_sites_all_NS.
+	        // Note that locally, each process stores only 'site_size_loc_all_NS' portion out of num_field_sites_all_NS.
 	    	//
     		// (VmatTran x delta_F_curr) is a vector of size Broyden_Threshold_MaxStep.
 	    	//
@@ -196,19 +186,19 @@ c_TransportSolver:: Set_Broyden_Parallel ()
 	        // Similar considerations went into storing W, which is used in the multiplication,
 	    	// W(*,site)*VmatTran_DeltaF(*), where VmatTran_DeltaF is a vector of size Broyden_Threshold_MaxStep.  		
             #ifdef BROYDEN_SKIP_GPU_OPTIMIZATION
-            h_sum_vector_data.resize({0}, {site_size_loc}, The_Pinned_Arena());
-            h_VmatTran_data.resize({0,0},{site_size_loc, Broyden_Threshold_MaxStep}, The_Pinned_Arena());
-            h_Wmat_data.resize({0,0},{Broyden_Threshold_MaxStep, site_size_loc}, The_Pinned_Arena());
+            h_sum_vector_data.resize({0}, {site_size_loc_all_NS}, The_Pinned_Arena());
+            h_VmatTran_data.resize({0,0},{site_size_loc_all_NS, Broyden_Threshold_MaxStep}, The_Pinned_Arena());
+            h_Wmat_data.resize({0,0},{Broyden_Threshold_MaxStep, site_size_loc_all_NS}, The_Pinned_Arena());
 
             SetVal_RealTable1D(h_sum_vector_data, 0.);
             SetVal_RealTable2D(h_VmatTran_data,0.);
             SetVal_RealTable2D(h_Wmat_data,0.);
             #else
-            d_sum_vector_data.resize({0}, {site_size_loc}, The_Arena());
+            d_sum_vector_data.resize({0}, {site_size_loc_all_NS}, The_Arena());
             d_intermed_vector_data.resize({0}, {Broyden_Threshold_MaxStep}, The_Arena());
 
-            d_VmatTran_data.resize({0,0},{site_size_loc, Broyden_Threshold_MaxStep}, The_Arena());
-            d_Wmat_data.resize({0,0},{Broyden_Threshold_MaxStep, site_size_loc}, The_Arena());
+            d_VmatTran_data.resize({0,0},{site_size_loc_all_NS, Broyden_Threshold_MaxStep}, The_Arena());
+            d_Wmat_data.resize({0,0},{Broyden_Threshold_MaxStep, site_size_loc_all_NS}, The_Arena());
 
             auto const& sum_vector      = d_sum_vector_data.table();
             auto const& intermed_vector = d_intermed_vector_data.table();
@@ -216,8 +206,8 @@ c_TransportSolver:: Set_Broyden_Parallel ()
             auto const& Wmat           = d_Wmat_data.table();
 
             const int BTM = Broyden_Threshold_MaxStep;
-            const int SSL = site_size_loc;
-            amrex::ParallelFor(site_size_loc, [=] AMREX_GPU_DEVICE (int site) noexcept
+            const int SSL = site_size_loc_all_NS;
+            amrex::ParallelFor(site_size_loc_all_NS, [=] AMREX_GPU_DEVICE (int site) noexcept
             {
                 for(int iter=0; iter < BTM; ++iter) 
                 {
@@ -235,7 +225,7 @@ c_TransportSolver:: Set_Broyden_Parallel ()
 
             break;
         }
-        case s_Algorithm::Type::simple_mixing:
+        case s_Algorithm_Type::simple_mixing:
         {
             amrex::Abort("Algorithm, simple_Mixing is not parallelized. Compile with preprocessor directive, BROYDEN_PARALLEL=False, or use broyden_second algorithm.");
             break;
@@ -287,7 +277,7 @@ c_TransportSolver:: Reset_Broyden_Parallel ()
     auto const& delta_F_curr    = d_delta_F_curr_data.table();
     auto const& Norm            = d_Norm_data.table();
 
-    amrex::ParallelFor(site_size_loc, [=] AMREX_GPU_DEVICE (int site) noexcept
+    amrex::ParallelFor(site_size_loc_all_NS, [=] AMREX_GPU_DEVICE (int site) noexcept
     {
         n_curr_out(site)   = 0.;
         n_prev_in(site)    = 0.;
@@ -298,13 +288,13 @@ c_TransportSolver:: Reset_Broyden_Parallel ()
     amrex::Gpu::streamSynchronize();
     #endif
 
-    switch(map_AlgorithmType[Algorithm_Type])
+    switch(c_TransportSolver::map_AlgorithmType.at(Algorithm_Type))
     {
-        case s_Algorithm::Type::broyden_first:
+        case s_Algorithm_Type::broyden_first:
         {
             break;
         }
-        case s_Algorithm::Type::broyden_second:
+        case s_Algorithm_Type::broyden_second:
         {
             #ifdef BROYDEN_SKIP_GPU_OPTIMIZATION
             SetVal_RealTable1D(h_sum_vector_data, 0.);
@@ -318,8 +308,8 @@ c_TransportSolver:: Reset_Broyden_Parallel ()
             auto const& Wmat           = d_Wmat_data.table();
 
             const int BTM = Broyden_Threshold_MaxStep;
-            const int SSL = site_size_loc;
-            amrex::ParallelFor(site_size_loc, [=] AMREX_GPU_DEVICE (int site) noexcept
+            const int SSL = site_size_loc_all_NS;
+            amrex::ParallelFor(site_size_loc_all_NS, [=] AMREX_GPU_DEVICE (int site) noexcept
             {
                 for(int iter=0; iter < BTM; ++iter) 
                 {
@@ -339,7 +329,7 @@ c_TransportSolver:: Reset_Broyden_Parallel ()
 
             break;
         }
-        case s_Algorithm::Type::simple_mixing:
+        case s_Algorithm_Type::simple_mixing:
         {
             break;
         }
@@ -376,10 +366,7 @@ c_TransportSolver::Deallocate_Broyden_Parallel ()
     h_F_curr_data.clear();
     h_delta_F_curr_data.clear();
     h_Norm_data.clear();
-
-    n_curr_in_glo_data.clear();
     h_intermed_vector_data.clear();
-
 
     #ifdef BROYDEN_SKIP_GPU_OPTIMIZATION
     h_Wmat_data.clear();
