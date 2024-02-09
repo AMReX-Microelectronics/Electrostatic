@@ -372,6 +372,7 @@ public:
     bool flag_correct_integration_limits = false;
     bool flag_write_integrand_main = false;
     bool flag_write_integrand_iter = false;
+    bool flag_write_charge_components = false;
     int integrand_correction_interval = 500;
     int write_integrand_interval = 500;
     amrex::Vector<amrex::Real> kT_window_around_singularity = {1., 1.};

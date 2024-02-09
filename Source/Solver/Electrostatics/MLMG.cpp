@@ -539,8 +539,6 @@ c_MLMGSolver:: UpdateBoundaryConditions(bool update_surface_soln)
     auto& rGprop = rCode.get_GeometryProperties();
     auto& rBC = rCode.get_BoundaryConditions();
     auto& geom = rGprop.geom;
-    auto& ba   = rGprop.ba;
-    auto& dm   = rGprop.dm;
     int amrlev = 0;
 
     #ifdef AMREX_USE_EB
@@ -693,6 +691,47 @@ c_MLMGSolver:: Fill_Constant_Inhomogeneous_Boundaries()
 #endif
 }
 
+void
+c_MLMGSolver:: Set_map_BoundarySoln_Name_Value (const int id, const std::vector<int>& dir_inhomo_func) 
+{
+    auto& rCode = c_Code::GetInstance();
+    const amrex::Real time = rCode.get_time();
+    auto& rBC = rCode.get_BoundaryConditions();
+    auto& bcAny_2d = rBC.bcAny_2d;
+    auto& map_robin_coeff = rBC.map_robin_coeff;
+
+    for (auto dir : dir_inhomo_func) //looping over boundaries of type inhomogeneous_function
+    {
+        if(LinOpBCType_2d[id][dir] == LinOpBCType::Robin) 
+        {  
+            std::string main_str = std::any_cast<std::string>(bcAny_2d[id][dir]);
+            for(auto it_rob : map_robin_coeff)
+            {
+                //loop over parser names with robin subscripts e.g. Zmin_a, Zmin_b, Zmin_f
+                std::string macro_str = main_str + it_rob.first; 
+
+                auto pParser = rBC.get_p_parser(macro_str);
+	            #ifdef TIME_DEPENDENT
+	                const auto& macro_parser = pParser->compile<4>();
+	            #else
+	                const auto& macro_parser = pParser->compile<3>();
+	            #endif
+                rBC.map_BoundarySoln_Name_Value[macro_str] = macro_parser(0.,0.,0.,time);
+            }
+        }
+        else //it is dirichlet or neumann inhomogeneous function boundary 
+        {
+            std::string macro_str = std::any_cast<std::string>(bcAny_2d[id][dir]);
+            auto pParser = rBC.get_p_parser(macro_str);
+            #ifdef TIME_DEPENDENT
+                const auto& macro_parser = pParser->compile<4>();
+            #else
+                const auto& macro_parser = pParser->compile<3>();
+            #endif
+            rBC.map_BoundarySoln_Name_Value[macro_str] = macro_parser(0.,0.,0.,time);
+        }
+    }
+}
 
 void
 c_MLMGSolver:: Fill_FunctionBased_Inhomogeneous_Boundaries()
@@ -740,11 +779,21 @@ c_MLMGSolver:: Fill_FunctionBased_Inhomogeneous_Boundaries()
     }
 #endif
 
+    // setting map_BoundarySoln_Name_Value for all procs, even those that are not adjacent to boundary
+    if(found_lo)
+    {
+        Set_map_BoundarySoln_Name_Value(0, dir_inhomo_func_lo);
+    }
+    if(found_hi)
+    {
+        Set_map_BoundarySoln_Name_Value(1, dir_inhomo_func_hi);
+    }
+
+    // filling function boundaries
     for (MFIter mfi(*soln, TilingIfNotGPU()); mfi.isValid(); ++mfi)
     {
         const auto& soln_arr = soln->array(mfi);
         const auto& bx = mfi.tilebox();
-        
         /*for low sides*/
         if(found_lo)
         {
@@ -771,7 +820,6 @@ c_MLMGSolver:: Fill_FunctionBased_Inhomogeneous_Boundaries()
 			                #else
 			                    const auto& macro_parser = pParser->compile<3>();
 			                #endif
-                            rBC.map_BoundarySoln_Name_Value[macro_str] = macro_parser(0.,0.,0.,time);
 
                             switch(it_rob.second)
                             {
@@ -828,9 +876,6 @@ c_MLMGSolver:: Fill_FunctionBased_Inhomogeneous_Boundaries()
 			                const auto& macro_parser = pParser->compile<3>();
 			            #endif
 
-                        rBC.map_BoundarySoln_Name_Value[macro_str] = macro_parser(0.,0.,0.,time);
-
-
                         amrex::ParallelFor(bxlo,
                         [=] AMREX_GPU_DEVICE (int i, int j, int k) noexcept
                         {
@@ -870,7 +915,6 @@ c_MLMGSolver:: Fill_FunctionBased_Inhomogeneous_Boundaries()
 			                #else
 			                    const auto& macro_parser = pParser->compile<3>();
 			                #endif
-                            rBC.map_BoundarySoln_Name_Value[macro_str] = macro_parser(0.,0.,0.,time);
 
                             switch(it_rob.second)
                             {
@@ -926,8 +970,6 @@ c_MLMGSolver:: Fill_FunctionBased_Inhomogeneous_Boundaries()
 			            #else
 			                const auto& macro_parser = pParser->compile<3>();
 			            #endif
-
-                        rBC.map_BoundarySoln_Name_Value[macro_str] = macro_parser(0.,0.,0.,time);
 
                         amrex::ParallelFor(bxhi,
                         [=] AMREX_GPU_DEVICE (int i, int j, int k) noexcept

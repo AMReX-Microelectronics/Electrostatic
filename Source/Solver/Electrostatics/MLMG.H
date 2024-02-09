@@ -70,6 +70,8 @@ public:
     /*The following is public for GPUs*/
     void Fill_Constant_Inhomogeneous_Boundaries(); 
     void Fill_FunctionBased_Inhomogeneous_Boundaries(); 
+    void Set_map_BoundarySoln_Name_Value (const int id, const std::vector<int>& dir_inhomo_func);
+
     std::string soln_str;
     amrex::MultiFab* soln=nullptr;
 

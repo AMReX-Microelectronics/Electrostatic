@@ -16,9 +16,9 @@ amrex.the_arena_is_managed=1
 ################################
 ##### Some Important Params ####
 ################################
-my_constants.gx = 1
-my_constants.gy = 1
-my_constants.gz = 1
+my_constants.gx = 2
+my_constants.gy = 2
+my_constants.gz = 2
 
 my_constants.num_CNTs = 1
 
@@ -72,7 +72,7 @@ my_constants.cells_per_unitcell = 16 #cell_size = 0.0355 nm
 
 my_constants.unitcells_per_D_CN = ceil((R_CN*2)/(L_unitcell)) #unitcells per diameter
 
-my_constants.width_factor  = 1.875 #1.875 corresponds to 3.195 nm (smallest periodicity distance)
+my_constants.width_factor  = 7.5 #1.875 corresponds to 3.195 nm (smallest periodicity distance)
 my_constants.height_factor = 12
 
 my_constants.ny = (N_unitcells + Ly_offset_unitcells) * cells_per_unitcell
@@ -234,7 +234,7 @@ mlmg.rhs    = charge_density
 mlmg.alpha  = alpha
 mlmg.beta   = epsilon
 
-mlmg.set_verbose=10
+mlmg.set_verbose=0
 mlmg.max_order=2
 mlmg.absolute_tolerance=0
 mlmg.relative_tolerance=1e-10
@@ -270,9 +270,11 @@ cntA.eq_integration_pts = 30 30 30
 cntA.flag_compute_flatband_dos = 1
 cntA.flatband_dos_integration_pts = 400
 cntA.flatband_dos_integration_limits = -1. 1.
-cntA.num_noneq_paths = 3
-cntA.noneq_percent_intercuts = 30 80
-cntA.noneq_integration_pts = 200 140 60
+cntA.num_noneq_paths = 1
+#cntA.noneq_percent_intercuts = 30 80
+cntA.noneq_integration_pts = 400
+cntA.flag_write_integrand = 0
+cntA.flag_write_charge_components = 0
 cntA.Fermi_tail_factors = 14 14
 cntA.num_recursive_parts = 2
 cntA.contact_Fermi_level = Ef

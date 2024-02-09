@@ -590,16 +590,16 @@ c_Nanostructure<NSType>::Obtain_PotentialAtSites()
         auto& par_gather    = pti.get_realPA_comp(realPA::gather);
         auto p_par_gather   = par_gather.data();
         auto get_1D_site_id = NSType::get_1D_site_id();
-        amrex::Print() << "np: " << np << "\n";
-        amrex::Print() << "p_par_gather: " << p_par_gather[0] << "\n";
-        amrex::Print() << "num_field_sites: " << num_field_sites << "\n";
+        //amrex::Print() << "np: " << np << "\n";
+        //amrex::Print() << "p_par_gather: " << p_par_gather[0] << "\n";
+        //amrex::Print() << "num_field_sites: " << num_field_sites << "\n";
           
         if(average_field_flag) 
         {
-            amrex::Print() << "average_field_flag: " << average_field_flag << "\n";
+            //amrex::Print() << "average_field_flag: " << average_field_flag << "\n";
             if(NSType::avg_type == s_AVG_TYPE::ALL) 
             {
-                amrex::Print() << "average_type: " << NSType::avg_type << "\n";
+                //amrex::Print() << "average_type: " << NSType::avg_type << "\n";
 
                 amrex::ParallelFor(np, [=] AMREX_GPU_DEVICE (int p) noexcept 
                 {
@@ -661,12 +661,12 @@ c_Nanostructure<NSType>::Obtain_PotentialAtSites()
                    MPI_SUM,
                    ParallelDescriptor::Communicator());
 
-    for(int i=0; i < 1; ++i)
-    {
-        std::cout << "NSType::name/proc/i/h_vec_V: "<< NSType::name << " " << NSType::my_rank << " " << i << "  " << p_hV[i] << "\n";
-    }
-    amrex::Print() << "\n";
-    MPI_Barrier(ParallelDescriptor::Communicator());
+    //for(int i=0; i < 1; ++i)
+    //{
+    //    std::cout << "NSType::name/proc/i/h_vec_V: "<< NSType::name << " " << NSType::my_rank << " " << i << "  " << p_hV[i] << "\n";
+    //}
+    //amrex::Print() << "\n";
+    //MPI_Barrier(ParallelDescriptor::Communicator());
     auto const& h_U_loc = NSType::h_U_loc_data.table();
     for (int l=0; l < blkCol_size_loc; ++l) 
     {
