@@ -112,11 +112,11 @@ c_CNT::Set_Material_Specific_Parameters()
     if(average_field_flag) 
     {
         num_atoms_per_field_site = atoms_per_ring;
-        if(avg_type == s_AVG_TYPE::ALL) 
+        if(avg_type == s_AVG_Type::ALL) 
         {
             num_atoms_to_avg_over    = num_atoms_per_field_site;
         }
-        else if(avg_type == s_AVG_TYPE::SPECIFIC)
+        else if(avg_type == s_AVG_Type::SPECIFIC)
         {
             num_atoms_to_avg_over    = vec_avg_indices.size();
         }

@@ -41,7 +41,7 @@ using namespace amrex;
             Broyden_NormSum_Curr = 0.; 
             switch(map_NormType[Broyden_Norm_Type])
             {
-                case s_Norm::Type::Absolute:
+                case s_Norm_Type::Absolute:
                 {
                     for(int site=0; site < site_size_loc_all_NS; ++site)
                     {
@@ -51,7 +51,7 @@ using namespace amrex;
                     }
                     break;
                 }
-                case s_Norm::Type::Relative:
+                case s_Norm_Type::Relative:
                 {
                     for(int site=0; site < site_size_loc_all_NS; ++site)
                     {
@@ -269,7 +269,7 @@ using namespace amrex;
 
             switch(map_NormType[Broyden_Norm_Type])
             {
-                case s_Norm::Type::Absolute:
+                case s_Norm_Type::Absolute:
                 {
                     const int BTM = Broyden_Threshold_MaxStep;
                     const int SSL = site_size_loc_all_NS;
@@ -297,7 +297,7 @@ using namespace amrex;
                     });
                     break;
                 }
-                case s_Norm::Type::Relative:
+                case s_Norm_Type::Relative:
                 {
                     const int BTM = Broyden_Threshold_MaxStep;
                     const int SSL = site_size_loc_all_NS;

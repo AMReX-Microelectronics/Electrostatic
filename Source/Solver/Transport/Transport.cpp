@@ -727,6 +727,7 @@ template<typename NSType>
 void
 c_TransportSolver:: Create_Global_Output_Data(NSType const& NS) 
 {
+
     #ifndef BROYDEN_SKIP_GPU_OPTIMIZATION
     /*only select data need to be copied for multiple NS*/
 

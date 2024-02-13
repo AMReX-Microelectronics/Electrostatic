@@ -10,28 +10,10 @@
 
 #include <fstream>
 
-struct s_AVG_TYPE 
-{
-    enum { 
-          ALL,
-          SPECIFIC
-    };
-};
 
-
-struct s_Potential_Profile
-{
-    enum Type
-    { 
-          CONSTANT,
-          LINEAR,
-	  POINT_CHARGE
-    };
-};
-
-struct s_Norm {
-    enum Type { Absolute, Relative };
-};
+enum class s_AVG_Type : int { ALL, SPECIFIC };
+enum class s_Potential_Profile_Type : int { CONSTANT, LINEAR, POINT_CHARGE };
+enum class s_Norm_Type : int { Absolute, Relative };
 
 struct s_Position3D
 {
@@ -39,11 +21,12 @@ struct s_Position3D
 };
 
 template<typename T>
-class c_NEGF_Common: public MatrixBlock<T>, 
-                     public c_IntegrationPath
+class c_NEGF_Common: private MatrixBlock<T>, 
+                     private c_IntegrationPath
 {
 
-public:
+private:
+
     using ComplexTable1D = TableData<ComplexType, 1>;
     using ComplexTable2D = TableData<ComplexType, 2>;
     using RealTable1D    = TableData<amrex::Real, 1>;
@@ -51,11 +34,9 @@ public:
     using BlkTable1D     = TableData<MatrixBlock<T>, 1>;
     using BlkTable2D     = TableData<MatrixBlock<T>, 2>;
 
-    virtual ~c_NEGF_Common();
+protected:
     /* This is the name of the nanostructure specified by user in the input file. */
     std::string name;
-
-    int NS_Id;
 
     /* rank number of current process */
     int my_rank;
@@ -77,17 +58,11 @@ public:
      */
     int num_atoms_per_unitcell = 0;
     int num_unitcells = 0;
-    
-    /*number of all sites*/
-    int num_field_sites = 0; 
+
 
     /* This offsets global number of field sites for different nanostructures
      * set in the constructor of c_nanostructure.*/
     int NS_field_sites_offset = 0;
-
-    /* This offsets data in local number of field sites of different nanostructures
-     * set on Broyden_Parallel_General.cpp */ 
-    int site_size_loc_offset = 0;
 
     /* number of field sites this processor gets
      * Note: a field site can be shared by multiple processors,
@@ -106,8 +81,8 @@ public:
      */
     int site_id_offset = 0;
 
-    /* avg_type can be s_AVG_TYPE::ALL or s_AVG_TYPE::SPECIFIC */
-    int avg_type;
+    /* avg_type can be s_AVG_Type::ALL or s_AVG_TYPE::SPECIFIC */
+    s_AVG_Type avg_type;
 
     /* The following host and device vectors represent indices of atoms to average over, while 
      * averaging data represented on atoms of a material to corresponding field site representation, 
@@ -165,29 +140,6 @@ public:
      */
     amrex::Vector<int> block_degen_vec;
     amrex::Gpu::DeviceVector<int> block_degen_gpuvec;
-
-    /* MPI_recv_count stores blkCol_size_loc of each processor.
-     * MPI_recv_disp stores the offset id of block columns for each processor.
-     * These vectors are defined for each processor and are useful during
-     * MPI_Gatherv of of induced charge computed by each processor.
-     */
-    amrex::Vector<int> MPI_recv_count;
-    amrex::Vector<int> MPI_recv_disp;
-
-    /* MPI_send_count stores num_local_field_sites of each processor.
-     * MPI_send_disp stores site_id_offset of each processor.
-     * These vectors are defined only for IOProcessor.
-     */
-    amrex::Vector<int> MPI_send_count;
-    amrex::Vector<int> MPI_send_disp;
-
-    int NS_data_offset=0; 
-    /* offset in a global 1D table data of multiple structures
-     * e.g. if there are 2 nanotubes, then for the first and second nanotubes
-     * it is 0 and Hsize_glo of the first nanotube.
-     */
-
-    amrex::Real total_conductance = -1;
 
     /*Tables required to store Hamiltonian */
     BlkTable1D h_minusHa_loc_data;
@@ -285,7 +237,6 @@ public:
     RealTable1D d_NonEq_Integrand_Drain_data;
     #endif
 
-
     amrex::GpuArray<int,NUM_CONTACTS> global_contact_index; 
     amrex::GpuArray<int,NUM_CONTACTS> contact_transmission_index;
     amrex::Real U_contact[NUM_CONTACTS] = {0.,0.};
@@ -301,7 +252,6 @@ public:
     ComplexType E_rightmost = 0.;
     ComplexType E_zeta = 0.;
     ComplexType E_eta = 0.;
-    amrex::Real E_f = 0.;
     amrex::Vector<ComplexType> E_f_vec;
     int num_enclosed_poles = 0.;
     amrex::Vector<ComplexType> E_poles_vec;
@@ -322,20 +272,14 @@ public:
 
     amrex::Real Contact_Temperature[NUM_CONTACTS] = {298., 298.};
 
-    int flag_contact_mu_specified = 1;
-    bool flag_EC_potential_updated = false;
-    amrex::Real Contact_Electrochemical_Potential[NUM_CONTACTS] = {0., 0.};
-    std::string Contact_Parser_String[NUM_CONTACTS];
-    std::string Gate_String = "Gate";
-
     int flag_impose_potential = 0;
     std::string potential_profile_type_str = "constant";
-    std::map<std::string, s_Potential_Profile::Type>
+    std::map<std::string, s_Potential_Profile_Type>
     map_PotentialProfile =
         {
-           {"constant"        , s_Potential_Profile::Type::CONSTANT},
-           {"linear"          , s_Potential_Profile::Type::LINEAR},
-           {"point_charge"    , s_Potential_Profile::Type::POINT_CHARGE}
+           {"constant"        , s_Potential_Profile_Type::CONSTANT},
+           {"linear"          , s_Potential_Profile_Type::LINEAR},
+           {"point_charge"    , s_Potential_Profile_Type::POINT_CHARGE}
         };
 
     amrex::Real kT_contact[NUM_CONTACTS] = {PhysConst::kb_eVperK*298.,PhysConst::kb_eVperK*298.};
@@ -357,17 +301,12 @@ public:
 
     /*For Output*/
     const int negf_plt_name_digits = 4;
-    std::string step_foldername_str;
     std::string step_filename_prefix_str;
     std::string current_filename_str; /*current here means charge current, I */
     std::ofstream outfile_I;
 
-    std::string step_filename_str;
-    std::string iter_foldername_str;
     std::string iter_filename_prefix_str;
-    std::string iter_filename_str;
 
-    int write_at_iter = 0;
     bool flag_adaptive_integration_limits = false;
     bool flag_correct_integration_limits = false;
     bool flag_write_integrand_main = false;
@@ -377,25 +316,75 @@ public:
     int write_integrand_interval = 500;
     amrex::Vector<amrex::Real> kT_window_around_singularity = {1., 1.};
     
-
-    void Set_StepFilenameString(const int step);
-    void Set_IterationFilenameString(const int iter);
-
     amrex::Real initial_charge = 1e-3;
     int num_recursive_parts = 1;
     int Hsize_recur_part=-1; 
 
+    MPI_Datatype MPI_BlkType;
+    ComplexTable1D h_E_RealPath_data;
+
+    amrex::Real total_conductance = -1;
+
+public:
+
+    virtual ~c_NEGF_Common() = default;
+
+    /*number of all sites*/
+    int num_field_sites = 0; 
+
+    /* This offsets data in local number of field sites of different nanostructures
+     * set on Broyden_Parallel_General.cpp */ 
+    int site_size_loc_offset = 0;
+
+    /* nanostructure id*/
+    int NS_Id;
+    
+    /* Fermi level of metal nanotube contact at equilibrium*/
+    amrex::Real E_f = 0.;
+
+    /* MPI_recv_count stores blkCol_size_loc of each processor.
+     * MPI_recv_disp stores the offset id of block columns for each processor.
+     * These vectors are defined for each processor and are useful during
+     * MPI_Gatherv of of induced charge computed by each processor.
+     */
+    amrex::Vector<int> MPI_recv_count;
+    amrex::Vector<int> MPI_recv_disp;
+
+    /* MPI_send_count stores num_local_field_sites of each processor.
+     * MPI_send_disp stores site_id_offset of each processor.
+     * These vectors are defined only for IOProcessor.
+     */
+    amrex::Vector<int> MPI_send_count;
+    amrex::Vector<int> MPI_send_disp;
+
+    int NS_data_offset=0; 
+    /* offset in a global 1D table data of multiple structures
+     * e.g. if there are 2 nanotubes, then for the first and second nanotubes
+     * it is 0 and Hsize_glo of the first nanotube.
+     */
+    int flag_contact_mu_specified = 1;
+    bool flag_EC_potential_updated = false;
+    amrex::Real Contact_Electrochemical_Potential[NUM_CONTACTS] = {0., 0.};
+    std::string Contact_Parser_String[NUM_CONTACTS];
+    std::string Gate_String = "Gate";
+    int write_at_iter = 0;
+    std::string step_filename_str;
+    std::string step_foldername_str;
+    std::string iter_foldername_str;
+    std::string iter_filename_str;
+
+
+    void Set_StepFilenameString(const int step);
+    void Set_IterationFilenameString(const int iter);
     void Initialize_ChargeAtFieldSites();
+
     virtual void ReadNanostructureProperties();
     virtual int get_Hsize() {return 0;}
     virtual int get_offDiag_repeatBlkSize() {return 0;}
     virtual void Set_Material_Specific_Parameters();
     virtual void Generate_AtomLocations(amrex::Vector<s_Position3D>& pos);
     virtual void Define_PotentialProfile();
-
     void DefineMatrixPartition();
-
-    MPI_Datatype MPI_BlkType;
     virtual void Define_MPI_BlkType ();
     virtual void AllocateArrays();
     virtual void ConstructHamiltonian ();
@@ -408,8 +397,7 @@ public:
     void Generate_NonEq_Paths ();
     void Find_NonEq_Percent_Intercuts_Adaptively();
     virtual void Define_ContactInfo();
-    virtual 
-    AMREX_GPU_HOST_DEVICE
+    virtual AMREX_GPU_HOST_DEVICE
     void Compute_SurfaceGreensFunction (MatrixBlock<T>& gr, const ComplexType EmU);
     void Compute_DensityOfStates(std::string DOS_foldername, bool flag_write_LDOS);
     amrex::Real Compute_Conductance(const amrex::Vector<ComplexType> E_vec,
@@ -427,7 +415,6 @@ public:
     void Compute_RhoNonEqOld();
     void Compute_InducedCharge(RealTable1D& n_curr_out_data);
     void Compute_Current();
-    //void GuessNewCharge_SimpleMixingAlg();
     
     void Gatherv_NEGFComputed_LocalCharge(RealTable1D& n_curr_out_glo_data);
     void Fetch_InputLocalCharge_FromNanostructure(RealTable1D& container_data, 
@@ -437,7 +424,6 @@ public:
     void Scatterv_BroydenComputed_GlobalCharge(RealTable1D& n_curr_in_glo_data);
 
     void Set_Arrays_OfSize_NumFieldSites();
-    //virtual void DeallocateArrays();
 
     int Total_Integration_Pts ();
 
@@ -453,7 +439,6 @@ public:
     //AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE 
     //MatrixBlock<T> get_Gamma(const MatrixBlock<T>& Sigma);
 
-    ComplexTable1D h_E_RealPath_data;
 
     template<typename VectorType, typename TableType> 
     void Write_Table1D(const amrex::Vector<VectorType>& Vec,
@@ -516,8 +501,6 @@ public:
 
     template<typename U, typename V> 
     void SetVal_Table2D(U& Tab2D_data, V val);
-
-    //virtual void Deallocate();
 
     void Define_MPISendCountAndDisp();
 };
