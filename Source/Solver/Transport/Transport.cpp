@@ -727,6 +727,9 @@ template<typename NSType>
 void
 c_TransportSolver:: Create_Global_Output_Data(NSType const& NS) 
 {
+    auto const& h_n_curr_out = h_n_curr_out_data.table();
+    auto const& h_Norm = h_Norm_data.table();
+
     #ifndef BROYDEN_SKIP_GPU_OPTIMIZATION
     /*only select data need to be copied for multiple NS*/
 
@@ -740,9 +743,6 @@ c_TransportSolver:: Create_Global_Output_Data(NSType const& NS)
     h_n_curr_out_data.resize({0}, {site_size_loc}, The_Pinned_Arena());
     h_Norm_data.resize({0}, {site_size_loc}, The_Pinned_Arena());
     
-    auto const& h_n_curr_out = h_n_curr_out_data.table();
-    auto const& h_Norm = h_Norm_data.table();
-
     auto const& d_n_curr_out = d_n_curr_out_data.const_table();
     auto const& d_Norm = d_Norm_data.const_table();
     
