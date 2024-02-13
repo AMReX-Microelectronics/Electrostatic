@@ -597,7 +597,7 @@ c_Nanostructure<NSType>::Obtain_PotentialAtSites()
         if(average_field_flag) 
         {
             //amrex::Print() << "average_field_flag: " << average_field_flag << "\n";
-            if(NSType::avg_type == s_AVG_TYPE::ALL) 
+            if(NSType::avg_type == s_AVG_Type::ALL) 
             {
                 //amrex::Print() << "average_type: " << NSType::avg_type << "\n";
 
@@ -609,7 +609,7 @@ c_Nanostructure<NSType>::Obtain_PotentialAtSites()
                     amrex::HostDevice::Atomic::Add(&(p_dV[site_id]), p_par_gather[p]);
                 });
             }
-            else if(NSType::avg_type == s_AVG_TYPE::SPECIFIC) 
+            else if(NSType::avg_type == s_AVG_Type::SPECIFIC) 
             {
                 auto get_atom_id_at_site = NSType::get_atom_id_at_site();
                 #ifdef AMREX_USE_GPU
@@ -724,7 +724,7 @@ c_Nanostructure<NSType>::Obtain_PotentialAtSites()
 //          
 //        if(average_field_flag) 
 //        {
-//            if(NSType::avg_type == s_AVG_TYPE::ALL) 
+//            if(NSType::avg_type == s_AVG_Type::ALL) 
 //            {
 //                amrex::ParallelFor(np, [=] AMREX_GPU_DEVICE (int p) noexcept 
 //                {
@@ -734,7 +734,7 @@ c_Nanostructure<NSType>::Obtain_PotentialAtSites()
 //                    amrex::HostDevice::Atomic::Add(&(p_V[site_id]), p_par_gather[p]);
 //                });
 //            }
-//            else if(NSType::avg_type == s_AVG_TYPE::SPECIFIC) 
+//            else if(NSType::avg_type == s_AVG_Type::SPECIFIC) 
 //            {
 //                auto get_atom_id_at_site = NSType::get_atom_id_at_site();
 //                #ifdef AMREX_USE_GPU

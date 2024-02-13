@@ -13,19 +13,6 @@ template class c_NEGF_Common<ComplexType[NUM_MODES][NUM_MODES]>; //c_Graphene
 								 
 
 template<typename T>
-c_NEGF_Common<T>:: ~c_NEGF_Common<T>()
-{
-    h_n_curr_in_loc_data.clear();
-    #if AMREX_USE_GPU
-    d_n_curr_in_loc_data.clear();
-    #endif
-
-    outfile_I.close();
-
-}
-
-
-template<typename T>
 void
 c_NEGF_Common<T>:: Set_StepFilenameString(const int step)
 {
@@ -258,15 +245,15 @@ c_NEGF_Common<T>:: ReadNanostructureProperties ()
     pp_ns.query("field_averaging_type", avg_type_str);
     if(avg_type_str == "all" or avg_type_str == "All" or avg_type_str == "ALL")
     {
-        avg_type = s_AVG_TYPE::ALL;
+        avg_type = s_AVG_Type::ALL;
     }
     if(avg_type_str == "specific" or avg_type_str == "Specific" or avg_type_str == "SPECIFIC")
     {
-        avg_type = s_AVG_TYPE::SPECIFIC;
+        avg_type = s_AVG_Type::SPECIFIC;
     }
-    amrex::Print() << "##### field_averaging_type: " << avg_type_str << " enum id: " << avg_type << "\n";
+    amrex::Print() << "##### field_averaging_type: " << avg_type_str  << "\n";
    
-    if(avg_type == s_AVG_TYPE::SPECIFIC) {
+    if(avg_type == s_AVG_Type::SPECIFIC) {
        pp_ns.getarr("atom_indices_for_averaging", vec_avg_indices);
        amrex::Print() << "##### atom_indices_for_averaging: \n";
        for (int i=0; i<vec_avg_indices.size(); ++i) 
@@ -586,7 +573,7 @@ c_NEGF_Common<T>:: Define_PotentialProfile()
 
     switch(map_PotentialProfile[potential_profile_type_str])
     {
-        case s_Potential_Profile::Type::CONSTANT:
+        case s_Potential_Profile_Type::CONSTANT:
         {
             amrex::ParmParse pp_ns(name);
             amrex::Real V_const = 0;
@@ -603,7 +590,7 @@ c_NEGF_Common<T>:: Define_PotentialProfile()
             }
             break;
         }
-        case s_Potential_Profile::Type::LINEAR:
+        case s_Potential_Profile_Type::LINEAR:
         {
             amrex::ParmParse pp_ns(name);
     	    amrex::Vector<amrex::Real> vec_V;
@@ -624,7 +611,7 @@ c_NEGF_Common<T>:: Define_PotentialProfile()
             }
             break;
         }
-        case s_Potential_Profile::Type::POINT_CHARGE:
+        case s_Potential_Profile_Type::POINT_CHARGE:
         {
             //amrex::Array<amrex::Real,2> QD_loc = {0., 1}; //1nm away in z
             //for (int l=0; l<NSType::num_field_sites; ++l)
@@ -783,7 +770,6 @@ c_NEGF_Common<T>::AllocateArrays ()
         auto const& RhoEq_loc       = d_RhoEq_loc_data.table();
         auto const& RhoNonEq_loc    = d_RhoNonEq_loc_data.table();
         auto const& GR_atPoles_loc  = d_GR_atPoles_loc_data.table();
-        int Hsize = Hsize_glo;  
         amrex::ParallelFor(blkCol_size_loc, [=] AMREX_GPU_DEVICE (int n) noexcept
         {
             #ifdef COMPUTE_GREENS_FUNCTION_OFFDIAG_ELEMS
@@ -2659,7 +2645,6 @@ c_NEGF_Common<T>:: Compute_RhoNonEq ()
             int cumulative_columns = vec_cumu_blkCol_size[my_rank];
             int Hsize = Hsize_glo;  
      	    auto& GC_ID = global_contact_index;
-    	    auto& CT_ID = contact_transmission_index;
             auto* degen_vec_ptr = degen_vec.dataPtr();
 
 	        amrex::Real const_multiplier = -1*spin_degen/(2*MathConst::pi);
@@ -3798,7 +3783,6 @@ c_NEGF_Common<T>:: Compute_Current ()
             int cumulative_columns = vec_cumu_blkCol_size[my_rank];
             int Hsize = Hsize_glo;
             auto& GC_ID = global_contact_index;
-            auto& CT_ID = contact_transmission_index;
             auto* degen_vec_ptr = degen_vec.dataPtr();
 
             amrex::Real const_multiplier = spin_degen*(PhysConst::q_e)/(PhysConst::h_eVperHz);

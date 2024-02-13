@@ -99,13 +99,13 @@ private:
     static const std::map<std::string, s_Algorithm_Type> map_AlgorithmType;
     
     std::string Broyden_Norm_Type = "relative";
-    std::map<std::string, s_Norm::Type>
+    std::map<std::string, s_Norm_Type>
     map_NormType =
         {
-           {"absolute"        , s_Norm::Type::Absolute},
-           {"relative"        , s_Norm::Type::Relative},
-           {"Absolute"        , s_Norm::Type::Absolute},
-           {"Relative"        , s_Norm::Type::Relative}
+           {"absolute"        , s_Norm_Type::Absolute},
+           {"relative"        , s_Norm_Type::Relative},
+           {"Absolute"        , s_Norm_Type::Absolute},
+           {"Relative"        , s_Norm_Type::Relative}
         };
 
     int         num_field_sites_all_NS = 0;

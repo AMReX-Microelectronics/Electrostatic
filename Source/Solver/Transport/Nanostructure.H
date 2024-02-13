@@ -105,7 +105,7 @@ public:
 template<typename NSType>
 class 
 c_Nanostructure
-               : public amrex::ParticleContainer<realPD::NUM, 
+               : private amrex::ParticleContainer<realPD::NUM, 
                                                  intPD::NUM, 
                                                  realPA::NUM, 
                                                  intPA::NUM>, public NSType
