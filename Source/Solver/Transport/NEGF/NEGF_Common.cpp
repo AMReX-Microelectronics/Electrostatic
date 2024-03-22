@@ -546,6 +546,16 @@ c_NEGF_Common<T>:: Generate_AtomLocations (amrex::Vector<s_Position3D>& pos)
     /*First code atom locations for particular material in the specialization*/
     /*Then call this function and apply global offset specified by the user*/
     /*Also, specify PrimaryTransportDirection PTD array*/
+    /*amrex::Print() << "PTD is specified in nm! \n";*/
+
+
+    for(int l=0; l< num_field_sites; ++l) 
+    {
+       h_PTD_glo_vec[l] = pos[l*num_atoms_per_field_site].dir[primary_transport_dir] / 1.e-9;
+       //amrex::Print() << l << "  " << h_PTD_glo_vec(l) << "\n";
+    }
+
+    //c_RotationMatrix<amrex::Real> rotator{{0., 0., 5.}, AngleType::Degrees};
 
     for(int i = 0; i<num_atoms; ++i)
     {
@@ -553,14 +563,9 @@ c_NEGF_Common<T>:: Generate_AtomLocations (amrex::Vector<s_Position3D>& pos)
        {
            pos[i].dir[j] += offset[j];
        }  
+       rotator.RotateContainer(pos[i].dir, {AxisType::Z});
     }
 
-    /*amrex::Print() << "PTD is specified in nm! \n";*/
-    for(int l=0; l< num_field_sites; ++l) 
-    {
-       h_PTD_glo_vec[l] = pos[l*num_atoms_per_field_site].dir[primary_transport_dir] / 1.e-9;
-       //amrex::Print() << l << "  " << h_PTD_glo_vec(l) << "\n";
-    }
 }
 
 

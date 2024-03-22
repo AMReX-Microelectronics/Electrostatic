@@ -4,26 +4,29 @@
 #include <AMReX_REAL.H>
 #include <AMReX_Vector.H>
 
+#include "../../Utils/SelectWarpXUtils/WarpXUtil.H"
+#include "../../Utils/SelectWarpXUtils/TextMsg.H"
+
+
 enum class AngleType : int { Degrees, Radians };
 enum class AxisType : int { X, Y, Z };
 
-template<typename T>
 class c_RotationMatrix
 {
     /*X,Y,Z rotation angles*/
-    amrex::Vector<T> _angles;
-    amrex::Vector<amrex::Vector<T>> _rotX;
-    amrex::Vector<amrex::Vector<T>> _rotY;
-    amrex::Vector<amrex::Vector<T>> _rotZ;
+    amrex::Vector<amrex::Real> _angles;
+    amrex::Vector<amrex::Vector<amrex::Real>> _rotX;
+    amrex::Vector<amrex::Vector<amrex::Real>> _rotY;
+    amrex::Vector<amrex::Vector<amrex::Real>> _rotZ;
 
     void Define_RotationMatrices();
 
-    void Set_RotationAngles(amrex::Vector<T>& new_angles);
+    void Set_RotationAngles(amrex::Vector<amrex::Real>& new_angles);
 
     template<typename ContainerType>
     void Rotate(ContainerType& v2,
                 const ContainerType v1,
-                const amrex::Vector<amrex::Vector<T>>& rotM);
+                const amrex::Vector<amrex::Vector<amrex::Real>>& rotM);
 
     template<typename ContainerType>
     void Apply_RotationOrder(ContainerType& v,
@@ -31,19 +34,73 @@ class c_RotationMatrix
 
 public:
 
-    c_RotationMatrix(amrex::Vector<T> angles,
+    c_RotationMatrix(amrex::Vector<amrex::Real> angles,
                      AngleType type); //default type AngleType::Degrees
 
-    amrex::Vector<T> Get_RotationAngles() const { 
+    amrex::Vector<amrex::Real> Get_RotationAngles() const { 
         return _angles;
     }
 
-    void Update_RotationMatrices(amrex::Vector<T>& new_angles);
+    void Update_RotationMatrices(amrex::Vector<amrex::Real>& new_angles);
 
     template<typename ContainerType>
-    void RotateContainer(const ContainerType& v1,
-                         const std::vector<AxisType>& order); 
+    void RotateContainer(ContainerType& v1,
+                         const std::vector<AxisType>&& order); 
                       //default order = {} 
 
 };
+
+
+
+template<typename ContainerType>
+void
+c_RotationMatrix::Rotate(ContainerType& v2,
+                            const ContainerType v1,
+                            const amrex::Vector<amrex::Vector<amrex::Real>>& rotM)
+{
+    WARPX_ALWAYS_ASSERT_WITH_MESSAGE(v1.size() == AMREX_SPACEDIM, "v1 size must be AMREX_SPACEDIM");
+    WARPX_ALWAYS_ASSERT_WITH_MESSAGE(v1.size() == AMREX_SPACEDIM, "v2 size must be AMREX_SPACEDIM");
+
+    for(int i=0; i<3; ++i) {
+        for(int j=0; j<3; ++j) {
+            v2[i] += rotM[i][j] * v1[j];
+        }
+    }
+}
+
+
+template<typename ContainerType>
+void
+c_RotationMatrix::Apply_RotationOrder(ContainerType& v,
+                        const std::vector<AxisType>& order)
+{
+    for (AxisType axis : order)
+    {
+        switch(axis) {
+            case AxisType::X:
+                Rotate(v, v, _rotX);
+                break;
+            case AxisType::Y:
+                Rotate(v, v, _rotY);
+                break;
+            case AxisType::Z:
+                Rotate(v, v, _rotZ);
+                break;
+        }
+    }
+}
+
+
+template<typename ContainerType>
+void
+c_RotationMatrix::RotateContainer(ContainerType& v1,
+                                  const std::vector<AxisType>&& order = {})
+{
+    WARPX_ALWAYS_ASSERT_WITH_MESSAGE(v1.size() == AMREX_SPACEDIM, "v1 size must be AMREX_SPACEDIM");
+
+    if (order.empty()) return;
+
+    Apply_RotationOrder(v1, order);
+}
+
 #endif

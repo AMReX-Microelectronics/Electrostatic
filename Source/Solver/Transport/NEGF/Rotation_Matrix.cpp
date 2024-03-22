@@ -1,24 +1,29 @@
 #include "Rotation_Matrix.H"
 
+#include "../../../Utils/SelectWarpXUtils/WarpXConst.H"
+
 #include <cmath>
 
 
-template<typename T>
-c_RotationMatrix<T>::c_RotationMatrix(amrex::Vector<T> angles,
+c_RotationMatrix::c_RotationMatrix(amrex::Vector<amrex::Real> angles,
                                    AngleType type = AngleType::Degrees) :
-    _angles(type == AngleType::Degrees ? angles * M_PI / 180 : angles),
-    _rotX(3, amrex::Vector<T>(3)),
-    _rotY(3, amrex::Vector<T>(3)),
-    _rotZ(3, amrex::Vector<T>(3))
+    _angles(angles.size()),
+    _rotX(3, amrex::Vector<amrex::Real>(3)),
+    _rotY(3, amrex::Vector<amrex::Real>(3)),
+    _rotZ(3, amrex::Vector<amrex::Real>(3))
 {
-    static_assert(angles.size() == 3, "Angles vector must be of size 3");
+    
+    WARPX_ALWAYS_ASSERT_WITH_MESSAGE(angles.size() == AMREX_SPACEDIM, "Angles vector must be of size AMREX_SPACEDIM");
+    for (int i = 0; i < angles.size(); ++i) {
+        _angles[i] = (type == AngleType::Degrees) ? angles[i] * (MathConst::pi / 180) : angles[i];
+    }
+
     Define_RotationMatrices();
 }
 
 
-template<typename T>
 void 
-c_RotationMatrix<T>::Define_RotationMatrices() 
+c_RotationMatrix::Define_RotationMatrices() 
 {
         _rotX[0] = {1, 0, 0};
         _rotX[1] = {0,  cos(_angles[0]), sin(_angles[0])};
@@ -34,76 +39,20 @@ c_RotationMatrix<T>::Define_RotationMatrices()
 }
 
 
-template<typename T>
-template<typename ContainerType>
 void 
-c_RotationMatrix<T>::Rotate(ContainerType& v2,
-                            const ContainerType v1, 
-                            const amrex::Vector<amrex::Vector<T>>& rotM) 
+c_RotationMatrix::Set_RotationAngles(amrex::Vector<amrex::Real>& new_angles) 
 {
-    assert(v1.size() == 3);
-    assert(v2.size() == 3);
-
-    for(int i=0; i<3; ++i) {
-        for(int j=0; j<3; ++j) {
-            v2[i] += rotM[i][j] * v1[j];
-        }
-    }
-}
-
-
-template<typename T>
-template<typename ContainerType>
-void 
-c_RotationMatrix<T>::Apply_RotationOrder(ContainerType& v,
-                        const std::vector<AxisType>& order)
-{
-    for (AxisType axis : order) 
-    {
-        switch(axis) {
-            case AxisType::X:
-                Rotate(v, v, _rotX);
-                break;
-            case AxisType::Y:
-                Rotate(v, v, _rotY);
-                break;
-            case AxisType::Z:
-                Rotate(v, v, _rotZ);
-                break;
-        }
-    }
-}
-
-
-template<typename T>
-void 
-c_RotationMatrix<T>::Set_RotationAngles(amrex::Vector<T>& new_angles) 
-{
-    static_assert(new_angles.size() == 3, "Angles vector must be of size 3");
+    WARPX_ALWAYS_ASSERT_WITH_MESSAGE(new_angles.size() == AMREX_SPACEDIM, 
+                                     "Angles vector must be of size AMREX_SPACEDIM");
     _angles = new_angles;
 
 }
 
 
-template<typename T>
 void 
-c_RotationMatrix<T>::Update_RotationMatrices(amrex::Vector<T>& new_angles) 
+c_RotationMatrix::Update_RotationMatrices(amrex::Vector<amrex::Real>& new_angles) 
 {
     Set_RotationAngles(new_angles);
 
     Define_RotationMatrices();
-}
-
-
-template<typename T>
-template<typename ContainerType>
-void
-c_RotationMatrix<T>::RotateContainer(const ContainerType& v1, 
-                                     const std::vector<AxisType>& order = {})
-{
-    assert(v1.size() == 3);
-
-    if (order.empty()) return; 
-
-    ApplyRotationOrder(order, v1);
 }

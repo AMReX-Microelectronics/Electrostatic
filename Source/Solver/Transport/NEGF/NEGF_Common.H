@@ -3,6 +3,8 @@
 
 #include "Matrix_Block.H"
 #include "IntegrationPath.H"
+#include "Rotation_Matrix.H"
+
 #include "../../../Utils/SelectWarpXUtils/WarpXUtil.H"
 #include "../../../Utils/SelectWarpXUtils/WarpXConst.H"
 
@@ -33,6 +35,8 @@ private:
     using RealTable2D    = TableData<amrex::Real, 2>;
     using BlkTable1D     = TableData<MatrixBlock<T>, 1>;
     using BlkTable2D     = TableData<MatrixBlock<T>, 2>;
+
+    c_RotationMatrix rotator{{0., 0., 5.}, AngleType::Degrees};
 
 protected:
     /* This is the name of the nanostructure specified by user in the input file. */
@@ -141,11 +145,11 @@ protected:
     amrex::Vector<int> block_degen_vec;
     amrex::Gpu::DeviceVector<int> block_degen_gpuvec;
 
+
     /*Tables required to store Hamiltonian */
     BlkTable1D h_minusHa_loc_data;
     BlkTable1D h_Hb_loc_data;
     BlkTable1D h_Hc_loc_data;
-
     BlkTable1D h_tau_glo_data;
 
     /*Tables required to store essential quantities and observables */
