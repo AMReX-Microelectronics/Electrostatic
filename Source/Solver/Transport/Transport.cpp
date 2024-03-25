@@ -188,6 +188,10 @@ c_TransportSolver::InitData()
         pp_transport.query("initialize_inverse_jacobian", flag_initialize_inverse_jacobian);
         amrex::Print() << "##### flag_initialize_inverse_jacobian: " << flag_initialize_inverse_jacobian  << "\n";
 
+        flag_compute_DOS = false;
+        pp_transport.query("flag_compute_DOS", flag_compute_DOS);
+        amrex::Print() << "##### flag_compute_DOS: " << flag_compute_DOS << "\n";
+
         flag_write_LDOS = false;
         pp_transport.query("flag_write_LDOS", flag_write_LDOS);
         amrex::Print() << "##### flag_write_LDOS: " << flag_write_LDOS << "\n";
@@ -397,7 +401,7 @@ c_TransportSolver::Solve(const int step, const amrex::Real time)
            auto mlmg_solve_time = rMLMG.Solve_PoissonEqn();
 
            rPostPro.Compute();
-           rOutput.WriteOutput(max_iter+100, time);
+           //rOutput.WriteOutput(max_iter+100, time);
 
            time_counter[1] = amrex::second();
 
@@ -480,7 +484,7 @@ c_TransportSolver::Solve(const int step, const amrex::Real time)
               if(flag_write_LDOS_iter and (max_iter+1)%write_LDOS_iter_period == 0) 
               {
                   std::string iter_dos_foldername_str 
-                  = amrex::Concatenate(vp_CNT[c]->iter_foldername_str + "/LDOS_iter", 
+                  = amrex::Concatenate(vp_CNT[c]->iter_foldername_str + "/DOS_iter", 
                           max_iter, negf_plt_name_digits);
 
                   CreateDirectory(iter_dos_foldername_str);
@@ -526,19 +530,19 @@ c_TransportSolver::Solve(const int step, const amrex::Real time)
          * if total conductance is calculated during LDOS computation,
          * and it is written in the same file used for writing current
          * after current computation.*/
-        if(flag_write_LDOS) 
+        if(flag_compute_DOS) 
         {
             for (int c=0; c < vp_CNT.size(); ++c)
             {
                 std::string 
                 dos_step_foldername_str 
-                = amrex::Concatenate(vp_CNT[c]->step_foldername_str + "/LDOS_step", 
+                = amrex::Concatenate(vp_CNT[c]->step_foldername_str + "/DOS_step", 
                         step, negf_plt_name_digits);
 
                 CreateDirectory(dos_step_foldername_str);
-                // e.g.: /negf/cnt/LDOS_step0001/
-                
-                vp_CNT[c]->Compute_DensityOfStates(dos_step_foldername_str,flag_write_LDOS);
+                // e.g.: /negf/cnt/DOS_step0001/
+
+                vp_CNT[c]->Compute_DensityOfStates(dos_step_foldername_str, flag_write_LDOS);
             }
         }
 
