@@ -56,6 +56,9 @@ ifeq ($(COMPUTE_SPECTRAL_FUNCTION_OFFDIAG_ELEMS),TRUE)
   DEFINES += -DCOMPUTE_SPECTRAL_FUNCTION_OFFDIAG_ELEMS
 endif
 
+ifeq ($(USE_HYPRE), TRUE) 
+  USERSuffix := $(USERSuffix).HYPRE
+endif
 
 AMREX_pack   += $(foreach dir, $(AMREX_dirs), $(AMREX_HOME)/Src/$(dir)/Make.package)
 include $(AMREX_pack)

@@ -13,8 +13,10 @@
 #include <AMReX_Parser.H>
 #include <AMReX_RealBox.H>
 #include <AMReX_MultiFab.H>
-//#include <AMReX_MultiFabUtil.H>
 
+#ifdef AMREX_USE_HYPRE
+#include <AMReX_Hypre.H>
+#endif
 
 using namespace amrex;
 
@@ -438,6 +440,11 @@ c_MLMGSolver:: Setup_MLEBABecLaplacian_ForPoissonEqn()
 
     pMLMG->setVerbose(set_verbose);
 
+#ifdef AMREX_USE_HYPRE
+    pMLMG->setBottomSolver(MLMG::BottomSolver::hypre);
+    pMLMG->setHypreInterface(Hypre::Interface::ij);
+#endif
+
 #ifdef PRINT_NAME
     amrex::Print() << "\t\t\t}************************c_MLMGSolver::Setup_MLEBABecLaplacian_ForPoissonEqn()************************\n";
 #endif
@@ -524,6 +531,11 @@ c_MLMGSolver:: Setup_MLABecLaplacian_ForPoissonEqn()
     pMLMG = std::make_unique<MLMG>(*p_mlabec);
 
     pMLMG->setVerbose(set_verbose);
+
+#ifdef AMREX_USE_HYPRE
+    pMLMG->setBottomSolver(MLMG::BottomSolver::hypre);
+    pMLMG->setHypreInterface(Hypre::Interface::ij);
+#endif
 
 #ifdef PRINT_NAME
     amrex::Print() << "\t\t\t}************************c_MLMGSolver::Setup_MLABecLaplacian_ForPoissonEqn()************************\n";
