@@ -33,10 +33,28 @@ my_constants.Nsteps =  25
 my_constants.dt = 1./(Nsteps-1)
 
 cnt.write_at_iter = 0
-cnt.initialize_charge_distribution = 0
-#cnt.charge_distribution_filename = 
+cntL1.write_at_iter = 0
+cntL2.write_at_iter = 0
+cntR1.write_at_iter = 0
+cntR2.write_at_iter = 0
 
-plot.folder_name = /global/cfs/projectdirs/m4540/eXstatic/multiCNT/periodic_multi_CNTFET
+cnt.initialize_charge_distribution = 1
+cntL1.initialize_charge_distribution = 1
+cntL2.initialize_charge_distribution = 1
+cntR1.initialize_charge_distribution = 1
+cntR2.initialize_charge_distribution = 1
+
+cnt.charge_distribution_filename   = /global/cfs/projectdirs/m4540/eXstatic/multiCNT/neumann_multi_CNTFET/negf/cnt/step0015_Qout.dat
+
+cntL1.charge_distribution_filename = /global/cfs/projectdirs/m4540/eXstatic/multiCNT/neumann_multi_CNTFET/negf/cntL1/step0015_Qout.dat
+
+cntL2.charge_distribution_filename = /global/cfs/projectdirs/m4540/eXstatic/multiCNT/neumann_multi_CNTFET/negf/cntL2/step0015_Qout.dat
+
+cntR1.charge_distribution_filename = /global/cfs/projectdirs/m4540/eXstatic/multiCNT/neumann_multi_CNTFET/negf/cntR1/step0015_Qout.dat
+
+cntR2.charge_distribution_filename = /global/cfs/projectdirs/m4540/eXstatic/multiCNT/neumann_multi_CNTFET/negf/cntR2/step0015_Qout.dat
+
+plot.folder_name = /global/cfs/projectdirs/m4540/eXstatic/multiCNT/neumann_multi_CNTFET
 plot.write_after_init = 0
 plot.write_interval = 1
 
@@ -45,8 +63,8 @@ transport.flag_write_LDOS = 0
 transport.flag_write_LDOS_iter = 0
 transport.write_LDOS_iter_period = 10
 
-restart = 0
-restart_step = 0
+restart = 1
+restart_step = 16
 ##################################
 ##### USER DEFINED CONSTANTS #####
 ##################################
@@ -76,7 +94,7 @@ my_constants.unitcells_per_D_CN = ceil((R_CN*2)/(L_unitcell)) #unitcells per dia
 
 my_constants.periodicity_length = periodicity_factor * unitcells_per_D_CN * L_unitcell
 
-my_constants.width_factor  = num_CNTs*periodicity_factor #1.875 corresponds to 3.195 nm (smallest periodicity distance)
+my_constants.width_factor  = (num_CNTs+2)*periodicity_factor #1.875 corresponds to 3.195 nm (smallest periodicity distance)
 
 my_constants.height_factor = 12
 
@@ -174,15 +192,15 @@ domain.blocking_factor = nx/gx ny/gy nz/gz
 domain.prob_lo = -Lx/2. -Ly/2.  Lz_min
 domain.prob_hi =  Lx/2.  Ly/2.  Lz_max
 
-domain.is_periodic = 1 0 0
+domain.is_periodic = 0 0 0
 
 domain.coord_sys = cartesian
 
 #################################
 ###### BOUNDARY CONDITIONS ######
 #################################
-boundary.hi = per neu(0.) neu(0.)
-boundary.lo = per neu(0.) dir(Gate)
+boundary.hi = neu(0.) neu(0.) neu(0.)
+boundary.lo = neu(0.) neu(0.) dir(Gate)
 
 boundary.Gate_function = "SV + Vgs_max - (Vgs_max-Vgs_min) * t"
 
@@ -239,7 +257,7 @@ mlmg.rhs    = charge_density
 mlmg.alpha  = alpha
 mlmg.beta   = epsilon
 
-mlmg.set_verbose=3
+mlmg.set_verbose=0
 mlmg.max_order=2
 mlmg.absolute_tolerance=0
 mlmg.relative_tolerance=1e-10

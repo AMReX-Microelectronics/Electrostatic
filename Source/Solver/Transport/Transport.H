@@ -91,6 +91,7 @@ private:
 
     int flag_reset_with_previous_charge_distribution = 0;
     int flag_initialize_inverse_jacobian = 0;
+    bool flag_compute_DOS = false;
     bool flag_write_LDOS = false;
     bool flag_write_LDOS_iter = false;
     int  write_LDOS_iter_period = 1e6;

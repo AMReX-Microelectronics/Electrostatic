@@ -1569,7 +1569,7 @@ c_NEGF_Common<T>:: Compute_DensityOfStates (std::string dos_foldername, bool fla
     if(flag_write_LDOS) {
         d_LDOS_loc_data.resize({0}, {blkCol_size_loc}, The_Arena());
     }
-    auto const& LDOS_loc  = d_LDOS_loc_data.table();
+    auto const& LDOS_loc        = d_LDOS_loc_data.table();
     #else
     auto const& GR_loc          = h_GR_loc_data.table();
     auto const& A_loc           = h_A_loc_data.table();
@@ -1915,12 +1915,11 @@ c_NEGF_Common<T>:: Compute_DensityOfStates (std::string dos_foldername, bool fla
 
         amrex::Print() << "Total conductance: " << total_conductance << "\n";
 
-        
         Write_Eql_Characteristics(E_total_vec, 
                                   h_DOS_loc_data, 
                                   h_Transmission_loc_data, 
                                   h_Conductance_loc_data, 
-                                  dos_foldername + "/Equilibrium_Characteristics.dat");
+                                  dos_foldername + "/transport_char.dat");
     }
 
     Deallocate_TemporaryArraysForGFComputation();
