@@ -16,9 +16,9 @@ amrex.the_arena_is_managed=1
 ################################
 ##### Some Important Params ####
 ################################
-my_constants.gx = 2
-my_constants.gy = 2
-my_constants.gz = 2
+my_constants.gx = 1
+my_constants.gy = 1
+my_constants.gz = 1
 
 my_constants.num_CNTs = 1
 
@@ -35,7 +35,8 @@ cntA.write_at_iter = 0
 cntA.initialize_charge_distribution = 0
 #cntA.charge_distribution_filename = 
 
-plot.folder_name = /global/cfs/projectdirs/m3766/SaurabhTests/eXstatic_Run/PeriodicRuns/periodic_CNTFET_d3
+#plot.folder_name = /global/cfs/projectdirs/m3766/SaurabhTests/eXstatic_Run/PeriodicRuns/periodic_CNTFET_d1
+plot.folder_name = periodic_CNTFET_d1
 plot.write_after_init = 0
 plot.write_interval = 100000
 
@@ -72,7 +73,7 @@ my_constants.cells_per_unitcell = 16 #cell_size = 0.0355 nm
 
 my_constants.unitcells_per_D_CN = ceil((R_CN*2)/(L_unitcell)) #unitcells per diameter
 
-my_constants.width_factor  = 7.5 #1.875 corresponds to 3.195 nm (smallest periodicity distance)
+my_constants.width_factor  = 1.875 #1.875 corresponds to 3.195 nm (smallest periodicity distance)
 my_constants.height_factor = 12
 
 my_constants.ny = (N_unitcells + Ly_offset_unitcells) * cells_per_unitcell
