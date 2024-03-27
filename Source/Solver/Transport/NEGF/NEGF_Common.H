@@ -36,8 +36,6 @@ private:
     using BlkTable1D     = TableData<MatrixBlock<T>, 1>;
     using BlkTable2D     = TableData<MatrixBlock<T>, 2>;
 
-    c_RotationMatrix rotator{{0., 0., 5.}, AngleType::Degrees};
-
 protected:
     /* This is the name of the nanostructure specified by user in the input file. */
     std::string name;
@@ -112,6 +110,10 @@ protected:
     /* computational cell volume */
     amrex::Real cell_volume = 1.;
     amrex::RealArray offset;
+
+    std::unique_ptr<c_RotationMatrix> p_rotator = nullptr;
+
+    void Initialize_RotationObject();
    
     /* global size of the Hamiltonian (each element can be a number or a block of numbers)*/
     int Hsize_glo=0; 

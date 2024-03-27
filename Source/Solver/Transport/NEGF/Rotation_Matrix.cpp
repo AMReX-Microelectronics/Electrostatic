@@ -6,8 +6,11 @@
 
 
 c_RotationMatrix::c_RotationMatrix(amrex::Vector<amrex::Real> angles,
+                                   amrex::Vector<AxisType> rotation_order,
                                    AngleType type = AngleType::Degrees) :
     _angles(angles.size()),
+    _rotation_order(std::move(rotation_order)),
+    _angle_type(type),
     _rotX(3, amrex::Vector<amrex::Real>(3)),
     _rotY(3, amrex::Vector<amrex::Real>(3)),
     _rotZ(3, amrex::Vector<amrex::Real>(3))
@@ -15,7 +18,7 @@ c_RotationMatrix::c_RotationMatrix(amrex::Vector<amrex::Real> angles,
     
     WARPX_ALWAYS_ASSERT_WITH_MESSAGE(angles.size() == AMREX_SPACEDIM, "Angles vector must be of size AMREX_SPACEDIM");
     for (int i = 0; i < angles.size(); ++i) {
-        _angles[i] = (type == AngleType::Degrees) ? angles[i] * (MathConst::pi / 180) : angles[i];
+        _angles[i] = (_angle_type == AngleType::Degrees) ? angles[i] * (MathConst::pi / 180) : angles[i];
     }
 
     Define_RotationMatrices();

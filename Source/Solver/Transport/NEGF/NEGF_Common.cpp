@@ -10,7 +10,25 @@
 /*Explicit specializations*/
 template class c_NEGF_Common<ComplexType[NUM_MODES]>;            //of c_CNT
 template class c_NEGF_Common<ComplexType[NUM_MODES][NUM_MODES]>; //c_Graphene
-								 
+	
+const std::map<std::string, AngleType> map_strToAngleType =
+{
+   {"d"   , AngleType::Degrees},
+   {"D"   , AngleType::Degrees},
+   {"r"   , AngleType::Radians},
+   {"R"   , AngleType::Radians},
+};
+
+const std::map<std::string, AxisType> map_strToAxisType =
+{
+   {"x"   , AxisType::X},
+   {"X"   , AxisType::X},
+   {"y"   , AxisType::Y},
+   {"Y"   , AxisType::Y},
+   {"z"   , AxisType::Z},
+   {"Z"   , AxisType::Z}
+};
+
 
 template<typename T>
 void
@@ -225,6 +243,39 @@ c_NEGF_Common<T>::Read_Table1D(int assert_size,
 
 template<typename T>
 void
+c_NEGF_Common<T>:: Initialize_RotationObject () 
+{
+
+    amrex::ParmParse pp_ns(name);
+
+    amrex::Vector<amrex::Real> vec_rotation_angles(AMREX_SPACEDIM,0);
+    auto is_specified = queryArrWithParser(pp_ns, "rotation_angles", 
+            vec_rotation_angles, 0, AMREX_SPACEDIM);
+
+    if(is_specified) 
+    {
+        std::string angle_type_str = "D";
+        pp_ns.query("angle_type", angle_type_str);
+        AngleType angle_type = map_strToAngleType.at(angle_type_str);
+
+        amrex::Vector<AxisType> vec_rotation_order={};
+
+        amrex::Vector<std::string> vec_rot_order_str = {};
+        pp_ns.getarr("rotation_order", vec_rot_order_str);
+
+        for (auto axis_str : vec_rot_order_str) {
+            if(map_strToAxisType.find(axis_str) != map_strToAxisType.end()) {
+                vec_rotation_order.push_back(map_strToAxisType.at(axis_str));
+            }
+        }
+        p_rotator = std::make_unique<c_RotationMatrix>(vec_rotation_angles, 
+                                                       vec_rotation_order,
+                                                       angle_type);
+    }
+}
+
+template<typename T>
+void
 c_NEGF_Common<T>:: ReadNanostructureProperties ()
 {
 
@@ -236,6 +287,8 @@ c_NEGF_Common<T>:: ReadNanostructureProperties ()
     amrex::Vector<amrex::Real> vec_offset;
     getArrWithParser(pp_ns, "offset", vec_offset, 0, AMREX_SPACEDIM);
     offset = vecToArr(vec_offset);
+    
+    Initialize_RotationObject();
 
     amrex::Print() << "##### offset: ";
     for (int i=0; i<AMREX_SPACEDIM; ++i) amrex::Print() << offset[i] << "  ";
@@ -555,15 +608,13 @@ c_NEGF_Common<T>:: Generate_AtomLocations (amrex::Vector<s_Position3D>& pos)
        //amrex::Print() << l << "  " << h_PTD_glo_vec(l) << "\n";
     }
 
-    //c_RotationMatrix<amrex::Real> rotator{{0., 0., 5.}, AngleType::Degrees};
-
     for(int i = 0; i<num_atoms; ++i)
     {
        for(int j = 0; j < AMREX_SPACEDIM; ++j)
        {
            pos[i].dir[j] += offset[j];
        }  
-       rotator.RotateContainer(pos[i].dir, {AxisType::Z});
+       if (p_rotator != nullptr) p_rotator->RotateContainer(pos[i].dir);
     }
 
 }
