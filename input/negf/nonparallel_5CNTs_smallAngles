@@ -20,7 +20,7 @@ my_constants.gx = 1
 my_constants.gy = 4
 my_constants.gz = 2
 
-my_constants.num_CNTs = 2
+my_constants.num_CNTs = 5
 my_constants.periodicity_factor = 1.875 #1.875 corresponds to 3.195 nm (smallest periodicity distance)
 
 my_constants.Channel_unitcells = 24
@@ -32,17 +32,7 @@ my_constants.Vgs_max = 8
 my_constants.Nsteps =  25
 my_constants.dt = 1./(Nsteps-1)
 
-cntL1.write_at_iter = 0
-cntR1.write_at_iter = 0
-
-cntL1.initialize_charge_distribution = 0
-cntR1.initialize_charge_distribution = 0
-
-#cntL1.charge_distribution_filename = /global/cfs/projectdirs/m4540/eXstatic/multiCNT/neumann_multi_CNTFET/negf/cntL1/step0015_Qout.dat
-
-#cntR1.charge_distribution_filename = /global/cfs/projectdirs/m4540/eXstatic/multiCNT/neumann_multi_CNTFET/negf/cntR1/step0015_Qout.dat
-
-plot.folder_name = two_nonparallel
+plot.folder_name = /global/cfs/projectdirs/m4540/eXstatic/nonparallel_5CNTs_smallAngles
 plot.write_after_init = 1
 plot.write_interval = 1
 
@@ -53,6 +43,7 @@ transport.write_LDOS_iter_period = 10
 
 restart = 0
 restart_step = 0
+NS_default.initialize_charge_distribution = 0
 ##################################
 ##### USER DEFINED CONSTANTS #####
 ##################################
@@ -215,7 +206,7 @@ macroscopic.atom_locations = 0.
 ###### OUTPUT ######
 ####################
 
-plot.fields_to_plot = epsilon.1 charge_density.1 phi.1 atom_locations #vecField 
+plot.fields_to_plot = phi.1 atom_locations #vecField 
 plot.rawfield_write_interval = 1000000
 
 ########################
@@ -255,7 +246,9 @@ mlmg.relative_tolerance=1e-10
 #################
 transport.use_negf = 1
 
-transport.NS_names = cntL1 cntR1 
+#transport.NS_names = cnt1 cnt2 
+transport.NS_num = num_CNTs
+transport.NS_type_default = CNT
 transport.NS_gather_field = phi            
 transport.NS_deposit_field  = charge_density 
 transport.NS_initial_deposit_value  = 1.e-3
@@ -268,77 +261,51 @@ transport.initialize_inverse_jacobian = 0
 transport.gate_terminal_type = Boundary
 transport.Broyden_threshold_maxstep = 100
 
-#cnt.type = CNT
-#cnt.offset = CN_x CN_y CN_z
-#cnt.type_id = m_index n_index    
-#cnt.acc = bond_length
-#cnt.gamma = 2.5  
-#cnt.num_unitcells = N_unitcells
-#cnt.contact_mu_specified = 1
-#cnt.contact_mu = Ef (Ef - Vds)
-#cnt.contact_T  = 298. 298.
-#cnt.eq_integration_pts = 30 30 30
-#cnt.flag_compute_flatband_dos = 1
-#cnt.flatband_dos_integration_pts = 400
-#cnt.flatband_dos_integration_limits = -1. 1.
-#cnt.num_noneq_paths = 1
-##cnt.noneq_percent_intercuts = 30 80
-#cnt.noneq_integration_pts = 400
-#cnt.flag_write_integrand = 0
-#cnt.flag_write_charge_components = 0
-#cnt.Fermi_tail_factors = 14 14
-#cnt.num_recursive_parts = 2
-#cnt.contact_Fermi_level = Ef
-#cnt.E_valence_min = -10
-#cnt.E_pole_max    = 3
-#cnt.E_zPlus_imag  = 1.e-5
+NS_default.num_unitcells = N_unitcells
+NS_default.rotation_order = Z
+NS_default.rotation_angle_type = D
+NS_default.contact_Fermi_level = Ef
+NS_default.contact_mu_specified = 1
+NS_default.contact_mu = Ef (Ef - Vds)
+NS_default.contact_T  = 298. 298.
+NS_default.Fermi_tail_factors = 14 14
+NS_default.eq_integration_pts = 30 30 30
+NS_default.flag_compute_flatband_dos = 1
+NS_default.flatband_dos_integration_pts = 400
+NS_default.flatband_dos_integration_limits = -1. 1.
+NS_default.noneq_integration_pts = 400
+NS_default.flag_write_integrand = 0
+NS_default.flag_write_charge_components = 0
+NS_default.num_noneq_paths = 1
+NS_default.num_recursive_parts = 2
+NS_default.write_at_iter = 0
+#NS_default.charge_distribution_filename = <full filename>
+#NS_default.read_step =
+#NS_default.read_negf_foldername =
+NS_default.E_valence_min = -10
+NS_default.E_pole_max    = 3
+NS_default.E_zPlus_imag  = 1.e-5
 
-cntL1.type = CNT
-cntL1.offset = (CN_x + periodicity_length/2.) CN_y CN_z
-cntL1.rotation_angles = 0 0 10.
-cntL1.rotation_order = Z
-cntL1.type_id = m_index n_index    
-cntL1.acc = bond_length
-cntL1.gamma = 2.5     
-cntL1.num_unitcells = N_unitcells
-cntL1.contact_mu_specified = 1
-cntL1.contact_mu = Ef (Ef - Vds)
-cntL1.contact_T  = 298. 298.
-cntL1.eq_integration_pts = 30 30 30
-cntL1.flag_compute_flatband_dos = 1
-cntL1.flatband_dos_integration_pts = 400
-cntL1.flatband_dos_integration_limits = -1. 1.
-cntL1.num_noneq_paths = 1
-cntL1.noneq_integration_pts = 400
-cntL1.flag_write_integrand = 0
-cntL1.flag_write_charge_components = 0
-cntL1.Fermi_tail_factors = 14 14
-cntL1.num_recursive_parts = 2
-cntL1.contact_Fermi_level = Ef
-cntL1.E_valence_min = -10
-cntL1.E_pole_max    = 3
-cntL1.E_zPlus_imag  = 1.e-5
+CNT_default.type_id = m_index n_index    
+CNT_default.acc = bond_length
+CNT_default.gamma = 2.5     
 
-cntR1.type = CNT
-cntR1.offset = (CN_x - periodicity_length/2.) CN_y CN_z
-cntR1.type_id = m_index n_index     
-cntR1.acc = bond_length
-cntR1.gamma = 2.5    
-cntR1.num_unitcells = N_unitcells
-cntR1.contact_mu_specified = 1
-cntR1.contact_mu = Ef (Ef - Vds)
-cntR1.contact_T  = 298. 298.
-cntR1.eq_integration_pts = 30 30 30
-cntR1.flag_compute_flatband_dos = 1
-cntR1.flatband_dos_integration_pts = 400
-cntR1.flatband_dos_integration_limits = -1. 1.
-cntR1.num_noneq_paths = 1
-cntR1.noneq_integration_pts = 400
-cntR1.flag_write_integrand = 0
-cntR1.flag_write_charge_components = 0
-cntR1.Fermi_tail_factors = 14 14
-cntR1.num_recursive_parts = 2
-cntR1.contact_Fermi_level = Ef
-cntR1.E_valence_min = -10
-cntR1.E_pole_max    = 3
-cntR1.E_zPlus_imag  = 1.e-5
+
+NS_1.offset = (CN_x + (-4/2.)*periodicity_length) CN_y CN_z
+NS_1.rotation_angles = 0 0 0.42
+
+
+NS_2.offset = (CN_x + (-2/2.)*periodicity_length) CN_y CN_z
+NS_2.rotation_angles = 0 0 0.23
+
+
+NS_3.offset = (CN_x + (0/2.)*periodicity_length) CN_y CN_z
+NS_3.rotation_angles = 0 0 -0.46
+
+
+NS_4.offset = (CN_x + (2/2.)*periodicity_length) CN_y CN_z
+NS_4.rotation_angles = 0 0 -0.24
+
+
+NS_5.offset = (CN_x + (4/2.)*periodicity_length) CN_y CN_z
+NS_5.rotation_angles = 0 0 0.81

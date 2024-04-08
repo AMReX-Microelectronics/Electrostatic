@@ -14,10 +14,36 @@
 class c_Graphene
            :public c_NEGF_Common<ComplexType[NUM_MODES][NUM_MODES]>
 {
-
-public:
     using BlkType = ComplexType[NUM_MODES][NUM_MODES];
 
+    static amrex::Array<int,2> type_id;
+
+protected:
+
+    virtual void Read_MaterialSpecificNanostructureProperties () final {}
+    virtual void Set_MaterialSpecificParameters() final {}
+    virtual void Print_MaterialSpecificReadData() final {}
+
+    virtual void Construct_Hamiltonian () final {}
+    virtual void Define_ContactInfo() final {}
+    virtual void Define_MPI_BlkType () final {};
+
+    virtual int Compute_NumAtoms() final { return 0; }
+    virtual int Compute_AtomsPerUnitcell() final { return 0; }
+    virtual int Compute_NumFieldSites() final { return 0; }
+    virtual int Compute_NumAtomsPerFieldSite() final { return 0; }
+    virtual int Set_PrimaryTransportDir() final { return 1; /*Y*/ }
+    virtual int Set_AverageFieldFlag() final { return 1; }
+    virtual int Compute_NumAtomsToAvgOver() final { return 1; }
+    virtual void Set_BlockDegeneracyVector(amrex::Vector<int>& vec) final { }
+    virtual int get_Hsize() final { return 0; }
+    virtual int get_offDiag_repeatBlkSize() final { return 1; }
+
+    virtual AMREX_GPU_HOST_DEVICE
+    void Compute_SurfaceGreensFunction (MatrixBlock<BlkType>& gr,
+                                        const ComplexType EmU) final {}
+
+public:
     struct Get1DSiteID 
     {
        AMREX_GPU_HOST_DEVICE int operator() (int global_par_id) const
@@ -46,21 +72,6 @@ public:
         return GetAtomIDAtSite{type_id}; 
     }
 
-    static amrex::Array<int,2> type_id;
-
-    //template
-    virtual int get_Hsize() override { return 0; }
-    virtual int get_offDiag_repeatBlkSize() override { return 2; }
-
-    //virtual void ReadNanostructureProperties () override;
-    //virtual void AllocateArrays() override;
-    //virtual void ConstructHamiltonian () override;
-    //virtual void AddPotentialToHamiltonian () override;
-    //virtual void DefineIntegrationPaths () override;
-    //virtual void DeallocateArrays() override;
-    //virtual void ComputeChargeDensity() override;
-
+    virtual void Generate_AtomLocations(amrex::Vector<s_Position3D>& pos) final {}
 };
-
-
 #endif

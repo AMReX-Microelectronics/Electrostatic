@@ -2,6 +2,7 @@
 #define NANOSTRUCTURE_H_
 
 #include "Nanostructure_fwd.H"
+//#include "NEGF/NEGF_Common.H"
 #include "NEGF/CNT.H"
 #include "NEGF/Graphene.H"
 
@@ -110,11 +111,24 @@ c_Nanostructure
                                                  realPA::NUM, 
                                                  intPA::NUM>, public NSType
 {
-
-public:
     using RealTable1D    = TableData<amrex::Real, 1>;
 
-    //~c_Nanostructure();
+    int _use_electrostatic=0;
+    int _use_negf=0;
+    const amrex::Geometry * const _geom;
+    amrex::MultiFab* p_mf_gather=nullptr;
+    amrex::MultiFab* p_mf_deposit=nullptr;
+    const amrex::GpuArray<int, AMREX_SPACEDIM>* _n_cell; 
+    amrex::Vector<s_Position3D> pos_vec;
+
+    void Fill_AtomLocations ();
+    void Read_AtomLocations ();
+
+    void Set_GatherAndDepositMultiFabs();
+    amrex::Real Compute_CellVolume();
+
+public:
+
     c_Nanostructure (const amrex::Geometry            & geom,
                      const amrex::DistributionMapping & dm,
                      const amrex::BoxArray            & ba,
@@ -127,35 +141,11 @@ public:
 		             const std::string negf_foldername_str,
                      const int NS_field_sites_offset);
 
-    virtual void ReadNanostructureProperties () override;
-
     void Evaluate_LocalFieldSites();
     void Gather_MeshAttributeAtAtoms();
     void Deposit_AtomAttributeToMesh();
     void Obtain_PotentialAtSites();
     void Mark_CellsWithAtoms(); 
-    void Solve_NEGF(RealTable1D& n_curr_out_data, const int iter);
-    void Write_Data (const std::string filename_prefix, 
-                     const RealTable1D& n_curr_out_data, 
-                     const RealTable1D& Norm_data);
 
-//    const amrex::Vector<amrex::Real>* get_avg_gatherField() { &avg_gatherField };
-
-private:
-    const amrex::GpuArray<int, AMREX_SPACEDIM>* _n_cell; 
-    const amrex::Geometry * _geom;
-    amrex::MultiFab* p_mf_gather=nullptr;
-    amrex::MultiFab* p_mf_deposit=nullptr;
-
-    void Fill_AtomLocations ();
-    void Read_AtomLocations ();
-    std::string read_filename;
-
-    int _use_electrostatic=0;
-    int _use_negf=0;
-    amrex::Vector<s_Position3D> pos_vec;
-
-    void InitializeNEGF(std::string common_foldername_str);
 };
-
 #endif

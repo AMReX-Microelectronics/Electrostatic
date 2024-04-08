@@ -8,48 +8,25 @@
 #include <math.h>
 #include<stdlib.h>
 
-amrex::Array<int,2> c_CNT::type_id; //very important
-
-/*Next, member class functions are defined*/
+amrex::Array<int,2> c_CNT::type_id = {17,0}; 
 
 void
-c_CNT:: ReadNanostructureProperties ()
+c_CNT:: Read_NanotubeParameters (amrex::ParmParse& pp_ns)
 {
-    amrex::Print() << "\n##### NANOSTRUCTURE PROPERTIES #####\n\n";
-
-
-    amrex::ParmParse pp_ns(name);
-
-    amrex::Print() << "##### Properties Specific to CNT: \n";
-
-    getWithParser(pp_ns,"acc", acc);
-    amrex::Print() << "##### acc: " << acc << "\n";
-
+    queryWithParser(pp_ns,"acc", acc);
+    queryWithParser(pp_ns,"gamma", gamma); 
     amrex::Vector<int> vec_type_id;
-    getArrWithParser(pp_ns, "type_id", vec_type_id, 0, 2);
-    type_id = vecToArr_Templated<int, 2>(vec_type_id);
-    amrex::Print() << "##### type_id: ";
-    for (int i=0; i<2; ++i) amrex::Print() << type_id[i] << "  ";
-    amrex::Print() << "\n";
+    auto typeID_isDefined = queryArrWithParser(pp_ns, "type_id", vec_type_id, 0, 2);
+    if(typeID_isDefined) type_id = vecToArr_Templated<int, 2>(vec_type_id);
+}
 
+
+void
+c_CNT:: Set_NanotubeParameters ()
+{
     R_cnt = acc*sqrt(3.*(pow(type_id[0],2) 
                    + pow(type_id[1],2) 
                    + type_id[0]*type_id[1])) / (2.*MathConst::pi);
-    amrex::Print() << "#####* R_cnt / (nm): " << R_cnt/1.e-9 << "\n";
-    amrex::Print() << "#####* D_cnt / (nm): " << 2*R_cnt/1.e-9 << "\n";
-    //getWithParser(pp_ns,"num_unitcells", num_unitcells);
-    //amrex::Print() << "##### num_unitcells: " << num_unitcells << "\n";
-
-    getWithParser(pp_ns,"gamma", gamma); 
-    amrex::Print() << "##### gamma: " << gamma << "\n";
-
-    //amrex::Vector<amrex::Real> vec_offset;
-    //getArrWithParser(pp_ns, "offset", vec_offset, 0, AMREX_SPACEDIM);
-    //offset = vecToArr(vec_offset);
-
-    //amrex::Print() << "##### offset: ";
-    //for (int i=0; i<AMREX_SPACEDIM; ++i) amrex::Print() << offset[i] << "  ";
-    //amrex::Print() << "\n";
 
     if(type_id[1] == 0) {
         rings_per_unitcell = 4;
@@ -59,83 +36,65 @@ c_CNT:: ReadNanostructureProperties ()
         rings_per_unitcell = 2;
         atoms_per_ring = type_id[0]-1;
     }
+}
+
+
+void
+c_CNT:: Read_MaterialSpecificNanostructureProperties ()
+{
+    amrex::ParmParse pp_ns_default("CNT_default");
+    amrex::ParmParse pp_ns(name);
+    amrex::ParmParse* pp=&pp_ns_default;
+
+    amrex::Print() << "##### Reading ParmParse CNT_Default\n";
+    for(int i=0; i<2; ++i) {
+        if(i==1) {
+            pp = &pp_ns;
+            amrex::Print() << "##### Reading ParmParse: "<< name << "\n";
+        }
+        Read_NanotubeParameters(*pp);
+    }
+}
+
+
+void 
+c_CNT::Set_MaterialSpecificParameters()
+{
+    Set_NanotubeParameters();
     Define_SortedModeVector();
-    amrex::Print() << "#####* rings_per_unitcell: " << rings_per_unitcell << "\n";
-    amrex::Print() << "#####* atoms_per_ring: " << atoms_per_ring << "\n";
-
-
-    E_valence_min = -10.; 
-    queryWithParser(pp_ns,"E_valence_min", E_valence_min); 
-    amrex::Print() << "##### valence_band_lower_limit, E_valence_min (eV): " << E_valence_min << "\n";
-
-    E_pole_max = 3; 
-    queryWithParser(pp_ns,"E_pole_max", E_pole_max); 
-    amrex::Print() << "##### pole_energy_upper_limit, E_pole_max (eV): " << E_pole_max << "\n";
-
-    amrex::Real E_zPlus_imag = 1.e-8; 
-    queryWithParser(pp_ns,"E_zPlus_imag", E_zPlus_imag); 
-    ComplexType val(0.,E_zPlus_imag);
-    E_zPlus = val;
-    amrex::Print() << "##### tiny distance between real axis and nonequilibrium integration line, E_zPlus_imag: " 
-                   << E_zPlus << "\n";
-
-    amrex::Vector<amrex::Real> vec_FermiTailFactors;
-    auto is_specified = queryArrWithParser(pp_ns, "Fermi_tail_factors", vec_FermiTailFactors, 0, 2);
-    if(is_specified) 
-    {
-        //default 14.
-        Fermi_tail_factor_lower = vec_FermiTailFactors[0];
-        Fermi_tail_factor_upper = vec_FermiTailFactors[1];
-    }
-    amrex::Print() << "##### Fermi tail factors (lower, upper): " << Fermi_tail_factor_lower << " " << Fermi_tail_factor_upper<< "\n";
-
-    c_NEGF_Common<BlkType>::ReadNanostructureProperties();
-
 }
 
 
-void 
-c_CNT:: Define_PotentialProfile() 
+void
+c_CNT::Set_BlockDegeneracyVector(amrex::Vector<int>& vec) 
 {
-    c_NEGF_Common<BlkType>::Define_PotentialProfile();
-}
-
-
-void 
-c_CNT::Set_Material_Specific_Parameters()
-{
-    num_atoms                = num_unitcells*rings_per_unitcell*atoms_per_ring;
-    num_atoms_per_unitcell   = atoms_per_ring*rings_per_unitcell;
-
-    num_field_sites          = num_unitcells*rings_per_unitcell;
-    average_field_flag       = 1;
-    if(average_field_flag) 
-    {
-        num_atoms_per_field_site = atoms_per_ring;
-        if(avg_type == s_AVG_Type::ALL) 
-        {
-            num_atoms_to_avg_over    = num_atoms_per_field_site;
-        }
-        else if(avg_type == s_AVG_Type::SPECIFIC)
-        {
-            num_atoms_to_avg_over    = vec_avg_indices.size();
-        }
-    }
-    primary_transport_dir    = 1; /*Y*/
-
-    block_degen_vec.resize(NUM_MODES);
+    vec.resize(NUM_MODES);
     for(int m=0; m<NUM_MODES; ++m) 
     {
-         block_degen_vec[m] = mode_degen_vec[m];
+         vec[m] = mode_degen_vec[m];
     }
+}
 
-    #if AMREX_USE_GPU
-    block_degen_gpuvec.resize(NUM_MODES);
 
-    amrex::Gpu::copy(amrex::Gpu::hostToDevice, 
-                     block_degen_vec.begin(), block_degen_vec.end(), 
-                     block_degen_gpuvec.begin());
-    #endif
+void
+c_CNT:: Print_NanotubeParameters()
+{
+    amrex::Print() << "##### Properties Specific to CNT: \n";
+    amrex::Print() << "##### acc: " << acc << "\n";
+    amrex::Print() << "##### type_id: ";
+    for (int i=0; i<2; ++i) amrex::Print() << type_id[i] << "  ";
+    amrex::Print() << "\n";
+    amrex::Print() << "#####* R_cnt / (nm): " << R_cnt/1.e-9 << "\n";
+    amrex::Print() << "#####* D_cnt / (nm): " << 2*R_cnt/1.e-9 << "\n";
+    amrex::Print() << "##### gamma: " << gamma << "\n";
+    amrex::Print() << "#####* rings_per_unitcell: " << rings_per_unitcell << "\n";
+    amrex::Print() << "#####* atoms_per_ring: " << atoms_per_ring << "\n";
+}
+
+void
+c_CNT:: Print_MaterialSpecificReadData ()
+{
+    Print_NanotubeParameters();
 }
 
 
@@ -345,24 +304,7 @@ c_CNT::Define_MPI_BlkType ()
 
 
 void 
-c_CNT::AllocateArrays () 
-{
-    c_NEGF_Common<BlkType>:: AllocateArrays (); 
-
-}
-//
-//
-//void 
-//c_CNT::DeallocateArrays () 
-//{
-//
-//}
-//
-//
-
-
-void 
-c_CNT::ConstructHamiltonian() 
+c_CNT::Construct_Hamiltonian() 
 {
     /*Here we define -H0 where H0 is Hamiltonian of flat bands*/
 
@@ -445,26 +387,3 @@ c_CNT:: Compute_SurfaceGreensFunction(MatrixBlock<BlkType>& gr, const ComplexTyp
        //amrex::Print() << "Value: " << (Factor+Sqrt)/Denom << "\n";
    }
 }
-
-
-void 
-c_CNT::Define_EnergyLimits ()
-{
-
-    /*set in the input*/
-    c_NEGF_Common<BlkType>:: Define_EnergyLimits ();
-
-}
-
-
-void 
-c_CNT::Define_IntegrationPaths ()
-{
-    c_NEGF_Common<BlkType>:: Define_IntegrationPaths ();
-}
-
-//void 
-//c_CNT::ComputeChargeDensity () 
-//{
-//
-//}

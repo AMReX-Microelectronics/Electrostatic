@@ -335,6 +335,14 @@ c_Code::EstimateOfRequiredMemory ()
 
 
 void 
+c_Code::Cleanup()
+{
+    #ifdef USE_TRANSPORT
+    if(use_transport) m_pTransportSolver->Cleanup();
+    #endif
+}
+
+void 
 c_Code::Solve_PostProcess_Output()
 {
 #ifdef PRINT_NAME
@@ -356,16 +364,16 @@ c_Code::Solve_PostProcess_Output()
         if(use_electrostatic) 
         {
             m_pPostProcessor->Compute(); 
-	}
-	#else
+	    }
+	    #else
         if(use_electrostatic) 
         {
-	    bool update_surface_soln_flag = true; 
+	        bool update_surface_soln_flag = true; 
             m_pMLMGSolver->UpdateBoundaryConditions(update_surface_soln_flag);
             auto mlmg_solve_time = m_pMLMGSolver->Solve_PoissonEqn();
             avg_mlmg_solve_time += mlmg_solve_time;
 
-	    amrex::Print() << "    mlmg_solve_time: " << std::setw(15) 
+    	    amrex::Print() << "    mlmg_solve_time: " << std::setw(15) 
                            << mlmg_solve_time << "\n";
 
             m_pPostProcessor->Compute(); 

@@ -21,127 +21,78 @@ template class c_Nanostructure<c_Graphene>;
 
 template<typename NSType>
 c_Nanostructure<NSType>::c_Nanostructure (const amrex::Geometry            & geom,
-                                  const amrex::DistributionMapping & dm,
-                                  const amrex::BoxArray            & ba,
-                                  const std::string NS_name_str,
-                                  const int NS_id_counter,
-                                  const std::string NS_gather_str,
-                                  const std::string NS_deposit_str,
-                                  const amrex::Real NS_initial_deposit_value,
-                                  const int use_negf,
-                  				  const std::string negf_foldername_str,
-                                  const int NS_field_sites_offset
-		                 		  )
-                 : amrex::ParticleContainer<realPD::NUM, intPD::NUM, 
-                                            realPA::NUM, intPA::NUM> (geom, dm, ba)
+                                          const amrex::DistributionMapping & dm,
+                                          const amrex::BoxArray            & ba,
+                                          const std::string NS_name_str,
+                                          const int         NS_id_counter,
+                                          const std::string NS_gather_str,
+                                          const std::string NS_deposit_str,
+                                          const amrex::Real NS_initial_deposit_value,
+                                          const int         use_negf,
+                  				          const std::string negf_foldername_str,
+                                          const int         NS_field_sites_offset
+		                 		          )
+                 : _geom(&geom),
+                   amrex::ParticleContainer
+                   <realPD::NUM, intPD::NUM, realPA::NUM, intPA::NUM> (geom, dm, ba)
 {
-    NSType::name = NS_name_str;
-    amrex::Print() << "Nanostructure: " << NS_name_str << "\n";
-
-    NSType::NS_Id = NS_id_counter;
-    amrex::Print() << "NS_Id: " << NSType::NS_Id << "\n";
-
-    NSType::NS_field_sites_offset = NS_field_sites_offset;
-    amrex::Print() << "NS_field_sites_offset: " << NS_field_sites_offset << "\n";
-
-    NSType::step_foldername_str = negf_foldername_str + "/" + NSType::name;
-    /*eg. output/negf/cnt for nanostructure named cnt */
-
-    if (ParallelDescriptor::IOProcessor())
-    {
-        CreateDirectory(NSType::step_foldername_str);
-
-        NSType::current_filename_str = NSType::step_foldername_str + "/I.dat";  /*current here means charge current, I */
-
-        NSType::outfile_I.open(NSType::current_filename_str.c_str()); 
-    	NSType::outfile_I << "'step', 'Vds' , 'Vgs', ";
-        for (int k=0; k <NUM_CONTACTS; ++k)
-        {
-	    	NSType::outfile_I << ", 'I at contact_" << k+1 << "',";
-        }
-	    NSType::outfile_I << "'Avg_intg_pts', 'Total_Iter', 'Broyden_Fraction', 'Broyden_Scalar', 'Conductance / (2q^2/h)'" << "\n";
-    	NSType::outfile_I.close();
-    }
-
-    NSType::step_filename_prefix_str = NSType::step_foldername_str + "/step"; 
-    /*eg. output/negf/cnt/step */
-    amrex::Print() << "step_filename_prefix_str: " << NSType::step_filename_prefix_str << "\n";
-     
-
     auto& rCode = c_Code::GetInstance();
-
     _use_electrostatic            = rCode.use_electrostatic;
     _use_negf                     = use_negf;
 
-    NSType::num_proc       = amrex::ParallelDescriptor::NProcs();
-    NSType::my_rank        = amrex::ParallelDescriptor::MyProc();
-    NSType::initial_charge = NS_initial_deposit_value;
-
     if(_use_negf) 
     {
-        ReadNanostructureProperties();
-
-        NSType::DefineMatrixPartition();
+        NSType::Initialize_NEGF_Params(NS_name_str, 
+                                       NS_id_counter, 
+                                       NS_field_sites_offset, 
+                                       NS_initial_deposit_value,
+                                       negf_foldername_str);
 
         pos_vec.resize(NSType::num_atoms);
+
         Read_AtomLocations();
     }
 
     if(_use_electrostatic) 
     {
-        auto& rGprop = rCode.get_GeometryProperties();
-
-        _n_cell = &rGprop.n_cell;
-        _geom = &geom;
-        auto dx =  _geom->CellSizeArray();
-	    NSType::cell_volume = 1.;
-
-	    for (int i=0; i<AMREX_SPACEDIM; ++i) NSType::cell_volume *= dx[i];
-	    amrex::Print() << "cell_volume: " << NSType::cell_volume << "\n";
-
         auto& rMprop = rCode.get_MacroscopicProperties();
-
         p_mf_gather = rMprop.get_p_mf(NS_gather_str);  
         p_mf_deposit = rMprop.get_p_mf(NS_deposit_str);  
 
-        //amrex::Print() << "Fill_AtomLocations()\n";
+        Compute_CellVolume();
+
         Fill_AtomLocations();
 
-        //amrex::Print() << "Evaluate_LocalFieldSites()\n";
         Evaluate_LocalFieldSites();
 
-        //amrex::Print() << "Define_MPISendCountAndDisp()\n";
         NSType::Define_MPISendCountAndDisp();
 
-        //amrex::Print() << "Mark_CellsWithAtoms()\n";
         Mark_CellsWithAtoms();
 
-        //amrex::Print() << "Initialize_ChargeAtFieldSites()\n";
         NSType::Initialize_ChargeAtFieldSites();
 
-        //amrex::Print() << "Deposit_AtomAttributeToMesh()\n";
         Deposit_AtomAttributeToMesh();
     }
 
     if(_use_negf) 
     {
-        InitializeNEGF(negf_foldername_str + "/transport_common");
+        NSType::Initialize_NEGF(negf_foldername_str + "/transport_common", 
+                                _use_electrostatic);
         pos_vec.clear(); 
     }
     
 }
 
-
 template<typename NSType>
-void
-c_Nanostructure<NSType>:: ReadNanostructureProperties ()
-{
-    amrex::ParmParse pp_ns(NSType::name);
-    read_filename = "NONE";
-    pp_ns.query("read_filename", read_filename);
-    amrex::Print() << "##### read_filename: " << read_filename << "\n";
+amrex::Real 
+c_Nanostructure<NSType>::Compute_CellVolume() {
+    auto dx =  _geom->CellSizeArray();
+    amrex::Real cell_volume = 1.;
+    for (int i=0; i<AMREX_SPACEDIM; ++i) cell_volume *= dx[i];
 
-    NSType::ReadNanostructureProperties();
+	amrex::Print() << "cell_volume: " << cell_volume << "\n";
+
+    return cell_volume;
 }
 
 
@@ -194,29 +145,9 @@ void
 c_Nanostructure<NSType>::Evaluate_LocalFieldSites() 
 {
     int lev=0;
-    //int num_field_sites = NSType::num_field_sites;
-    //#ifdef AMREX_USE_GPU
-    //amrex::Gpu::HostVector<amrex::Real> h_intermed_values_vec = {std::numeric_limits<int>::max(), 0};
-
-    //amrex::Gpu::DeviceVector<amrex::Real> d_intermed_values_vec(2);
-    //amrex::Gpu::copy(amrex::Gpu::hostToDevice, h_intermed_values_vec.begin(),
-    //                                           h_intermed_values_vec.end(),
-    //                                           d_intermed_values_vec.begin() );
-    //amrex::Gpu::streamSynchronize();
-
-    //auto* intermed_values = d_intermed_values_vec.dataPtr();
-
-    //RealTable1D d_site_id_vec({0}, {num_field_sites}, The_Device_Arena());
-    //amrex::ParallelFor(num_field_sites, [=] AMREX_GPU_DEVICE (int s) noexcept 
-    //{
-    //    d_site_id_vec(s) = 0;
-    //});
-    //amrex::Gpu::streamSynchronize();
-    //#else
     std::unordered_map<int, int> map;
     int counter=0;
     int min_site_id = std::numeric_limits<int>::max();
-    //#endif
 
     int hasValidBox = false;
     for (MyParIter pti(*this, lev); pti.isValid(); ++pti)
@@ -228,24 +159,6 @@ c_Nanostructure<NSType>::Evaluate_LocalFieldSites()
         const auto p_par = particles().data();
         auto get_1D_site_id = NSType::get_1D_site_id();
 
-        //#ifdef AMREX_USE_GPU
-        //amrex::ParallelFor(np, [=] AMREX_GPU_DEVICE (int p) noexcept 
-        //{
-        //    int global_id = p_par[p].id();
-        //    int site_id   = get_1D_site_id(global_id);
-        //    amrex::Gpu::Atomic::Min(&(intermed_values[0]), site_id);
-    
-        //    if(d_site_id_vec(site_id) == 0) 
-        //    {
-        //        //amrex::HostDevice::Atomic::Add(&(d_site_id_vec(site_id)), 1);
-        //        amrex::Gpu::Atomic::Add(&(d_site_id_vec(site_id)), site_id);
-        //    }
-        //});
-        //amrex::Gpu::streamSynchronize();
-
-        //#else
-        //hashmap solution
-        
         const int FSO = NSType::NS_field_sites_offset;
         for(int p=0; p < np; ++p) 
         {   
@@ -258,40 +171,14 @@ c_Nanostructure<NSType>::Evaluate_LocalFieldSites()
                 min_site_id = std::min(min_site_id, site_id);
             }
         }
-        //#endif
     }
-    //#ifdef AMREX_USE_GPU
-    //amrex::ParallelFor(num_field_sites, [=] AMREX_GPU_DEVICE (int s) noexcept 
-    //{
-    //    if(d_site_id_vec(s) == 1) 
-    //    {
-    //        amrex::HostDevice::Atomic::Add(&(intermed_values[1]), 1);
-    //    }
-    //});
-    //amrex::Gpu::streamSynchronize();
 
-    //amrex::Gpu::copy(amrex::Gpu::deviceToHost, d_intermed_values_vec.begin(),
-    //                                           d_intermed_values_vec.end(),
-    //                                           h_intermed_values_vec.begin() );
-    //amrex::Gpu::streamSynchronize();
-
-    //if(hasValidBox) {
-    //    NSType::site_id_offset = h_intermed_values_vec[0];
-    //} else {
-    //    NSType::site_id_offset = 0;   
-    //}
-    //NSType::num_local_field_sites = h_intermed_values_vec[1];
-
-    //#else
-    //obtained from hashmap solution
     if(hasValidBox) {
         NSType::site_id_offset = min_site_id;
     } else {
         NSType::site_id_offset = 0;   
     }
     NSType::num_local_field_sites = counter;
-    //#endif
-    
 
     //std::cout << " process/site_id_offset/num_local_field_sites: " 
     //          << NSType::my_rank << " " 
@@ -312,9 +199,9 @@ c_Nanostructure<NSType>::Read_AtomLocations()
 
     if (ParallelDescriptor::IOProcessor()) 
     {
+        std::string read_filename = NSType::get_read_atom_filename();
 
-        std::string str_null = "NONE";
-        if(strcmp(read_filename.c_str(),str_null.c_str()) == 0)
+        if(read_filename.empty())
         {
             NSType::Generate_AtomLocations(pos_vec);
         }
@@ -552,8 +439,6 @@ c_Nanostructure<NSType>::Deposit_AtomAttributeToMesh()
 
         });
     }
-    //p_mf_deposit->SumBoundary(_geom->periodicity());
-
 
 }
 
@@ -590,17 +475,11 @@ c_Nanostructure<NSType>::Obtain_PotentialAtSites()
         auto& par_gather    = pti.get_realPA_comp(realPA::gather);
         auto p_par_gather   = par_gather.data();
         auto get_1D_site_id = NSType::get_1D_site_id();
-        //amrex::Print() << "np: " << np << "\n";
-        //amrex::Print() << "p_par_gather: " << p_par_gather[0] << "\n";
-        //amrex::Print() << "num_field_sites: " << num_field_sites << "\n";
           
         if(average_field_flag) 
         {
-            //amrex::Print() << "average_field_flag: " << average_field_flag << "\n";
             if(NSType::avg_type == s_AVG_Type::ALL) 
             {
-                //amrex::Print() << "average_type: " << NSType::avg_type << "\n";
-
                 amrex::ParallelFor(np, [=] AMREX_GPU_DEVICE (int p) noexcept 
                 {
                     int global_id = p_par[p].id();
@@ -650,10 +529,6 @@ c_Nanostructure<NSType>::Obtain_PotentialAtSites()
                                                d_vec_V.end(),
                                                h_vec_V.begin() );
     amrex::Gpu::streamSynchronize();
-    //for (int l=0; l<num_field_sites; ++l)
-    //{
-    //    ParallelDescriptor::ReduceRealSum(p_V[l]);
-    //}
     MPI_Allreduce( MPI_IN_PLACE,
                    &(p_hV[0]),
                    num_field_sites,
@@ -661,12 +536,6 @@ c_Nanostructure<NSType>::Obtain_PotentialAtSites()
                    MPI_SUM,
                    ParallelDescriptor::Communicator());
 
-    //for(int i=0; i < 1; ++i)
-    //{
-    //    std::cout << "NSType::name/proc/i/h_vec_V: "<< NSType::name << " " << NSType::my_rank << " " << i << "  " << p_hV[i] << "\n";
-    //}
-    //amrex::Print() << "\n";
-    //MPI_Barrier(ParallelDescriptor::Communicator());
     auto const& h_U_loc = NSType::h_U_loc_data.table();
     for (int l=0; l < blkCol_size_loc; ++l) 
     {
@@ -689,192 +558,4 @@ c_Nanostructure<NSType>::Obtain_PotentialAtSites()
     //                + std::to_string(p_V[gid]));
     //    }
     //}
-}
-
-
-//template<typename NSType>
-//void 
-//c_Nanostructure<NSType>::Obtain_PotentialAtSites() 
-//{
-//    const int num_field_sites          = NSType::num_field_sites;
-//    const int num_atoms_per_field_site = NSType::num_atoms_per_field_site;
-//    const int num_atoms_to_avg_over    = NSType::num_atoms_to_avg_over;
-//    const int average_field_flag       = NSType::average_field_flag;
-//
-//    amrex::Gpu::DeviceVector<amrex::Real> vec_V(num_field_sites);
-//
-//    for (int l=0; l < num_field_sites; ++l) 
-//    {
-//        vec_V[l] = 0.;
-//    }
-//
-//    amrex::Real* p_V   = vec_V.dataPtr();  
-//    
-//    int lev = 0;
-//    for (MyParIter pti(*this, lev); pti.isValid(); ++pti)
-//    {
-//        auto np = pti.numParticles();
-//
-//        const auto& particles = pti.GetArrayOfStructs();
-//        const auto p_par = particles().data();
-//
-//        auto& par_gather  = pti.get_realPA_comp(realPA::gather);
-//        auto p_par_gather = par_gather.data();
-//        auto get_1D_site_id = NSType::get_1D_site_id();
-//          
-//        if(average_field_flag) 
-//        {
-//            if(NSType::avg_type == s_AVG_Type::ALL) 
-//            {
-//                amrex::ParallelFor(np, [=] AMREX_GPU_DEVICE (int p) noexcept 
-//                {
-//                    int global_id = p_par[p].id();
-//                    int site_id = get_1D_site_id(global_id); 
-//
-//                    amrex::HostDevice::Atomic::Add(&(p_V[site_id]), p_par_gather[p]);
-//                });
-//            }
-//            else if(NSType::avg_type == s_AVG_Type::SPECIFIC) 
-//            {
-//                auto get_atom_id_at_site = NSType::get_atom_id_at_site();
-//                #ifdef AMREX_USE_GPU
-//    	        auto avg_indices_ptr = NSType::gpuvec_avg_indices.dataPtr();
-//                #else
-//    	        auto avg_indices_ptr = NSType::vec_avg_indices.dataPtr();
-//                #endif
-//
-//                amrex::ParallelFor(np, [=] AMREX_GPU_DEVICE (int p) noexcept 
-//                {
-//                    int global_id = p_par[p].id();
-//                    int site_id = get_1D_site_id(global_id); 
-//
-//                    int atom_id_at_site = get_atom_id_at_site(global_id); 
-//                    int remainder = atom_id_at_site%num_atoms_per_field_site;
-//
-//	                for(int m=0; m < num_atoms_to_avg_over; ++m)
-//	                {
-//                        if(remainder == avg_indices_ptr[m]) 
-//	                    {
-//                            amrex::HostDevice::Atomic::Add(&(p_V[site_id]), p_par_gather[p]);
-//                        }
-//                    } 
-//                });
-//            }
-//        }
-//        else 
-//        { 
-//            amrex::ParallelFor(np, [=] AMREX_GPU_DEVICE (int p) noexcept 
-//            {
-//                int global_id  = p_par[p].id();
-//                int site_id    = get_1D_site_id(global_id); 
-//                p_V[site_id]   = p_par_gather[p];
-//            });
-//        } 
-//    }
-//
-//    for (int l=0; l<num_field_sites; ++l) 
-//    {
-//        ParallelDescriptor::ReduceRealSum(p_V[l]);
-//    }
-//
-//    for (int l=0; l<num_field_sites; ++l) 
-//    {
-//        NSType::Potential[l]   = -p_V[l] / num_atoms_to_avg_over;
-//	    //amrex::Print() << "site_id, avg_potential: " << l << "  " << NSType::Potential[l] << "\n";
-//        /*minus because Potential is experienced by electrons*/
-//    }
-//
-//}
-
-
-template<typename NSType>
-void
-c_Nanostructure<NSType>:: InitializeNEGF (std::string common_foldername_str)
-{
-
-    NSType::AllocateArrays();
-
-    NSType::ConstructHamiltonian();
-
-    NSType::Define_ContactInfo();
-
-    amrex::Print() << "#####* Initially defining energy limits:\n";
-    NSType::Define_EnergyLimits();
-
-    NSType::Define_IntegrationPaths();
-
-    if(NSType::flag_compute_flatband_dos) 
-    {
-        bool flag_write_LDOS = false;
-
-        BL_PROFILE_VAR("Compute_DOS", compute_dos);
-
-        std::string dos_dir = NSType::step_foldername_str + "/DOS_flatband";
-
-        if (ParallelDescriptor::IOProcessor()) CreateDirectory(dos_dir);
-
-        NSType::Compute_DensityOfStates(dos_dir, flag_write_LDOS);
-
-        BL_PROFILE_VAR_STOP(compute_dos);
-    }
-
-    BL_PROFILE_VAR("Compute_Rho0", compute_rho0);
-
-    NSType::Compute_Rho0();
-
-    BL_PROFILE_VAR_STOP(compute_rho0);
-
-    if(!_use_electrostatic)
-    {
-	    NSType::Define_PotentialProfile();
-    }
-
-}
-
-
-template<typename NSType>
-void
-c_Nanostructure<NSType>:: Solve_NEGF (RealTable1D& n_curr_out_data, const int iter)
-{
-    NSType::AddPotentialToHamiltonian();
-
-    if(NSType::flag_adaptive_integration_limits and iter%NSType::integrand_correction_interval == 0) {
-        NSType::flag_correct_integration_limits = true;
-        amrex::Print() << "\n setting flag_correct_integration_limits: " << NSType::flag_correct_integration_limits << "\n";
-    } 
-    else {
-        NSType::flag_correct_integration_limits = false;
-    }
-
-    if(NSType::flag_EC_potential_updated)
-    {
-        NSType::Update_ContactElectrochemicalPotential(); 
-        NSType::Define_EnergyLimits();
-    }
-    if(NSType::flag_EC_potential_updated or NSType::flag_correct_integration_limits) 
-    {
-        NSType::Update_IntegrationPaths();
-        NSType::flag_EC_potential_updated = false;
-    }
-
-    NSType::Compute_InducedCharge(n_curr_out_data);
-
-}
-
-
-template<typename NSType>
-void
-c_Nanostructure<NSType>:: Write_Data (const std::string filename_prefix, 
-                                      const RealTable1D& n_curr_out_data, 
-                                      const RealTable1D& Norm_data)
-{
-    BL_PROFILE_VAR("Write_Data", compute_write_data);
-
-    NSType::Write_PotentialAtSites(filename_prefix);
-    if (ParallelDescriptor::IOProcessor())
-    {
-        NSType::Write_InducedCharge(filename_prefix, n_curr_out_data);
-        NSType::Write_ChargeNorm(filename_prefix, Norm_data);
-    }
-    BL_PROFILE_VAR_STOP(compute_write_data);
 }

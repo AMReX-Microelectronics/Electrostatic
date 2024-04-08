@@ -112,6 +112,7 @@ public:
     void ReadData ();
     void InitData ();
     void Solve_PostProcess_Output ();
+    void Cleanup ();
 
     void EstimateOfRequiredMemory();
 
