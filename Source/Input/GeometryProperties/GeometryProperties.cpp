@@ -32,18 +32,6 @@ c_GeometryProperties::c_GeometryProperties ()
 } 
 
 
-c_GeometryProperties::~c_GeometryProperties ()
-{
-#ifdef PRINT_NAME
-    amrex::Print() << "\n\n\t\t\t{************************c_GeometryProperties Destructor()************************\n";
-    amrex::Print() << "\t\t\tin file: " << __FILE__ << " at line: " << __LINE__ << "\n";
-#endif
-
-#ifdef PRINT_NAME
-    amrex::Print() << "\t\t\t}************************c_GeometryProperties Destructor()************************\n";
-#endif
-} 
-
 void 
 c_GeometryProperties::ReadData()
 {    

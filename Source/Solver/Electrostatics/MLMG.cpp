@@ -314,11 +314,11 @@ c_MLMGSolver:: InitData()
     auto& rGprop = rCode.get_GeometryProperties();
 
 #ifdef AMREX_USE_EB
-    if(rGprop.embedded_boundary_flag) {
+    if(rGprop.is_eb_enabled()) {
         Setup_MLEBABecLaplacian_ForPoissonEqn();
     }
 #endif
-    if(!rGprop.embedded_boundary_flag) {
+    if(!rGprop.is_eb_enabled()) {
         Setup_MLABecLaplacian_ForPoissonEqn();
     }
 
@@ -554,7 +554,7 @@ c_MLMGSolver:: UpdateBoundaryConditions(bool update_surface_soln)
     int amrlev = 0;
 
     #ifdef AMREX_USE_EB
-    if(rGprop.embedded_boundary_flag) 
+    if(rGprop.is_eb_enabled()) 
     {
         if(some_constant_inhomogeneous_boundaries)
         {
@@ -591,7 +591,7 @@ c_MLMGSolver:: UpdateBoundaryConditions(bool update_surface_soln)
 	}
     }
     #endif
-    if(!rGprop.embedded_boundary_flag) 
+    if(!rGprop.is_eb_enabled()) 
     {
         if(some_constant_inhomogeneous_boundaries)
         {

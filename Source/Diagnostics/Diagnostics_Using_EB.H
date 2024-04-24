@@ -34,13 +34,22 @@ struct s_Cylinder
     int has_fluid_inside=0;
     int num_params_plot_single_level;
     std::map<std::string,int> map_param_all;
+};
 
+struct s_Plane
+{
+    int direction;
+    amrex::Real location;
+    int num_params_plot_single_level;
+    std::map<std::string,int> map_param_all;
 };
 
 class
 c_Diagnostics_Using_EB
                       :private c_Field_Plot_Essentials
 {
+
+   void Define_SliceGeometry(amrex::Geometry& sg);
 
 protected:
 
@@ -66,7 +75,7 @@ protected:
                                //{"sphere"         , s_ObjectType::object::sphere},
                                //{"box"            , s_ObjectType::object::box},
                                {"cylinder"       , s_ObjectType::object::cylinder},
-                               //{"plane"          , s_ObjectType::object::plane},
+                               {"plane"          , s_ObjectType::object::plane},
                                //{"torus"          , s_ObjectType::object::torus},
                                //{"parser"         , s_ObjectType::object::parser},
                                //{"stl"            , s_ObjectType::object::stl},
@@ -74,8 +83,8 @@ protected:
 
                                //{"Sphere"         , s_ObjectType::object::sphere},
                                //{"Box"            , s_ObjectType::object::box},
-                               {"Cylinder"       , s_ObjectType::object::cylinder}
-                               //{"Plane"          , s_ObjectType::object::plane},
+                               {"Cylinder"       , s_ObjectType::object::cylinder},
+                               {"Plane"          , s_ObjectType::object::plane}
                                //{"Torus"          , s_ObjectType::object::torus},
                                //{"Parser"         , s_ObjectType::object::parser},
                                //{"Stl"            , s_ObjectType::object::stl},

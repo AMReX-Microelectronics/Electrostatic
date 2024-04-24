@@ -74,7 +74,7 @@ c_NEGF_Common<T>::Define_FileHeaderForCurrent()
 {
     if (ParallelDescriptor::IOProcessor())
     {   
-        outfile_I.open(current_filename_str.c_str());         
+        outfile_I.open(current_filename_str.c_str(), std::ios::app);         
         outfile_I << "'step', 'Vds' , 'Vgs', ";
         for (int k=0; k <NUM_CONTACTS; ++k)
         {   

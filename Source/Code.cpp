@@ -258,11 +258,12 @@ c_Code::EstimateOfRequiredMemory ()
     auto& rBC = *m_pBoundaryConditions;
     auto& rPost = *m_pPostProcessor;
     auto& rOutput = *m_pOutput;
+    auto const& n_cell_array = rGprop.get_NumCells();
 
     amrex::Print() << prt << "Rough estimation of required memory: \n";
     int num_cells = 1;
 //    num_cells = rGprop.n_cell[0]*rGprop.n_cell[1]*rGprop.n_cell[2];
-    for (auto i: rGprop.n_cell) num_cells *= i;
+    for (auto i: n_cell_array) num_cells *= i;
 
     amrex::Print() << prt << "Number of cells: " << num_cells << "\n";
     amrex::Real ratio = num_cells / pow(512,3);

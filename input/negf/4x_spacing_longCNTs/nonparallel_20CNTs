@@ -17,13 +17,13 @@ amrex.the_arena_is_managed=1
 ##### Some Important Params ####
 ################################
 my_constants.gx = 2
-my_constants.gy = 8
+my_constants.gy = 128
 my_constants.gz = 2
 
-my_constants.num_CNTs = 5
+my_constants.num_CNTs = 20
 my_constants.periodicity_factor = 7.5 #1.875 corresponds to 3.195 nm (smallest periodicity distance)
 
-my_constants.Channel_unitcells = 24
+my_constants.Channel_unitcells = 232
 my_constants.Overlap_unitcells = 12
 
 my_constants.Vds = 0.   #Drain-Source voltage [V]
@@ -32,9 +32,9 @@ my_constants.Vgs_max = 8
 my_constants.Nsteps =  25
 my_constants.dt = 1./(Nsteps-1)
 
-plot.folder_name = /global/cfs/projectdirs/m4540/eXstatic/4x_spacing/nonpll_5CNTs_largeAngles
-plot.write_after_init = 1
-plot.write_interval = 5000
+plot.folder_name = /global/cfs/projectdirs/m4540/eXstatic/4x_spacing_longCNTs/nonpll_20CNTs
+plot.write_after_init = 0
+plot.write_interval = 1000
 
 transport.flag_compute_DOS = 1 #DOS, Transmission, Conductance
 transport.flag_write_LDOS = 0
@@ -42,7 +42,7 @@ transport.flag_write_LDOS_iter = 0
 transport.write_LDOS_iter_period = 10
 
 restart = 1
-restart_step = 20
+restart_step = 18
 NS_default.initialize_charge_distribution = 1
 ##################################
 ##### USER DEFINED CONSTANTS #####
@@ -217,9 +217,10 @@ use_diagnostics = 1
 diag.specify_using_eb = 1
 diag.objects = Z_0
 Z_0.geom_type = plane
-Z_0.point = 0 0 0
-Z_0.normal = 0 0 1
+Z_0.direction = 2
+Z_0.location = 0.0
 Z_0.fields_to_plot = phi
+
 ####################################
 ###### MLMG SOLVER PROPERTIES ######
 ####################################
@@ -286,22 +287,81 @@ CNT_default.type_id = m_index n_index
 CNT_default.acc = bond_length
 CNT_default.gamma = 2.5     
 
-
-NS_1.offset = (CN_x + (-4/2.)*periodicity_length) CN_y CN_z
-NS_1.rotation_angles = 0 0 -32.28
-
-
-NS_2.offset = (CN_x + (-2/2.)*periodicity_length) CN_y CN_z
-NS_2.rotation_angles = 0 0 20.45
+NS_1.offset = (CN_x + (-19/2.)*periodicity_length) CN_y CN_z
+NS_1.rotation_angles = 0 0 -3.48
 
 
-NS_3.offset = (CN_x + (0/2.)*periodicity_length) CN_y CN_z
-NS_3.rotation_angles = 0 0 4.37
+NS_2.offset = (CN_x + (-17/2.)*periodicity_length) CN_y CN_z
+NS_2.rotation_angles = 0 0 3.89
 
 
-NS_4.offset = (CN_x + (2/2.)*periodicity_length) CN_y CN_z
-NS_4.rotation_angles = 0 0 -15.27
+NS_3.offset = (CN_x + (-15/2.)*periodicity_length) CN_y CN_z
+NS_3.rotation_angles = 0 0 -5.43
 
 
-NS_5.offset = (CN_x + (4/2.)*periodicity_length) CN_y CN_z
-NS_5.rotation_angles = 0 0 29.22
+NS_4.offset = (CN_x + (-13/2.)*periodicity_length) CN_y CN_z
+NS_4.rotation_angles = 0 0 -2.30
+
+
+NS_5.offset = (CN_x + (-11/2.)*periodicity_length) CN_y CN_z
+NS_5.rotation_angles = 0 0 -1.46
+
+
+NS_6.offset = (CN_x + (-9/2.)*periodicity_length) CN_y CN_z
+NS_6.rotation_angles = 0 0 2.72
+
+
+NS_7.offset = (CN_x + (-7/2.)*periodicity_length) CN_y CN_z
+NS_7.rotation_angles = 0 0 -5.32
+
+
+NS_8.offset = (CN_x + (-5/2.)*periodicity_length) CN_y CN_z
+NS_8.rotation_angles = 0 0 -2.11
+
+
+NS_9.offset = (CN_x + (-3/2.)*periodicity_length) CN_y CN_z
+NS_9.rotation_angles = 0 0 6.45
+
+
+NS_10.offset = (CN_x + (-1/2.)*periodicity_length) CN_y CN_z
+NS_10.rotation_angles = 0 0 -3.24
+
+
+NS_11.offset = (CN_x + (1/2.)*periodicity_length) CN_y CN_z
+NS_11.rotation_angles = 0 0 -4.96
+
+
+NS_12.offset = (CN_x + (3/2.)*periodicity_length) CN_y CN_z
+NS_12.rotation_angles = 0 0 -0.85
+
+
+NS_13.offset = (CN_x + (5/2.)*periodicity_length) CN_y CN_z
+NS_13.rotation_angles = 0 0 5.11
+
+
+NS_14.offset = (CN_x + (7/2.)*periodicity_length) CN_y CN_z
+NS_14.rotation_angles = 0 0 3.78
+
+
+NS_15.offset = (CN_x + (9/2.)*periodicity_length) CN_y CN_z
+NS_15.rotation_angles = 0 0 -2.76
+
+
+NS_16.offset = (CN_x + (11/2.)*periodicity_length) CN_y CN_z
+NS_16.rotation_angles = 0 0 0.70
+
+
+NS_17.offset = (CN_x + (13/2.)*periodicity_length) CN_y CN_z
+NS_17.rotation_angles = 0 0 -2.93
+
+
+NS_18.offset = (CN_x + (15/2.)*periodicity_length) CN_y CN_z
+NS_18.rotation_angles = 0 0 -1.52
+
+
+NS_19.offset = (CN_x + (17/2.)*periodicity_length) CN_y CN_z
+NS_19.rotation_angles = 0 0 5.86
+
+
+NS_20.offset = (CN_x + (19/2.)*periodicity_length) CN_y CN_z
+NS_20.rotation_angles = 0 0 -0.25

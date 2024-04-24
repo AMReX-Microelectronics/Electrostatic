@@ -32,9 +32,9 @@ my_constants.Vgs_max = 8
 my_constants.Nsteps =  25
 my_constants.dt = 1./(Nsteps-1)
 
-plot.folder_name = /global/cfs/projectdirs/m4540/eXstatic/4x_spacing/nonpll_5CNTs_largeAngles
+plot.folder_name = /global/cfs/projectdirs/m4540/eXstatic/4x_spacing/parallel_5CNTs
 plot.write_after_init = 1
-plot.write_interval = 5000
+plot.write_interval = 1
 
 transport.flag_compute_DOS = 1 #DOS, Transmission, Conductance
 transport.flag_write_LDOS = 0
@@ -206,7 +206,7 @@ macroscopic.atom_locations = 0.
 ###### OUTPUT ######
 ####################
 
-plot.fields_to_plot = phi.1 atom_locations #vecField 
+plot.fields_to_plot = epsilon.1 charge_density.1 phi.1 atom_locations #vecField 
 plot.rawfield_write_interval = 1000000
 
 ########################
@@ -217,9 +217,10 @@ use_diagnostics = 1
 diag.specify_using_eb = 1
 diag.objects = Z_0
 Z_0.geom_type = plane
-Z_0.point = 0 0 0
-Z_0.normal = 0 0 1
+Z_0.direction = 2
+Z_0.location = 0.0
 Z_0.fields_to_plot = phi
+
 ####################################
 ###### MLMG SOLVER PROPERTIES ######
 ####################################
@@ -260,6 +261,7 @@ transport.Broyden_threshold_maxstep = 100
 NS_default.num_unitcells = N_unitcells
 NS_default.rotation_order = Z
 NS_default.rotation_angle_type = D
+NS_default.rotation_angles = 0 0 0
 NS_default.contact_Fermi_level = Ef
 NS_default.contact_mu_specified = 1
 NS_default.contact_mu = Ef (Ef - Vds)
@@ -288,20 +290,15 @@ CNT_default.gamma = 2.5
 
 
 NS_1.offset = (CN_x + (-4/2.)*periodicity_length) CN_y CN_z
-NS_1.rotation_angles = 0 0 -32.28
 
 
 NS_2.offset = (CN_x + (-2/2.)*periodicity_length) CN_y CN_z
-NS_2.rotation_angles = 0 0 20.45
 
 
 NS_3.offset = (CN_x + (0/2.)*periodicity_length) CN_y CN_z
-NS_3.rotation_angles = 0 0 4.37
 
 
 NS_4.offset = (CN_x + (2/2.)*periodicity_length) CN_y CN_z
-NS_4.rotation_angles = 0 0 -15.27
 
 
 NS_5.offset = (CN_x + (4/2.)*periodicity_length) CN_y CN_z
-NS_5.rotation_angles = 0 0 29.22

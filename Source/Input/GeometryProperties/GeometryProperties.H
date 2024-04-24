@@ -25,35 +25,59 @@
 class 
 c_GeometryProperties
 {
-public: 
-    c_GeometryProperties();
-    ~c_GeometryProperties();
-
+    amrex::GpuArray<amrex::Real, AMREX_SPACEDIM>  prob_lo; 
+    amrex::GpuArray<amrex::Real, AMREX_SPACEDIM>  prob_hi; 
     amrex::GpuArray<int, AMREX_SPACEDIM>  n_cell;     // number of cells in each dimension
-    amrex::GpuArray<amrex::Real, AMREX_SPACEDIM>  prob_lo; // physical lo coordinate
-    amrex::GpuArray<amrex::Real, AMREX_SPACEDIM>  prob_hi; // physical hi coordinate
     amrex::Array<amrex::Real, AMREX_SPACEDIM>  dx; 
     amrex::IntVect max_grid_size;
     amrex::IntVect blocking_factor;
     std::array<int, AMREX_SPACEDIM> is_periodic;
     amrex::CoordSys::CoordType coord_sys;
+    int embedded_boundary_flag;
+
+    void ParseBasicDomainInput();
+    void InitializeBoxArrayAndDistributionMap ();
+
+public: 
 
     amrex::BoxArray ba; // a list of boxes that cover the domain
-    amrex::Geometry geom;
     amrex::DistributionMapping dm;
+    amrex::Geometry geom;
 
-    int embedded_boundary_flag;
     #ifdef AMREX_USE_EB
     std::unique_ptr<c_EmbeddedBoundaries> pEB;
     #endif
 
+    c_GeometryProperties();
     void ReadData();
     void InitData();
 
-private:
-    void ParseBasicDomainInput();
-    void InitializeBoxArrayAndDistributionMap ();
-
+    const amrex::GpuArray<amrex::Real, AMREX_SPACEDIM>& get_ProbLo() const {
+        return prob_lo;
+    }
+    const amrex::GpuArray<amrex::Real, AMREX_SPACEDIM>& get_ProbHi() const {
+        return prob_hi;
+    }
+    const amrex::GpuArray<int, AMREX_SPACEDIM>& get_NumCells() const {
+        return n_cell;
+    }
+    const amrex::Array<amrex::Real, AMREX_SPACEDIM>& get_CellSize() const {
+        return dx;
+    }
+    const amrex::IntVect& get_MaxGridSize() const {
+        return max_grid_size;
+    }
+    const amrex::IntVect& get_BlockingFactor() const {
+        return blocking_factor;
+    }
+    const std::array<int,AMREX_SPACEDIM>& get_PeriodicityArray() const {
+        return is_periodic;
+    }
+    const amrex::CoordSys::CoordType& get_CoordinateSystem() const {
+        return coord_sys;
+    }
+    bool is_eb_enabled() const {
+        return embedded_boundary_flag;
+    }
 };
-
 #endif

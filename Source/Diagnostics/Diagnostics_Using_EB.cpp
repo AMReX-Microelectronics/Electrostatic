@@ -4,10 +4,12 @@
 #include "../Input/GeometryProperties/GeometryProperties.H"
 #include "../Input/MacroscopicProperties/MacroscopicProperties.H"
 #include "../Utils/SelectWarpXUtils/WarpXUtil.H"
+#include "../Utils/SelectWarpXUtils/TextMsg.H"
 #include "../Utils/CodeUtils/CodeUtil.H"
 #include "../Output/Output.H"
 
 #include <AMReX_PlotFileUtil.H>
+#include <AMReX_MultiFabUtil.H>
 #include <AMReX.H>
 #include <AMReX_ParmParse.H>
 #include <AMReX_Parser.H>
@@ -138,6 +140,49 @@ c_Diagnostics_Using_EB::ReadEBObjectInfo(std::string object_name, std::string ob
             break;
 
         }
+        case s_ObjectType::object::plane:
+        {
+            s_Plane plane;
+
+            getWithParser(pp_object, "direction", plane.direction);
+
+            WARPX_ALWAYS_ASSERT_WITH_MESSAGE(plane.direction >=0 and 
+                                             plane.direction <= AMREX_SPACEDIM,
+                                             "Direction d must be such that, \
+                                              0 <= d <= AMREX_SPACEDIM");
+            amrex::Print() << "##### plane direction: " << plane.direction << "\n";
+
+            getWithParser(pp_object, "location", plane.location);
+            amrex::Print() << "##### plane location: " << plane.location << "\n";
+
+            auto& rCode = c_Code::GetInstance();
+            auto& rGprop = rCode.get_GeometryProperties();
+            const auto& PL = rGprop.get_ProbLo();
+            const auto& PH = rGprop.get_ProbHi();
+
+            WARPX_ALWAYS_ASSERT_WITH_MESSAGE(plane.location >= PL[plane.direction] and 
+                                             plane.location <= PH[plane.direction],
+                                             "Direction must be within [" 
+                                             + std::to_string(PL[plane.direction]) + " and " 
+                                             + std::to_string(PH[plane.direction]) + "]");
+
+            amrex::Vector< std::string > fields_to_plot;
+            bool varnames_specified = pp_object.queryarr("fields_to_plot", fields_to_plot);
+
+            plane.num_params_plot_single_level= SpecifyOutputOption(fields_to_plot,
+                                                                  plane.map_param_all);             
+            amrex::Print() << "##### plane num_params_plot_single_level: "<<
+                                     plane.num_params_plot_single_level << "\n";
+
+            amrex::Print() << "##### plane map_param_all: \n";
+            for(auto it: plane.map_param_all) {
+                 amrex::Print() << it.first << "  " << it.second << "\n";
+            }
+            amrex::Print() << "\n";
+
+            map_object_info[object_name] = plane;  
+            break;
+        }
         default:
         {
             amrex::Abort("geom_type " + object_type + " not supported in diagnostics.");
@@ -204,6 +249,17 @@ c_Diagnostics_Using_EB::CreateFactory()
                 //amrex::EB2::IndexSpace::clear();
                 break;
             }
+            case s_ObjectType::object::plane:
+            {
+                //auto ob = std::any_cast<s_Plane>(map_object_info[name]);
+
+                //using IFType = amrex::EB2::PlaneIF;
+
+                //IFType object_IF(ob.point, ob.normal);
+
+                //ObtainSingleObjectFactory<IFType>(name, object_IF);
+                break;
+            }
         }
     }
     amrex::Print() << "After index space size : " << amrex::EB2::IndexSpace::size() << "\n";
@@ -253,11 +309,14 @@ c_Diagnostics_Using_EB::ComputeAndWriteEBDiagnostics(int step, amrex::Real time)
     auto& rGprop = rCode.get_GeometryProperties();
     auto& rOutput = rCode.get_Output();
     _foldername_str = rOutput.get_folder_name() + "_diag/";
+    CreateDirectory(_foldername_str);
+    amrex::Print() << "diagnostics foldername: " << _foldername_str << "\n";
 
     for(auto name: vec_object_names)
     {
        _filename_prefix_str = _foldername_str + name + _plt_str;
        _plot_file_name = amrex::Concatenate(_filename_prefix_str, step, _plt_name_digits);
+       amrex::Print() << "_plot_file_name: " << _plot_file_name << "\n";
 
        amrex::Vector<amrex::MultiFab*> vec_pFieldMF;
        amrex::Vector<amrex::MultiFab*> vec_pFactoryMF;
@@ -309,6 +368,49 @@ c_Diagnostics_Using_EB::ComputeAndWriteEBDiagnostics(int step, amrex::Real time)
                pFactoryMF_All.reset();
                break;
            }
+           case s_ObjectType::object::plane:
+           {
+               auto info = std::any_cast<s_Plane>(map_object_info[name]);
+
+               vec_pFieldMF.resize(info.num_params_plot_single_level);
+
+               amrex::Vector<const amrex::MultiFab*> 
+                   vec_pSliceMF(info.num_params_plot_single_level);
+
+               amrex::Vector<std::unique_ptr<amrex::MultiFab>> 
+                   vec_pSliceMF_UPtr(info.num_params_plot_single_level);
+
+               int StartComp0=0, NComp1=1;
+               for(auto it : info.map_param_all)
+               {   
+                   std::string field_name = it.first;
+                   int c = it.second;
+                   vec_pFieldMF[c] = rMprop.get_p_mf(field_name);
+               } 
+
+
+               amrex::Geometry slice_geom;
+               Define_SliceGeometry(slice_geom);
+                
+               for(auto it: info.map_param_all)
+               {
+                   std::string field_name = it.first;
+                   int c = it.second;
+
+                   vec_pFieldMF[c] = rMprop.get_p_mf(field_name);
+                   vec_pSliceMF_UPtr[c] = get_slice_data(info.direction, info.location, 
+                                                         *vec_pFieldMF[c], *geom, 
+                                                         StartComp0, NComp1);
+                   vec_pSliceMF[c] = vec_pSliceMF_UPtr[c].get();
+               }
+               amrex::Print() << "writing slice in: " << _plot_file_name << "\n";
+               amrex::WriteMLMF(_plot_file_name, vec_pSliceMF, {slice_geom});
+
+               vec_pFieldMF.clear();
+               vec_pSliceMF.clear();
+               vec_pSliceMF_UPtr.clear();
+               break;
+           }
        }
     }
 #ifdef PRINT_NAME
@@ -317,24 +419,28 @@ c_Diagnostics_Using_EB::ComputeAndWriteEBDiagnostics(int step, amrex::Real time)
 }
 
 
-                   //     amrex::Array2D<amrex::Real,1,Max_Ncell_Azim,1,Max_Ncell_Long,amrex::Order::C> cyl_surf_grid;
+void
+c_Diagnostics_Using_EB::Define_SliceGeometry(amrex::Geometry& sg)
+{
 
-                   //int total_cutcells = Multifab_Manipulation::GetTotalNumberOfCutcells(*pFactoryMF);
-                   //amrex::Print() << "total_cutcells: " << total_cutcells << "\n";
+    auto& rCode = c_Code::GetInstance();
+    auto& rGprop = rCode.get_GeometryProperties();
+    const auto& gd = geom->data();
+    const Real* PL = gd.ProbLo();
+    const Real* PH = gd.ProbHi();
+    const Real* dx = gd.CellSize();
+    const int* DL  = gd.Domain().loVect();
+    const int* DH  = gd.Domain().hiVect();
+    const auto& coord_sys = rGprop.get_CoordinateSystem();
+    const auto& is_periodic = rGprop.get_PeriodicityArray();
 
-                   //const int cyl_ncell_axis = n_cell[info.axial_direction];
-                   //const int cyl_ncell_ring = int (total_cutcells/(cyl_ncell_axis));
-                   //amrex::Print() << "cyl_ncell_axis "<< cyl_ncell_axis << ", cyl_ncell_ring: " << cyl_ncell_ring << "\n";
+    amrex::IntVect dom_lo(AMREX_D_DECL(DL[0], DL[1], 0)); 
+    amrex::IntVect dom_hi(AMREX_D_DECL(DH[0], DH[1], 1)); 
+    amrex::Box domain(dom_lo, dom_hi); 
 
-                   //Multifab_Manipulation::
-                   // Copy_3DCartesian_To_2DAzimuthalLongitudinal(*geom,
-                   //                                             *pFactoryMF, 
-                   //                                             &cyl_surf_grid, 
-                   //                                             cyl_ncell_ring, 
-                   //                                             cyl_ncell_axis,
-                   //                                             info.center,
-                   //                                             info.axial_direction,
-                   //                                             info.theta_reference_direction);
-                   //
-                   ////cyl_surf_grid(1,1)=1;
-                   //amrex::Print() << "cyl_surf_grid value: (1,1) : " << cyl_surf_grid(1,1) << " (1+cyl_ncell_ring, 1): " << cyl_surf_grid(1+cyl_ncell_ring, 1) << "\n";
+    amrex::RealBox real_box({AMREX_D_DECL( PL[0], PL[1], 0-dx[2]/2.)},
+                            {AMREX_D_DECL( PH[0], PH[1], 0+dx[2]/2.)}); 
+
+    sg.define(domain, real_box, coord_sys, is_periodic); 
+
+}
