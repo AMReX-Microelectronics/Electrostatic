@@ -31,12 +31,10 @@ c_TransportSolver::Define_MPI_Vector_Type_and_MPI_Vector_Sum ()
 
 
 void
-c_TransportSolver::Free_MPI_Vector_Type_and_MPI_Vector_Sum ()
+c_TransportSolver::Free_MPIDerivedDataTypes ()
 {
-
     MPI_Type_free(&MPI_Vector_Type);
     MPI_Op_free(&Vector_Add);
-
 }
 
 
@@ -65,7 +63,7 @@ c_TransportSolver::Define_Broyden_Partition()
 
     for (int c=0; c < vp_CNT.size(); ++c)
     {
-        vp_CNT[c]->site_size_loc_offset = site_size_loc_cumulative[c];
+        vp_CNT[c]->set_site_size_loc_offset(site_size_loc_cumulative[c]);
         site_size_loc_cumulative[c+1] = site_size_loc_cumulative[c] + vp_CNT[c]->MPI_recv_count[my_rank];
     }
     site_size_loc_all_NS = site_size_loc_cumulative[vp_CNT.size()];
@@ -84,6 +82,8 @@ c_TransportSolver::Define_Broyden_Partition()
 void
 c_TransportSolver:: Set_Broyden_Parallel ()
 {
+    amrex::Print() << "\nSetting Broyden PARALLEL\n";
+
     Define_Broyden_Partition();
 
     Broyden_Step = 1;
@@ -354,38 +354,5 @@ c_TransportSolver:: Reset_Broyden_Parallel ()
     amrex::Print() << " Broyden_NormSum_Curr: "              << Broyden_NormSum_Curr << "\n";
     amrex::Print() << " Broyden_NormSum_Prev: "              << Broyden_NormSum_Prev << "\n";
 
-}
-
-
-void
-c_TransportSolver::Deallocate_Broyden_Parallel ()
-{
-    h_n_curr_in_data.clear();
-    h_n_curr_out_data.clear();
-    h_n_prev_in_data.clear();
-    h_F_curr_data.clear();
-    h_delta_F_curr_data.clear();
-    h_Norm_data.clear();
-    h_intermed_vector_data.clear();
-
-    #ifdef BROYDEN_SKIP_GPU_OPTIMIZATION
-    h_Wmat_data.clear();
-    h_VmatTran_data.clear();
-    h_sum_vector_data.clear();
-    #else
-    d_n_curr_in_data.clear();
-    d_n_curr_out_data.clear();
-    d_n_prev_in_data.clear();
-    d_F_curr_data.clear();
-    d_delta_F_curr_data.clear();
-    d_Norm_data.clear();
-    d_intermed_vector_data.clear();
-    d_sum_vector_data.clear();
-
-    d_Wmat_data.clear();
-    d_VmatTran_data.clear();
-    #endif
-
-    Free_MPI_Vector_Type_and_MPI_Vector_Sum();
 }
 #endif

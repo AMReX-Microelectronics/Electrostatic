@@ -20,16 +20,14 @@ c_TransportSolver
 {
 
 public:
-    amrex::Vector<std::unique_ptr<c_Nanostructure<c_CNT>>> vp_CNT;
-    amrex::Vector<std::unique_ptr<c_Nanostructure<c_Graphene>>> vp_Graphene;
-    //amrex::Vector<std::unique_ptr<c_Nanostructure<c_Silicon>>> vp_Silicon;
-
     c_TransportSolver();
-    ~c_TransportSolver();
-
     void InitData();
     void Solve(const int step, const amrex::Real time);
-    
+    void Cleanup();
+
+    /* The following methods are public because 
+     * __device__ lambda cannot have private or protected access within its class.
+     * Need refactoring. */
     #ifdef BROYDEN_PARALLEL
     void Set_Broyden_Parallel();
     void Reset_Broyden_Parallel();
@@ -37,69 +35,65 @@ public:
     void Execute_Broyden_Modified_Second_Algorithm_Parallel_SkipGPU();
     #endif
 
+    
 private:
     using RealTable1D    = TableData<amrex::Real, 1>;
     using RealTable2D    = TableData<amrex::Real, 2>;
 
-    Gate_Terminal_Type gate_terminal_type;
+    bool flag_compute_DOS = false;
+    bool flag_write_LDOS = false;
+    bool flag_write_LDOS_iter = false;
+    bool flag_isDefined_InitialDepositValue = false;
+    bool flag_isDefined_NS_type_default = false;
 
-    static const std::map<std::string, Gate_Terminal_Type> map_S_GateTerminalType;
-
-    static bool doesKeyExist(std::string key) 
-    {
-        return map_S_GateTerminalType.find(key) != map_S_GateTerminalType.end();
-    }
-    void Set_gate_terminal_type(const std::string);
-
-    int num_NS=0;
+    int NS_num=0;
     int m_step=0;
-    amrex::Geometry  dummy_geom;
-    amrex::BoxArray  dummy_ba;
-    amrex::DistributionMapping  dummy_dm;
-    amrex::Real total_max_time_across_all_steps[7] = {0., 0., 0., 0., 0., 0., 0.};
     int total_iter = 0;
-
-    amrex::Geometry const * _geom = &dummy_geom;
-    amrex::BoxArray const * _ba = &dummy_ba;
-    amrex::DistributionMapping const * _dm = &dummy_dm;
-    //const amrex::GpuArray<int, AMREX_SPACEDIM> * _n_cell;
-    amrex::Vector< std::string > vec_NS_names;
-   
-    amrex::Real Vds = 0;
-    amrex::Real Vgs = 0;
     int max_iter = 1;
     int total_intg_pts_in_all_iter = 0;
-
-    void ReadData();
-
-    static const std::map<std::string, s_NS_Type> map_NSType_enum;
-
-    std::string NS_gather_field_str;
-    std::string NS_deposit_field_str;
-    amrex::Real NS_initial_deposit_value;
-
-    int use_selfconsistent_potential;
-    int use_negf;
+    int use_selfconsistent_potential = 0;
+    int use_negf = 0;
     const int negf_plt_name_digits = 4;
+    int  write_LDOS_iter_period = 1e6;
+    int flag_reset_with_previous_charge_distribution = 0;
+    int flag_initialize_inverse_jacobian = 0;
+    int total_proc;
+    int my_rank;
+    int num_procs_with_sites;
+    int site_size_loc_all_NS = 0;
+    /*Broyden*/
+    int num_field_sites_all_NS = 0;
+    int Broyden_Step = 1;
+    int Broyden_Threshold_MaxStep = 200;
 
+    amrex::Real Vds = 0;
+    amrex::Real Vgs = 0;
+    amrex::Real NS_initial_deposit_value = 0.;
+    amrex::Real total_max_time_across_all_steps[7] = {0., 0., 0., 0., 0., 0., 0.};
+    /*Broyden*/
+    amrex::Real Broyden_fraction = 0.1;
+    amrex::Real Broyden_max_norm = 1.e-5;
+    amrex::Real Broyden_Original_Fraction = 0.1;
+    amrex::Real Broyden_Scalar = 1.0;
+    amrex::Real Broyden_NormSum_Prev = 1.e100;
+    amrex::Real Broyden_Norm = 0.;
+    amrex::Real Broyden_NormSum_Curr = 0.;
+
+    std::string NS_type_default = "";
+    std::string NS_gather_field_str = "phi";
+    std::string NS_deposit_field_str = "charge_density";
     std::string negf_foldername_str = "output/negf";
     std::string common_foldername_str = "output/negf/transport_common";
     std::string common_step_folder_str;
     std::string inverse_jacobian_filename;
-
-    void Set_CommonStepFolder(const int step);
-
-    int flag_reset_with_previous_charge_distribution = 0;
-    int flag_initialize_inverse_jacobian = 0;
-    bool flag_compute_DOS = false;
-    bool flag_write_LDOS = false;
-    bool flag_write_LDOS_iter = false;
-    int  write_LDOS_iter_period = 1e6;
-    /*For Broyden*/
+    std::string gate_terminal_type_str = "EB";
+    /*Broyden*/
     std::string Algorithm_Type = "broyden_second";
-    static const std::map<std::string, s_Algorithm_Type> map_AlgorithmType;
-    
     std::string Broyden_Norm_Type = "relative";
+
+    static const std::map<std::string, s_NS_Type> map_NSType_enum;
+    static const std::map<std::string, Gate_Terminal_Type> map_S_GateTerminalType;
+    static const std::map<std::string, s_Algorithm_Type> map_AlgorithmType;
     std::map<std::string, s_Norm_Type>
     map_NormType =
         {
@@ -108,35 +102,26 @@ private:
            {"Absolute"        , s_Norm_Type::Absolute},
            {"Relative"        , s_Norm_Type::Relative}
         };
+    std::map<std::string, std::string> map_NSNameToTypeStr;
 
-    int         num_field_sites_all_NS = 0;
-    int         Broyden_Step = 1;
-    amrex::Real Broyden_fraction = 0.1;
-    amrex::Real Broyden_max_norm = 1.e-5;
-    amrex::Real Broyden_Original_Fraction = 0.1;
-    amrex::Real Broyden_Scalar = 1.0;
-    amrex::Real Broyden_NormSum_Prev = 1.e100;
-    int         Broyden_Threshold_MaxStep = 200;
-    amrex::Real Broyden_Norm = 0.;
-    amrex::Real Broyden_NormSum_Curr = 0.;
+    amrex::Geometry const * _geom = nullptr;
+    amrex::BoxArray const * _ba = nullptr;
+    amrex::DistributionMapping const * _dm = nullptr;
+    Gate_Terminal_Type gate_terminal_type;
 
-    int total_proc;
-    int my_rank;
-    int num_procs_with_sites;
-    int site_size_loc_all_NS = 0;
+    amrex::Vector< std::string > vec_NS_names;
     amrex::Vector<int> site_size_loc_cumulative;
-    //std::map<std::string, amrex::Vector<int>> MPI_recv_count;
-    //std::map<std::string, amrex::Vector<int>> MPI_recv_disp;
-    //amrex::Vector<int> MPI_recv_count;
-    //amrex::Vector<int> MPI_recv_disp;
 
+    amrex::Vector<std::unique_ptr<c_Nanostructure<c_CNT>>> vp_CNT;
+    amrex::Vector<std::unique_ptr<c_Nanostructure<c_Graphene>>> vp_Graphene;
+   
+    /*Tables for Broyden*/
     RealTable1D h_n_curr_in_data; 
     RealTable1D h_n_curr_out_data; 
     RealTable1D h_n_prev_in_data;
     RealTable1D h_F_curr_data;
     RealTable1D h_delta_F_curr_data;
     RealTable1D h_Norm_data;
-
     #ifdef BROYDEN_PARALLEL
     RealTable1D n_curr_in_glo_data;
     RealTable1D h_intermed_vector_data;
@@ -171,42 +156,55 @@ private:
     amrex::Vector<RealTable1D*> V_Broyden;
     #endif
 
+    /***Methods***/
+    void ReadData();
+    void Read_NSNames(amrex::ParmParse& pp);
+    void Read_NSTypes(amrex::ParmParse& pp);
+    void Read_ControlFlags(amrex::ParmParse& pp);
+    void Read_GatherAndDepositFields(amrex::ParmParse& pp);
+    void Read_SelfConsistencyInput(amrex::ParmParse& pp);
+    void Read_InverseJacobianFilename(amrex::ParmParse& pp);
+    void Read_DOSInput(amrex::ParmParse& pp);
+    void Read_GateTerminalType(amrex::ParmParse& pp);
+    void Set_NEGFFolderDirectories();
+
+    void Create_NEGFFolderDirectories();
+    void Assert_GatherAndDepositFields();
+    void Define_InitialDepositValue();
+    int  Instantiate_Materials();
+    std::string Get_NS_type_str(const std::string& name);
+    void Set_gate_terminal_type(const std::string);
+    void Sum_ChargeDepositedByAllNS();
+    void Set_CommonStepFolder(const int step);
+    static bool doesKeyExist(std::string key) 
+    {
+        return map_S_GateTerminalType.find(key) != map_S_GateTerminalType.end();
+    }
     template<typename NSType>
     void Set_TerminalBiasesAndContactPotential(NSType const& NS);
-
     template<typename NSType>
     void CopyFromNS_ChargeComputedFromNEGF(NSType const& NS);
-
     template<typename NSType>
     void CopyToNS_ChargeComputedUsingSelfConsistencyAlgorithm(NSType const& NS);
-
     template<typename NSType>
     void Write_MoreDataAndComputeCurrent(NSType const& NS, 
                                          std::string const& write_filename,
                                          bool const compute_current_flag);
-
     void Perform_SelfConsistencyAlgorithm();
-
     void Reset_ForNextBiasStep();
-
     void Obtain_maximum_time(amrex::Real const* total_time_counter_diff);
 
-
     #ifdef BROYDEN_PARALLEL
+    template<typename NSType>
+    void Create_Global_Output_Data(NSType const& NS);
     void Deallocate_Broyden_Parallel();
     void Define_Broyden_Partition();
     void Define_MPI_Vector_Type_and_MPI_Vector_Sum();
-    void Free_MPI_Vector_Type_and_MPI_Vector_Sum();
+    void Free_MPIDerivedDataTypes();
+
     MPI_Datatype MPI_Vector_Type;
     MPI_Op Vector_Add;
 
-    //static void Vector_Add_Func_wrapper(double* A, double* B, int* veclen, MPI_Datatype* dtype) 
-    //{
-    //    //reinterpret_cast<c_TransportSolver*>(A,B,veclen,dtype)->Vector_Add_Func(A,B,veclen,dtype);
-    //    //static_cast<c_TransportSolver*>(A,B,veclen,dtype)->Vector_Add_Func(A,B,veclen,dtype);
-    //    Vector_Add_Func(A,B,veclen,dtype);
-    //}
- 
     static void Vector_Add_Func(double* A, double* B, int* veclen, MPI_Datatype* dtype)
     {
         /* Note: https://www.mpich.org/static/docs/v3.2/www3/MPI_Op_create.html
@@ -223,8 +221,6 @@ private:
             B[i] += A[i];
         }
     }
-    template<typename NSType>
-    void Create_Global_Output_Data(NSType const& NS);
     #else
     void Set_Broyden();
     void Reset_Broyden();

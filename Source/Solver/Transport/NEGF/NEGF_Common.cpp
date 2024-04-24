@@ -10,7 +10,82 @@
 /*Explicit specializations*/
 template class c_NEGF_Common<ComplexType[NUM_MODES]>;            //of c_CNT
 template class c_NEGF_Common<ComplexType[NUM_MODES][NUM_MODES]>; //c_Graphene
-								 
+	
+const std::map<std::string, AngleType> map_strToAngleType =
+{
+   {"d"   , AngleType::Degrees},
+   {"D"   , AngleType::Degrees},
+   {"r"   , AngleType::Radians},
+   {"R"   , AngleType::Radians},
+};
+
+const std::map<std::string, AxisType> map_strToAxisType =
+{
+   {"x"   , AxisType::X},
+   {"X"   , AxisType::X},
+   {"y"   , AxisType::Y},
+   {"Y"   , AxisType::Y},
+   {"z"   , AxisType::Z},
+   {"Z"   , AxisType::Z}
+};
+
+
+template<typename T>
+void
+c_NEGF_Common<T>:: Set_KeyParams(const std::string& name_str,
+                                 const int&         id_counter,
+                                 const int&         field_sites_offset,
+                                 const amrex::Real& initial_deposit_value)
+{
+    name                  = name_str;
+    NS_Id                 = id_counter;
+    NS_field_sites_offset = field_sites_offset;
+    initial_charge        = initial_deposit_value;
+
+    num_proc              = amrex::ParallelDescriptor::NProcs();
+    my_rank               = amrex::ParallelDescriptor::MyProc();
+
+}
+
+template<typename T>
+void
+c_NEGF_Common<T>:: Define_FoldersAndFiles(const std::string& negf_foldername_str)                
+{
+    step_foldername_str = negf_foldername_str + "/" + name;
+    /*eg. output/negf/cnt for nanostructure named cnt */
+
+    step_filename_prefix_str = step_foldername_str + "/step";
+    /*eg. output/negf/cnt/step */
+
+
+    if (ParallelDescriptor::IOProcessor()) {
+        CreateDirectory(step_foldername_str);
+
+        current_filename_str = step_foldername_str + "/I.dat";  
+    }
+
+    Define_FileHeaderForCurrent();
+}
+
+
+template<typename T>
+void 
+c_NEGF_Common<T>::Define_FileHeaderForCurrent() 
+{
+    if (ParallelDescriptor::IOProcessor())
+    {   
+        outfile_I.open(current_filename_str.c_str(), std::ios::app);         
+        outfile_I << "'step', 'Vds' , 'Vgs', ";
+        for (int k=0; k <NUM_CONTACTS; ++k)
+        {   
+            outfile_I << ", 'I at contact_" << k+1 << "',";
+        }
+        outfile_I << "'Avg_intg_pts', 'Total_Iter', 'Broyden_Fraction', \
+                      'Broyden_Scalar', 'Conductance / (2q^2/h)'" << "\n";
+        outfile_I.close();
+    }
+}
+
 
 template<typename T>
 void
@@ -225,22 +300,60 @@ c_NEGF_Common<T>::Read_Table1D(int assert_size,
 
 template<typename T>
 void
-c_NEGF_Common<T>:: ReadNanostructureProperties ()
+c_NEGF_Common<T>:: Read_Unitcells(amrex::ParmParse& pp_ns)
 {
+    queryWithParser(pp_ns, "num_unitcells", num_unitcells);
+}
 
-    amrex::ParmParse pp_ns(name);
 
-    getWithParser(pp_ns,"num_unitcells", num_unitcells);
-    amrex::Print() << "##### num_unitcells: " << num_unitcells << "\n";
+template<typename T>
+void
+c_NEGF_Common<T>:: Read_MaterialOrientationParams(amrex::ParmParse& pp_ns)
+{
+    /*translation*/
+    amrex::Vector<amrex::Real> vec_offset(3,0.);
+    auto offset_isDefined = queryArrWithParser(pp_ns, "offset", vec_offset, 0, AMREX_SPACEDIM);
 
-    amrex::Vector<amrex::Real> vec_offset;
-    getArrWithParser(pp_ns, "offset", vec_offset, 0, AMREX_SPACEDIM);
-    offset = vecToArr(vec_offset);
+    if(offset_isDefined) offset = vecToArr(vec_offset);
 
-    amrex::Print() << "##### offset: ";
-    for (int i=0; i<AMREX_SPACEDIM; ++i) amrex::Print() << offset[i] << "  ";
-    amrex::Print() << "\n";
+    /*rotation*/
+    if(p_rotInputParams == nullptr) p_rotInputParams = std::make_unique<RotationInputParams>();
 
+    amrex::Vector<amrex::Real> vec_rotation_angles;
+    auto angles_isDefined = queryArrWithParser(pp_ns, "rotation_angles", 
+            vec_rotation_angles, 0, AMREX_SPACEDIM);
+
+    if(angles_isDefined) p_rotInputParams->angles = vec_rotation_angles;
+
+    std::string angle_type_str = "";
+    auto angleType_isDefined = pp_ns.query("rotation_angle_type", angle_type_str);
+
+    if(angleType_isDefined) {
+        p_rotInputParams->angle_type = map_strToAngleType.at(angle_type_str);
+    }
+
+    amrex::Vector<std::string> vec_rot_order_str = {};
+    auto rotationOrder_isDefined = pp_ns.queryarr("rotation_order", vec_rot_order_str);
+
+    if(rotationOrder_isDefined) 
+    {
+        p_rotInputParams->rotation_order.clear(); 
+
+        for (auto axis_str : vec_rot_order_str) 
+        {
+            if(map_strToAxisType.find(axis_str) != map_strToAxisType.end()) 
+            {
+                p_rotInputParams->rotation_order.push_back(map_strToAxisType.at(axis_str));
+            }
+        }
+    }
+}
+
+
+template<typename T>
+void
+c_NEGF_Common<T>:: Read_FieldAveragingParams(amrex::ParmParse& pp_ns)
+{
     std::string avg_type_str = "all";
     pp_ns.query("field_averaging_type", avg_type_str);
     if(avg_type_str == "all" or avg_type_str == "All" or avg_type_str == "ALL")
@@ -250,24 +363,55 @@ c_NEGF_Common<T>:: ReadNanostructureProperties ()
     if(avg_type_str == "specific" or avg_type_str == "Specific" or avg_type_str == "SPECIFIC")
     {
         avg_type = s_AVG_Type::SPECIFIC;
+        pp_ns.queryarr("atom_indices_for_averaging", vec_avg_indices);
     }
-    amrex::Print() << "##### field_averaging_type: " << avg_type_str  << "\n";
-   
-    if(avg_type == s_AVG_Type::SPECIFIC) {
-       pp_ns.getarr("atom_indices_for_averaging", vec_avg_indices);
-       amrex::Print() << "##### atom_indices_for_averaging: \n";
-       for (int i=0; i<vec_avg_indices.size(); ++i) 
-       {
-           amrex::Print() << vec_avg_indices[i] << "  ";
-       }
 
-       #if AMREX_USE_GPU
-       gpuvec_avg_indices.resize(vec_avg_indices.size());
-       amrex::Gpu::copy(amrex::Gpu::hostToDevice, 
-                        vec_avg_indices.begin(), 
-                        vec_avg_indices.end(), 
-                        gpuvec_avg_indices.begin());
-       #endif
+}
+
+template<typename T>
+void
+c_NEGF_Common<T>:: set_Contact_Electrochemical_Potential(const amrex::Vector<amrex::Real>& ep)
+{
+    WARPX_ALWAYS_ASSERT_WITH_MESSAGE(ep.size() == NUM_CONTACTS,
+    "ep.size != NUM_CONTACTS. It is: " + std::to_string(ep.size()));
+
+    for (int k=0; k < ep.size(); ++k) {
+        Contact_Electrochemical_Potential[k] = ep[k];
+    }
+    flag_EC_potential_updated = true;
+}
+
+
+template<typename T>
+void
+c_NEGF_Common<T>:: Read_TerminalParams(amrex::ParmParse& pp_ns)
+{
+    pp_ns.query("gate_string", Gate_String);
+
+    queryWithParser(pp_ns,"contact_Fermi_level", E_f);
+
+    pp_ns.query("contact_mu_specified", flag_contact_mu_specified);
+
+    if(flag_contact_mu_specified) 
+    {
+        amrex::Vector<amrex::Real> vec_mu;
+        auto is_specified = queryArrWithParser(pp_ns, "contact_mu", vec_mu, 0, NUM_CONTACTS);
+        if(is_specified) {
+            for(int c=0; c<NUM_CONTACTS; ++c) {
+                Contact_Electrochemical_Potential[c] = vec_mu[c];
+            }
+            flag_EC_potential_updated = true;
+        }
+    }
+    else 
+    {
+        amrex::Vector<std::string> temp_vec;
+        auto is_specified = pp_ns.queryarr("contact_parser_string", temp_vec);
+        if(is_specified) {
+            for(int c=0; c<NUM_CONTACTS; ++c) {
+                Contact_Parser_String[c] = temp_vec[c];
+            }
+        }
     }
 
     amrex::Vector<amrex::Real> vec_Temperature;
@@ -277,50 +421,46 @@ c_NEGF_Common<T>:: ReadNanostructureProperties ()
             Contact_Temperature[c] = vec_Temperature[c];
         }
     }
+}
 
-    E_f = 0.;
-    queryWithParser(pp_ns,"contact_Fermi_level", E_f);
 
-    flag_contact_mu_specified = 1;
-    pp_ns.query("contact_mu_specified", flag_contact_mu_specified);
-    
-
-    flag_EC_potential_updated = false;
-    if(flag_contact_mu_specified) 
-    {
-        amrex::Vector<amrex::Real> vec_mu;
-        getArrWithParser(pp_ns, "contact_mu", vec_mu, 0, NUM_CONTACTS);
-        for(int c=0; c<NUM_CONTACTS; ++c) 
-	    {
-            Contact_Electrochemical_Potential[c] = vec_mu[c];
-        }
-        flag_EC_potential_updated = true;
-	    vec_mu.clear();
-    }
-    else 
-    {
-        amrex::Vector<std::string> temp_vec;
-        pp_ns.getarr("contact_parser_string", temp_vec);
-        for(int c=0; c<NUM_CONTACTS; ++c) 
-	    {
-            Contact_Parser_String[c] = temp_vec[c];
-        }
-	    temp_vec.clear();
-    }
-    pp_ns.query("gate_string", Gate_String);
-
+template<typename T>
+void
+c_NEGF_Common<T>:: Read_PotentialProfileParams(amrex::ParmParse& pp_ns)
+{
     pp_ns.query("impose_potential", flag_impose_potential);
     if(flag_impose_potential) 
     {
         pp_ns.query("potential_profile_type", potential_profile_type_str);
     }
+}
 
-    pp_ns.query("flag_compute_flatband_dos", flag_compute_flatband_dos);
+
+template<typename T>
+void
+c_NEGF_Common<T>:: Read_EqContourIntgPts(amrex::ParmParse& pp_ns)
+{
     auto is_specified_eq = queryArrWithParser(pp_ns, "eq_integration_pts", eq_integration_pts, 0, 3);
+}
+
+
+template<typename T>
+void
+c_NEGF_Common<T>:: Read_FlatbandDOSParams(amrex::ParmParse& pp_ns)
+{
+    pp_ns.query("flag_compute_flatband_dos", flag_compute_flatband_dos);
 
     queryWithParser(pp_ns, "flatband_dos_integration_pts", flatband_dos_integration_pts);
     auto is_specified_dos_limit = queryArrWithParser(pp_ns, "flatband_dos_integration_limits", 
                                                              flatband_dos_integration_limits, 0, 2);
+
+}
+
+
+template<typename T>
+void
+c_NEGF_Common<T>:: Read_NonEqPathParams(amrex::ParmParse& pp_ns)
+{
     auto flag_num_noneq_paths = queryWithParser(pp_ns, "num_noneq_paths", 
                                                         num_noneq_paths);
 
@@ -343,6 +483,38 @@ c_NEGF_Common<T>:: ReadNanostructureProperties ()
                                                           noneq_integration_pts, 0, 
                                                           num_noneq_paths);
 
+}
+
+
+template<typename T>
+void
+c_NEGF_Common<T>:: Read_IntegrationParams(amrex::ParmParse& pp_ns)
+{
+    queryWithParser(pp_ns,"E_valence_min", E_valence_min);
+    queryWithParser(pp_ns,"E_pole_max", E_pole_max);
+
+    amrex::Real imag=1e-8;
+    auto is_imag_specified = queryWithParser(pp_ns,"E_zPlus_imag", imag);
+    if(is_imag_specified) {
+        ComplexType val(0., imag);
+        E_zPlus = val;
+    }
+
+    amrex::Vector<amrex::Real> vec_FermiTailFactors;
+    auto is_specified = queryArrWithParser(pp_ns, "Fermi_tail_factors", 
+                                           vec_FermiTailFactors, 0, 2);
+    if(is_specified)
+    {
+        Fermi_tail_factor_lower = vec_FermiTailFactors[0];
+        Fermi_tail_factor_upper = vec_FermiTailFactors[1];
+    }
+}
+
+
+template<typename T>
+void
+c_NEGF_Common<T>:: Read_AdaptiveIntegrationParams(amrex::ParmParse& pp_ns)
+{
     flag_adaptive_integration_limits = false;
     pp_ns.query("flag_adaptive_integration_limits", flag_adaptive_integration_limits);
     if(flag_adaptive_integration_limits) 
@@ -358,6 +530,13 @@ c_NEGF_Common<T>:: ReadNanostructureProperties ()
                                                                         noneq_integration_pts_density, 0, 
                                                                         num_noneq_paths);
     }
+}
+
+
+template<typename T>
+void
+c_NEGF_Common<T>:: Read_IntegrandWritingParams(amrex::ParmParse& pp_ns)
+{
     flag_write_integrand_main = false;
     flag_write_integrand_iter = false;
     pp_ns.query("flag_write_integrand", flag_write_integrand_main);
@@ -366,91 +545,371 @@ c_NEGF_Common<T>:: ReadNanostructureProperties ()
         write_integrand_interval = 500;
         pp_ns.query("write_integrand_interval", write_integrand_interval);
     }
+}
 
+
+template<typename T>
+void
+c_NEGF_Common<T>:: Read_WritingRelatedFlags(amrex::ParmParse& pp_ns)
+{
     write_at_iter = 0;
     queryWithParser(pp_ns,"write_at_iter", write_at_iter);
 
     flag_write_charge_components = false;
     pp_ns.query("flag_write_charge_components", flag_write_charge_components);
 
-    pp_ns.query("initialize_charge_distribution", flag_initialize_charge_distribution);
-    amrex::Print() << "##### flag_initialize_charge_distribution: " << flag_initialize_charge_distribution  << "\n";
+    Read_IntegrandWritingParams(pp_ns);
 
+}
+
+
+template<typename T>
+void
+c_NEGF_Common<T>:: Read_AtomLocationAndChargeDistributionFilename(amrex::ParmParse& pp_ns)
+{
+    //filename for atom location
+    pp_ns.query("read_atom_filename", read_atom_filename);
+
+    pp_ns.query("initialize_charge_distribution", flag_initialize_charge_distribution);
     if(flag_initialize_charge_distribution) 
     {
         amrex::ParmParse pp;
-
-	int flag_restart = 0;
+	    int flag_restart = 0;
         pp.query("restart", flag_restart);
 
         if(flag_restart)
         {
             int restart_step = 0;	
             getWithParser(pp,"restart_step", restart_step);
-
             std::string step_filename_str  = amrex::Concatenate(step_filename_prefix_str, restart_step-1, negf_plt_name_digits);
             /*eg. output/negf/cnt/step0007_Qout.dat for step 1*/
-
-	    charge_distribution_filename = step_filename_str + "_Qout.dat";
-
-	    pp_ns.query("charge_distribution_filename", charge_distribution_filename);
-
-            amrex::Print() << "##### charge_distribution_filename: "             << charge_distribution_filename              << "\n";
+	        charge_distribution_filename = step_filename_str + "_Qout.dat";
+	        pp_ns.query("charge_distribution_filename", charge_distribution_filename);
         }
         else 
-	{
-	    pp_ns.get("charge_distribution_filename", charge_distribution_filename);
-            amrex::Print() << "##### charge_distribution_filename: "             << charge_distribution_filename              << "\n";
-	}
-    }
+    	{
+            std::string cd_filename="";
+            std::string read_negf_foldername_str = "";
+            int read_step=-1;
 
+	        auto cd_filename_isDefined = pp_ns.query("charge_distribution_filename", cd_filename);
+	        auto read_folder_isDefined = pp_ns.query("read_negf_foldername", read_negf_foldername_str);
+	        auto read_step_isDefined = pp_ns.query("read_step", read_step);
+
+            if(cd_filename_isDefined) {
+                charge_distribution_filename = cd_filename;
+            }
+            else if(read_folder_isDefined and read_step_isDefined) 
+            {
+                std::string read_filename_prefix_str = read_negf_foldername_str + "/" + name + "/step";
+                /*eg. output/negf/cnt/step */
+
+                std::string read_filename_str  = amrex::Concatenate(read_filename_prefix_str, read_step-1, negf_plt_name_digits);
+
+	            charge_distribution_filename = read_filename_str + "_Qout.dat";
+            }
+	    }
+    }
+}
+
+
+template<typename T>
+void
+c_NEGF_Common<T>:: Read_RecursiveOptimizationParams(amrex::ParmParse& pp_ns)
+{
     num_recursive_parts = 1;
     queryWithParser(pp_ns, "num_recursive_parts", num_recursive_parts);
-    
-    Set_Material_Specific_Parameters();
+}
 
 
-    amrex::Print() << "\n#####* num_atoms: "                << num_atoms                  << "\n";
-    amrex::Print() << "#####* num_atoms_per_unitcell: "     << num_atoms_per_unitcell     << "\n";
-    amrex::Print() << "#####* num_unitcells: "              << num_unitcells              << "\n";
-    amrex::Print() << "#####* num_field_sites: "            << num_field_sites            << "\n";
-    amrex::Print() << "#####* average_field_flag: "         << average_field_flag         << "\n";
-    amrex::Print() << "#####* num_atoms_per_field_site: "   << num_atoms_per_field_site   << "\n";
-    amrex::Print() << "#####* num_atoms_to_avg_over: "      << num_atoms_to_avg_over      << "\n";
-    amrex::Print() << "#####* primary_transport_dir: "      << primary_transport_dir      << "\n";
-    amrex::Print() << "#####* Contact_Temperatures, T / [K]: \n";
-    for(int c=0; c<NUM_CONTACTS; ++c) {
-        amrex::Print() << "#####*   contact, T: " << c << "  " << Contact_Temperature[c] <<"\n";
+template<typename T>
+void
+c_NEGF_Common<T>:: Assert_Reads ()
+{
+    amrex::Print() << "##### Assert Reads\n";
+    //qeuryWithParser(pp_ns, "num_unitcells", num_unitcells);
+    //pp_ns.queryarr("atom_indices_for_averaging", vec_avg_indices);
+    //if(flag_contact_mu_specified) 
+    //{
+    //    amrex::Vector<amrex::Real> vec_mu;
+    //    queryArrWithParser(pp_ns, "contact_mu", vec_mu, 0, NUM_CONTACTS);
+    //    for(int c=0; c<NUM_CONTACTS; ++c) 
+	//    {
+    //        Contact_Electrochemical_Potential[c] = vec_mu[c];
+    //    }
+    //    flag_EC_potential_updated = true;
+	//    vec_mu.clear();
+    //}
+    //else 
+    //{
+    //    amrex::Vector<std::string> temp_vec;
+    //    pp_ns.queryarr("contact_parser_string", temp_vec);
+    //    for(int c=0; c<NUM_CONTACTS; ++c) 
+	//    {
+    //        Contact_Parser_String[c] = temp_vec[c];
+    //    }
+	//    temp_vec.clear();
+    //}
+    //if(!flag_restart) {
+	//        pp_ns.query("charge_distribution_filename", charge_distribution_filename);
+    //}
+}
+
+
+template<typename T>
+void
+c_NEGF_Common<T>:: Read_CommonData (amrex::ParmParse& pp)
+{
+    Read_Unitcells(pp);
+    Read_MaterialOrientationParams(pp);
+    Read_FieldAveragingParams(pp); 
+    Read_TerminalParams(pp); 
+    Read_PotentialProfileParams(pp);
+    Read_EqContourIntgPts(pp);
+    Read_FlatbandDOSParams(pp);
+    Read_NonEqPathParams(pp);
+    Read_IntegrationParams(pp);
+    Read_AdaptiveIntegrationParams(pp);
+    Read_WritingRelatedFlags(pp);
+    Read_AtomLocationAndChargeDistributionFilename(pp); 
+    Read_RecursiveOptimizationParams(pp);
+}
+
+template<typename T>
+void
+c_NEGF_Common<T>:: Read_NanostructureProperties ()
+{
+    amrex::ParmParse pp_ns_default("NS_default");
+    amrex::ParmParse pp_ns(name);
+    amrex::ParmParse* pp=&pp_ns_default;
+
+    amrex::Print() << "##### Reading ParmParse NS_Default\n";
+    for(int i=0; i<2; ++i) {
+        if(i==1) {
+            pp = &pp_ns;
+            amrex::Print() << "##### Reading ParmParse: "<< name << "\n";
+        }
+        Read_CommonData(*pp);
     }
-    amrex::Print() << "#####* contact_mu_specified: " <<  flag_contact_mu_specified <<"\n";
+    Assert_Reads();
+
+    Read_MaterialSpecificNanostructureProperties();
+}
+
+
+template<typename T>
+void
+c_NEGF_Common<T>:: Set_MaterialParameters() 
+{
+    Set_MaterialSpecificParameters();
+
+    num_atoms                = Compute_NumAtoms();
+    num_atoms_per_unitcell   = Compute_AtomsPerUnitcell();
+    num_field_sites          = Compute_NumFieldSites();
+    num_atoms_per_field_site = Compute_NumAtomsPerFieldSite();
+    primary_transport_dir    = Set_PrimaryTransportDir();
+    average_field_flag       = Set_AverageFieldFlag();
+    offDiag_repeatBlkSize    = get_offDiag_repeatBlkSize();
+
+    if(average_field_flag)
+        num_atoms_to_avg_over = Compute_NumAtomsToAvgOver();
+
+    Set_BlockDegeneracyVector(block_degen_vec);
+
+    Assert_KeyParameters();
+
+    
+    Set_RotationMatrix();
+    Set_BlockDegeneracyGPUVector();
+    Define_GPUVectorOfAvgIndices();
+    Set_Arrays_OfSize_NumFieldSites();
+}
+
+
+template<typename T>
+void
+c_NEGF_Common<T>:: Set_RotationMatrix()  
+{
+    p_rotator = std::make_unique<c_RotationMatrix>(std::move(p_rotInputParams));
+    p_rotInputParams = nullptr;
+}
+
+
+template<typename T>
+void
+c_NEGF_Common<T>:: Set_BlockDegeneracyGPUVector()  
+{
+    #if AMREX_USE_GPU
+    block_degen_gpuvec.resize(block_degen_vec.size());
+
+    amrex::Gpu::copy(amrex::Gpu::hostToDevice,
+                     block_degen_vec.begin(), block_degen_vec.end(),
+                     block_degen_gpuvec.begin());
+    #endif
+}
+
+
+template<typename T>
+void
+c_NEGF_Common<T>:: Assert_KeyParameters() 
+{
+    WARPX_ALWAYS_ASSERT_WITH_MESSAGE(num_field_sites > 0, "Assert: num_field_sites > 0");
+}
+
+
+template<typename T>
+void
+c_NEGF_Common<T>:: Print_ReadData ()
+{
+    Print_KeyParams();
+    Print_MaterialParams();
+    Print_MaterialOrientationParams();
+    Print_FieldAveragingParams();
+    Print_TerminalParams();
+    Print_PotentialProfileParams();
+    Print_EqContourIntgPts();
+    Print_FlatbandDOSParams();
+    Print_NonEqPathParams();
+    Print_IntegrationParams();
+    Print_AdaptiveIntegrationParams();
+    Print_WritingRelatedFlags();
+    Print_AtomLocationAndChargeDistributionFilename();
+    Print_RecursiveOptimizationParams();
+
+    Print_MaterialSpecificReadData();
+}
+
+
+template<typename T>
+void
+c_NEGF_Common<T>:: Print_KeyParams()
+{
+    amrex::Print() << "##### name: "                  << name << "\n";
+    amrex::Print() << "##### NS_Id: "                 << NS_Id << "\n";
+    amrex::Print() << "##### NS_field_sites_offset: " << NS_field_sites_offset << "\n";
+    amrex::Print() << "##### initial_charge: "        << initial_charge << "\n";
+    amrex::Print() << "##### num_proc: "              << num_proc << "\n";
+    amrex::Print() << "##### my_rank: "               << my_rank << "\n";
+    amrex::Print() << "step_filename_prefix_str: "    << step_filename_prefix_str << "\n";
+    amrex::Print() << "current_filename_str: "        << current_filename_str << "\n";
+}
+
+
+template<typename T>
+void
+c_NEGF_Common<T>:: Print_MaterialParams ()
+{
+    amrex::Print() << "\n";
+    amrex::Print() << "##### num_unitcells: "            << num_unitcells << "\n";
+    amrex::Print() << "#####* num_atoms: "               << num_atoms               << "\n";
+    amrex::Print() << "#####* num_atoms_per_unitcell: "  << num_atoms_per_unitcell  << "\n";
+    amrex::Print() << "#####* num_unitcells: "           << num_unitcells           << "\n";
+    amrex::Print() << "#####* num_field_sites: "         << num_field_sites         << "\n";
+    amrex::Print() << "#####* average_field_flag: "      << average_field_flag      << "\n";
+    amrex::Print() << "#####* num_atoms_per_field_site: "<< num_atoms_per_field_site<< "\n";
+    amrex::Print() << "#####* num_atoms_to_avg_over: "   << num_atoms_to_avg_over   << "\n";
+    amrex::Print() << "#####* primary_transport_dir: "   << primary_transport_dir   << "\n";
+}
+
+
+template<typename T>
+void
+c_NEGF_Common<T>:: Print_MaterialOrientationParams()
+{
+    amrex::Print() << "##### offset: ";
+    for (int i=0; i<AMREX_SPACEDIM; ++i) amrex::Print() << offset[i] << "  ";
+    amrex::Print() << "\n";
+
+    if(p_rotator != nullptr) p_rotator->Print_RotationParams();
+}
+
+
+template<typename T>
+void
+c_NEGF_Common<T>:: Print_FieldAveragingParams()
+{
+
+    if(avg_type == s_AVG_Type::ALL) {
+        amrex::Print() << "##### field_averaging_type: ALL\n"; 
+    }
+    else if(avg_type == s_AVG_Type::SPECIFIC) {
+        amrex::Print() << "##### field_averaging_type: SPECIFIC\n";
+        amrex::Print() << "##### atom_indices_for_averaging: \n";
+        for (int i=0; i<vec_avg_indices.size(); ++i) 
+        {
+            amrex::Print() << vec_avg_indices[i] << "  ";
+        }
+    }
+}
+
+
+template<typename T>
+void
+c_NEGF_Common<T>:: Print_TerminalParams()
+{
+    amrex::Print() << "##### gate_string: " << Gate_String << "\n";
+
+    amrex::Print() << "##### contact_Fermi_level, E_f / [eV]: " << E_f << "\n";
+
+    amrex::Print() << "##### contact_mu_specified: " <<  flag_contact_mu_specified <<"\n";
     if(flag_contact_mu_specified) 
     { 
-        amrex::Print() << "#####* Contact_Electrochemical_Potentials, mu / [eV]: \n";
+        amrex::Print() << "##### Contact_Electrochemical_Potentials, mu / [eV]: \n";
         for(int c=0; c<NUM_CONTACTS; ++c) {
-            amrex::Print() << "#####*   contact, mu: " << c << "  " << Contact_Electrochemical_Potential[c] <<"\n";
+            amrex::Print() << "#####   contact, mu: " << c << "  " << Contact_Electrochemical_Potential[c] <<"\n";
         }
     }
     else 
     {
-        amrex::Print() << "#####* Contact_Parser_String: \n";
+        amrex::Print() << "##### Contact_Parser_String: \n";
         for(int c=0; c<NUM_CONTACTS; ++c) {
-            amrex::Print() << "#####*   contact, mu: " << c << "  " << Contact_Parser_String[c] <<"\n";
+            amrex::Print() << "#####   contact, mu: " << c << "  " << Contact_Parser_String[c] <<"\n";
         }
     }
-    amrex::Print() << "#####* contact_Fermi_level, E_f / [eV]: " << E_f << "\n";
+
+    amrex::Print() << "##### Contact_Temperatures, T / [K]: \n";
+    for(int c=0; c<NUM_CONTACTS; ++c) {
+        amrex::Print() << "#####   contact, T: " << c << "  " << Contact_Temperature[c] <<"\n";
+    }
+}
+
+
+template<typename T>
+void
+c_NEGF_Common<T>:: Print_PotentialProfileParams()
+{
     amrex::Print() << "##### flag_impose_potential: " << flag_impose_potential << "\n";
     amrex::Print() << "##### potential_profile_type: " << potential_profile_type_str << "\n";
+}
 
 
-    amrex::Print() << "##### flag_compute_flatband_dos: " << flag_compute_flatband_dos << "\n";
-    amrex::Print() << "##### flatband_dos_integration_pts: " << flatband_dos_integration_pts << "\n";
-    amrex::Print() << "##### flatband_dos_integration_limits: ";
-    amrex::Print() << flatband_dos_integration_limits[0] << "  " << flatband_dos_integration_limits[1] << "\n";
+template<typename T>
+void
+c_NEGF_Common<T>:: Print_EqContourIntgPts()
+{
     amrex::Print() << "##### Equilibrium contour integration points, eq_integration_pts: ";
     for(int c=0; c < 3; ++c) {
         amrex::Print() << eq_integration_pts[c] << "  ";
     }
     amrex::Print() << "\n";
+}
+
+
+template<typename T>
+void
+c_NEGF_Common<T>:: Print_FlatbandDOSParams()
+{
+    amrex::Print() << "##### flag_compute_flatband_dos: " << flag_compute_flatband_dos << "\n";
+    amrex::Print() << "##### flatband_dos_integration_pts: " << flatband_dos_integration_pts << "\n";
+    amrex::Print() << "##### flatband_dos_integration_limits: ";
+    amrex::Print() << flatband_dos_integration_limits[0] << "  " << flatband_dos_integration_limits[1] << "\n";
+}
+
+
+template<typename T>
+void
+c_NEGF_Common<T>:: Print_NonEqPathParams()
+{
     amrex::Print() << "##### num_noneq_paths: " << num_noneq_paths << "\n";
     if(num_noneq_paths > 1) 
     {
@@ -469,7 +928,36 @@ c_NEGF_Common<T>:: ReadNanostructureProperties ()
     }
     amrex::Print() << "\n";
     amrex::Print() << "#####* Total nonequilibrium contour integration points: " << total_noneq_integration_pts << "\n";
+}
 
+
+template<typename T>
+void
+c_NEGF_Common<T>:: Print_WritingRelatedFlags()
+{
+    amrex::Print() << "##### write_at_iter: " << write_at_iter << "\n";
+    amrex::Print() << "##### flag_write_charge_components: " << flag_write_charge_components << "\n";
+}
+
+
+template<typename T>
+void
+c_NEGF_Common<T>:: Print_IntegrationParams()
+{
+    amrex::Print() << "##### valence_band_lower_limit, E_valence_min (eV): "<< E_valence_min << "\n";
+    amrex::Print() << "##### pole_energy_upper_limit, E_pole_max (eV): "<< E_pole_max << "\n";
+    amrex::Print() << "##### tiny distance between real axis and nonequilibrium integration line, E_zPlus_imag: "
+                   << E_zPlus << "\n";
+    amrex::Print() << "##### Fermi tail factors (lower, upper): " << Fermi_tail_factor_lower << " "
+                                                                  << Fermi_tail_factor_upper<< "\n";
+
+}
+
+
+template<typename T>
+void
+c_NEGF_Common<T>:: Print_AdaptiveIntegrationParams()
+{
     amrex::Print() << "##### flag_adaptive_integration_limits: " << flag_adaptive_integration_limits << "\n";
     if(flag_adaptive_integration_limits) 
     {
@@ -489,23 +977,54 @@ c_NEGF_Common<T>:: ReadNanostructureProperties ()
             amrex::Print() << "\n";
         }
     }
+}
+
+
+template<typename T>
+void
+c_NEGF_Common<T>:: Print_IntegrandWritingParams()
+{
     amrex::Print() << "##### flag_write_integrand: " << flag_write_integrand_main << "\n";
     if(flag_write_integrand_main) {
         amrex::Print() << "##### write_integrand_interval: " << write_integrand_interval << "\n";
     }
+}
+
+
+template<typename T>
+void
+c_NEGF_Common<T>:: Print_AtomLocationAndChargeDistributionFilename() 
+{
+    if(!read_atom_filename.empty()) 
+        amrex::Print() << "##### read_atom_filename: " << read_atom_filename << "\n";
+
+    amrex::Print() << "##### flag_initialize_charge_distribution: " << flag_initialize_charge_distribution  << "\n";
+    if(flag_initialize_charge_distribution) 
+        amrex::Print() << "##### charge_distribution_filename: "    << charge_distribution_filename << "\n";
+}
+
+
+template<typename T>
+void
+c_NEGF_Common<T>:: Print_RecursiveOptimizationParams()
+{
     amrex::Print() << "##### num_recursive_parts: " << num_recursive_parts << "\n";
+}
 
 
-    Set_Arrays_OfSize_NumFieldSites();
-
-    //h_n_curr_in_glo_data.resize({0},{num_field_sites}, The_Pinned_Arena());
-    //SetVal_Table1D(h_n_curr_in_glo_data,0.);
-
-    //#if AMREX_USE_GPU
-    //d_n_curr_in_glo_data.resize({0},{num_field_sites}, The_Arena());
-    //d_n_curr_in_glo_data.copy(h_n_curr_in_glo_data);
-    //#endif 
-
+template<typename T>
+void
+c_NEGF_Common<T>:: Define_GPUVectorOfAvgIndices() 
+{
+    #if AMREX_USE_GPU
+    if(avg_type == s_AVG_Type::SPECIFIC) {
+       gpuvec_avg_indices.resize(vec_avg_indices.size());
+       amrex::Gpu::copy(amrex::Gpu::hostToDevice, 
+                        vec_avg_indices.begin(), 
+                        vec_avg_indices.end(), 
+                        gpuvec_avg_indices.begin());
+    }
+    #endif
 }
 
 
@@ -522,30 +1041,19 @@ c_NEGF_Common<T>::Set_Arrays_OfSize_NumFieldSites()
 
 template<typename T>
 void 
-c_NEGF_Common<T>::Set_Material_Specific_Parameters() 
-{
-    /*set the following in the specialization*/
-    /*num_atoms: number of total atoms*/
-    /*num_atoms_per_unitcell: number of atoms per unitcell*/
-    /*num_unitcells*/
-    /*num_field_sites*/
-    /*average_field_flag*/
-    /*num_atoms_per_field_site*/
-    /*num_atoms_to_avg_over*/
-    /*primary_transport_dir*/
-    /*block_degen_vec: this is vector of degeneracy factors of size equal to that of a block element*/ 
-    /*block_degen_gpuvec: device vector copy of block_degen_vec*/
-    /*set the size ofprimary_transport_dir*/
-}
-
-
-template<typename T>
-void 
 c_NEGF_Common<T>:: Generate_AtomLocations (amrex::Vector<s_Position3D>& pos)
 {
     /*First code atom locations for particular material in the specialization*/
     /*Then call this function and apply global offset specified by the user*/
     /*Also, specify PrimaryTransportDirection PTD array*/
+    /*amrex::Print() << "PTD is specified in nm! \n";*/
+
+
+    for(int l=0; l< num_field_sites; ++l) 
+    {
+       h_PTD_glo_vec[l] = pos[l*num_atoms_per_field_site].dir[primary_transport_dir] / 1.e-9;
+       //amrex::Print() << l << "  " << h_PTD_glo_vec(l) << "\n";
+    }
 
     for(int i = 0; i<num_atoms; ++i)
     {
@@ -553,14 +1061,10 @@ c_NEGF_Common<T>:: Generate_AtomLocations (amrex::Vector<s_Position3D>& pos)
        {
            pos[i].dir[j] += offset[j];
        }  
+
+       if (p_rotator != nullptr) p_rotator->RotateContainer(pos[i].dir, offset);
     }
 
-    /*amrex::Print() << "PTD is specified in nm! \n";*/
-    for(int l=0; l< num_field_sites; ++l) 
-    {
-       h_PTD_glo_vec[l] = pos[l*num_atoms_per_field_site].dir[primary_transport_dir] / 1.e-9;
-       //amrex::Print() << l << "  " << h_PTD_glo_vec(l) << "\n";
-    }
 }
 
 
@@ -627,7 +1131,7 @@ c_NEGF_Common<T>:: Define_PotentialProfile()
 
 template<typename T>
 void 
-c_NEGF_Common<T>::DefineMatrixPartition() 
+c_NEGF_Common<T>::Define_MatrixPartition() 
 {
 
     Hsize_glo = get_Hsize(); 
@@ -708,46 +1212,155 @@ c_NEGF_Common<T>::DefineMatrixPartition()
 
 template<typename T>
 void 
-c_NEGF_Common<T>::Define_MPI_BlkType () 
+c_NEGF_Common<T>::Initialize_NEGF_Params (const std::string& name_str,
+                                          const int&         id_counter,
+                                          const int&         field_sites_offset,
+                                          const amrex::Real& initial_deposit_value,
+                                          const std::string& negf_foldername_str)
 {
-    /*define MPI_BlkType in overriden class*/
+    Set_KeyParams(name_str,
+                  id_counter,
+                  field_sites_offset,
+                  initial_deposit_value);
+
+    Define_FoldersAndFiles(negf_foldername_str);
+
+    Read_NanostructureProperties();
+
+    Set_MaterialParameters();
+
+    Print_ReadData();
+
+    Define_MatrixPartition();
 }
 
 
 template<typename T>
 void 
-c_NEGF_Common<T>::Define_ContactInfo () 
+c_NEGF_Common<T>::Initialize_NEGF (const std::string common_foldername_str, 
+                                   const bool _use_electrostatic)
 {
-    /*define the following in overriden functions:
-     *global_contact_index
-     *contact_transmission_index
-     *h_tau
-     */
+    Allocate_Arrays();
+
+    Construct_Hamiltonian();
+
+    Define_ContactInfo();
+
+    amrex::Print() << "#####* Initially defining energy limits:\n";
+    Define_EnergyLimits();
+
+    Define_IntegrationPaths();
+
+    if(flag_compute_flatband_dos)
+    {
+        bool flag_write_LDOS = false;
+
+        std::string dos_dir = step_foldername_str + "/DOS_flatband";
+
+        if (ParallelDescriptor::IOProcessor()) CreateDirectory(dos_dir);
+
+        Compute_DensityOfStates(dos_dir, flag_write_LDOS);
+    }
+
+    Compute_Rho0();
+
+    if(!_use_electrostatic) { Define_PotentialProfile(); }
 }
+
+
+template<typename T>
+void
+c_NEGF_Common<T>:: Solve_NEGF (RealTable1D& n_curr_out_data, const int iter)
+{
+    Add_PotentialToHamiltonian();
+
+    if(flag_adaptive_integration_limits and iter%integrand_correction_interval == 0) {
+       flag_correct_integration_limits = true;
+       amrex::Print() << "\n setting flag_correct_integration_limits: " 
+                      << flag_correct_integration_limits << "\n";
+    }
+    else {
+        flag_correct_integration_limits = false;
+    }
+
+    if(flag_EC_potential_updated)
+    {
+       Update_ContactElectrochemicalPotential();
+       Define_EnergyLimits();
+    }
+    if(flag_EC_potential_updated or flag_correct_integration_limits)
+    {
+        Update_IntegrationPaths();
+        flag_EC_potential_updated = false;
+    }
+
+    Compute_InducedCharge(n_curr_out_data);
+}
+
+
 
 template<typename T>
 void 
-c_NEGF_Common<T>::AllocateArrays () 
+c_NEGF_Common<T>::Write_Data (const std::string filename_prefix,
+                              const RealTable1D& n_curr_out_data,
+                              const RealTable1D& Norm_data)
+{
+    Write_PotentialAtSites(filename_prefix);
+    if (ParallelDescriptor::IOProcessor())
+    {
+        Write_InducedCharge(filename_prefix, n_curr_out_data);
+        Write_ChargeNorm(filename_prefix, Norm_data);
+    }
+}
+
+
+//template<typename T>
+//void 
+//c_NEGF_Common<T>::Define_ContactInfo () 
+//{
+//    /*define the following in overriden functions:
+//     *global_contact_index
+//     *contact_transmission_index
+//     *h_tau
+//     */
+//}
+
+
+template<typename T>
+void 
+c_NEGF_Common<T>::Allocate_ArraysForHamiltonian () 
 {
     ComplexType zero(0.,0.);   
+
     h_minusHa_loc_data.resize({0},{blkCol_size_loc}, The_Pinned_Arena());
     SetVal_Table1D(h_minusHa_loc_data,zero);
 
-    offDiag_repeatBlkSize = get_offDiag_repeatBlkSize();
     h_Hb_loc_data.resize({0},{offDiag_repeatBlkSize}, The_Pinned_Arena());
     SetVal_Table1D(h_Hb_loc_data,zero);
 
     h_Hc_loc_data.resize({0},{offDiag_repeatBlkSize}, The_Pinned_Arena());
     SetVal_Table1D(h_Hc_loc_data,zero);
+}
+
+
+template<typename T>
+void 
+c_NEGF_Common<T>::Allocate_ArraysForLeadSpecificQuantities () 
+{
+    ComplexType zero(0.,0.);   
 
     h_tau_glo_data.resize({0},{NUM_CONTACTS},The_Pinned_Arena());
     SetVal_Table1D(h_tau_glo_data,zero);
+}
 
-    h_Current_loc_data.resize({0},{NUM_CONTACTS},The_Pinned_Arena());
-    SetVal_Table1D(h_Current_loc_data,0.);
+
+template<typename T>
+void 
+c_NEGF_Common<T>::Allocate_ArraysForGreensAndSpectralFunction() 
+{
+    ComplexType zero(0.,0.);   
 
     #if AMREX_USE_GPU
-
         #ifdef COMPUTE_GREENS_FUNCTION_OFFDIAG_ELEMS
         d_GR_loc_data.resize({0,0}, {Hsize_glo, blkCol_size_loc}, The_Arena());
         #else
@@ -758,40 +1371,7 @@ c_NEGF_Common<T>::AllocateArrays ()
         #else
         d_A_loc_data.resize({0}, {blkCol_size_loc}, The_Arena());
         #endif
-
-        d_Rho0_loc_data.resize({0},{blkCol_size_loc}, The_Arena());
-        d_RhoEq_loc_data.resize({0},{blkCol_size_loc}, The_Arena());
-        d_RhoNonEq_loc_data.resize({0},{blkCol_size_loc}, The_Arena());
-        d_GR_atPoles_loc_data.resize({0},{blkCol_size_loc}, The_Arena());
-
-        auto const& GR_loc          = d_GR_loc_data.table();
-        auto const& A_loc           = d_A_loc_data.table();
-        auto const& Rho0_loc        = d_Rho0_loc_data.table();
-        auto const& RhoEq_loc       = d_RhoEq_loc_data.table();
-        auto const& RhoNonEq_loc    = d_RhoNonEq_loc_data.table();
-        auto const& GR_atPoles_loc  = d_GR_atPoles_loc_data.table();
-        amrex::ParallelFor(blkCol_size_loc, [=] AMREX_GPU_DEVICE (int n) noexcept
-        {
-            #ifdef COMPUTE_GREENS_FUNCTION_OFFDIAG_ELEMS
-            for (int m=0; m<Hsize; ++m) {
-                GR_loc(m,n) = 0.;
-            }
-            #else
-            GR_loc(n) = 0.;
-            #endif
-            #ifdef COMPUTE_SPECTRAL_FUNCTION_OFFDIAG_ELEMS
-            for (int m=0; m<Hsize; ++m) {
-                A_loc(m,n) = 0.;
-            }
-            #else
-            A_loc(n) = 0.;
-            #endif
-
-            Rho0_loc(n) = 0.;
-            RhoEq_loc(n) = 0.;
-            RhoNonEq_loc(n) = 0.;
-            GR_atPoles_loc(n) = 0.;
-        });
+        Initialize_GPUArraysForGreensAndSpectralFunctionToZero();
     #else
         #ifdef COMPUTE_GREENS_FUNCTION_OFFDIAG_ELEMS
         h_GR_loc_data.resize({0,0}, {Hsize_glo, blkCol_size_loc}, The_Arena());
@@ -807,36 +1387,120 @@ c_NEGF_Common<T>::AllocateArrays ()
         h_A_loc_data.resize({0}, {blkCol_size_loc}, The_Pinned_Arena());
         SetVal_Table1D(h_A_loc_data, zero);
         #endif
-
-        h_Rho0_loc_data.resize({0},{blkCol_size_loc}, The_Pinned_Arena());
-        SetVal_Table1D(h_Rho0_loc_data,zero);
-
-        h_RhoEq_loc_data.resize({0},{blkCol_size_loc}, The_Pinned_Arena());
-        SetVal_Table1D(h_RhoEq_loc_data,zero);
-
-        h_RhoNonEq_loc_data.resize({0},{blkCol_size_loc}, The_Pinned_Arena());
-        SetVal_Table1D(h_RhoNonEq_loc_data,zero);
-
-        h_GR_atPoles_loc_data.resize({0},{blkCol_size_loc}, The_Pinned_Arena());
-        SetVal_Table1D(h_GR_atPoles_loc_data,zero);
     #endif
-
-    h_E_RealPath_data.resize({0},{NUM_ENERGY_PTS_REAL},The_Pinned_Arena());
-
-    h_U_loc_data.resize({0},{blkCol_size_loc}, The_Pinned_Arena());
-    SetVal_Table1D(h_U_loc_data,0.);
-
 }
 
 
 template<typename T>
 void 
-c_NEGF_Common<T>:: ConstructHamiltonian () {}
+c_NEGF_Common<T>:: Initialize_GPUArraysForChargeComputationToZero() 
+{
+    auto const& Rho0_loc        = d_Rho0_loc_data.table();
+    auto const& RhoEq_loc       = d_RhoEq_loc_data.table();
+    auto const& RhoNonEq_loc    = d_RhoNonEq_loc_data.table();
+    auto const& GR_atPoles_loc  = d_GR_atPoles_loc_data.table();
+    amrex::ParallelFor(blkCol_size_loc, [=] AMREX_GPU_DEVICE (int n) noexcept
+    {
+        Rho0_loc(n) = 0.;
+        RhoEq_loc(n) = 0.;
+        RhoNonEq_loc(n) = 0.;
+        GR_atPoles_loc(n) = 0.;
+    });
+}
 
 
 template<typename T>
 void 
-c_NEGF_Common<T>:: AddPotentialToHamiltonian () 
+c_NEGF_Common<T>:: Initialize_GPUArraysForGreensAndSpectralFunctionToZero() 
+{
+    #if AMREX_USE_GPU
+    auto const& GR_loc          = d_GR_loc_data.table();
+    auto const& A_loc           = d_A_loc_data.table();
+    amrex::ParallelFor(blkCol_size_loc, [=] AMREX_GPU_DEVICE (int n) noexcept
+    {
+        #ifdef COMPUTE_GREENS_FUNCTION_OFFDIAG_ELEMS
+        for (int m=0; m<Hsize; ++m) {
+            GR_loc(m,n) = 0.;
+        }
+        #else
+        GR_loc(n) = 0.;
+        #endif
+        #ifdef COMPUTE_SPECTRAL_FUNCTION_OFFDIAG_ELEMS
+        for (int m=0; m<Hsize; ++m) {
+            A_loc(m,n) = 0.;
+        }
+        #else
+        A_loc(n) = 0.;
+        #endif
+    });
+    #endif
+}
+
+
+template<typename T>
+void 
+c_NEGF_Common<T>::Allocate_ArraysForChargeAndCurrent() 
+{
+    ComplexType zero(0.,0.);   
+    #if AMREX_USE_GPU
+    d_Rho0_loc_data.resize({0},{blkCol_size_loc}, The_Arena());
+    d_RhoEq_loc_data.resize({0},{blkCol_size_loc}, The_Arena());
+    d_RhoNonEq_loc_data.resize({0},{blkCol_size_loc}, The_Arena());
+    d_GR_atPoles_loc_data.resize({0},{blkCol_size_loc}, The_Arena());
+
+    Initialize_GPUArraysForChargeComputationToZero();
+    #else
+    h_Rho0_loc_data.resize({0},{blkCol_size_loc}, The_Pinned_Arena());
+    SetVal_Table1D(h_Rho0_loc_data,zero);
+
+    h_RhoEq_loc_data.resize({0},{blkCol_size_loc}, The_Pinned_Arena());
+    SetVal_Table1D(h_RhoEq_loc_data,zero);
+
+    h_RhoNonEq_loc_data.resize({0},{blkCol_size_loc}, The_Pinned_Arena());
+    SetVal_Table1D(h_RhoNonEq_loc_data,zero);
+
+    h_GR_atPoles_loc_data.resize({0},{blkCol_size_loc}, The_Pinned_Arena());
+    SetVal_Table1D(h_GR_atPoles_loc_data,zero);
+    #endif
+
+    h_Current_loc_data.resize({0},{NUM_CONTACTS},The_Pinned_Arena());
+    SetVal_Table1D(h_Current_loc_data,0.);
+}
+
+
+template<typename T>
+void 
+c_NEGF_Common<T>::Allocate_ArrayForPotential() 
+{
+    h_U_loc_data.resize({0},{blkCol_size_loc}, The_Pinned_Arena());
+    SetVal_Table1D(h_U_loc_data,0.);
+}
+
+
+template<typename T>
+void 
+c_NEGF_Common<T>::Allocate_ArrayForEnergy() 
+{
+    h_E_RealPath_data.resize({0},{NUM_ENERGY_PTS_REAL},The_Pinned_Arena());
+}
+
+
+template<typename T>
+void 
+c_NEGF_Common<T>::Allocate_Arrays () 
+{
+    Allocate_ArraysForHamiltonian();
+    Allocate_ArraysForLeadSpecificQuantities();
+    Allocate_ArraysForGreensAndSpectralFunction();
+    Allocate_ArraysForChargeAndCurrent();
+    Allocate_ArrayForPotential();
+    Allocate_ArrayForEnergy();
+}
+
+
+template<typename T>
+void 
+c_NEGF_Common<T>:: Add_PotentialToHamiltonian () 
 {
     auto const& h_minusHa = h_minusHa_loc_data.table();
     auto const& h_U_loc   = h_U_loc_data.table();
@@ -845,19 +1509,6 @@ c_NEGF_Common<T>:: AddPotentialToHamiltonian ()
     {
         h_minusHa(c) = -1*h_U_loc(c); /*Note: Ha = H0a (=0) + U, so -Ha = -U */
     }
-}
-
-
-template<typename T>
-void 
-c_NEGF_Common<T>:: Update_ContactPotential () 
-{
-    //amrex::Print() <<  "Updated contact potential: \n";
-    //for(int c=0; c < NUM_CONTACTS; ++c)
-    //{
-    //    U_contact[c] = Potential[global_contact_index[c]];
-    //    amrex::Print() << "  contact, U: " <<  c << " " << U_contact[c] << "\n";
-    //}
 }
 
 
@@ -1008,7 +1659,7 @@ c_NEGF_Common<T>:: Define_IntegrationPaths ()
 
 template<typename T>
 int
-c_NEGF_Common<T>:: Total_Integration_Pts ()
+c_NEGF_Common<T>:: get_Total_NonEq_Integration_Pts () const
 {
     return std::accumulate(noneq_integration_pts.begin(), noneq_integration_pts.end(), 0);
 }
@@ -1216,7 +1867,7 @@ c_NEGF_Common<T>:: Generate_NonEq_Paths ()
         ContourPath_RhoNonEq[p].Define_GaussLegendrePoints(noneq_path_min[p], noneq_path_max[p], 
                                                            noneq_integration_pts[p], 0);
     }
-    amrex::Print() << " total noneq integration pts: " << Total_Integration_Pts() << "\n";
+    amrex::Print() << " total noneq integration pts: " << get_Total_NonEq_Integration_Pts() << "\n";
 }
 
 
@@ -1910,8 +2561,8 @@ c_NEGF_Common<T>:: Compute_DensityOfStates (std::string dos_foldername, bool fla
     {
         RealTable1D h_Conductance_loc_data({0}, {E_total_pts}, The_Pinned_Arena());
         total_conductance = Compute_Conductance(E_total_vec, 
-                                                            h_Transmission_loc_data,
-                                                            h_Conductance_loc_data);
+                                                h_Transmission_loc_data,
+                                                h_Conductance_loc_data);
 
         amrex::Print() << "Total conductance: " << total_conductance << "\n";
 
@@ -2145,27 +2796,27 @@ c_NEGF_Common<T>:: Fetch_InputLocalCharge_FromNanostructure (RealTable1D& contai
 }
 
 
-template<typename T>
-void 
-c_NEGF_Common<T>:: Gatherv_NEGFComputed_LocalCharge (RealTable1D& n_curr_out_glo_data)
-{
-    auto const& h_RhoInduced_loc = h_RhoInduced_loc_data.table();
-    auto const& n_curr_out_glo = n_curr_out_glo_data.table();
-
-    
-    MPI_Gatherv(&h_RhoInduced_loc(0),
-                 blkCol_size_loc,
-                 MPI_DOUBLE,
-                &n_curr_out_glo(0),
-                 MPI_recv_count.data(),
-                 MPI_recv_disp.data(),
-                 MPI_DOUBLE,
-        		 ParallelDescriptor::IOProcessorNumber(),
-                 ParallelDescriptor::Communicator());
-
-    //MPI_Barrier(ParallelDescriptor::Communicator());
-
-}
+//template<typename T>
+//void 
+//c_NEGF_Common<T>:: Gatherv_NEGFComputed_LocalCharge (RealTable1D& n_curr_out_glo_data)
+//{
+//    auto const& h_RhoInduced_loc = h_RhoInduced_loc_data.table();
+//    auto const& n_curr_out_glo = n_curr_out_glo_data.table();
+//
+//    
+//    MPI_Gatherv(&h_RhoInduced_loc(0),
+//                 blkCol_size_loc,
+//                 MPI_DOUBLE,
+//                &n_curr_out_glo(0),
+//                 MPI_recv_count.data(),
+//                 MPI_recv_disp.data(),
+//                 MPI_DOUBLE,
+//        		 ParallelDescriptor::IOProcessorNumber(),
+//                 ParallelDescriptor::Communicator());
+//
+//    //MPI_Barrier(ParallelDescriptor::Communicator());
+//
+//}
 
 
 template<typename T>
@@ -3357,10 +4008,10 @@ c_NEGF_Common<T>:: Compute_Rho0 ()
 
 }
 
-template<typename T>
-AMREX_GPU_HOST_DEVICE
-void 
-c_NEGF_Common<T>:: Compute_SurfaceGreensFunction (MatrixBlock<T>& gr, const ComplexType EmU) {}
+//template<typename T>
+//AMREX_GPU_HOST_DEVICE
+//void 
+//c_NEGF_Common<T>:: Compute_SurfaceGreensFunction (MatrixBlock<T>& gr, const ComplexType EmU) {}
 
 
 template<typename T>

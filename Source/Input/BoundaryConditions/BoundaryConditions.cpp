@@ -26,11 +26,11 @@ c_BoundaryConditions::c_BoundaryConditions ()
 #ifdef AMREX_USE_EB
         auto& rCode = c_Code::GetInstance();
         auto& rGprop = rCode.get_GeometryProperties();
-
-        if(some_robin_boundaries == true and rGprop.embedded_boundary_flag==1)                      
-        {
-        WARPX_ALWAYS_ASSERT_WITH_MESSAGE(some_robin_boundaries != false and  rGprop.embedded_boundary_flag !=0,
-                                         "Use of robin boundaries with embedded boundaries is not supported/well tested at the moment. Consider changing those boundaries to Neumann.");
+        
+        if(some_robin_boundaries and rGprop.is_eb_enabled()) {
+            amrex::Abort("Use of robin boundaries with embedded boundaries\
+                         is not supported/well tested at the moment.\
+                         Consider changing those boundaries to Neumann.");
         }
 #endif
 
@@ -189,8 +189,7 @@ c_BoundaryConditions::ReadBoundaryConditionsType()
     /* Make both boundaries periodic based on is_periodic */
     auto& rCode = c_Code::GetInstance();
     auto& rGprop = rCode.get_GeometryProperties();
-    auto& is_periodic = rGprop.is_periodic;
-
+    const auto& is_periodic = rGprop.get_PeriodicityArray();
     
     for (std::size_t idim = 0; idim < AMREX_SPACEDIM; ++idim) 
     {

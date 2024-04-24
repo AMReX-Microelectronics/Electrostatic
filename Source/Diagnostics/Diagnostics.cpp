@@ -95,10 +95,9 @@ c_Diagnostics::InitData()
     auto& rGprop = rCode.get_GeometryProperties();
 
     #if AMREX_USE_EB
-    if(specify_using_eb) 
-    {
-       SetGeometry(&rGprop.geom, &rGprop.ba, &rGprop.dm,specify_using_eb); 
-       CreateFactory();  
+    if(specify_using_eb) {
+        SetGeometry(&rGprop.geom, &rGprop.ba, &rGprop.dm,specify_using_eb); 
+        CreateFactory();  
     }
     #endif 
 

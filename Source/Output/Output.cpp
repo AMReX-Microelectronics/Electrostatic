@@ -128,16 +128,16 @@ c_Output::InitData()
     auto& ba = rGprop.ba;
     auto& dm = rGprop.dm;
 
-    Init_Plot_Field_Essentials(geom, rGprop.embedded_boundary_flag);
+    Init_Plot_Field_Essentials(geom, rGprop.is_eb_enabled());
 
     int Nghost0=0;
 
 #ifdef AMREX_USE_EB
-    if(rGprop.embedded_boundary_flag) {
+    if(rGprop.is_eb_enabled()) {
         m_p_mf_all = std::make_unique<amrex::MultiFab>(ba, dm, m_num_params_plot_single_level, Nghost0, MFInfo(), *rGprop.pEB->p_factory_union); 
     }
 #endif
-    if(!rGprop.embedded_boundary_flag) {
+    if(!rGprop.is_eb_enabled()) {
          m_p_mf_all = std::make_unique<amrex::MultiFab>(ba, dm, m_num_params_plot_single_level, Nghost0);  
     }
 
@@ -160,11 +160,11 @@ c_Output::InitData()
             }
         }
 #ifdef AMREX_USE_EB
-        if(rGprop.embedded_boundary_flag) {
+        if(rGprop.is_eb_enabled()) {
             m_p_mf_all_init = std::make_unique<amrex::MultiFab>(ba, dm, counter, Nghost0, MFInfo(), *rGprop.pEB->p_factory_union);
         }
 #endif
-        if(!rGprop.embedded_boundary_flag) {
+        if(!rGprop.is_eb_enabled()) {
             m_p_mf_all_init = std::make_unique<amrex::MultiFab>(ba, dm, counter, Nghost0);
         }
 
