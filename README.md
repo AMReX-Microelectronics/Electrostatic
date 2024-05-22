@@ -40,6 +40,12 @@ The output data includes 3D plot files for each voltage step such as `plt0000/`,
 Refer to the following link for several visualization tools that can be used for AMReX plotfiles.
 [Visualization](https://amrex-codes.github.io/amrex/docs_html/Visualization_Chapter.html)
 
+This is a sample output visualized at V=0.1 V.
+![Screenshot from 2024-05-22 11-41-44](https://github.com/AMReX-Microelectronics/ELEQTRONeX/assets/42623728/fd43bd3c-79a9-4bfb-8a4c-2316877fb2a7)
+
+
+
+
 The output specific to NEGF is written out to `all_around_metal_test/negf` folder for each material structure. 
 
 For this test, the data is written out to `cnt` subfolder, for each converged step as:
