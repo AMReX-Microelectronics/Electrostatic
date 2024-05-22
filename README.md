@@ -4,8 +4,11 @@ The framework comprises three major components: the electrostatic module, the qu
 
 ![Summary_ELEQTRONeX](https://github.com/AMReX-Microelectronics/eXstatic/assets/42623728/bb489e73-8530-4a48-9992-0caf2b206588)
 
+# Getting Help
+Our community is here to help. Please report installation problems or general questions about the code in the github [Issues](https://github.com/AMReX-Microelectronics/ELEQTRONeX/issues) tab above.
+
 # Installation
-Here are instructions for MPI/GPU installation with `USE_MPI=TRUE`, `USE_GPU=TRUE` enabled.  
+Below are instructions for MPI/GPU installation with `USE_MPI=TRUE`, `USE_GPU=TRUE` enabled.  
 
 ## Download AMReX and ELEQTRONeX Repositories
 Make sure that AMReX and ELEQTRONeX are cloned at the same root location. \
