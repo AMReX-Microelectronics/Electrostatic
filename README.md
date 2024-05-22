@@ -43,7 +43,7 @@ Refer to the following link for several visualization tools that can be used for
 This is a sample output visualized at V=0.1 V.
 ![Screenshot from 2024-05-22 11-41-44](https://github.com/AMReX-Microelectronics/ELEQTRONeX/assets/42623728/fd43bd3c-79a9-4bfb-8a4c-2316877fb2a7)
 
-
+<img src="https://github.com/AMReX-Microelectronics/ELEQTRONeX/assets/42623728/fd43bd3c-79a9-4bfb-8a4c-2316877fb2a7" width="300" height="200">
 
 
 The output specific to NEGF is written out to `all_around_metal_test/negf` folder for each material structure. 
