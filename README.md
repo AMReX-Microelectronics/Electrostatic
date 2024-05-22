@@ -35,7 +35,7 @@ Run the test case as,
 
 ```>> ./<compile_binary> ../input/negf/all_around_metal```
 
-A folder named, `Exec/all_around_metal_test`, will be generated in which output will be written out. Location of this folder can be changed using `plot.folder_name` parameter in the inputs file.
+A folder named, `Exec/all_around_metal_test`, will be generated in which output will be written out. Location of this folder can be changed using `plot.folder_name` parameter in the input file.
 
 # Visualization and Data Analysis
 
