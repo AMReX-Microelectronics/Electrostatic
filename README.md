@@ -31,7 +31,7 @@ You can run the following to simulate a problem involving band-alignment of a ca
 
 ```>> ./<compile_binary> ../input/negf/all_around_metal```
 
-A folder named, Exec/all_around_metal_test, will be generated in which output will be written out. Location of this folder can be changed using `plot.folder_name` parameter in the inputs file.
+A folder named, `Exec/all_around_metal_test`, will be generated in which output will be written out. Location of this folder can be changed using `plot.folder_name` parameter in the inputs file.
 
 # Visualization and Data Analysis
 
@@ -40,15 +40,15 @@ The output data includes 3D plot files for each voltage step such as `plt0000/`,
 Refer to the following link for several visualization tools that can be used for AMReX plotfiles.
 [Visualization](https://amrex-codes.github.io/amrex/docs_html/Visualization_Chapter.html)
 
-This is a sample output visualized at V=0.1 V. 
+This is a sample output visualized at `V = 0.1 V`. 
 
 <img src="https://github.com/AMReX-Microelectronics/ELEQTRONeX/assets/42623728/fd43bd3c-79a9-4bfb-8a4c-2316877fb2a7" width="500" height="500">
 
 
 The output specific to NEGF is written out to `all_around_metal_test/negf` folder for each material structure. 
 
-For this test, the data is written out to `cnt` subfolder, for each converged step as:
-`step<step_number>_<data_field>.dat` where data_field can be Qout: induced charge, norm: norm after convergence, U: electrostatic potential on the surface of the tube.
+For this test, the data is written out to `cnt` subfolder, as specified in the input file, for each converged step as,
+`step<step_number>_<data_field>.dat` where data_field can be `Qout`: induced charge, `norm`: norm after convergence, `U`: electrostatic potential on the surface of the tube.
 In addition, data for each iteration in a given step is outputted to `step<step_number>_iter/` folder.
 
-This data can be visualized using a simple python script, `../scripts/all_around_metal/bandstructure.ipynb`.
+This data can be visualized using a simple python script, `scripts/all_around_metal/bandstructure.ipynb`.
