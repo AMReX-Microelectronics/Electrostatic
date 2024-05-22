@@ -41,8 +41,6 @@ Refer to the following link for several visualization tools that can be used for
 [Visualization](https://amrex-codes.github.io/amrex/docs_html/Visualization_Chapter.html)
 
 This is a sample output visualized at V=0.1 V.
-![Screenshot from 2024-05-22 11-41-44](https://github.com/AMReX-Microelectronics/ELEQTRONeX/assets/42623728/fd43bd3c-79a9-4bfb-8a4c-2316877fb2a7)
-
 <img src="https://github.com/AMReX-Microelectronics/ELEQTRONeX/assets/42623728/fd43bd3c-79a9-4bfb-8a4c-2316877fb2a7" width="500" height="500">
 
 
