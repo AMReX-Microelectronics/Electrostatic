@@ -299,6 +299,7 @@ cnt.acc = bond_length
 cnt.gamma = 2.5       #coupling strength (eV)
 cnt.num_unitcells = N_unitcells
 cnt.offset = CN_x CN_y CN_z
+cnt.rotation_angles = 0 0 0
 cnt.contact_mu_specified = 0
 cnt.contact_parser_string = Source Drain
 #cnt.contact_mu_specified = 1

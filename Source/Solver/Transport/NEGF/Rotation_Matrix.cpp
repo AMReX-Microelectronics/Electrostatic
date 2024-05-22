@@ -21,11 +21,11 @@ c_RotationMatrix::c_RotationMatrix(std::unique_ptr<RotationInputParams> rotation
     Print_RotationParams();
 
     //test
-    amrex::Vector<amrex::Real> test_vec = {1., 1., 1.};
-    RotateContainer(test_vec);
-    amrex::Print() << "##### test_vec(1.,1.,1.) rotated to:\n";
-    for(auto val: test_vec) amrex::Print() << val<< " ";
-    amrex::Print() << "\n";
+    //amrex::Vector<amrex::Real> test_vec = {1., 1., 1.};
+    //RotateContainer(test_vec);
+    //amrex::Print() << "##### test_vec(1.,1.,1.) rotated to:\n";
+    //for(auto val: test_vec) amrex::Print() << val<< " ";
+    //amrex::Print() << "\n";
 }
 
 
