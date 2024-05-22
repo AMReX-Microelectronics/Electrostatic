@@ -28,7 +28,8 @@ To compile the code with HYPRE, keep USE_HYPRE flag on.
 # Running ELEQTRONeX
 
 Here we show how to simulate the band-alignment test for a carbon nanotube surrounded by a metal contact for the different voltages specified on the metal (0 to 1 V with a step size of 0.1 V).
-Description of this case can be found in Reference: `Leonard, F., & Stewart, D. A. (2006). Properties of short channel ballistic carbon nanotube transistors with ohmic contacts. Nanotechnology, 17(18), 4699.`
+Description of this case can be found in Reference,\
+Leonard, F., & Stewart, D. A. (2006). Properties of short channel ballistic carbon nanotube transistors with ohmic contacts. Nanotechnology, 17(18), 4699.\
 
 ```>> ./<compile_binary> ../input/negf/all_around_metal```
 
