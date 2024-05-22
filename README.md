@@ -50,4 +50,4 @@ For this test, the data is written out to `cnt` subfolder, for each converged st
 `step<step_number>_<data_field>.dat` where data_field can be Qout: induced charge, norm: norm after convergence, U: electrostatic potential on the surface of the tube.
 In addition, data for each iteration in a given step is outputted to `step<step_number>_iter/` folder.
 
-This data can be visualized using a simple python script found in `../scripts/all_around_metal` folder.
+This data can be visualized using a simple python script, `../scripts/all_around_metal/bandstructure.ipynb`.
