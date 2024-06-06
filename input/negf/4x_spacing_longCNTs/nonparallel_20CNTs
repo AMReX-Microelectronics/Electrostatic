@@ -29,10 +29,10 @@ my_constants.Overlap_unitcells = 12
 my_constants.Vds = 0.   #Drain-Source voltage [V]
 my_constants.Vgs_min = -4
 my_constants.Vgs_max = 8
-my_constants.Nsteps =  25
+my_constants.Nsteps =  121
 my_constants.dt = 1./(Nsteps-1)
 
-plot.folder_name = /global/cfs/projectdirs/m4540/eXstatic/4x_spacing_longCNTs/nonpll_20CNTs
+plot.folder_name = /global/cfs/projectdirs/m4540/eXstatic/4x_spacing_longCNTs/nonpll_20CNTs_finer
 plot.write_after_init = 0
 plot.write_interval = 1000
 

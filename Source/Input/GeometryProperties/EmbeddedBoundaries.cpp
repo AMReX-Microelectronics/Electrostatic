@@ -471,36 +471,26 @@ c_EmbeddedBoundaries::ReadObjectInfo(std::string object_name, std::string object
             for (int i=0; i<AMREX_SPACEDIM; ++i) amrex::Print() << inner_hi[i]/(*_dx)[i] << "  ";
             amrex::Print() << "\n";
 
-            amrex::Real thickness;
-            getWithParser(pp_object,"thickness", thickness);
-            amrex::Print() << "##### box thickness: " << thickness << "\n";
-            amrex::Print() << "##### box thickness/dy: " << thickness/(*_dx)[1] << "\n";
 
-            int direction;
-            pp_object.get("direction", direction);
-            AMREX_ALWAYS_ASSERT_WITH_MESSAGE(direction >=0 && direction < 3,
-                                             "cavity direction is invalid");
-            amrex::Print() << "##### cavity direction: " << direction << "\n";
+            amrex::Vector<amrex::Real> outer_lo;
+            getArrWithParser(pp_object,"outer_box_lo", outer_lo,0,AMREX_SPACEDIM);
 
-            amrex::Vector<amrex::Real> outer_lo(AMREX_SPACEDIM);
-            amrex::Vector<amrex::Real> outer_hi(AMREX_SPACEDIM);
-
-            for(int i=0; i<AMREX_SPACEDIM; ++i) 
-            {
-                if( i!=direction ) {
-                    outer_lo[i] = inner_lo[i] - thickness;
-                    outer_hi[i] = inner_hi[i] + thickness;
-                }
-                else {
-                    outer_lo[i] = inner_lo[i];
-                    outer_hi[i] = inner_hi[i];
-                }
-            }
             amrex::Print() << "##### outer_box_lo: ";
             for (int i=0; i<AMREX_SPACEDIM; ++i) amrex::Print() << outer_lo[i] << "  ";
             amrex::Print() << "\n";
+            amrex::Print() << "##### outer_box_lo/cell_size: ";
+            for (int i=0; i<AMREX_SPACEDIM; ++i) amrex::Print() << outer_lo[i]/(*_dx)[i] << "  ";
+            amrex::Print() << "\n";
+
+
+            amrex::Vector<amrex::Real> outer_hi;
+            getArrWithParser(pp_object,"outer_box_hi", outer_hi, 0, AMREX_SPACEDIM);
+
             amrex::Print() << "##### outer_box_hi: ";
             for (int i=0; i<AMREX_SPACEDIM; ++i) amrex::Print() << outer_hi[i] << "  ";
+            amrex::Print() << "\n";
+            amrex::Print() << "##### outer_box_hi/cell_size: ";
+            for (int i=0; i<AMREX_SPACEDIM; ++i) amrex::Print() << outer_hi[i]/(*_dx)[i] << "  ";
             amrex::Print() << "\n";
 
             bool outer_box_has_fluid_inside=0;

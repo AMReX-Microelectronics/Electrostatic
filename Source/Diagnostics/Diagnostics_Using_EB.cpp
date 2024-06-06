@@ -390,7 +390,7 @@ c_Diagnostics_Using_EB::ComputeAndWriteEBDiagnostics(int step, amrex::Real time)
 
 
                amrex::Geometry slice_geom;
-               Define_SliceGeometry(slice_geom);
+               Define_SliceGeometry(slice_geom, info.direction);
                 
                for(auto it: info.map_param_all)
                {
@@ -420,7 +420,7 @@ c_Diagnostics_Using_EB::ComputeAndWriteEBDiagnostics(int step, amrex::Real time)
 
 
 void
-c_Diagnostics_Using_EB::Define_SliceGeometry(amrex::Geometry& sg)
+c_Diagnostics_Using_EB::Define_SliceGeometry(amrex::Geometry& sg, const int dir)
 {
 
     auto& rCode = c_Code::GetInstance();
@@ -433,14 +433,54 @@ c_Diagnostics_Using_EB::Define_SliceGeometry(amrex::Geometry& sg)
     const int* DH  = gd.Domain().hiVect();
     const auto& coord_sys = rGprop.get_CoordinateSystem();
     const auto& is_periodic = rGprop.get_PeriodicityArray();
+    std::array<int,AMREX_SPACEDIM> periodicity_array = is_periodic; 
 
-    amrex::IntVect dom_lo(AMREX_D_DECL(DL[0], DL[1], 0)); 
-    amrex::IntVect dom_hi(AMREX_D_DECL(DH[0], DH[1], 1)); 
-    amrex::Box domain(dom_lo, dom_hi); 
+    if(dir == 0) 
+    {
+        if(is_periodic[dir] == 1) {
+            periodicity_array[dir] = 0;
+        }
 
-    amrex::RealBox real_box({AMREX_D_DECL( PL[0], PL[1], 0-dx[2]/2.)},
-                            {AMREX_D_DECL( PH[0], PH[1], 0+dx[2]/2.)}); 
+        amrex::IntVect dom_lo(AMREX_D_DECL(0, DL[1], DL[2])); 
+        amrex::IntVect dom_hi(AMREX_D_DECL(1, DH[1], DH[2])); 
 
-    sg.define(domain, real_box, coord_sys, is_periodic); 
+        amrex::Box domain(dom_lo, dom_hi); 
 
+        amrex::RealBox real_box({AMREX_D_DECL(0-dx[0]/2., PL[1], PL[2])},
+                                {AMREX_D_DECL(0+dx[0]/2., PH[1], PH[2])}); 
+
+        sg.define(domain, real_box, coord_sys, periodicity_array); 
+    }
+    else if(dir == 1) 
+    {
+        if(is_periodic[dir] == 1) {
+            periodicity_array[dir] = 0;
+        }
+
+        amrex::IntVect dom_lo(AMREX_D_DECL(DL[0], 0, DL[2])); 
+        amrex::IntVect dom_hi(AMREX_D_DECL(DH[0], 1, DH[2])); 
+
+        amrex::Box domain(dom_lo, dom_hi); 
+
+        amrex::RealBox real_box({AMREX_D_DECL(PL[0], 0-dx[1]/2., PL[2])},
+                                {AMREX_D_DECL(PH[0], 0+dx[1]/2., PH[2])}); 
+
+        sg.define(domain, real_box, coord_sys, periodicity_array); 
+    }
+    else if(dir == 2) 
+    {
+        if(is_periodic[dir] == 1) {
+            periodicity_array[dir] = 0;
+        }
+
+        amrex::IntVect dom_lo(AMREX_D_DECL(DL[0], DL[1], 0)); 
+        amrex::IntVect dom_hi(AMREX_D_DECL(DH[0], DH[1], 1)); 
+
+        amrex::Box domain(dom_lo, dom_hi); 
+
+        amrex::RealBox real_box({AMREX_D_DECL(PL[0], PL[1], 0-dx[2]/2.)},
+                                {AMREX_D_DECL(PH[0], PH[1], 0+dx[2]/2.)}); 
+
+        sg.define(domain, real_box, coord_sys, periodicity_array); 
+    }
 }

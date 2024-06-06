@@ -231,6 +231,7 @@ class c_NEGF_Common: private MatrixBlock<T>,
     void Deallocate_TemporaryArraysForGFComputation();
     void get_Sigma_at_contacts(BlkTable1D& h_Sigma_contact_data, 
                                ComplexType E);
+    int get_Total_NonEq_Integration_Pts() const;
 
     void Write_PotentialAtSites(const std::string filename_prefix);
 
@@ -549,7 +550,7 @@ public:
     std::string get_iter_foldername() const { return iter_foldername_str; }
     std::string get_read_atom_filename() const { return read_atom_filename; }
 
-    int get_Total_NonEq_Integration_Pts() const;
+    int get_Total_Integration_Pts() const;
 
 };
 
