@@ -1,4 +1,9 @@
 ################
+# Simple scaling test: nanotube contact. 
+# Fig 4 (top, ~1.3 diameter CNT) in: Leonard, F., & Stewart, D. A. (2006). Properties of short channel ballistic carbon nanotube transistors with ohmic contacts. Nanotechnology, 17(18), 4699. 
+################
+
+################
 ##### FLAGS ####
 ################
 use_electrostatic = 1
@@ -8,25 +13,24 @@ amrex.the_arena_is_managed=1
 ############################
 ##### Scaling Variables ####
 ############################
-my_constants.gx = 2
-my_constants.gy = 128
-my_constants.gz = 2
+my_constants.gx = 1
+my_constants.gy = 512
+my_constants.gz = 1
 
-my_constants.N_unitcells = 128000
-plot.folder_name = /global/cfs/projectdirs/m3766/SaurabhTests/weak_scaling/all_around_metal/gpu512
+my_constants.N_unitcells = 2048*64
+plot.folder_name = /global/cfs/projectdirs/m4540/eXstatic/eql_scaling/gpu512
+NS_default.num_recursive_parts = 64
 ##################################
 ##### USER DEFINED CONSTANTS #####
 ##################################
 
 ### Physical and Other Constants
 my_constants.epsilon_0 = 8.8541878128e-12
-my_constants.tiny = 1e-12
 my_constants.pi = 3.141592653589793
 
-my_constants.GV_min = 0.
-my_constants.GV_max = 1.
-my_constants.Nsteps =  2
-my_constants.dt = 1./(Nsteps-1)
+my_constants.GV = 0.
+my_constants.Nsteps = 1
+my_constants.dt = 1.
 
 my_constants.Ef = -1. #Palladium Contact Fermi level [eV]
 
@@ -42,11 +46,8 @@ my_constants.CN_y = 0.
 my_constants.L_unitcell = 3*bond_length #0.426 nm
 
 my_constants.R_CN = bond_length*sqrt(3.*(m_index*m_index + n_index*n_index + m_index*n_index))/(2*pi)  #radius
-my_constants.CN_co_l = 2*L_unitcell
 
-my_constants.small_gap = 0.3e-9  #0.1nm #5*bond_length #0.355e-9, gap between nanotube and the contacts
-
-my_constants.epsilon_CN = epsilon_0 #vacuum
+my_constants.small_gap = 0.3e-9  #gap between nanotube and the contacts
 
 ### Total domain dimensions
 my_constants.Ly_offset_unitcells = 0
@@ -62,11 +63,8 @@ my_constants.nx = width_factor * unitcells_per_D_CN * cells_per_unitcell
 my_constants.ny = (N_unitcells + Ly_offset_unitcells) * cells_per_unitcell
 my_constants.nz = width_factor * unitcells_per_D_CN * cells_per_unitcell                   
 
-my_constants.dx = Lx/nx
 my_constants.dy = Ly/ny
 my_constants.dz = Lz/nz
-
-my_constants.epsilon_domain = epsilon_0 #air
 
 ##################################################
 ###### TIME DEPENDENT SIMULATION PROPERTIES ######
@@ -92,10 +90,7 @@ Gate.thickness      = 5*dz
 Gate.center         = CN_x CN_y CN_z
 Gate.height         = Ly + 2*dy/5
 Gate.direction      = 1
-Gate.surf_soln_parser   = 1
-#Gate.surf_soln_function = GV
-Gate.surf_soln_function = "GV_min + (GV_max-GV_min) * t"
-
+Gate.surf_soln = GV
 
 #################################
 ###### GEOMETRY PROPERTIES ######
@@ -141,23 +136,13 @@ macroscopic.atom_locations = 0.
 
 plot.fields_to_plot = epsilon.1 charge_density.1 phi.1 atom_locations
 plot.write_after_init = 0
-plot.write_interval = 100
+plot.write_interval = 1000
 plot.rawfield_write_interval = 1000000
 
 ########################
 ###### DIAGNOSTICS #####
 ########################
 use_diagnostics = 0
-
-diag.specify_using_eb = 1
-diag.objects = Surf1
-Surf1.geom_type = cylinder
-Surf1.center = 0 0 CN_z
-Surf1.radius = R_CN
-Surf1.axial_direction = 1
-Surf1.theta_reference_direction = 0
-Surf1.has_fluid_inside = 0
-Surf1.fields_to_plot = phi charge_density atom_locations
 
 ####################################
 ###### MLMG SOLVER PROPERTIES ######
@@ -179,39 +164,47 @@ mlmg.relative_tolerance=1e-10
 #################
 ###### NEGF #####
 #################
-
-#nanostructure names
-transport.NS_names = cnt
 transport.use_negf = 1
+transport.NS_num = 1
+transport.NS_type_default = CNT
 transport.NS_gather_field = phi
 transport.NS_deposit_field  = charge_density
-transport.NS_initial_deposit_value  = 0.
-transport.Broyden_fraction = 1e-1
+transport.NS_initial_deposit_value  = 1.e-3
+transport.Broyden_fraction = 0.1
 transport.Broyden_max_norm = 1.e-5
-transport.Broyden_norm_type = absolute
+transport.Broyden_norm_type = relative
 transport.selfconsistency_algorithm = broyden_second
 transport.reset_with_previous_charge_distribution = 1
-
 transport.initialize_inverse_jacobian = 0
-cnt.initialize_charge_distribution = 0
+transport.gate_terminal_type = EB
+transport.Broyden_threshold_maxstep = 100
 
-cnt.type = CNT
-cnt.type_id = m_index n_index     #m n
-cnt.acc = bond_length
-cnt.gamma = 2.5        #coupling strength (eV)
-cnt.num_unitcells = N_unitcells
-cnt.offset = CN_x CN_y CN_z
+NS_default.num_unitcells = N_unitcells
+NS_default.offset = CN_x CN_y CN_z
 
-cnt.contact_mu_specified = 1
-cnt.contact_mu = Ef Ef
-cnt.contact_T  = 298. 298.
+NS_default.contact_Fermi_level = Ef
+NS_default.contact_mu_specified = 1
+NS_default.contact_mu = Ef Ef
+NS_default.contact_T  = 298. 298.
+NS_default.Fermi_tail_factors = 14 14
+NS_default.eq_integration_pts = 30 30 30
+NS_default.flag_compute_flatband_dos = 0
+#NS_default.flatband_dos_integration_pts = 400
+#NS_default.flatband_dos_integration_limits = -1. 1.
+NS_default.noneq_integration_pts = 0
+NS_default.flag_write_integrand = 0
+NS_default.flag_write_charge_components = 0
+NS_default.num_noneq_paths = 0
+NS_default.write_at_iter = 0
+NS_default.initialize_charge_distribution = 0
+#NS_default.charge_distribution_filename = <full filename>
+#NS_default.read_step = 
+#NS_default.read_negf_foldername = 
+NS_default.E_valence_min = -10
+NS_default.E_pole_max    = 3
+NS_default.E_zPlus_imag  = 1.e-5
 
-cnt.contact_Fermi_level = Ef
-cnt.E_valence_min = -10
-cnt.E_pole_max    = 3
-
-cnt.eq_integration_pts = 30 30 30
-cnt.noneq_integration_pts = 0
-
-cnt.write_at_iter = 0
+CNT_default.type_id = m_index n_index
+CNT_default.acc = bond_length
+CNT_default.gamma = 2.5
 #####################################

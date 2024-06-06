@@ -49,7 +49,7 @@ c_Diagnostics_Using_EB
                       :private c_Field_Plot_Essentials
 {
 
-   void Define_SliceGeometry(amrex::Geometry& sg);
+   void Define_SliceGeometry(amrex::Geometry& sg, const int dir);
 
 protected:
 

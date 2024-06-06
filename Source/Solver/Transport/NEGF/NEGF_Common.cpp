@@ -311,7 +311,7 @@ void
 c_NEGF_Common<T>:: Read_MaterialOrientationParams(amrex::ParmParse& pp_ns)
 {
     /*translation*/
-    amrex::Vector<amrex::Real> vec_offset(3,0.);
+    amrex::Vector<amrex::Real> vec_offset(AMREX_SPACEDIM,0.);
     auto offset_isDefined = queryArrWithParser(pp_ns, "offset", vec_offset, 0, AMREX_SPACEDIM);
 
     if(offset_isDefined) offset = vecToArr(vec_offset);
@@ -319,7 +319,7 @@ c_NEGF_Common<T>:: Read_MaterialOrientationParams(amrex::ParmParse& pp_ns)
     /*rotation*/
     if(p_rotInputParams == nullptr) p_rotInputParams = std::make_unique<RotationInputParams>();
 
-    amrex::Vector<amrex::Real> vec_rotation_angles;
+    amrex::Vector<amrex::Real> vec_rotation_angles(AMREX_SPACEDIM,0);
     auto angles_isDefined = queryArrWithParser(pp_ns, "rotation_angles", 
             vec_rotation_angles, 0, AMREX_SPACEDIM);
 
@@ -515,17 +515,14 @@ template<typename T>
 void
 c_NEGF_Common<T>:: Read_AdaptiveIntegrationParams(amrex::ParmParse& pp_ns)
 {
-    flag_adaptive_integration_limits = false;
     pp_ns.query("flag_adaptive_integration_limits", flag_adaptive_integration_limits);
     if(flag_adaptive_integration_limits) 
     {
-        integrand_correction_interval = 500;
         pp_ns.query("integrand_correction_interval", integrand_correction_interval);
 
         auto flag_kT_window_around_singularity = queryArrWithParser(pp_ns, "kT_window_around_singularity", 
                                                                kT_window_around_singularity, 0, 2);
 
-        flag_noneq_integration_pts_density = false;
         flag_noneq_integration_pts_density = queryArrWithParser(pp_ns, "noneq_integration_pts_density", 
                                                                         noneq_integration_pts_density, 0, 
                                                                         num_noneq_paths);
@@ -537,12 +534,9 @@ template<typename T>
 void
 c_NEGF_Common<T>:: Read_IntegrandWritingParams(amrex::ParmParse& pp_ns)
 {
-    flag_write_integrand_main = false;
-    flag_write_integrand_iter = false;
     pp_ns.query("flag_write_integrand", flag_write_integrand_main);
     if(flag_write_integrand_main) 
     {
-        write_integrand_interval = 500;
         pp_ns.query("write_integrand_interval", write_integrand_interval);
     }
 }
@@ -552,10 +546,8 @@ template<typename T>
 void
 c_NEGF_Common<T>:: Read_WritingRelatedFlags(amrex::ParmParse& pp_ns)
 {
-    write_at_iter = 0;
     queryWithParser(pp_ns,"write_at_iter", write_at_iter);
 
-    flag_write_charge_components = false;
     pp_ns.query("flag_write_charge_components", flag_write_charge_components);
 
     Read_IntegrandWritingParams(pp_ns);
@@ -617,7 +609,6 @@ template<typename T>
 void
 c_NEGF_Common<T>:: Read_RecursiveOptimizationParams(amrex::ParmParse& pp_ns)
 {
-    num_recursive_parts = 1;
     queryWithParser(pp_ns, "num_recursive_parts", num_recursive_parts);
 }
 
@@ -730,8 +721,8 @@ template<typename T>
 void
 c_NEGF_Common<T>:: Set_RotationMatrix()  
 {
-    p_rotator = std::make_unique<c_RotationMatrix>(std::move(p_rotInputParams));
-    p_rotInputParams = nullptr;
+    if (p_rotInputParams && !p_rotInputParams->angles.empty()) 
+        p_rotator = std::make_unique<c_RotationMatrix>(std::move(p_rotInputParams));
 }
 
 
@@ -1664,6 +1655,23 @@ int
 c_NEGF_Common<T>:: get_Total_NonEq_Integration_Pts () const
 {
     return std::accumulate(noneq_integration_pts.begin(), noneq_integration_pts.end(), 0);
+}
+
+
+template<typename T>
+int
+c_NEGF_Common<T>:: get_Total_Integration_Pts () const
+{
+    int intg_pts = 0;
+    if(flag_noneq_exists) {
+        intg_pts = get_Total_NonEq_Integration_Pts();
+    }
+    else {
+        for(auto& path: ContourPath_RhoEq) {
+            intg_pts += path.num_pts;   
+        }
+    }
+    return intg_pts;
 }
 
 

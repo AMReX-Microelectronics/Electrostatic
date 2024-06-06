@@ -550,7 +550,7 @@ c_TransportSolver::Solve(const int step, const amrex::Real time)
                #else
                vp_CNT[c]->Solve_NEGF(h_n_curr_out_data, max_iter);
                #endif
-               total_intg_pts_in_this_iter += vp_CNT[c]->get_Total_NonEq_Integration_Pts();
+               total_intg_pts_in_this_iter += vp_CNT[c]->get_Total_Integration_Pts();
                //CopyFromNS_ChargeComputedFromNEGF(vp_CNT[c]);
            }
            total_intg_pts_in_all_iter += total_intg_pts_in_this_iter;
