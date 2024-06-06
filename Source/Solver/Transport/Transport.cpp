@@ -781,14 +781,17 @@ c_TransportSolver:: CopyToNS_ChargeComputedUsingSelfConsistencyAlgorithm(NSType 
     int end = site_size_loc_cumulative[NS->get_NS_Id() + 1];
     int site_size_loc = end - begin;
 
-    auto const& d_n_curr_in      = d_n_curr_in_data.table();
     auto const& h_n_curr_in      = h_n_curr_in_data.table();
+
+    #ifdef AMREX_USE_GPU
+    auto const& d_n_curr_in      = d_n_curr_in_data.table();
 
     h_n_curr_in_data.resize({0}, {site_size_loc}, The_Pinned_Arena());
 
     amrex::Gpu::copyAsync(amrex::Gpu::deviceToHost, 
                           d_n_curr_in.p + begin , d_n_curr_in.p + end, h_n_curr_in.p);
     amrex::Gpu::streamSynchronize();
+    #endif
 
     if(ParallelDescriptor::IOProcessor())
     {
@@ -849,6 +852,8 @@ template<typename NSType>
 void
 c_TransportSolver:: Create_Global_Output_Data(NSType const& NS) 
 {
+    auto const& h_n_curr_out = h_n_curr_out_data.table();
+    auto const& h_Norm = h_Norm_data.table();
 
     #ifndef BROYDEN_SKIP_GPU_OPTIMIZATION
     /*only select data need to be copied for multiple NS*/
@@ -863,8 +868,6 @@ c_TransportSolver:: Create_Global_Output_Data(NSType const& NS)
     h_n_curr_out_data.resize({0}, {site_size_loc}, The_Pinned_Arena());
     h_Norm_data.resize({0}, {site_size_loc}, The_Pinned_Arena());
     
-    auto const& h_n_curr_out = h_n_curr_out_data.table();
-    auto const& h_Norm = h_Norm_data.table();
 
     auto const& d_n_curr_out = d_n_curr_out_data.const_table();
     auto const& d_Norm = d_Norm_data.const_table();
