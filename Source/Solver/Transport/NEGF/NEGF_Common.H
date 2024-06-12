@@ -23,7 +23,7 @@ struct s_Position3D
 };
 
 template<typename T>
-class c_NEGF_Common: private MatrixBlock<T>, 
+class c_NEGF_Common: protected MatrixBlock<T>, 
                      private c_IntegrationPath
 {
 
