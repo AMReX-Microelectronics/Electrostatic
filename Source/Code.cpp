@@ -343,6 +343,19 @@ c_Code::Cleanup()
     #endif
 }
 
+
+amrex::Real 
+c_Code::Solve_OnlyElectrostatics() 
+{
+    bool update_surface_soln_flag = true; 
+    m_pMLMGSolver->UpdateBoundaryConditions(update_surface_soln_flag);
+
+    auto mlmg_solve_time = m_pMLMGSolver->Solve_PoissonEqn();
+    amrex::Print() << "    mlmg_solve_time: " << std::setw(15) 
+                                              << mlmg_solve_time << "\n";
+    return mlmg_solve_time;
+}
+
 void 
 c_Code::Solve_PostProcess_Output()
 {
@@ -362,21 +375,13 @@ c_Code::Solve_PostProcess_Output()
 
         #ifdef USE_TRANSPORT
         if(use_transport) m_pTransportSolver->Solve(step, time);
-        if(use_electrostatic) 
-        {
+        if(use_electrostatic) {
+            if(!use_transport) avg_mlmg_solve_time += Solve_OnlyElectrostatics();
             m_pPostProcessor->Compute(); 
 	    }
 	    #else
-        if(use_electrostatic) 
-        {
-	        bool update_surface_soln_flag = true; 
-            m_pMLMGSolver->UpdateBoundaryConditions(update_surface_soln_flag);
-            auto mlmg_solve_time = m_pMLMGSolver->Solve_PoissonEqn();
-            avg_mlmg_solve_time += mlmg_solve_time;
-
-    	    amrex::Print() << "    mlmg_solve_time: " << std::setw(15) 
-                           << mlmg_solve_time << "\n";
-
+        if(use_electrostatic) {
+            avg_mlmg_solve_time += Solve_OnlyElectrostatics();
             m_pPostProcessor->Compute(); 
         } 
         #endif

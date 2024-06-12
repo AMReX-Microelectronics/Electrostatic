@@ -108,11 +108,13 @@ public:
 
     void Copy_HostVectorToGPU() 
     {
+        #ifdef AMREX_USE_GPU
         if (!h_vec_source.empty()) {
             amrex::Gpu::copy(amrex::Gpu::hostToDevice, h_vec_source.begin(),
                                                        h_vec_source.end(),
                                                        d_vec_source.begin() );
         }
+        #endif
     }
 
     AMREX_GPU_DEVICE
@@ -122,16 +124,15 @@ public:
         amrex::Real pi = static_cast<amrex::Real>(3.14159265358979323846);
         amrex::Real q_e  = static_cast<amrex::Real>(1.602176634e-19);
 
-        //for(int s=0; s< num_sources; ++s)
-        //{
-        //    //sum += charge_density_calculator(p_vec_source[s], x, y, z);
-
-        //}
-
-        if(p_vec_source != nullptr) {
-            const PointCharge& pc = p_vec_source[0];
-            sum += *d_num_sources;
+        for(int s=0; s< num_sources; ++s)
+        {
+            sum += charge_density_calculator(p_vec_source[s], x, y, z);
         }
+
+        //if(p_vec_source != nullptr) {
+        //    const PointCharge& pc = p_vec_source[0];
+        //    sum += *d_num_sources;
+        //}
         //sum += q_e * pc.charge_unit *
         //       ( 1./pow((sqrt(2*pi)*pc.sigma),3.)) *
         //         exp(-1.*( (x-pc.pos[0])*(x-pc.pos[0]) +

@@ -142,7 +142,7 @@ steps = Nsteps
 ###### EMBEDDED BOUNDARIES #########
 ####################################
 
-domain.embedded_boundary = 1  #options: 1=true, 0=false (default)
+domain.embedded_boundary = 0  #options: 1=true, 0=false (default)
 domain.specify_using_eb2 = 0  #options: 1=true, 0=false (default)
 
 ebgeom.objects = Source Drain
