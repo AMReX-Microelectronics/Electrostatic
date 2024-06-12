@@ -1386,6 +1386,7 @@ template<typename T>
 void 
 c_NEGF_Common<T>:: Initialize_GPUArraysForChargeComputationToZero() 
 {
+    #if AMREX_USE_GPU
     auto const& Rho0_loc        = d_Rho0_loc_data.table();
     auto const& RhoEq_loc       = d_RhoEq_loc_data.table();
     auto const& RhoNonEq_loc    = d_RhoNonEq_loc_data.table();
@@ -1397,6 +1398,7 @@ c_NEGF_Common<T>:: Initialize_GPUArraysForChargeComputationToZero()
         RhoNonEq_loc(n) = 0.;
         GR_atPoles_loc(n) = 0.;
     });
+    #endif
 }
 
 
@@ -2677,31 +2679,38 @@ c_NEGF_Common<T>:: Compute_InducedCharge (RealTable1D& n_curr_out_data)
         amrex::Gpu::streamSynchronize();
         #endif
 
+        #ifdef AMREX_USE_GPU
+        RealTable1D h_Rho0_loc_data({0}, {blkCol_size_loc}, The_Pinned_Arena());
         RealTable1D h_RhoEq_loc_data({0}, {blkCol_size_loc}, The_Pinned_Arena());
         RealTable1D h_RhoNonEq_loc_data({0}, {blkCol_size_loc}, The_Pinned_Arena());
-        RealTable1D h_Rho0_loc_data({0}, {blkCol_size_loc}, The_Pinned_Arena());
         RealTable1D h_RhoInduced_loc_data({0}, {blkCol_size_loc}, The_Pinned_Arena());
+        auto const& h_RhoInduced_loc = h_RhoInduced_loc_data.const_table();
+        #else
+        auto const& h_RhoInduced_loc = n_curr_out_data.const_table();
+        #endif
 
-        RealTable1D h_RhoEq_data({0}, {Hsize_glo}, The_Pinned_Arena());
-        RealTable1D h_RhoNonEq_data({0}, {Hsize_glo}, The_Pinned_Arena());
-        RealTable1D h_Rho0_data({0}, {Hsize_glo}, The_Pinned_Arena());
-        RealTable1D h_RhoInduced_data({0}, {Hsize_glo}, The_Pinned_Arena());
-        
         auto const& h_Rho0_loc       = h_Rho0_loc_data.const_table();
         auto const& h_RhoEq_loc      = h_RhoEq_loc_data.const_table();
         auto const& h_RhoNonEq_loc   = h_RhoNonEq_loc_data.const_table();
-        auto const& h_RhoInduced_loc = h_RhoInduced_loc_data.const_table();
-        auto const& h_Rho0     = h_Rho0_data.table();
-        auto const& h_RhoEq    = h_RhoEq_data.table();
-        auto const& h_RhoNonEq = h_RhoNonEq_data.table();
-        auto const& h_RhoInduced = h_RhoInduced_data.table();
 
+        #ifdef AMREX_USE_GPU
         h_Rho0_loc_data.copy(d_Rho0_Imag_loc_data);
         h_RhoEq_loc_data.copy(d_RhoEq_Imag_loc_data);
         h_RhoNonEq_loc_data.copy(d_RhoNonEq_Real_loc_data);
         h_RhoInduced_loc_data.copy(n_curr_out_data);
-        
+        #endif
+
         MPI_Barrier(ParallelDescriptor::Communicator());
+
+        RealTable1D h_Rho0_data({0}, {Hsize_glo}, The_Pinned_Arena());
+        RealTable1D h_RhoEq_data({0}, {Hsize_glo}, The_Pinned_Arena());
+        RealTable1D h_RhoNonEq_data({0}, {Hsize_glo}, The_Pinned_Arena());
+        RealTable1D h_RhoInduced_data({0}, {Hsize_glo}, The_Pinned_Arena());
+        
+        auto const& h_Rho0     = h_Rho0_data.table();
+        auto const& h_RhoEq    = h_RhoEq_data.table();
+        auto const& h_RhoNonEq = h_RhoNonEq_data.table();
+        auto const& h_RhoInduced = h_RhoInduced_data.table();
 
         MPI_Gatherv(&h_Rho0_loc(0),
                      blkCol_size_loc,
