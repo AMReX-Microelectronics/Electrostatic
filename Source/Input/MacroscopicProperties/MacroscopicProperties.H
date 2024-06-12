@@ -2,6 +2,7 @@
 #define MACROSCOPIC_PROPERTIES_H_
 
 #include "MacroscopicProperties_fwd.H"
+#include "ChargeDensitySource.H"
 
 #include "../Utils/SelectWarpXUtils/WarpXConst.H"
 
@@ -24,16 +25,27 @@ struct s_MacroscopicPropertiesMacroName {
 class 
 c_MacroscopicProperties
 {
+
 public: 
 
     c_MacroscopicProperties();
-    ~c_MacroscopicProperties();
 
     void ReadData();
     void InitData();
 
-    amrex::MultiFab& get_mf  (std::string macro_str) {auto macro_num = map_param_all[macro_str]; return (*m_p_mf[macro_num]);}
-    amrex::MultiFab* get_p_mf (std::string macro_str) {auto macro_num = map_param_all[macro_str]; return m_p_mf[macro_num].get();}
+    amrex::MultiFab& get_mf  (std::string macro_str) 
+    {   
+        auto macro_num = map_param_all[macro_str]; 
+        return (*m_p_mf[macro_num]);
+    }
+    amrex::MultiFab* get_p_mf (std::string macro_str) 
+    {    
+        if(map_param_all.find(macro_str) != map_param_all.end()) {
+            auto macro_num = map_param_all[macro_str]; 
+            return m_p_mf[macro_num].get();
+        }
+        return nullptr;
+    }
 
     std::map<std::string,s_MacroscopicPropertiesMacroName::macro_name> map_macro_name;
     std::map<std::string,int> map_param_all;
@@ -41,40 +53,35 @@ public:
     int num_params;
     void ReInitializeMacroparam(std::string macro_str);
 
+    void Define_ExternalChargeDensitySources();
+    void Deposit_ExternalChargeDensitySources();
+
 private:
-    void DefineParameterNameMap()
-    {
-#ifdef PRINT_NAME
-    amrex::Print() << "\n\n\t\t\t\t{************************c_MacroscopicProperties::DefineParameterNameMap()************************\n";
-    amrex::Print() << "\t\t\t\tin file: " << __FILE__ << " at line: " << __LINE__ << "\n";
+    
+    std::map<std::string,amrex::Real> map_default_value;
+    std::map<std::string,int> map_num_ghostcell;
+
+    std::unique_ptr<PointChargeSource> p_pointChargeSource = nullptr;
+
+#ifdef TIME_DEPENDENT
+    amrex::Vector<std::string> m_parser_varname_vector = {"x", "y", "z", "t"};
+#else
+    amrex::Vector<std::string> m_parser_varname_vector = {"x", "y", "z"};
 #endif
 
+    void DefineParameterNameMap()
+    {
         map_macro_name["epsilon"] = s_MacroscopicPropertiesMacroName::epsilon;
         map_macro_name["charge_density"] = s_MacroscopicPropertiesMacroName::charge_density;
         map_macro_name["phi"] = s_MacroscopicPropertiesMacroName::phi;
-
-#ifdef PRINT_NAME
-    amrex::Print() << "\t\t\t\t}************************c_MacroscopicProperties::DefineParameterNameMap()************************\n";
-#endif
     };
 
     void DefineDefaultValueMap()
     {
-#ifdef PRINT_NAME
-    amrex::Print() << "\n\n\t\t\t\t{************************c_MacroscopicProperties::DefineDefaultValueMap()************************\n";
-    amrex::Print() << "\t\t\t\tin file: " << __FILE__ << " at line: " << __LINE__ << "\n";
-#endif
-
         map_default_value["epsilon"] = PhysConst::ep0;
         map_default_value["charge_density"] = 0.0;
         map_default_value["phi"] = 0.0;
-
-#ifdef PRINT_NAME
-    amrex::Print() << "\t\t\t\t}************************c_MacroscopicProperties::DefineDefaultValueMap()************************\n";
-#endif
     };
-    std::map<std::string,amrex::Real> map_default_value;
-    std::map<std::string,int> map_num_ghostcell;
 
     void ReadPermittivity();
     void InitializePermittivity();
@@ -98,12 +105,6 @@ private:
                                        amrex::DistributionMapping& dm,
                                        amrex::Geometry& geom,
                                        int Ncomp, int Nghost);
-
-#ifdef TIME_DEPENDENT
-    amrex::Vector<std::string> m_parser_varname_vector = {"x", "y", "z", "t"};
-#else
-    amrex::Vector<std::string> m_parser_varname_vector = {"x", "y", "z"};
-#endif
 
 };
 

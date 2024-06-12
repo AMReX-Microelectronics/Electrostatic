@@ -15,42 +15,17 @@ using namespace amrex;
 
 c_MacroscopicProperties::c_MacroscopicProperties ()
 {
-#ifdef PRINT_NAME
-    amrex::Print() << "\n\n\t\t\t{************************c_MacroscopicProperties Consructor()************************\n";
-    amrex::Print() << "\t\t\tin file: " << __FILE__ << " at line: " << __LINE__ << "\n";
-#endif
 
     DefineParameterNameMap();
     DefineDefaultValueMap();
     ReadData();
 
-#ifdef PRINT_NAME
-    amrex::Print() << "\t\t\t}************************c_MacroscopicProperties Consructor()************************\n";
-#endif
-} 
-
-
-c_MacroscopicProperties::~c_MacroscopicProperties ()
-{
-#ifdef PRINT_NAME
-    amrex::Print() << "\n\n\t\t\t{************************c_MacroscopicProperties Destructor()************************\n";
-    amrex::Print() << "\t\t\tin file: " << __FILE__ << " at line: " << __LINE__ << "\n";
-#endif
-
-#ifdef PRINT_NAME
-    amrex::Print() << "\t\t\t}************************c_MacroscopicProperties Destructor()************************\n";
-#endif
 } 
 
 
 void 
 c_MacroscopicProperties::ReadData()
 { 
-#ifdef PRINT_NAME
-    amrex::Print() << "\n\n\t\t\t\t{************************c_MacroscopicProperties::ReadData()************************\n";
-    amrex::Print() << "\t\t\t\tin file: " << __FILE__ << " at line: " << __LINE__ << "\n";
-#endif
-
     num_params = ReadParameterMapAndNumberOfGhostCells();
 
     DefineMacroVariableVectorSizes();
@@ -70,21 +45,14 @@ c_MacroscopicProperties::ReadData()
         }
         ReadMacroparam(it.first, default_val);
     }
-#ifdef PRINT_NAME
-    amrex::Print() << "\t\t\t\t}************************c_MacroscopicProperties::ReadData()************************\n";
-#endif
+
+    Define_ExternalChargeDensitySources();
 }
 
 
 int 
 c_MacroscopicProperties::ReadParameterMapAndNumberOfGhostCells()
 { 
-#ifdef PRINT_NAME
-    amrex::Print() << "\n\n\t\t\t\t\t{************************c_MacroscopicProperties::ReadParameterMapAndNumberOfGhostCells()************************\n";
-    amrex::Print() << "\t\t\t\t\tin file: " << __FILE__ << " at line: " << __LINE__ << "\n";
-    std::string prt = "\t\t\t\t\t";
-#endif
-
 
     amrex::Vector< std::string > fields_to_define;
     amrex::Vector< std::string > ghostcells_for_fields;
@@ -158,10 +126,6 @@ c_MacroscopicProperties::ReadParameterMapAndNumberOfGhostCells()
     amrex::Print() << "##### Total number of parameters: " << map_param_all.size() << "\n\n";
 
 
-#ifdef PRINT_NAME
-    amrex::Print() << "\t\t\t\t\t}************************c_MacroscopicProperties::ReadParameterMapAndNumberOfGhostCells()************************\n";
-#endif
-
     return map_param_all.size();
 
 }
@@ -190,11 +154,6 @@ c_MacroscopicProperties::DefineMacroVariableVectorSizes()
 void 
 c_MacroscopicProperties::InitData()
 {
-#ifdef PRINT_NAME
-    amrex::Print() << "\n\n\t\t{************************c_MacroscopicProperties::InitData()************************\n";
-    amrex::Print() << "\t\tin file: " << __FILE__ << " at line: " << __LINE__ << "\n";
-#endif
-
     const int Ncomp1=1;
 
     auto& rCode = c_Code::GetInstance();
@@ -210,10 +169,8 @@ c_MacroscopicProperties::InitData()
         auto macro_num = it.second;
         DefineAndInitializeMacroparam(macro_str, macro_num, ba, dm, geom, Ncomp1, map_num_ghostcell[macro_str]);
     }
-
-#ifdef PRINT_NAME
-    amrex::Print() << "\t\t}************************c_MacroscopicProperties::InitData()************************\n";
-#endif
+    
+    Deposit_ExternalChargeDensitySources();
 }
 
 
@@ -273,10 +230,6 @@ c_MacroscopicProperties::DefineAndInitializeMacroparam(std::string macro_str,
                                                        int Ncomp, 
                                                        int Nghost)
 {
-#ifdef PRINT_NAME
-    amrex::Print() << "\n\n\t\t\t{************************c_MacroscopicProperties::DefineAndInitializeMacroparam()************************\n";
-    amrex::Print() << "\t\t\tin file: " << __FILE__ << " at line: " << __LINE__ << "\n";
-#endif
 
     auto macro_num = map_param_all[macro_str];
     //amrex::Print()  << " Initializing macro_str: " << macro_str << " macro_num: " << macro_num << " macro_type: " << m_macro_type[macro_num] << "\n";
@@ -300,9 +253,6 @@ c_MacroscopicProperties::DefineAndInitializeMacroparam(std::string macro_str,
        #endif 
     }
 
-#ifdef PRINT_NAME
-    amrex::Print() << "\t\t\t}************************c_MacroscopicProperties::DefineAndInitializeMacroparam()************************\n";
-#endif
 }
 
 
@@ -335,4 +285,104 @@ c_MacroscopicProperties::ReInitializeMacroparam(std::string macro_str)
     }
 
     m_p_mf[macro_num] -> FillBoundary(geom.periodicity());
+}
+
+
+void
+c_MacroscopicProperties::Define_ExternalChargeDensitySources()
+{
+
+    amrex::Print()  << "\n##### EXTERNAL CHARGE DENSITY SOURCES #####\n\n";
+
+    amrex::ParmParse pp_cds("charge_density_source");
+
+    int num = 0;
+    std::string type_str;
+    auto num_isDefined  = pp_cds.query("num", num);
+    auto type_isDefined = pp_cds.query("type", type_str);
+    
+    amrex::Print() << " charge_density_source.num " << num << "\n";
+    amrex::Print() << " charge_density_source.type " << type_str << "\n";
+    if(type_isDefined) 
+    {
+        if(type_str == "point_charge") 
+        {
+            if(p_pointChargeSource==nullptr) 
+                p_pointChargeSource = std::make_unique<PointChargeSource>(num);
+
+            for(size_t s=0; s<num; ++s) 
+            {
+                amrex::ParmParse pp_pc("pc_" + std::to_string(s+1));
+
+                amrex::Vector<amrex::Real> pos(AMREX_SPACEDIM);
+
+                getArrWithParser(pp_pc, "location",
+                                 pos, 
+                                 0, AMREX_SPACEDIM);
+    
+                amrex::Real sigma = 2.e-10;
+                pp_pc.query("sigma", sigma);
+                
+                int charge_unit = 1;
+                pp_pc.query("charge_unit", charge_unit);
+
+                p_pointChargeSource->Define_PointCharge(s, 
+                                       PointCharge(pos.data(), sigma, charge_unit));
+                       
+            }
+            #ifdef AMREX_USE_GPU
+            p_pointChargeSource->Copy_HostVectorToGPU();
+            #endif
+            p_pointChargeSource->Print_PointCharge();
+        }
+    }
+}
+
+
+void
+c_MacroscopicProperties::Deposit_ExternalChargeDensitySources()
+{
+    amrex::Print() << "In Deposit_External\n";
+    auto& rCode  = c_Code::GetInstance();
+    auto& rGprop = rCode.get_GeometryProperties();
+    auto& geom = rGprop.geom;
+    auto dx = geom.CellSizeArray();
+    auto& real_box = geom.ProbDomain();
+
+    amrex::MultiFab* const p_charge_density_mf = get_p_mf("charge_density");
+    
+    if(p_charge_density_mf == nullptr) 
+        AMREX_ALWAYS_ASSERT_WITH_MESSAGE(p_charge_density_mf != nullptr, 
+                "charge_density mf string wrong!");
+
+
+    auto iv = p_charge_density_mf->ixType().toIntVect();
+
+    for ( amrex::MFIter mfi(*p_charge_density_mf, amrex::TilingIfNotGPU()); 
+                        mfi.isValid(); 
+                        ++mfi )
+    {
+        const auto& tb = mfi.tilebox( iv, p_charge_density_mf->nGrowVect() );
+        auto const& mf_array = p_charge_density_mf->array(mfi);
+        auto* const p_charge_source = this->p_pointChargeSource.get();
+
+        amrex::ParallelFor (tb,
+            [=] 
+            AMREX_GPU_DEVICE (int i, int j, int k)
+        {
+                amrex::Real fac_x = (1._rt - iv[0]) * dx[0] * 0.5_rt;
+                amrex::Real x = i * dx[0] + real_box.lo(0) + fac_x;
+
+                amrex::Real fac_y = (1._rt - iv[1]) * dx[1] * 0.5_rt;
+                amrex::Real y = j * dx[1] + real_box.lo(1) + fac_y;
+
+                amrex::Real fac_z = (1._rt - iv[2]) * dx[2] * 0.5_rt;
+                amrex::Real z = k * dx[2] + real_box.lo(2) + fac_z;
+
+                mf_array(i,j,k) += p_charge_source->get_charge_sum(x,y,z);
+        });
+    }
+    amrex::Gpu::streamSynchronize();
+
+    p_charge_density_mf->FillBoundary(rGprop.geom.periodicity());
 }

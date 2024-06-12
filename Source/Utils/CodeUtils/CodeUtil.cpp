@@ -1,5 +1,6 @@
 #include <CodeUtil.H>
 #include "../../Code.H"
+#include "../../Input/GeometryProperties/GeometryProperties.H"
 #include "../../Input/MacroscopicProperties/MacroscopicProperties.H"
 #include "../../PostProcessor/PostProcessor.H"
 

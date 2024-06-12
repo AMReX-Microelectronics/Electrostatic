@@ -79,5 +79,8 @@ public:
     bool is_eb_enabled() const {
         return embedded_boundary_flag;
     }
+
+    bool Is_Point_Inside_Physical_Domain(const amrex::Real* pos);
+   
 };
 #endif

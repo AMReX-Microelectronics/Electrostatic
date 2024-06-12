@@ -190,3 +190,23 @@ c_GeometryProperties::InitializeBoxArrayAndDistributionMap()
     amrex::Print() << "\t\t\t}************************c_GeometryProperties::InitializeBoxArrayAndDistributionMap()************************\n";
 #endif
 }
+
+
+bool 
+c_GeometryProperties::Is_Point_Inside_Physical_Domain(const amrex::Real* pos) {
+
+    //auto& rCode = c_Code::GetInstance();
+    //auto& rGprop = rCode.get_GeometryProperties();
+    //const auto& PL = rGprop.get_ProbLo();
+    //const auto& PH = rGprop.get_ProbHi();
+
+    const amrex::Real eps = 1e-14;
+
+    for(int j=0; j<AMREX_SPACEDIM; ++j) {
+        if((pos[j] - eps) < prob_lo[j] || (pos[j] + eps) > prob_hi[j]) {
+
+            return false;
+        }
+    }
+    return true;
+}
