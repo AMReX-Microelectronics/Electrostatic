@@ -106,6 +106,12 @@ private:
                                        amrex::Geometry& geom,
                                        int Ncomp, int Nghost);
 
+
+    static PointChargeDensityCalculator get_charge_sum()
+    {
+       return PointChargeDensityCalculator{};
+    }
+
 };
 
 #endif

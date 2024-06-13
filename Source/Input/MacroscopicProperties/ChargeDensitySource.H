@@ -51,14 +51,11 @@ static_assert(std::is_trivially_copyable<PointCharge>::value,
 
 
 struct PointChargeDensityCalculator {
-
-    AMREX_GPU_DEVICE
+    AMREX_GPU_HOST_DEVICE
     double operator()(const PointCharge& pc, double x, double y, double z) const {
 
-        //static constexpr amrex::Real pi = static_cast<amrex::Real>(3.14159265358979323846);
-        //static constexpr amrex::Real q_e  = static_cast<amrex::Real>(1.602176634e-19);
-        amrex::Real pi = static_cast<amrex::Real>(3.14159265358979323846);
-        amrex::Real q_e  = static_cast<amrex::Real>(1.602176634e-19);
+        static constexpr amrex::Real pi = static_cast<amrex::Real>(3.14159265358979323846);
+        static constexpr amrex::Real q_e  = static_cast<amrex::Real>(1.602176634e-19);
         return q_e * pc.charge_unit *
                    ( 1./pow((sqrt(2*pi)*pc.sigma),3.)) *
                      exp(-1.*( (x-pc.pos[0])*(x-pc.pos[0]) +
@@ -73,37 +70,29 @@ template<typename SourceType=PointCharge,
          typename ChargeDensityCalculator=PointChargeDensityCalculator>
 class ChargeDensitySource {
 
-    int num_sources;  
-
-    SourceType* p_vec_source;
-
+    amrex::Gpu::DeviceScalar<int> d_num_sources;
     amrex::Vector<SourceType> h_vec_source;
-
-    #ifdef AMREX_USE_GPU
-    int * d_num_sources;
-    amrex::Gpu::DeviceVector<SourceType> d_vec_source;
-    #endif
-
+    //SourceType* p_vec_source;
+    
     ChargeDensityCalculator charge_density_calculator;
 
 public:
+    amrex::Gpu::DeviceVector<SourceType> d_vec_source;
 
     ChargeDensitySource(int _num_sources,
                         const ChargeDensityCalculator& calculator = ChargeDensityCalculator())
-        : num_sources(_num_sources), 
+        : d_num_sources(_num_sources), 
           charge_density_calculator(calculator) 
     {
-        amrex::Print() << " num_sources: " << num_sources << "\n";
-        h_vec_source.resize(num_sources); 
+        amrex::Print() << " num_sources: " << _num_sources << "\n";
+        h_vec_source.resize(_num_sources); 
 
-        #ifdef AMREX_USE_GPU
-        d_vec_source.resize(num_sources); 
-        p_vec_source = d_vec_source.dataPtr();
-
-        amrex::Gpu::htod_memcpy((void*)d_num_sources, &num_sources, sizeof(int));
-        #else
-        p_vec_source = h_vec_source.dataPtr();
-        #endif
+        //#ifdef AMREX_USE_GPU
+        d_vec_source.resize(_num_sources); 
+        //p_vec_source = d_vec_source.dataPtr();
+        //#else
+        //p_vec_source = h_vec_source.dataPtr();
+        //#endif
     }
 
     void Copy_HostVectorToGPU() 
@@ -117,30 +106,32 @@ public:
         #endif
     }
 
-    AMREX_GPU_DEVICE
-    double get_charge_sum(double x, double y, double z) const
-    {
-        double sum=0;
-        amrex::Real pi = static_cast<amrex::Real>(3.14159265358979323846);
-        amrex::Real q_e  = static_cast<amrex::Real>(1.602176634e-19);
+    int Get_NumSources() const {
+        return d_num_sources.dataValue();
+    }
 
-        for(int s=0; s< num_sources; ++s)
-        {
-            sum += charge_density_calculator(p_vec_source[s], x, y, z);
-        }
+    SourceType* Get_pVecSources() const {
+        return d_vec_source.dataPtr();
+    }
 
-        //if(p_vec_source != nullptr) {
-        //    const PointCharge& pc = p_vec_source[0];
-        //    sum += *d_num_sources;
-        //}
-        //sum += q_e * pc.charge_unit *
-        //       ( 1./pow((sqrt(2*pi)*pc.sigma),3.)) *
-        //         exp(-1.*( (x-pc.pos[0])*(x-pc.pos[0]) +
-        //                   (y-pc.pos[1])*(y-pc.pos[1])+
-        //                   (z-pc.pos[2])*(z-pc.pos[2])
-        //                ) / (2 * pc.sigma*pc.sigma)
-        //            );
-        return sum;
+    //AMREX_GPU_DEVICE
+    //double get_charge_sum(double x, double y, double z) const
+    //{
+    //    double sum=0;
+
+    //    for(int s=0; s< num_sources; ++s)
+    //    {
+    //        sum += charge_density_calculator(p_vec_source[s], x, y, z);
+    //    }
+    //    return sum;
+    //}
+    //static PointChargeDensityCalculator get_charge_sum()
+    //{
+    //   return PointChargeDensityCalculator{};
+    //}
+    //
+    charge_density_calculator get_charge_sum() {
+       return charge_density_calculator{};
     }
 
     void Define_PointCharge(size_t index, PointCharge&& pc)

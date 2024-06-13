@@ -364,7 +364,13 @@ c_MacroscopicProperties::Deposit_ExternalChargeDensitySources()
     {
         const auto& tb = mfi.tilebox( iv, p_charge_density_mf->nGrowVect() );
         auto const& mf_array = p_charge_density_mf->array(mfi);
-        auto* const p_charge_source = this->p_pointChargeSource.get();
+
+        auto num_source = p_pointChargeSource->Get_NumSources();
+        //auto* p_vec_source = p_pointChargeSource->Get_pVecSources();
+        auto* p_vec_source = p_pointChargeSource->d_vec_source.dataPtr();
+        auto get_charge = get_charge_sum();
+
+        //auto* const p_charge_source = this->p_pointChargeSource.get();
 
         amrex::ParallelFor (tb,
             [=] 
@@ -379,10 +385,12 @@ c_MacroscopicProperties::Deposit_ExternalChargeDensitySources()
                 amrex::Real fac_z = (1._rt - iv[2]) * dx[2] * 0.5_rt;
                 amrex::Real z = k * dx[2] + real_box.lo(2) + fac_z;
 
-                mf_array(i,j,k) += p_charge_source->get_charge_sum(x,y,z);
+                for(int s=0; s< num_source; ++s) {
+                    mf_array(i,j,k) += get_charge(p_vec_source[s],x,y,z);
+                }
+                //mf_array(i,j,k) += p_charge_source->get_charge_sum(x,y,z);
         });
     }
-    amrex::Gpu::streamSynchronize();
-
-    p_charge_density_mf->FillBoundary(rGprop.geom.periodicity());
+//    amrex::Gpu::streamSynchronize();
+//    p_charge_density_mf->FillBoundary(rGprop.geom.periodicity());
 }
