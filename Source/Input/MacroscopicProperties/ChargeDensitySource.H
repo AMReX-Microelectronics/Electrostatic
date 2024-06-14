@@ -12,15 +12,15 @@
 #include <algorithm>  // For std::copy
 #include <type_traits>  // For std::is_trivially_copyable
 
+
+
 class PointCharge {
 public:
     amrex::Real pos[AMREX_SPACEDIM];  
     amrex::Real sigma;
     int charge_unit;
 
-    // default
     PointCharge() : sigma(2e-10), charge_unit(1) {
-        // Initialize pos array to zero or another suitable default value
         std::fill_n(pos, AMREX_SPACEDIM, 0.0);
     }
     
@@ -49,7 +49,6 @@ public:
 static_assert(std::is_trivially_copyable<PointCharge>::value, 
               "PointCharge must be trivially copyable");    
 
-
 struct PointChargeDensityCalculator {
     AMREX_GPU_HOST_DEVICE
     double operator()(const PointCharge& pc, double x, double y, double z) const {
@@ -66,36 +65,37 @@ struct PointChargeDensityCalculator {
     }
 };
 
-template<typename SourceType=PointCharge,
-         typename ChargeDensityCalculator=PointChargeDensityCalculator>
+
+//define a traits class
+template<typename ChargeType>
+struct ChargeTraits;
+
+
+//specialization for PointCharge
+template<>
+struct ChargeTraits<PointCharge>{
+    using DensityCalculator = PointChargeDensityCalculator;
+};
+
+template<typename SourceType=PointCharge>
 class ChargeDensitySource {
 
-    amrex::Gpu::DeviceScalar<int> d_num_sources;
+    int _num_sources;
     amrex::Vector<SourceType> h_vec_source;
-    //SourceType* p_vec_source;
-    
-    ChargeDensityCalculator charge_density_calculator;
-
-public:
     amrex::Gpu::DeviceVector<SourceType> d_vec_source;
+    
+public:
+    using ChargeDensityCalculator = typename ChargeTraits<SourceType>::DensityCalculator;
 
-    ChargeDensitySource(int _num_sources,
-                        const ChargeDensityCalculator& calculator = ChargeDensityCalculator())
-        : d_num_sources(_num_sources), 
-          charge_density_calculator(calculator) 
+    ChargeDensitySource(int num_sources) : _num_sources(num_sources)
     {
-        amrex::Print() << " num_sources: " << _num_sources << "\n";
         h_vec_source.resize(_num_sources); 
-
-        //#ifdef AMREX_USE_GPU
+        #ifdef AMREX_USE_GPU
         d_vec_source.resize(_num_sources); 
-        //p_vec_source = d_vec_source.dataPtr();
-        //#else
-        //p_vec_source = h_vec_source.dataPtr();
-        //#endif
+        #endif
     }
 
-    void Copy_HostVectorToGPU() 
+    void Copy_HostToDevice() 
     {
         #ifdef AMREX_USE_GPU
         if (!h_vec_source.empty()) {
@@ -106,32 +106,16 @@ public:
         #endif
     }
 
-    int Get_NumSources() const {
-        return d_num_sources.dataValue();
+    int get_num_sources() const {
+        return _num_sources;
     }
 
-    SourceType* Get_pVecSources() const {
+    const SourceType* get_p_sources() const {
         return d_vec_source.dataPtr();
     }
 
-    //AMREX_GPU_DEVICE
-    //double get_charge_sum(double x, double y, double z) const
-    //{
-    //    double sum=0;
-
-    //    for(int s=0; s< num_sources; ++s)
-    //    {
-    //        sum += charge_density_calculator(p_vec_source[s], x, y, z);
-    //    }
-    //    return sum;
-    //}
-    //static PointChargeDensityCalculator get_charge_sum()
-    //{
-    //   return PointChargeDensityCalculator{};
-    //}
-    //
-    charge_density_calculator get_charge_sum() {
-       return charge_density_calculator{};
+    ChargeDensityCalculator get_charge_density_calculator() {
+       return ChargeDensityCalculator();
     }
 
     void Define_PointCharge(size_t index, PointCharge&& pc)
@@ -153,7 +137,7 @@ public:
         h_vec_source[index] = std::move(pc);
     }
 
-    void Print_PointCharge()
+    void Print_ChargeDensity()
     {
         amrex::Print() << "Point Charges:\n";
         for(int s=0; s<h_vec_source.size(); ++s) {
@@ -162,10 +146,5 @@ public:
     }
 };
 
-
-using PointChargeSource = 
-      ChargeDensitySource<PointCharge, PointChargeDensityCalculator>;
-
-//#include "ChargeDensitySource.tpp"  // Include template definitions
-
+using PointChargeSource = ChargeDensitySource<PointCharge>;
 #endif

@@ -61,7 +61,7 @@ private:
     std::map<std::string,amrex::Real> map_default_value;
     std::map<std::string,int> map_num_ghostcell;
 
-    std::unique_ptr<PointChargeSource> p_pointChargeSource = nullptr;
+    std::unique_ptr<PointChargeSource> p_ChargeDensitySource = nullptr;
 
 #ifdef TIME_DEPENDENT
     amrex::Vector<std::string> m_parser_varname_vector = {"x", "y", "z", "t"};
@@ -105,12 +105,6 @@ private:
                                        amrex::DistributionMapping& dm,
                                        amrex::Geometry& geom,
                                        int Ncomp, int Nghost);
-
-
-    static PointChargeDensityCalculator get_charge_sum()
-    {
-       return PointChargeDensityCalculator{};
-    }
 
 };
 

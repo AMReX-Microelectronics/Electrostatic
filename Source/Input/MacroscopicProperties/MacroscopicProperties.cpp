@@ -307,8 +307,8 @@ c_MacroscopicProperties::Define_ExternalChargeDensitySources()
     {
         if(type_str == "point_charge") 
         {
-            if(p_pointChargeSource==nullptr) 
-                p_pointChargeSource = std::make_unique<PointChargeSource>(num);
+            if(p_ChargeDensitySource==nullptr) 
+                p_ChargeDensitySource = std::make_unique<PointChargeSource>(num);
 
             for(size_t s=0; s<num; ++s) 
             {
@@ -326,14 +326,12 @@ c_MacroscopicProperties::Define_ExternalChargeDensitySources()
                 int charge_unit = 1;
                 pp_pc.query("charge_unit", charge_unit);
 
-                p_pointChargeSource->Define_PointCharge(s, 
-                                       PointCharge(pos.data(), sigma, charge_unit));
+                p_ChargeDensitySource->Define_PointCharge(s, 
+                                    PointCharge(pos.data(), sigma, charge_unit));
                        
             }
-            #ifdef AMREX_USE_GPU
-            p_pointChargeSource->Copy_HostVectorToGPU();
-            #endif
-            p_pointChargeSource->Print_PointCharge();
+            p_ChargeDensitySource->Copy_HostToDevice();
+            p_ChargeDensitySource->Print_ChargeDensity();
         }
     }
 }
@@ -342,7 +340,6 @@ c_MacroscopicProperties::Define_ExternalChargeDensitySources()
 void
 c_MacroscopicProperties::Deposit_ExternalChargeDensitySources()
 {
-    amrex::Print() << "In Deposit_External\n";
     auto& rCode  = c_Code::GetInstance();
     auto& rGprop = rCode.get_GeometryProperties();
     auto& geom = rGprop.geom;
@@ -365,12 +362,9 @@ c_MacroscopicProperties::Deposit_ExternalChargeDensitySources()
         const auto& tb = mfi.tilebox( iv, p_charge_density_mf->nGrowVect() );
         auto const& mf_array = p_charge_density_mf->array(mfi);
 
-        auto num_source = p_pointChargeSource->Get_NumSources();
-        //auto* p_vec_source = p_pointChargeSource->Get_pVecSources();
-        auto* p_vec_source = p_pointChargeSource->d_vec_source.dataPtr();
-        auto get_charge = get_charge_sum();
-
-        //auto* const p_charge_source = this->p_pointChargeSource.get();
+        int num_sources = p_ChargeDensitySource->get_num_sources();
+        const auto* p_vec_source = p_ChargeDensitySource->get_p_sources();
+        auto charge_density_calculator = p_ChargeDensitySource->get_charge_density_calculator();
 
         amrex::ParallelFor (tb,
             [=] 
@@ -385,12 +379,9 @@ c_MacroscopicProperties::Deposit_ExternalChargeDensitySources()
                 amrex::Real fac_z = (1._rt - iv[2]) * dx[2] * 0.5_rt;
                 amrex::Real z = k * dx[2] + real_box.lo(2) + fac_z;
 
-                for(int s=0; s< num_source; ++s) {
-                    mf_array(i,j,k) += get_charge(p_vec_source[s],x,y,z);
+                for(int s=0; s< num_sources; ++s) {
+                    mf_array(i,j,k) += charge_density_calculator(p_vec_source[s],x,y,z);
                 }
-                //mf_array(i,j,k) += p_charge_source->get_charge_sum(x,y,z);
         });
     }
-//    amrex::Gpu::streamSynchronize();
-//    p_charge_density_mf->FillBoundary(rGprop.geom.periodicity());
 }
