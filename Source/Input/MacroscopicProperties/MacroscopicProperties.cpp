@@ -303,35 +303,33 @@ c_MacroscopicProperties::Define_ExternalChargeDensitySources()
     
     amrex::Print() << " charge_density_source.num " << num << "\n";
     amrex::Print() << " charge_density_source.type " << type_str << "\n";
-    if(type_isDefined) 
+
+    if(type_isDefined && type_str == "point_charge") 
     {
-        if(type_str == "point_charge") 
+        amrex::Vector<PointCharge> v_pointCharges;
+        v_pointCharges.reserve(num);
+
+        for(size_t s=0; s<num; ++s) 
         {
-            if(p_ChargeDensitySource==nullptr) 
-                p_ChargeDensitySource = std::make_unique<PointChargeSource>(num);
+            amrex::ParmParse pp_pc("pc_" + std::to_string(s+1));
 
-            for(size_t s=0; s<num; ++s) 
-            {
-                amrex::ParmParse pp_pc("pc_" + std::to_string(s+1));
-
-                amrex::Vector<amrex::Real> pos(AMREX_SPACEDIM);
-
-                getArrWithParser(pp_pc, "location",
-                                 pos, 
-                                 0, AMREX_SPACEDIM);
+            amrex::Vector<amrex::Real> pos(AMREX_SPACEDIM);
+            getArrWithParser(pp_pc, "location",
+                             pos, 
+                             0, AMREX_SPACEDIM);
     
-                amrex::Real sigma = 2.e-10;
-                pp_pc.query("sigma", sigma);
-                
-                int charge_unit = 1;
-                pp_pc.query("charge_unit", charge_unit);
+            amrex::Real sigma = 2.e-10;
+            pp_pc.query("sigma", sigma);
+            
+            int charge_unit = 1;
+            pp_pc.query("charge_unit", charge_unit);
 
-                p_ChargeDensitySource->Define_PointCharge(s, 
-                                    PointCharge(pos.data(), sigma, charge_unit));
-                       
-            }
-            p_ChargeDensitySource->Copy_HostToDevice();
-            p_ChargeDensitySource->Print_ChargeDensity();
+            v_pointCharges.emplace_back(pos.data(), sigma, charge_unit);
+        }
+
+        if (p_ChargeDensitySource == nullptr) {
+            bool print=true;
+            p_ChargeDensitySource = std::make_unique<PointChargeSource>(std::move(v_pointCharges), print);
         }
     }
 }

@@ -32,7 +32,7 @@ public:
     }    
 
     void Print() const {
-        amrex::Print() << " location: [";
+        amrex::Print() << " Point Charge location: [";
         for (int i = 0; i < AMREX_SPACEDIM; ++i) {
             amrex::Print() << std::scientific << std::setprecision(3) << pos[i];
             if (i < AMREX_SPACEDIM - 1) std::cout << ", ";
@@ -67,79 +67,76 @@ struct PointChargeDensityCalculator {
 
 
 //define a traits class
-template<typename ChargeType>
-struct ChargeTraits;
-
+template<typename SourceType>
+struct SourceTraits;
 
 //specialization for PointCharge
 template<>
-struct ChargeTraits<PointCharge>{
+struct SourceTraits<PointCharge>{
     using DensityCalculator = PointChargeDensityCalculator;
+
+    static void CheckSource(const amrex::Vector<PointCharge>& vec_source) {
+        auto& rCode = c_Code::GetInstance();
+        auto& rGprop = rCode.get_GeometryProperties();
+
+        std::string assert_msg = "Point charge is out of the physical domain! See pos: [";
+
+        for(auto& source : vec_source) {
+
+            assert_msg += std::to_string(source.pos[0]) 
+                        + std::to_string(source.pos[1]) 
+                        + std::to_string(source.pos[2]) + "]\n";
+
+            AMREX_ALWAYS_ASSERT_WITH_MESSAGE(
+                    rGprop.Is_Point_Inside_Physical_Domain(source.pos), assert_msg);
+        }
+    }    
 };
+
 
 template<typename SourceType=PointCharge>
 class ChargeDensitySource {
 
-    int _num_sources;
     amrex::Vector<SourceType> h_vec_source;
     amrex::Gpu::DeviceVector<SourceType> d_vec_source;
     
 public:
-    using ChargeDensityCalculator = typename ChargeTraits<SourceType>::DensityCalculator;
+    using ChargeDensityCalculator = typename SourceTraits<SourceType>::DensityCalculator;
 
-    ChargeDensitySource(int num_sources) : _num_sources(num_sources)
+    ChargeDensitySource(amrex::Vector<SourceType>&& vec_source, bool PrintFlag=false) 
+        : h_vec_source(std::move(vec_source))
     {
-        h_vec_source.resize(_num_sources); 
-        #ifdef AMREX_USE_GPU
-        d_vec_source.resize(_num_sources); 
-        #endif
-    }
+        SourceTraits<SourceType>::CheckSource(h_vec_source);
 
-    void Copy_HostToDevice() 
-    {
         #ifdef AMREX_USE_GPU
         if (!h_vec_source.empty()) {
+            d_vec_source.resize(h_vec_source.size());
             amrex::Gpu::copy(amrex::Gpu::hostToDevice, h_vec_source.begin(),
                                                        h_vec_source.end(),
                                                        d_vec_source.begin() );
         }
         #endif
+
+        if(PrintFlag) Print_ChargeDensity();
     }
 
     int get_num_sources() const {
-        return _num_sources;
+        return h_vec_source.size();
     }
 
     const SourceType* get_p_sources() const {
+        #ifdef AMREX_USE_GPU
         return d_vec_source.dataPtr();
+        #else
+        return h_vec_source.dataPtr();
+        #endif
     }
 
     ChargeDensityCalculator get_charge_density_calculator() {
        return ChargeDensityCalculator();
     }
 
-    void Define_PointCharge(size_t index, PointCharge&& pc)
-    {
-        std::string assert_msg = "index: " + std::to_string(index)
-                   + ", h_vec_source.size(): " + std::to_string(h_vec_source.size()) + "\n";
-    
-        AMREX_ALWAYS_ASSERT_WITH_MESSAGE(index < h_vec_source.size(), assert_msg);
-    
-        assert_msg = "point charge: " + std::to_string(index)
-                   + " is out of the physical domain!\n";
-    
-        auto& rCode = c_Code::GetInstance();
-        auto& rGprop = rCode.get_GeometryProperties();
-    
-        AMREX_ALWAYS_ASSERT_WITH_MESSAGE(rGprop.Is_Point_Inside_Physical_Domain(pc.pos),
-                                         assert_msg);
-    
-        h_vec_source[index] = std::move(pc);
-    }
-
-    void Print_ChargeDensity()
-    {
-        amrex::Print() << "Point Charges:\n";
+    void Print_ChargeDensity() {
         for(int s=0; s<h_vec_source.size(); ++s) {
             h_vec_source[s].Print();
         }
