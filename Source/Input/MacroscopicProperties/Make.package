@@ -1,4 +1,5 @@
 CEXE_sources += MacroscopicProperties.cpp
+CEXE_headers += MacroscopicProperties_impl.H
 CEXE_headers += MacroscopicProperties.H
 CEXE_headers += MacroscopicProperties_fwd.H
 

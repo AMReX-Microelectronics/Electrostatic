@@ -13,8 +13,6 @@
 
 #include <string>
 #include <any>
-//#include <AMReX_Extension.H>
-//#include <AMReX_GpuQualifiers.H>
 
 
 struct s_MacroscopicPropertiesMacroName {
@@ -26,42 +24,14 @@ class
 c_MacroscopicProperties
 {
 
-public: 
-
-    c_MacroscopicProperties();
-
-    void ReadData();
-    void InitData();
-
-    amrex::MultiFab& get_mf  (std::string macro_str) 
-    {   
-        auto macro_num = map_param_all[macro_str]; 
-        return (*m_p_mf[macro_num]);
-    }
-    amrex::MultiFab* get_p_mf (std::string macro_str) 
-    {    
-        if(map_param_all.find(macro_str) != map_param_all.end()) {
-            auto macro_num = map_param_all[macro_str]; 
-            return m_p_mf[macro_num].get();
-        }
-        return nullptr;
-    }
-
-    std::map<std::string,s_MacroscopicPropertiesMacroName::macro_name> map_macro_name;
-    std::map<std::string,int> map_param_all;
-
-    int num_params;
-    void ReInitializeMacroparam(std::string macro_str);
-
-    void Define_ExternalChargeDensitySources();
-    void Deposit_ExternalChargeDensitySources();
-
 private:
-    
+
     std::map<std::string,amrex::Real> map_default_value;
     std::map<std::string,int> map_num_ghostcell;
 
-    std::unique_ptr<PointChargeSource> p_ChargeDensitySource = nullptr;
+    std::unique_ptr<PointChargeSource> p_PointChargeSource = nullptr;
+
+    void Define_ExternalChargeDensitySources();
 
 #ifdef TIME_DEPENDENT
     amrex::Vector<std::string> m_parser_varname_vector = {"x", "y", "z", "t"};
@@ -106,6 +76,38 @@ private:
                                        amrex::Geometry& geom,
                                        int Ncomp, int Nghost);
 
-};
+public: 
 
+    c_MacroscopicProperties();
+
+    void ReadData();
+    void InitData();
+
+    amrex::MultiFab& get_mf  (std::string macro_str) 
+    {   
+        auto macro_num = map_param_all[macro_str]; 
+        return (*m_p_mf[macro_num]);
+    }
+    amrex::MultiFab* get_p_mf (std::string macro_str) 
+    {    
+        if(map_param_all.find(macro_str) != map_param_all.end()) {
+            auto macro_num = map_param_all[macro_str]; 
+            return m_p_mf[macro_num].get();
+        }
+        return nullptr;
+    }
+
+    std::map<std::string,s_MacroscopicPropertiesMacroName::macro_name> map_macro_name;
+    std::map<std::string,int> map_param_all;
+
+    int num_params;
+    void ReInitializeMacroparam(std::string macro_str);
+
+    void Deposit_AllExternalChargeDensitySources();
+
+    template<typename SourceType>
+    void Deposit_ExternalChargeDensitySources(std::unique_ptr<ChargeDensitySource<SourceType>>&);
+
+
+};
 #endif
