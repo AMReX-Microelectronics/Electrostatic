@@ -1109,4 +1109,3 @@ c_MLMGSolver:: Compute_vecFlux(std::array<amrex::MultiFab, AMREX_SPACEDIM>& vecF
     amrex::Print() << "\t\t\t}************************c_MLMGSolver::Compute_vecFlux(*)************************\n";
 #endif
 }
-

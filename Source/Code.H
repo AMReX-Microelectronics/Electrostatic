@@ -112,6 +112,7 @@ public:
     void ReadData ();
     void InitData ();
     void Solve_PostProcess_Output ();
+    amrex::Real Solve_OnlyElectrostatics();
     void Cleanup ();
 
     void EstimateOfRequiredMemory();

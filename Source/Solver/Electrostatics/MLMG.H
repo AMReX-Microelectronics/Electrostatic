@@ -33,6 +33,7 @@ class TD;
 class 
 c_MLMGSolver
 {
+
 public: 
     amrex::Real ascalar, bscalar;
     int set_verbose;
@@ -107,8 +108,6 @@ private:
     bool all_homogeneous_boundaries;
     bool some_functionbased_inhomogeneous_boundaries;
     bool some_constant_inhomogeneous_boundaries;
-
-
 };
 
 #endif
