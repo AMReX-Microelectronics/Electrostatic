@@ -10,34 +10,31 @@
 ##### FLAGS ####
 ################
 use_electrostatic = 1
-use_transport = 0
+use_transport = 1
 amrex.the_arena_is_managed=1
 
 ################################
 ##### Some Important Params ####
 ################################
-my_constants.gx = 2
+my_constants.gx = 1
 my_constants.gy = 4
 my_constants.gz = 2
 
 my_constants.num_CNTs = 1
 my_constants.periodicity_factor = 1.875 #1.875 corresponds to 3.195 nm (smallest periodicity distance)
 
-my_constants.Channel_unitcells = 24
+my_constants.Channel_unitcells = 12
 my_constants.Overlap_unitcells = 12
 
 my_constants.Vds = 0.   #Drain-Source voltage [V]
 my_constants.Vgs_min = -4
-my_constants.Vgs_max = -4
-#my_constants.Nsteps =  25
-#my_constants.dt = 1./(Nsteps-1)
-my_constants.Nsteps = 1
-my_constants.dt = 1
+my_constants.Vgs_max = 8
+my_constants.Nsteps =  5
+my_constants.dt = 1./(Nsteps-1)
 
-plot.folder_name = point_charges
-#plot.folder_name = /global/cfs/projectdirs/m4540/eXstatic/point_charges
-plot.write_after_init = 1
-plot.write_interval = 1
+plot.folder_name = cnt_pt_charge
+plot.write_after_init = 0
+plot.write_interval = 200000
 
 transport.flag_compute_DOS = 1 #DOS, Transmission, Conductance
 transport.flag_write_LDOS = 0
@@ -46,6 +43,7 @@ transport.write_LDOS_iter_period = 10
 
 restart = 0
 restart_step = 0
+NS_default.initialize_charge_distribution = 0
 ##################################
 ##### USER DEFINED CONSTANTS #####
 ##################################
@@ -75,7 +73,7 @@ my_constants.unitcells_per_D_CN = ceil((R_CN*2)/(L_unitcell)) #unitcells per dia
 
 my_constants.periodicity_length = periodicity_factor * unitcells_per_D_CN * L_unitcell
 
-my_constants.width_factor  = (num_CNTs)*periodicity_factor #1.875 corresponds to 3.195 nm (smallest periodicity distance)
+my_constants.width_factor  = (num_CNTs+2)*periodicity_factor #1.875 corresponds to 3.195 nm (smallest periodicity distance)
 
 my_constants.height_factor = 12
 
@@ -142,7 +140,7 @@ steps = Nsteps
 ###### EMBEDDED BOUNDARIES #########
 ####################################
 
-domain.embedded_boundary = 0  #options: 1=true, 0=false (default)
+domain.embedded_boundary = 1  #options: 1=true, 0=false (default)
 domain.specify_using_eb2 = 0  #options: 1=true, 0=false (default)
 
 ebgeom.objects = Source Drain
@@ -173,15 +171,25 @@ domain.blocking_factor = nx/gx ny/gy nz/gz
 domain.prob_lo = -Lx/2. -Ly/2.  Lz_min
 domain.prob_hi =  Lx/2.  Ly/2.  Lz_max
 
-domain.is_periodic = 1 0 0
+domain.is_periodic = 0 0 0
 
 domain.coord_sys = cartesian
+
+##############################
+###### Point Charges #########
+##############################
+
+charge_density_source.num = 1
+charge_density_source.type = point_charge
+
+pc_1.location = CN_x CN_y (CN_z + R_CN + 1e-9)
+
 
 #################################
 ###### BOUNDARY CONDITIONS ######
 #################################
-boundary.hi = per neu(0.) neu(0.)
-boundary.lo = per neu(0.) dir(Gate)
+boundary.hi = neu(0.) neu(0.) neu(0.)
+boundary.lo = neu(0.) neu(0.) dir(Gate)
 
 boundary.Gate_function = "SV + Vgs_max - (Vgs_max-Vgs_min) * t"
 
@@ -197,19 +205,6 @@ macroscopic.epsilon_function = "epsilon_0 + (epsilon_GO - epsilon_0) * (z < GO_m
 
 macroscopic.phi = 0.
 macroscopic.atom_locations = 0.
-
-##############################
-###### Point Charges #########
-##############################
-
-charge_density_source.num = 5
-charge_density_source.type = point_charge
-
-pc_1.location = 0.  0.   1e-9  
-pc_2.location = 0. -3e-9 2e-9
-pc_3.location = 0.  3e-9 2e-9
-pc_4.location = 0. -6e-9 4e-9 
-pc_5.location = 0.  6e-9 4e-9
 
 #############################
 ###### POST PROCESSING ######
@@ -227,9 +222,15 @@ plot.rawfield_write_interval = 1000000
 ########################
 ###### DIAGNOSTICS #####
 ########################
-use_diagnostics = 0
+use_diagnostics = 1
 
-#diag.specify_using_eb = 1
+diag.specify_using_eb = 1
+#diag.objects = Z_0
+Z_0.geom_type = plane
+Z_0.direction = 2
+Z_0.location = 0.0
+Z_0.fields_to_plot = phi charge_density
+
 #diag.objects = Surf1
 #Surf1.geom_type = cylinder
 #Surf1.center = 0 0 CN_z
@@ -237,7 +238,10 @@ use_diagnostics = 0
 #Surf1.axial_direction = 1
 #Surf1.theta_reference_direction = 0
 #Surf1.has_fluid_inside = 0
-#Surf1.fields_to_plot = phi charge_density
+#Surf1.fields_to_plot = phi charge_density atom_locations
+
+
+
 
 ####################################
 ###### MLMG SOLVER PROPERTIES ######
@@ -279,6 +283,7 @@ transport.Broyden_threshold_maxstep = 100
 NS_default.num_unitcells = N_unitcells
 NS_default.rotation_order = Z
 NS_default.rotation_angle_type = D
+NS_default.rotation_angles = 0 0 0
 NS_default.contact_Fermi_level = Ef
 NS_default.contact_mu_specified = 1
 NS_default.contact_mu = Ef (Ef - Vds)
@@ -294,10 +299,9 @@ NS_default.flag_write_charge_components = 0
 NS_default.num_noneq_paths = 1
 NS_default.num_recursive_parts = 2
 NS_default.write_at_iter = 0
-NS_default.initialize_charge_distribution = 0
 #NS_default.charge_distribution_filename = <full filename>
-#NS_default.read_step = 
-#NS_default.read_negf_foldername = 
+#NS_default.read_step =
+#NS_default.read_negf_foldername =
 NS_default.E_valence_min = -10
 NS_default.E_pole_max    = 3
 NS_default.E_zPlus_imag  = 1.e-5
@@ -305,5 +309,5 @@ NS_default.E_zPlus_imag  = 1.e-5
 CNT_default.type_id = m_index n_index    
 CNT_default.acc = bond_length
 CNT_default.gamma = 2.5     
+
 NS_1.offset = (CN_x + (0/2.)*periodicity_length) CN_y CN_z
-NS_1.rotation_angles = 0 0 0.0
