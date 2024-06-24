@@ -28,13 +28,14 @@ my_constants.Overlap_unitcells = 12
 
 my_constants.Vds = 0.   #Drain-Source voltage [V]
 my_constants.Vgs_min = -4
-my_constants.Vgs_max = 8
-my_constants.Nsteps =  5
-my_constants.dt = 1./(Nsteps-1)
+my_constants.Vgs_max = -4
+my_constants.Nsteps =  1
+my_constants.dt = 1
+#my_constants.dt = 1./(Nsteps-1)
 
 plot.folder_name = cnt_pt_charge
-plot.write_after_init = 0
-plot.write_interval = 200000
+plot.write_after_init = 1
+plot.write_interval = 1
 
 transport.flag_compute_DOS = 1 #DOS, Transmission, Conductance
 transport.flag_write_LDOS = 0
@@ -225,11 +226,21 @@ plot.rawfield_write_interval = 1000000
 use_diagnostics = 1
 
 diag.specify_using_eb = 1
-#diag.objects = Z_0
-Z_0.geom_type = plane
-Z_0.direction = 2
-Z_0.location = 0.0
-Z_0.fields_to_plot = phi charge_density
+diag.objects = X Y Z
+X.geom_type = plane
+X.direction = 0
+X.location = 0.0
+X.fields_to_plot = phi
+
+Y.geom_type = plane
+Y.direction = 1
+Y.location = 0.0
+Y.fields_to_plot = phi
+
+Z.geom_type = plane
+Z.direction = 2
+Z.location = 0.0
+Z.fields_to_plot = phi
 
 #diag.objects = Surf1
 #Surf1.geom_type = cylinder

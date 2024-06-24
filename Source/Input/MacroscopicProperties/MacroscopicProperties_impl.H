@@ -57,5 +57,9 @@ c_MacroscopicProperties::Deposit_ExternalChargeDensitySources(
                 }
         });
     }
+
+    amrex::Gpu::streamSynchronize();
+    p_charge_density_mf->FillBoundary(geom.periodicity());
+
 }
 #endif
