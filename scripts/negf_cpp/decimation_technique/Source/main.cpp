@@ -66,17 +66,88 @@ MatrixDType Compute_SurfaceGreensFunction(MatrixDType E,
 
      MatrixDType Denom = 2. * gamma_sq * EmU; 
 
-     //amrex::Print() << "EmU: " << EmU << "\n";
+     amrex::Print() << "EmU: " << EmU << "\n";
      //amrex::Print() << "Factor: " << Factor << "\n";
      //amrex::Print() << "Sqrt: "  << Sqrt << "\n";
      //amrex::Print() << "Denom: " << Denom << "\n";
      //amrex::Print() << "Numerator: " << Factor+Sqrt << "\n";
-     //amrex::Print() << "Value: " << (Factor+Sqrt)/Denom << "\n";
+     amrex::Print() << "Value: " << (Factor+Sqrt)/Denom << "\n";
 
      return (Factor + Sqrt) / Denom;
 
 }
 
+AMREX_GPU_HOST_DEVICE 
+MatrixDType Compute_SurfaceGreensFunction_DecimationTechnique(MatrixDType E, 
+		                          amrex::Real U, 
+					  MatrixDType beta, 
+					  amrex::Real gamma) 
+{
+
+    MatrixDType mu_0 = E-U;
+    
+    MatrixDType nu_0 = E-U;
+
+    MatrixDType gamma_0 = beta;
+
+    MatrixDType zeta_0 = gamma;
+
+
+    MatrixDType mu_old = mu_0 - pow(gamma_0,2.) / nu_0;
+
+    MatrixDType nu_old = nu_0 - 2. * gamma_0 * zeta_0 / nu_0;
+
+    MatrixDType kappa_old = gamma_0 * zeta_0 / nu_0;
+
+    MatrixDType gamma_old = pow(gamma_0,2.) / nu_0;
+
+    MatrixDType zeta_old =  pow(zeta_0,2.) / nu_0;
+
+
+    MatrixDType mu_new = mu_old;
+
+    MatrixDType nu_new = nu_old;
+
+    MatrixDType kappa_new = kappa_old;
+
+    MatrixDType gamma_new = gamma_old;
+
+    MatrixDType zeta_new =  zeta_old;
+
+    amrex::Print() << "Value mu_new: " << mu_new << "\n";
+      
+    for (int i=1; i<10; ++i) {
+      
+      mu_new = mu_old - gamma_old * kappa_old / nu_old;
+
+      nu_new = nu_old - 2. * gamma_old * zeta_old / nu_old;
+
+      kappa_new =  gamma_old * zeta_old / nu_old;
+
+      gamma_new = pow(gamma_old,2.) / nu_old;
+
+      zeta_new =  pow(zeta_old,2.) / nu_old;
+
+
+      mu_old = mu_new;
+
+      nu_old = nu_new;
+
+      kappa_old = kappa_new;
+
+      gamma_old = gamma_new;
+
+      zeta_old = zeta_new;
+
+      amrex::Print() << "Value mu_new: " << mu_new << "\n";
+    }
+
+    amrex::Print() << "E: " << E << "\n";
+    amrex::Print() << "Value: " << pow(mu_new,-1.) << "\n";
+
+    return pow(mu_new,-1.);
+
+}
 
 AMREX_GPU_HOST_DEVICE 
 MatrixDType get_Sigma(MatrixDType E,
@@ -85,7 +156,8 @@ MatrixDType get_Sigma(MatrixDType E,
                       amrex::Real gamma) 
 {
 
-   MatrixDType gr = Compute_SurfaceGreensFunction(E, U, beta, gamma);
+  MatrixDType gr = Compute_SurfaceGreensFunction_DecimationTechnique(E, U, beta, gamma);
+  // Compute_SurfaceGreensFunction(E, U, beta, gamma);
 
    MatrixDType Sigma = pow(gamma,2.)*gr;
 
@@ -883,7 +955,7 @@ int main (int argc, char* argv[])
     int num_EnPts = 10;
     pp.query("num_EnPts", num_EnPts);
 
-    amrex::Real EnRange[2] = {-1., 1.}; //eV
+    amrex::Real EnRange[2] = {-6., -5.}; //eV
     Matrix1D h_E_glo_data({0},{num_EnPts},The_Pinned_Arena());
     auto const& h_E_glo = h_E_glo_data.table();
 

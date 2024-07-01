@@ -66,12 +66,12 @@ MatrixDType Compute_SurfaceGreensFunction(MatrixDType E,
 
      MatrixDType Denom = 2. * gamma_sq * EmU; 
 
-     //amrex::Print() << "EmU: " << EmU << "\n";
+     amrex::Print() << "EmU: " << EmU << "\n";
      //amrex::Print() << "Factor: " << Factor << "\n";
      //amrex::Print() << "Sqrt: "  << Sqrt << "\n";
      //amrex::Print() << "Denom: " << Denom << "\n";
      //amrex::Print() << "Numerator: " << Factor+Sqrt << "\n";
-     //amrex::Print() << "Value: " << (Factor+Sqrt)/Denom << "\n";
+     amrex::Print() << "Value: " << (Factor+Sqrt)/Denom << "\n";
 
      return (Factor + Sqrt) / Denom;
 
@@ -845,7 +845,7 @@ int main (int argc, char* argv[])
           h_B(i) = -gamma;
           h_C(i) = -gamma;
        } 
-       //amrex::Print() << "i,B,C: " << i << " "<< h_B(i) << " " << h_C(i) << "\n";
+       amrex::Print() << "i,B,C: " << i << " "<< h_B(i) << " " << h_C(i) << "\n";
     }
     
     /*define energy grid and sigma*/

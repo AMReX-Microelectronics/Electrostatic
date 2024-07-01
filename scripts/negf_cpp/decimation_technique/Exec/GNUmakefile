@@ -1,10 +1,10 @@
 AMREX_HOME  ?= ../../../../../amrex
 
 DEBUG        = FALSE
-ASSERT       = TRUE
+ASSERT       = FALSE
 USE_MPI      = TRUE
 USE_OMP      = FALSE
-USE_CUDA     = TRUE
+USE_CUDA     = FALSE
 COMP         = gnu
 DIM          = 3
 CXXSTD       = c++17
