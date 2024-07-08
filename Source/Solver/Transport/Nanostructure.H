@@ -144,6 +144,7 @@ public:
     void Evaluate_LocalFieldSites();
     void Gather_MeshAttributeAtAtoms();
     void Deposit_AtomAttributeToMesh();
+    void Deposit_ZeroToMesh();
     void Obtain_PotentialAtSites();
     void Mark_CellsWithAtoms(); 
 

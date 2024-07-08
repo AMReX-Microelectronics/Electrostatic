@@ -33,7 +33,8 @@ c_MacroscopicProperties::Deposit_ExternalChargeDensitySources(
                         mfi.isValid();
                         ++mfi )
     {
-        const auto& tb = mfi.tilebox( iv, p_charge_density_mf->nGrowVect() );
+        //const auto& tb = mfi.tilebox( iv, p_charge_density_mf->nGrowVect() );
+        const auto& tb = mfi.tilebox(iv);
         auto const& mf_array = p_charge_density_mf->array(mfi);
 
         int num_sources = p_ChargeDensitySource->get_num_sources();

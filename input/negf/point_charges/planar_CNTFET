@@ -23,7 +23,7 @@ my_constants.gz = 2
 my_constants.num_CNTs = 1
 my_constants.periodicity_factor = 1.875 #1.875 corresponds to 3.195 nm (smallest periodicity distance)
 
-my_constants.Channel_unitcells = 12
+my_constants.Channel_unitcells = 24
 my_constants.Overlap_unitcells = 12
 
 my_constants.Vds = 0.   #Drain-Source voltage [V]
@@ -34,8 +34,8 @@ my_constants.dt = 1
 #my_constants.dt = 1./(Nsteps-1)
 
 plot.folder_name = cnt_pt_charge
-plot.write_after_init = 1
-plot.write_interval = 1
+plot.write_after_init = 0
+plot.write_interval = 10000
 
 transport.flag_compute_DOS = 1 #DOS, Transmission, Conductance
 transport.flag_write_LDOS = 0

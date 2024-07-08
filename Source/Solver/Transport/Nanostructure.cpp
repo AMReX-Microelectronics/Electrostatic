@@ -354,11 +354,65 @@ c_Nanostructure<NSType>::Gather_MeshAttributeAtAtoms()
 
 template<typename NSType>
 void 
+c_Nanostructure<NSType>::Deposit_ZeroToMesh() 
+{
+    const auto& plo = _geom->ProbLoArray();
+    const auto dx =_geom->CellSizeArray();
+    int lev = 0;
+
+    for (MyParIter pti(*this, lev); pti.isValid(); ++pti) 
+    { 
+        auto np = pti.numParticles();
+
+        const auto& particles = pti.GetArrayOfStructs();
+        const auto p_par = particles().data();
+
+        auto rho = p_mf_deposit->array(pti);
+
+        amrex::ParallelFor(np, [=] AMREX_GPU_DEVICE (int p) noexcept 
+        {
+            amrex::Real lx = (p_par[p].pos(0) - plo[0] - dx[0]*0.5)/dx[0];
+    	    amrex::Real ly = (p_par[p].pos(1) - plo[1] - dx[1]*0.5)/dx[1];
+	        amrex::Real lz = (p_par[p].pos(2) - plo[2] - dx[2]*0.5)/dx[2];
+
+	        int i = static_cast<int>(amrex::Math::floor(lx)); 
+    	    int j = static_cast<int>(amrex::Math::floor(ly)); 
+	        int k = static_cast<int>(amrex::Math::floor(lz));
+
+            amrex::Real wx_hi = lx - i;
+            amrex::Real wy_hi = ly - j;
+            amrex::Real wz_hi = lz - k;
+
+            amrex::Real wx_lo = amrex::Real(1.0) - wx_hi;
+            amrex::Real wy_lo = amrex::Real(1.0) - wy_hi;
+            amrex::Real wz_lo = amrex::Real(1.0) - wz_hi;
+
+    	    amrex::Gpu::Atomic::AddNoRet(&rho(i  , j  , k  , 0), 0.);
+
+	        amrex::Gpu::Atomic::AddNoRet(&rho(i+1, j  , k  , 0), 0.);
+	        amrex::Gpu::Atomic::AddNoRet(&rho(i  , j+1, k  , 0), 0.);
+    	    amrex::Gpu::Atomic::AddNoRet(&rho(i  , j  , k+1, 0), 0.);
+
+	        amrex::Gpu::Atomic::AddNoRet(&rho(i+1, j+1, k  , 0), 0.);
+    	    amrex::Gpu::Atomic::AddNoRet(&rho(i  , j+1, k+1, 0), 0.);
+	        amrex::Gpu::Atomic::AddNoRet(&rho(i+1, j  , k+1, 0), 0.);
+
+            amrex::Gpu::Atomic::AddNoRet(&rho(i+1, j+1, k+1, 0), 0.);
+
+        });
+    }
+}
+
+
+template<typename NSType>
+void 
 c_Nanostructure<NSType>::Deposit_AtomAttributeToMesh() 
 {
     const auto& plo = _geom->ProbLoArray();
     const auto dx =_geom->CellSizeArray();
     int lev = 0;
+
+    //Deposit_ZeroToMesh();
 
     #ifdef AMREX_USE_GPU
     NSType::d_n_curr_in_loc_data.copy(NSType::h_n_curr_in_loc_data);
@@ -392,14 +446,6 @@ c_Nanostructure<NSType>::Deposit_AtomAttributeToMesh()
 
         const int FSO = NSType::NS_field_sites_offset;
 
-        //for(int p=0; p < 80; ++p) {
-        //int site_id = get_1D_site_id(p_par[p].id()) - FSO;
-        //amrex::Print() << " p, global_id, site_id: "<< p << " " << p_par[p].id()
-        //                                                 << " " << site_id
-        //                                                 << " " << h_n_curr_in_loc(site_id) 
-        //                                                 << "\n";
-        //}
-    
         amrex::ParallelFor(np, [=] AMREX_GPU_DEVICE (int p) noexcept 
         {
     	    amrex::Real vol = AMREX_D_TERM(dx[0], *dx[1], *dx[2]);
@@ -439,7 +485,6 @@ c_Nanostructure<NSType>::Deposit_AtomAttributeToMesh()
 
         });
     }
-
 }
 
 template<typename NSType>
