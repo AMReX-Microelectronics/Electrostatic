@@ -513,6 +513,7 @@ c_TransportSolver::Solve(const int step, const amrex::Real time)
            time_counter[0] = amrex::second();
            
 
+           //rMprop.Deposit_ExternalChargeDensitySources();
            rMprop.ReInitializeMacroparam(NS_gather_field_str);
            rMLMG.UpdateBoundaryConditions(update_surface_soln_flag);
 
