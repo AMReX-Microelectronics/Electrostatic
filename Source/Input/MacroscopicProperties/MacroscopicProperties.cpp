@@ -307,6 +307,16 @@ c_MacroscopicProperties::Define_ExternalChargeDensitySources()
 
     if(type_isDefined && type_str == "point_charge") 
     {
+        /*translation*/
+        amrex::ParmParse pp_pc_main("pc");
+        amrex::Vector<amrex::Real> vec_offset(AMREX_SPACEDIM,0.);
+        auto offset_isDefined = queryArrWithParser(pp_pc_main, "offset", 
+                                                   vec_offset, 0, AMREX_SPACEDIM);
+        /*scaling*/
+        amrex::Vector<amrex::Real> vec_scaling(AMREX_SPACEDIM,1.);
+        auto scaling_isDefined = queryArrWithParser(pp_pc_main, "scaling", 
+                                                   vec_scaling, 0, AMREX_SPACEDIM);
+        
         amrex::Vector<PointCharge> v_pointCharges;
         v_pointCharges.reserve(num);
 
@@ -318,6 +328,10 @@ c_MacroscopicProperties::Define_ExternalChargeDensitySources()
             getArrWithParser(pp_pc, "location",
                              pos, 
                              0, AMREX_SPACEDIM);
+
+            for(size_t k=0; k < AMREX_SPACEDIM; ++k) {
+                pos[k] = pos[k]*vec_scaling[k] + vec_offset[k];
+            }
     
             amrex::Real sigma = 2.e-10;
             pp_pc.query("sigma", sigma);
@@ -330,7 +344,8 @@ c_MacroscopicProperties::Define_ExternalChargeDensitySources()
 
         if (!p_PointChargeSource) {
             bool print=true;
-            p_PointChargeSource = std::make_unique<PointChargeSource>(std::move(v_pointCharges), print);
+            p_PointChargeSource = 
+                std::make_unique<PointChargeSource>(std::move(v_pointCharges), print);
         }
     }
 }
