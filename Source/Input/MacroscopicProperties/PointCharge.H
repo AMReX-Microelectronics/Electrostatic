@@ -17,17 +17,21 @@ public:
     amrex::Real current_potential; //eV
     amrex::Real threshold_potential; //eV
     int charge_unit;
+    int boxID;
 
-    PointCharge() : sigma(2e-10), charge_unit(1), 
+    PointCharge() : boxID(-1), sigma(2e-10), charge_unit(1), 
                     threshold_potential(0.), current_potential(0.) {
         std::fill_n(pos, AMREX_SPACEDIM, 0.0);
     }
 
     PointCharge(const amrex::Real p[AMREX_SPACEDIM],
+                int boxID_val,
                amrex::Real sigma_val = 2e-10,
                int charge_unit_val = 1,
                amrex::Real threshold_val = 0.)
-    : sigma(sigma_val), charge_unit(charge_unit_val), threshold_potential(threshold_val) {
+    : boxID(boxID_val), 
+      sigma(sigma_val), charge_unit(charge_unit_val), threshold_potential(threshold_val)
+    {
         std::copy(p, p + AMREX_SPACEDIM, pos);
     }
 
@@ -44,6 +48,10 @@ public:
                        << charge_unit 
                        << ", threshold_potential: "
                        << threshold_potential << "\n";
+    }
+
+    RealVect pos () const & {
+        return RealVect(AMREX_D_DECL(this->pos[0], this->pos[1], this->pos[2]));
     }
 };
 static_assert(std::is_trivially_copyable<PointCharge>::value,

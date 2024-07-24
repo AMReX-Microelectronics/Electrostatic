@@ -210,3 +210,41 @@ c_GeometryProperties::Is_Point_Inside_Physical_Domain(const amrex::Real* pos) {
     }
     return true;
 }
+
+
+bool 
+c_GeometryProperties::Is_Position_Inside_BoxArray(const amrex::Real* pos) {
+
+    amrex::Real lx = (pos[0] - probe_lo[0] - dx[0]*0.5)/dx[0];
+    amrex::Real ly = (pos[1] - probe_lo[1] - dx[1]*0.5)/dx[1];
+    amrex::Real lz = (pos[2] - probe_lo[2] - dx[2]*0.5)/dx[2];
+
+    int i_par = static_cast<int>(amrex::Math::floor(lx));
+    int j_par = static_cast<int>(amrex::Math::floor(ly));
+    int k_par = static_cast<int>(amrex::Math::floor(lz));
+
+    return ba.contains( amrex::IntVect(AMREX_D_DECL(i,j,k)) );
+}
+
+
+int 
+c_GeometryProperties::Get_BoxID(const amrex::Real* pos) {
+
+    amrex::Real lx = (pos[0] - probe_lo[0] - dx[0]*0.5)/dx[0];
+    amrex::Real ly = (pos[1] - probe_lo[1] - dx[1]*0.5)/dx[1];
+    amrex::Real lz = (pos[2] - probe_lo[2] - dx[2]*0.5)/dx[2];
+
+    int i_par = static_cast<int>(amrex::Math::floor(lx));
+    int j_par = static_cast<int>(amrex::Math::floor(ly));
+    int k_par = static_cast<int>(amrex::Math::floor(lz));
+
+    IntVect iv = amrex::IntVect(AMREX_D_DECL(i,j,k));
+
+    std::vector< std::pair<int, Box> > isects;
+
+    ba.intersections(Box(iv, iv), isects, findfirst, nGrow);
+
+    box = isects.empty() ? -1 : isects[0].first;
+
+    return box;
+}

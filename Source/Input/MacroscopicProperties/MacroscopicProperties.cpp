@@ -318,7 +318,9 @@ c_MacroscopicProperties::Define_ExternalChargeDensitySources()
                                                    vec_scaling, 0, AMREX_SPACEDIM);
         
         amrex::Vector<PointCharge> v_pointCharges;
-        v_pointCharges.reserve(num);
+
+        auto& rCode = c_Code::GetInstance();
+        auto& rGprop = rCode.get_GeometryProperties();
 
         for(size_t s=0; s<num; ++s) 
         {
@@ -339,7 +341,11 @@ c_MacroscopicProperties::Define_ExternalChargeDensitySources()
             int charge_unit = 1;
             pp_pc.query("charge_unit", charge_unit);
 
-            v_pointCharges.emplace_back(pos.data(), sigma, charge_unit);
+            boxID = rGprop.Get_BoxID(p_vec_sources[s].pos);
+
+            if(boxID >=0) {
+                v_pointCharges.push_back(PointCharge(pos.data(), boxID, sigma, charge_unit));
+            }
         }
 
         if (!p_PointChargeSource) {
