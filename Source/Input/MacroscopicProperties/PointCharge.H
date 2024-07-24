@@ -12,18 +12,22 @@
 
 class PointCharge {
 public:
-    amrex::Real pos[AMREX_SPACEDIM];
-    amrex::Real sigma;
+    amrex::Real pos[AMREX_SPACEDIM]; //m
+    amrex::Real sigma; 
+    amrex::Real current_potential; //eV
+    amrex::Real threshold_potential; //eV
     int charge_unit;
 
-    PointCharge() : sigma(2e-10), charge_unit(1) {
+    PointCharge() : sigma(2e-10), charge_unit(1), 
+                    threshold_potential(0.), current_potential(0.) {
         std::fill_n(pos, AMREX_SPACEDIM, 0.0);
     }
 
     PointCharge(const amrex::Real p[AMREX_SPACEDIM],
                amrex::Real sigma_val = 2e-10,
-               int charge_unit_val = 1)
-    : sigma(sigma_val), charge_unit(charge_unit_val) {
+               int charge_unit_val = 1,
+               amrex::Real threshold_val = 0.)
+    : sigma(sigma_val), charge_unit(charge_unit_val), threshold_potential(threshold_val) {
         std::copy(p, p + AMREX_SPACEDIM, pos);
     }
 
@@ -36,7 +40,10 @@ public:
         amrex::Print() << "], ";
         amrex::Print() << "  sigma: " << std::scientific << std::setprecision(3)
                        << sigma
-                       << ", charge_unit: " << charge_unit << "\n";
+                       << ", charge_unit: " 
+                       << charge_unit 
+                       << ", threshold_potential: "
+                       << threshold_potential << "\n";
     }
 };
 static_assert(std::is_trivially_copyable<PointCharge>::value,
