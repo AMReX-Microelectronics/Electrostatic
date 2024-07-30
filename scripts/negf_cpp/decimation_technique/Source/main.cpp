@@ -28,6 +28,17 @@ using Matrix2D = TableData<MatrixDType, 2>;
 template<typename T>
 class TD;
 
+
+struct CondensedHamiltonianElem {
+
+MatrixDType Xi_s;
+MatrixDType Xi;
+MatrixDType Pi;
+
+};
+
+
+
 namespace MathConst
 {
     static constexpr amrex::Real pi = static_cast<amrex::Real>(3.14159265358979323846);
@@ -48,13 +59,20 @@ MatrixDType get_beta(amrex::Real gamma, int M, int J)
 }
 
 AMREX_GPU_HOST_DEVICE 
-MatrixDType Compute_SurfaceGreensFunction(MatrixDType E, 
+MatrixDType conjugate(MatrixDType a) 
+{
+   amrex::GpuComplex a_conj(a.real(), -1.*a.imag());
+   return a_conj;
+}
+
+AMREX_GPU_HOST_DEVICE 
+MatrixDType Compute_SurfaceGreensFunction_Quadratic(MatrixDType E, 
 		                          amrex::Real U, 
 					  MatrixDType beta, 
 					  amrex::Real gamma) 
 {
 
-     MatrixDType EmU = E-U;
+     MatrixDType EmU = E - U;
 
      MatrixDType EmU_sq = pow(EmU,2.);
 
@@ -70,59 +88,93 @@ MatrixDType Compute_SurfaceGreensFunction(MatrixDType E,
      //amrex::Print() << "Factor: " << Factor << "\n";
      //amrex::Print() << "Sqrt: "  << Sqrt << "\n";
      //amrex::Print() << "Denom: " << Denom << "\n";
-     //amrex::Print() << "Numerator: " << Factor+Sqrt << "\n";
-     amrex::Print() << "Value: " << (Factor+Sqrt)/Denom << "\n";
+     //amrex::Print() << "Numerator: " << Factor-Sqrt << "\n";
+     amrex::Print() << "Quadratic Value: " << (Factor-Sqrt)/Denom << "\n";
 
-     return (Factor + Sqrt) / Denom;
+     return (Factor - Sqrt) / Denom;
 
 }
 
 AMREX_GPU_HOST_DEVICE 
-MatrixDType Compute_SurfaceGreensFunction_DecimationTechnique(MatrixDType E, 
-		                          amrex::Real U, 
-					  MatrixDType beta, 
-					  amrex::Real gamma) 
+void CondenseHamiltonian(CondensedHamiltonianElem& cond, 
+		                MatrixDType E, 
+                          	amrex::Real U, 
+			  	MatrixDType beta, 
+			  	amrex::Real gamma) 
 {
 
-    MatrixDType mu_0 = E-U;
+    MatrixDType H_tilde_11 = pow(E - U,-1.);
     
-    MatrixDType nu_0 = E-U;
+    cond.Xi_s = U + beta * conjugate(beta) * H_tilde_11;
+    
+    cond.Xi = cond.Xi_s + gamma * conjugate(gamma) * H_tilde_11;
+    
+    cond.Pi = gamma * beta * H_tilde_11;
+    
+    //amrex::Print() << "E: " << E << "\n";
+    //amrex::Print() << "Xi_s: " << Xi_s << "\n";
+    //amrex::Print() << "Xi: " << Xi << "\n";
+    //amrex::Print() << "Pi: " << Pi << "\n";
+	
+}
 
-    MatrixDType gamma_0 = beta;
+AMREX_GPU_HOST_DEVICE 
+MatrixDType Compute_SurfaceGreensFunction_EigenfunctionTechnique(MatrixDType E, CondensedHamiltonianElem& cond)
+{
 
-    MatrixDType zeta_0 = gamma;
+    MatrixDType EmXi = E - cond.Xi;
+    
+    MatrixDType Factor = EmXi * pow(cond.Pi,-1.);
+    
+    MatrixDType Eigval = 0.5 * Factor - 0.5 * sqrt(pow(Factor,2.) - 4.);
+    
+    MatrixDType Sigma_dash = cond.Pi * Eigval;
+    
+    MatrixDType Denomenator = E - cond.Xi_s - Sigma_dash;
+    
+    amrex::Print() << "E: " << E << "\n";
+    //amrex::Print() << "Factor Eig: " << Factor << "\n";
+    //amrex::Print() << "Eigval: " << Eigval << "\n";    
+    amrex::Print() << "Eigenfunction Value: " << pow(Denomenator,-1.) << "\n";
+
+    return pow(Denomenator,-1.);
+    
+}
 
 
-    MatrixDType mu_old = mu_0 - pow(gamma_0,2.) / nu_0;
+AMREX_GPU_HOST_DEVICE 
+MatrixDType Compute_SurfaceGreensFunction_DecimationTechnique(MatrixDType E, const CondensedHamiltonianElem& cond)
+{
 
-    MatrixDType nu_old = nu_0 - 2. * gamma_0 * zeta_0 / nu_0;
+    MatrixDType mu_0 = E - cond.Xi_s;
+    
+    MatrixDType nu_0 = E - cond.Xi;
 
-    MatrixDType kappa_old = gamma_0 * zeta_0 / nu_0;
+    MatrixDType gamma_0 = cond.Pi;
+
+
+    MatrixDType mu_old = mu_0 - gamma_0*conjugate(gamma_0) / nu_0;
+
+    MatrixDType nu_old = nu_0 - gamma_0*conjugate(gamma_0) / nu_0;
 
     MatrixDType gamma_old = pow(gamma_0,2.) / nu_0;
 
-    MatrixDType zeta_old =  pow(zeta_0,2.) / nu_0;
+    MatrixDType zeta_old =  pow(conjugate(gamma_0),2.) / nu_0;
 
 
     MatrixDType mu_new = mu_old;
 
     MatrixDType nu_new = nu_old;
 
-    MatrixDType kappa_new = kappa_old;
-
     MatrixDType gamma_new = gamma_old;
 
     MatrixDType zeta_new =  zeta_old;
-
-    amrex::Print() << "Value mu_new: " << mu_new << "\n";
       
     for (int i=1; i<10; ++i) {
       
-      mu_new = mu_old - gamma_old * kappa_old / nu_old;
+      mu_new = mu_old - gamma_old * zeta_old / nu_old;
 
       nu_new = nu_old - 2. * gamma_old * zeta_old / nu_old;
-
-      kappa_new =  gamma_old * zeta_old / nu_old;
 
       gamma_new = pow(gamma_old,2.) / nu_old;
 
@@ -133,21 +185,19 @@ MatrixDType Compute_SurfaceGreensFunction_DecimationTechnique(MatrixDType E,
 
       nu_old = nu_new;
 
-      kappa_old = kappa_new;
-
       gamma_old = gamma_new;
 
       zeta_old = zeta_new;
 
-      amrex::Print() << "Value mu_new: " << mu_new << "\n";
     }
 
     amrex::Print() << "E: " << E << "\n";
-    amrex::Print() << "Value: " << pow(mu_new,-1.) << "\n";
+    amrex::Print() << "Decimation Value: " << pow(mu_new,-1.) << "\n";
 
     return pow(mu_new,-1.);
 
 }
+
 
 AMREX_GPU_HOST_DEVICE 
 MatrixDType get_Sigma(MatrixDType E,
@@ -156,8 +206,13 @@ MatrixDType get_Sigma(MatrixDType E,
                       amrex::Real gamma) 
 {
 
-  MatrixDType gr = Compute_SurfaceGreensFunction_DecimationTechnique(E, U, beta, gamma);
-  // Compute_SurfaceGreensFunction(E, U, beta, gamma);
+
+  CondensedHamiltonianElem cond;
+  CondenseHamiltonian(cond, E, U, beta, gamma);
+  Compute_SurfaceGreensFunction_DecimationTechnique(E, cond);
+  Compute_SurfaceGreensFunction_EigenfunctionTechnique(E, cond);  
+
+  MatrixDType gr = Compute_SurfaceGreensFunction_Quadratic(E, U, beta, gamma);
 
    MatrixDType Sigma = pow(gamma,2.)*gr;
 
@@ -172,15 +227,6 @@ MatrixDType get_Gamma(MatrixDType Sigma)
    amrex::GpuComplex val(-2.*Sigma.imag(), 0.);
    return val;
 }
-
-
-AMREX_GPU_HOST_DEVICE 
-MatrixDType conjugate(MatrixDType a) 
-{
-   amrex::GpuComplex a_conj(a.real(), -1.*a.imag());
-   return a_conj;
-}
-
 
 void Write1DArrayVsE(const Matrix1D& E_data, Matrix1D& Arr_data, std::string filename, std::string header)
 {
@@ -955,7 +1001,7 @@ int main (int argc, char* argv[])
     int num_EnPts = 10;
     pp.query("num_EnPts", num_EnPts);
 
-    amrex::Real EnRange[2] = {-6., -5.}; //eV
+    amrex::Real EnRange[2] = {-6., 0.}; //eV
     Matrix1D h_E_glo_data({0},{num_EnPts},The_Pinned_Arena());
     auto const& h_E_glo = h_E_glo_data.table();
 
