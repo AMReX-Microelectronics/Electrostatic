@@ -21,4 +21,4 @@ pc_6.location = -3.26e-10 5.71e-08 1.40e-09
 
 If point charges are placed outside the computational domain, the program will fail to run. 
 
-With the "input_files" folder there are already several random densities for the topgate configuration. There are also cases for a 10nm and 100nm cnt using a single point charge located above the cnt center. 
+With the "input_files" folder there are already several random densities for the topgate configuration. There are also cases for a 10nm and 100nm cnt using a single point charge located above the cnt center. There is also one file which does not have a CNT, only 200 point charges which are arranged to spell "ELEQTRONeX" when their charge density is visualized.  
