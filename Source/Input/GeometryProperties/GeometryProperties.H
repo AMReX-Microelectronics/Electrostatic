@@ -82,8 +82,8 @@ public:
 
     bool Is_Point_Inside_Physical_Domain(const amrex::Real* pos);
  
-    bool Is_Position_Inside_BoxArray(const amrex::Real& pos);  
+    bool Is_Position_Inside_BoxArray(const amrex::Real* pos);  
 
-    bool Get_BoxID(const amrex::Real& pos);  
+    int Get_BoxID(const amrex::Real* pos);  
 };
 #endif

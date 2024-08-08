@@ -9,13 +9,13 @@
 
 namespace CloudInCell
 {
-    AMREX_GPU_DEVICE amrex::Real 
+    AMREX_GPU_HOST_DEVICE amrex::Real 
     Gather_Trilinear(const amrex::RealVect& pos, 
                      const amrex::GpuArray<amrex::Real, AMREX_SPACEDIM>& plo, 
                      const amrex::GpuArray<amrex::Real, AMREX_SPACEDIM>& dx,  
                      const amrex::Array4<amrex::Real>& phi);
 
-    AMREX_GPU_DEVICE void
+    AMREX_GPU_HOST_DEVICE void
     Deposit_Trilinear(const amrex::RealVect& pos, 
                       const amrex::GpuArray<amrex::Real, AMREX_SPACEDIM>& plo, 
                       const amrex::GpuArray<amrex::Real, AMREX_SPACEDIM>& dx,  

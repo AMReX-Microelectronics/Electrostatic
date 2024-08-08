@@ -105,9 +105,5 @@ public:
 
     void Deposit_AllExternalChargeDensitySources();
 
-    template<typename SourceType>
-    void Deposit_ExternalChargeDensitySources(std::unique_ptr<ChargeDensitySource<SourceType>>&);
-
-
 };
 #endif

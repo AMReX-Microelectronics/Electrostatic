@@ -1,8 +1,10 @@
 CEXE_sources += MacroscopicProperties.cpp
-CEXE_headers += MacroscopicProperties_impl.H
 CEXE_headers += MacroscopicProperties.H
 CEXE_headers += MacroscopicProperties_fwd.H
 
+CEXE_sources += PointChargeContainer.cpp
+CEXE_headers += PointChargeContainer.H
+CEXE_sources += ChargeDensitySource.cpp
 CEXE_headers += ChargeDensitySource.H
 
 VPATH_LOCATIONS += $(CODE_HOME)/Source/Input/MacroscopicProperties

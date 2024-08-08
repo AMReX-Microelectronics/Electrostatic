@@ -1,6 +1,6 @@
 #include "CloudInCell.H"
 
-AMREX_GPU_DEVICE
+AMREX_GPU_HOST_DEVICE
 amrex::Real 
 CloudInCell::Gather_Trilinear(const amrex::RealVect& pos, 
                               const amrex::GpuArray<amrex::Real, AMREX_SPACEDIM>& plo, 
@@ -37,7 +37,7 @@ CloudInCell::Gather_Trilinear(const amrex::RealVect& pos,
 }
 
 
-AMREX_GPU_DEVICE
+AMREX_GPU_HOST_DEVICE
 void
 CloudInCell::Deposit_Trilinear(const amrex::RealVect& pos, 
                                const amrex::GpuArray<amrex::Real, AMREX_SPACEDIM>& plo, 
