@@ -2,7 +2,7 @@
 #define CHARGE_DENSITY_SOURCE_H_
 
 #include "PointChargeContainer.H"
-#include "HasDeposit.H"
+//#include "HasDeposit.H"
 #include <type_traits>
 
 template<typename ParticleContainerType=c_PointChargeContainer>
