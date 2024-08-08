@@ -1,9 +1,5 @@
 ################
-# Test case for validation of periodic boundary conditions -- infinite array of nanotubes.
-# The output of conductance can be compared with the result from the following reference,
-# Fig. 2), periodicity distance, d=3.195 nm == 3.2 nm. (see width_factor defined below).
-# Léonard, F. (2006). Crosstalk between nanotube devices: contact and channel effects. 
-# Nanotechnology, 17(9), 2381.
+# 10 nm cnt with single point charge located above center of CNT
 ################
 
 ################
@@ -27,18 +23,20 @@ my_constants.Channel_unitcells = 24
 my_constants.Overlap_unitcells = 12
 
 my_constants.Vds = 0.   #Drain-Source voltage [V]
-my_constants.Vgs_min = -4
-my_constants.Vgs_max = -4
+my_constants.Vgs_min = 1
+my_constants.Vgs_max = 1
 my_constants.Nsteps =  1
-my_constants.dt = 1
-#my_constants.dt = 1./(Nsteps-1)
+#my_constants.dt = 1
+my_constants.dt = 1./(Nsteps-1)
 
-plot.folder_name = cnt_pt_charge
-plot.write_after_init = 0
-plot.write_interval = 10000
+
+#plot.folder_name = ../../../../../../cfs/projectdirs/m4540/teo/planar_CNTFET
+plot.folder_name = planar_CNTFET_10nm
+plot.write_after_init = 1
+plot.write_interval = 1
 
 transport.flag_compute_DOS = 1 #DOS, Transmission, Conductance
-transport.flag_write_LDOS = 0
+transport.flag_write_LDOS = 1
 transport.flag_write_LDOS_iter = 0
 transport.write_LDOS_iter_period = 10
 
@@ -180,11 +178,15 @@ domain.coord_sys = cartesian
 ###### Point Charges #########
 ##############################
 
-charge_density_source.num = 1
 charge_density_source.type = point_charge
+pc.flag_vary_occupation = 1
+pc.Et = -1
+pc.V0 = 10
+pc.default_charge_unit = 1
+pc.default_occupation = 0
 
+pc.num = 1
 pc_1.location = CN_x CN_y (CN_z + R_CN + 1e-9)
-
 
 #################################
 ###### BOUNDARY CONDITIONS ######
@@ -230,17 +232,17 @@ diag.objects = X Y Z
 X.geom_type = plane
 X.direction = 0
 X.location = 0.0
-X.fields_to_plot = phi
+X.fields_to_plot = phi charge_density
 
 Y.geom_type = plane
 Y.direction = 1
 Y.location = 0.0
-Y.fields_to_plot = phi
+Y.fields_to_plot = phi charge_density 
 
 Z.geom_type = plane
 Z.direction = 2
 Z.location = 0.0
-Z.fields_to_plot = phi
+Z.fields_to_plot = phi charge_density 
 
 #diag.objects = Surf1
 #Surf1.geom_type = cylinder
@@ -250,9 +252,6 @@ Z.fields_to_plot = phi
 #Surf1.theta_reference_direction = 0
 #Surf1.has_fluid_inside = 0
 #Surf1.fields_to_plot = phi charge_density atom_locations
-
-
-
 
 ####################################
 ###### MLMG SOLVER PROPERTIES ######
@@ -301,7 +300,7 @@ NS_default.contact_mu = Ef (Ef - Vds)
 NS_default.contact_T  = 298. 298.
 NS_default.Fermi_tail_factors = 14 14
 NS_default.eq_integration_pts = 30 30 30
-NS_default.flag_compute_flatband_dos = 1
+NS_default.flag_compute_flatband_dos = 0
 NS_default.flatband_dos_integration_pts = 400
 NS_default.flatband_dos_integration_limits = -1. 1.
 NS_default.noneq_integration_pts = 400
