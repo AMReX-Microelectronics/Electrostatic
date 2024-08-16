@@ -1,7 +1,12 @@
-#include "MacroscopicProperties_impl.H"
+#include "MacroscopicProperties.H"
 
+#include "Code.H"
+#include "GeometryProperties.H"
 #include "../../Utils/SelectWarpXUtils/WarpXUtil.H"
 #include "../../Utils/CodeUtils/CodeUtil.H"
+
+#include <AMReX_ParmParse.H>
+#include <AMReX_Parser.H>
 
 #include <ctype.h>
 
@@ -40,7 +45,6 @@ c_MacroscopicProperties::ReadData()
         ReadMacroparam(it.first, default_val);
     }
 
-    Define_ExternalChargeDensitySources();
 }
 
 
@@ -163,15 +167,40 @@ c_MacroscopicProperties::InitData()
         auto macro_num = it.second;
         DefineAndInitializeMacroparam(macro_str, macro_num, ba, dm, geom, Ncomp1, map_num_ghostcell[macro_str]);
     }
+
+    Define_ExternalChargeDensitySources();
     
-    Deposit_AllExternalChargeDensitySources();
+    //Deposit_AllExternalChargeDensitySources();
 }
 
 
 void 
 c_MacroscopicProperties::Deposit_AllExternalChargeDensitySources()
 {
-    if (p_PointChargeSource) Deposit_ExternalChargeDensitySources(p_PointChargeSource);
+    auto& rCode  = c_Code::GetInstance();
+    auto& rGprop = rCode.get_GeometryProperties();
+
+    amrex::MultiFab* const p_rho_mf = get_p_mf("charge_density");
+    amrex::MultiFab* const p_phi_mf = get_p_mf("phi");
+
+    if (p_PointChargeSource) {
+
+        if(p_PointChargeSource->Is_Occupation_Variable()) {
+            p_PointChargeSource->Gather(p_phi_mf);
+            amrex::Gpu::streamSynchronize();
+
+            p_PointChargeSource->Compute_Occupation();
+            amrex::Gpu::streamSynchronize();
+
+            amrex::Print() << "\nPrint after gather & occupation:\n";
+            p_PointChargeSource->Print_Container();
+        }
+
+        p_PointChargeSource->Deposit(p_rho_mf);
+    }
+    amrex::Gpu::streamSynchronize();
+    p_rho_mf->FillBoundary(rGprop.geom.periodicity());
+
 }
 
 
@@ -292,45 +321,21 @@ c_MacroscopicProperties::ReInitializeMacroparam(std::string macro_str)
 void
 c_MacroscopicProperties::Define_ExternalChargeDensitySources()
 {
+    auto& rCode = c_Code::GetInstance();
+    auto& rGprop = rCode.get_GeometryProperties();
+    auto& ba = rGprop.ba;
+    auto& dm = rGprop.dm;
+    auto& geom = rGprop.geom;
 
     amrex::Print()  << "\n##### EXTERNAL CHARGE DENSITY SOURCES #####\n\n";
 
     amrex::ParmParse pp_cds("charge_density_source");
-
-    int num = 0;
     std::string type_str;
-    auto num_isDefined  = pp_cds.query("num", num);
     auto type_isDefined = pp_cds.query("type", type_str);
-    
-    amrex::Print() << " charge_density_source.num " << num << "\n";
-    amrex::Print() << " charge_density_source.type " << type_str << "\n";
 
-    if(type_isDefined && type_str == "point_charge") 
+    if(type_isDefined && type_str == "point_charge")
     {
-        amrex::Vector<PointCharge> v_pointCharges;
-        v_pointCharges.reserve(num);
-
-        for(size_t s=0; s<num; ++s) 
-        {
-            amrex::ParmParse pp_pc("pc_" + std::to_string(s+1));
-
-            amrex::Vector<amrex::Real> pos(AMREX_SPACEDIM);
-            getArrWithParser(pp_pc, "location",
-                             pos, 
-                             0, AMREX_SPACEDIM);
-    
-            amrex::Real sigma = 2.e-10;
-            pp_pc.query("sigma", sigma);
-            
-            int charge_unit = 1;
-            pp_pc.query("charge_unit", charge_unit);
-
-            v_pointCharges.emplace_back(pos.data(), sigma, charge_unit);
-        }
-
-        if (!p_PointChargeSource) {
-            bool print=true;
-            p_PointChargeSource = std::make_unique<PointChargeSource>(std::move(v_pointCharges), print);
-        }
+        amrex::Print() << " charge_density_source.type " << type_str << "\n";
+        if (!p_PointChargeSource) p_PointChargeSource = std::make_unique<PointChargeSource>(geom, dm, ba);
     }
 }

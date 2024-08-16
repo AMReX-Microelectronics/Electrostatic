@@ -32,7 +32,7 @@ private:
     void ReadDiagnostics();
 
     std::string m_foldername_str;
-    std::string m_diagnostics_str = "_diag";
+    std::string m_diagnostics_str = "/diag";
 
 };
 #endif

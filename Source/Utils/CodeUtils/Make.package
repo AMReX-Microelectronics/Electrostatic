@@ -1,5 +1,8 @@
 CEXE_sources += CodeUtil.cpp
 CEXE_headers += CodeUtil.H
+CEXE_sources += CloudInCell.cpp
+CEXE_headers += CloudInCell.H
+CEXE_headers += ParticleStructure.H
 
 VPATH_LOCATIONS   += $(CODE_HOME)/Source/Utils/CodeUtils
 INCLUDE_LOCATIONS   += $(CODE_HOME)/Source/Utils/CodeUtils

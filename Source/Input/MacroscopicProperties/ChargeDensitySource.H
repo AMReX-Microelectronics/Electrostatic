@@ -1,58 +1,43 @@
 #ifndef CHARGE_DENSITY_SOURCE_H_
 #define CHARGE_DENSITY_SOURCE_H_
 
-#include "SourceTraits.H"
-#include <AMReX_GpuContainers.H>
+#include "PointChargeContainer.H"
+//#include "HasDeposit.H"
+#include <type_traits>
 
+template<typename ParticleContainerType=c_PointChargeContainer>
+class c_ChargeDensitySource 
+{
+private:
+    ParticleContainerType m_container;
 
-template<typename SourceType=PointCharge>
-class ChargeDensitySource {
-
-    amrex::Vector<SourceType> h_vec_source;
-    amrex::Gpu::DeviceVector<SourceType> d_vec_source;
-    
 public:
-    using ChargeDensityCalculator = typename SourceTraits<SourceType>::DensityCalculator;
 
-    ChargeDensitySource(amrex::Vector<SourceType>&& vec_source, bool PrintFlag=false) 
-        : h_vec_source(std::move(vec_source))
-    {
-        SourceTraits<SourceType>::CheckSource(h_vec_source);
+    c_ChargeDensitySource(const amrex::Geometry& geom,
+                        const amrex::DistributionMapping& dm,
+                        const amrex::BoxArray& ba)
+    : m_container(geom, dm, ba) {}
 
-        #ifdef AMREX_USE_GPU
-        if (!h_vec_source.empty()) {
-            d_vec_source.resize(h_vec_source.size());
-            amrex::Gpu::copy(amrex::Gpu::hostToDevice, h_vec_source.begin(),
-                                                       h_vec_source.end(),
-                                                       d_vec_source.begin() );
-        }
-        #endif
-
-        if(PrintFlag) Print_ChargeDensity();
+    void Define(const amrex::Vector<amrex::Vector<amrex::Real>>& particles) { 
+        m_container.Define(particles); 
     }
 
-    int get_num_sources() const {
-        return h_vec_source.size();
+    void Print_Container(bool print_positions = false) {
+        m_container.Print_Container(print_positions);
     }
 
-    const SourceType* get_p_sources() const {
-        #ifdef AMREX_USE_GPU
-        return d_vec_source.dataPtr();
-        #else
-        return h_vec_source.dataPtr();
-        #endif
+    void Compute_Occupation() {
+        m_container.Compute_Occupation(); 
     }
 
-    ChargeDensityCalculator get_charge_density_calculator() {
-       return ChargeDensityCalculator();
+    bool Is_Occupation_Variable() {
+        return m_container.Is_Occupation_Variable();
     }
 
-    void Print_ChargeDensity() {
-        for(int s=0; s<h_vec_source.size(); ++s) {
-            h_vec_source[s].Print();
-        }
-    }
+    void Deposit(amrex::MultiFab* const p_rho_mf);
+
+    void Gather(amrex::MultiFab* const p_potential_mf);
 };
 
-using PointChargeSource = ChargeDensitySource<PointCharge>;
+using PointChargeSource = c_ChargeDensitySource<c_PointChargeContainer>;
 #endif

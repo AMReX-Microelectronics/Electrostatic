@@ -453,7 +453,8 @@ c_TransportSolver::Sum_ChargeDepositedByAllNS()
     auto& rMprop = rCode.get_MacroscopicProperties();
 
     amrex::MultiFab* p_mf_deposit = rMprop.get_p_mf(NS_deposit_field_str);
-    p_mf_deposit->SumBoundary(rGprop.geom.periodicity());
+    //p_mf_deposit->SumBoundary(rGprop.geom.periodicity());
+    p_mf_deposit->FillBoundary(rGprop.geom.periodicity());
 }
 
 
@@ -512,8 +513,6 @@ c_TransportSolver::Solve(const int step, const amrex::Real time)
            //Part 1: Electrostatics
            time_counter[0] = amrex::second();
            
-
-           //rMprop.Deposit_ExternalChargeDensitySources();
            rMprop.ReInitializeMacroparam(NS_gather_field_str);
            rMLMG.UpdateBoundaryConditions(update_surface_soln_flag);
 
@@ -564,6 +563,7 @@ c_TransportSolver::Solve(const int step, const amrex::Real time)
 
            //Part 5: Deposit
            rMprop.ReInitializeMacroparam(NS_deposit_field_str);
+           rMprop.Deposit_AllExternalChargeDensitySources();
 
            for (int c=0; c < vp_CNT.size(); ++c)
            {
@@ -581,7 +581,6 @@ c_TransportSolver::Solve(const int step, const amrex::Real time)
                    n_curr_in_glo_data.clear();
                }
 	       }
-
            Sum_ChargeDepositedByAllNS();
 
            time_counter[5] = amrex::second();

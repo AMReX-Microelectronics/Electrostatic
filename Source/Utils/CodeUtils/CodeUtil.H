@@ -246,3 +246,10 @@ namespace Quadrature
 
 void 
 CreateDirectory(std::string foldername);
+
+namespace GeomUtils {
+bool
+Is_ID_Within_Bounds(const amrex::Vector<int>& pos,
+                    const amrex::Vector<int>& minID,
+                    const amrex::Vector<int>& maxID);
+}

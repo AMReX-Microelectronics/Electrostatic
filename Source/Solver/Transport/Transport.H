@@ -34,8 +34,11 @@ public:
     void Execute_Broyden_Modified_Second_Algorithm_Parallel();
     void Execute_Broyden_Modified_Second_Algorithm_Parallel_SkipGPU();
     #endif
-
     
+    amrex::Real get_Vgs() { return Vgs;}
+    amrex::Real get_Vds() { return Vds;}
+    amrex::Real get_Broyden_Step() { return Broyden_Step;}
+
 private:
     using RealTable1D    = TableData<amrex::Real, 1>;
     using RealTable2D    = TableData<amrex::Real, 2>;

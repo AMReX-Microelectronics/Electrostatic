@@ -10,7 +10,7 @@
 ##### FLAGS ####
 ################
 use_electrostatic = 1
-use_transport = 0
+use_transport = 1
 amrex.the_arena_is_managed=1
 
 ################################
@@ -21,21 +21,18 @@ my_constants.gy = 4
 my_constants.gz = 2
 
 my_constants.num_CNTs = 1
-my_constants.periodicity_factor = 1.875 #1.875 corresponds to 3.195 nm (smallest periodicity distance)
+my_constants.periodicity_factor = 7.5 #1.875 corresponds to 3.195 nm (smallest periodicity distance)
 
 my_constants.Channel_unitcells = 24
 my_constants.Overlap_unitcells = 12
 
 my_constants.Vds = 0.   #Drain-Source voltage [V]
 my_constants.Vgs_min = -4
-my_constants.Vgs_max = -4
-#my_constants.Nsteps =  25
-#my_constants.dt = 1./(Nsteps-1)
-my_constants.Nsteps = 1
-my_constants.dt = 1
+my_constants.Vgs_max = 12
+my_constants.Nsteps =  65
+my_constants.dt = 1./(Nsteps-1)
 
-plot.folder_name = point_charges
-#plot.folder_name = /global/cfs/projectdirs/m4540/eXstatic/point_charges
+plot.folder_name = /global/cfs/projectdirs/m4540/eXstatic/4x_spacing/periodic
 plot.write_after_init = 1
 plot.write_interval = 1
 
@@ -142,7 +139,7 @@ steps = Nsteps
 ###### EMBEDDED BOUNDARIES #########
 ####################################
 
-domain.embedded_boundary = 0  #options: 1=true, 0=false (default)
+domain.embedded_boundary = 1  #options: 1=true, 0=false (default)
 domain.specify_using_eb2 = 0  #options: 1=true, 0=false (default)
 
 ebgeom.objects = Source Drain
@@ -197,19 +194,6 @@ macroscopic.epsilon_function = "epsilon_0 + (epsilon_GO - epsilon_0) * (z < GO_m
 
 macroscopic.phi = 0.
 macroscopic.atom_locations = 0.
-
-##############################
-###### Point Charges #########
-##############################
-
-charge_density_source.num = 5
-charge_density_source.type = point_charge
-
-pc_1.location = 0.  0.   1e-9  
-pc_2.location = 0. -3e-9 2e-9
-pc_3.location = 0.  3e-9 2e-9
-pc_4.location = 0. -6e-9 4e-9 
-pc_5.location = 0.  6e-9 4e-9
 
 #############################
 ###### POST PROCESSING ######

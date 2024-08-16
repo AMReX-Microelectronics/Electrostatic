@@ -1,5 +1,5 @@
 ################
-# Test case 
+# Topgate Configuration, CONTROL, no point charge
 ################
 
 ################
@@ -25,10 +25,11 @@ my_constants.periodicity_length = periodicity_factor * unitcells_per_D_CN * L_un
 my_constants.Vds = 0.   #Drain-Source voltage [V]
 my_constants.Vgs_min = -3
 my_constants.Vgs_max = 1
-my_constants.Nsteps = 65
+my_constants.Nsteps = 21
 my_constants.dt = 1./(Nsteps-1)
 
-plot.folder_name = /global/cfs/projectdirs/m4540/eXstatic/topgate_eps_varied/eps_12Dot5
+
+plot.folder_name = /global/cfs/projectdirs/m4540/eXstatic/point_charge/topgate_CNTFET/rhoDot04_Et2
 plot.write_after_init = 0
 plot.write_interval = 1000
 
@@ -52,7 +53,7 @@ my_constants.q = 1.602e-19
 my_constants.epsilon_0 = 8.8541878128e-12
 my_constants.pi = 3.141592653589793
 
-my_constants.epsilon_GO     = 12.5*epsilon_0 #HfO2
+my_constants.epsilon_GO     = 25*epsilon_0 #HfO2
 my_constants.epsilon_S      = 3.9*epsilon_0 #SiO2
 
 my_constants.SV = 0.      #source voltage [V]
@@ -104,6 +105,8 @@ my_constants.CN_x = 0.
 my_constants.CN_y = 0.
 
 my_constants.Channel_unitcells = ((G_length + 2*GO_thickness)*1e9/0.426)
+my_constants.Channel_length = (G_length + 2*GO_thickness)
+
 #my_constants.Overlap_unitcells = ((CM_length - CM_y_thickness)*1e9/0.426) - 5
 my_constants.Overlap_unitcells = ((Ly - G_length - 2*GO_thickness)*1e9/0.426/2)
 
@@ -152,6 +155,27 @@ my_constants.G_top    = G_bottom + G_height
 my_constants.FET_length  = G_length + 2*GO_thickness  + 2*CM_length #FET length
 my_constants.FET_height  = S_thickness + GO_thickness + G_height + 2*(R_CN+small_gap)
 my_constants.FET_width   = CM_width
+
+##############################
+###### Point Charges #########
+##############################
+
+charge_density_source.type = point_charge
+pc.flag_vary_occupation = 1
+pc.mixing_factor = 0
+pc.scaling = (GO_width - 8*dx) (Channel_length - 8*dy) (GO_thickness - 8*dz)
+pc.offset =  (-GO_width/2. + 4*dx) (-Channel_length/2. + 4*dy) (GO_bottom + 4*dz)
+pc.Et = 2
+pc.V0 = 0.5
+pc.default_charge_unit = 1
+pc.default_occupation = 1
+
+pc.flag_random_positions = 1
+pc.charge_density=0.04e27 #cubic meter
+pc.random_seed = 0
+
+#pc.num = 1
+#pc_1.location = CN_x CN_y (CN_z + R_CN + 1e-9)
 
 ##################################################
 ###### TIME DEPENDENT SIMULATION PROPERTIES ######
@@ -237,7 +261,7 @@ macroscopic.atom_locations = 0.
 ###### OUTPUT ######
 ####################
 
-plot.fields_to_plot = epsilon.1 atom_locations #vecField 
+plot.fields_to_plot = epsilon.1 charge_density.1 phi.1 atom_locations #vecField 
 plot.rawfield_write_interval = 1000000
 
 ########################
@@ -246,7 +270,7 @@ plot.rawfield_write_interval = 1000000
 use_diagnostics = 1
 
 diag.specify_using_eb = 1
-diag.objects = X_0 Y_0 Z_0 
+diag.objects = X_0 Y_0 Z_0
 X_0.geom_type = plane
 X_0.direction = 0
 X_0.location = 0.0
@@ -295,7 +319,7 @@ transport.selfconsistency_algorithm = broyden_second
 transport.reset_with_previous_charge_distribution = 1
 transport.initialize_inverse_jacobian = 0
 transport.gate_terminal_type = Boundary
-transport.Broyden_threshold_maxstep = 100
+transport.Broyden_threshold_maxstep = 200
 transport.gate_terminal_type = EB
 
 NS_default.num_unitcells = N_unitcells
