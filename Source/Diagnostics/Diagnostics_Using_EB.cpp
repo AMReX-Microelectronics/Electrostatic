@@ -308,7 +308,7 @@ c_Diagnostics_Using_EB::ComputeAndWriteEBDiagnostics(int step, amrex::Real time)
     auto& rMprop = rCode.get_MacroscopicProperties();
     auto& rGprop = rCode.get_GeometryProperties();
     auto& rOutput = rCode.get_Output();
-    _foldername_str = rOutput.get_folder_name() + "_diag/";
+    _foldername_str = rOutput.get_folder_name() + "/diag/";
     CreateDirectory(_foldername_str);
     amrex::Print() << "diagnostics foldername: " << _foldername_str << "\n";
 

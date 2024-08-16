@@ -6,6 +6,7 @@
 #include <AMReX_GpuContainers.H>
 #include <AMReX_MultiFab.H>
 #include <mutex>    
+#include <limits>
 
 struct PointChargeAttributes {
     struct realPA { enum { charge_unit, occupation, potential, NUM }; };
@@ -37,21 +38,35 @@ public:
                 const amrex::Vector<amrex::Real>& charge_units = {},
                 const amrex::Vector<amrex::Real>& occupations = {});
 
-    static void Set_V0(amrex::Real value);
+    //static void Set_StaticVar(amrex::Real& member_variable, amrex::Real value)
+    //{
+    //    std::lock_guard<std::mutex> lock(mtx);
+    //    member_variable = value;
+    //}
 
-    static void Set_Et(amrex::Real value);
+    //struct GetV0 {
+    //   AMREX_GPU_HOST_DEVICE int operator() () const { return V0; }
+    //   amrex::Real V0;
+    //};
+    //static GetV0 Get_V0() { return GetV0{V0}; }    
 
-    struct GetV0 {
-       AMREX_GPU_HOST_DEVICE int operator() () const { return V0; }
-       amrex::Real V0;
-    };
-    static GetV0 Get_V0() { return GetV0{V0}; }    
+    //struct GetEt {
+    //   AMREX_GPU_HOST_DEVICE int operator() () const { return Et; }
+    //   amrex::Real Et;
+    //};
+    //static GetEt Get_Et() { return GetEt{Et}; }    
+    //struct GetChargeDensity {
+    //   AMREX_GPU_HOST_DEVICE int operator() () const { return charge_density; }
+    //   amrex::Real charge_density;
+    //};
+    //static GetChargeDensity Get_Charge_Density() { return GetChargeDensity{charge_density}; }    
 
-    struct GetEt {
-       AMREX_GPU_HOST_DEVICE int operator() () const { return Et; }
-       amrex::Real Et;
-    };
-    static GetEt Get_Et() { return GetEt{Et}; }    
+    amrex::Real Get_V0() { return V0; }    
+    amrex::Real Get_Et() { return Et; }    
+    amrex::Real Get_mixing_factor() { return mixing_factor; }    
+    amrex::Real Get_Charge_Density() { return charge_density; }    
+    amrex::Real Get_total_charge() {return total_charge; }
+    amrex::Real Get_total_charge_units() {return total_charge_units; }
 
     void Print_Container(bool print_positions = false);
 
@@ -60,6 +75,9 @@ public:
     bool Is_Occupation_Variable() {
         return flag_vary_occupation;
     }
+
+    void Define_OutputFile();
+    void Write_OutputFile();
 
     // Define the iterator class to iterate over the particles
     class ParIter
@@ -110,13 +128,25 @@ public:
     };
 
 private:
-   static amrex::Real V0;
-   static amrex::Real Et;
-   static std::mutex mtx;  
+   //static std::mutex mtx;  
 
    bool flag_vary_occupation = false;
+   bool flag_random_positions = false;
+   amrex::Real charge_density = 0.;
+   amrex::Real V0 = 0.;
+   amrex::Real Et = 0.;
+   amrex::Real mixing_factor = 0.;
+    
+   std::ofstream outfile_pc_step;
+   std::string pc_stepwise_filename;
+   amrex::Real total_charge = 0.;
+   int total_charge_units = 0;
 
    void Read_PointCharges();
+   void Check_PositionBounds(const amrex::Vector<amrex::Vector<amrex::Real>>& particles,
+                             const amrex::Vector<amrex::Real>& vec_offset,
+                             const amrex::Vector<amrex::Real>& vec_max_bound);
+
 };
 
 #endif

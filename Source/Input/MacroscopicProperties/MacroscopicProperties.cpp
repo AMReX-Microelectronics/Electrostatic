@@ -170,7 +170,7 @@ c_MacroscopicProperties::InitData()
 
     Define_ExternalChargeDensitySources();
     
-    Deposit_AllExternalChargeDensitySources();
+    //Deposit_AllExternalChargeDensitySources();
 }
 
 

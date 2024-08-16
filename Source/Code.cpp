@@ -136,10 +136,6 @@ c_Code::ReadData ()
     //queryWithParser(pp_const,"R_CN", R_CN);
     //amrex::Print() << "my_constants.R_CN: " << R_CN << "\n";
 
-    m_timestep = 0;
-    m_total_steps = 1;
-    m_flag_restart = 0;
-    m_restart_step = 0;
     amrex::ParmParse pp;
 
     #ifdef TIME_DEPENDENT

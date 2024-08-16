@@ -1,5 +1,9 @@
 ################
-# 10 nm cnt with single point charge located above center of CNT
+# Test case for validation of periodic boundary conditions -- infinite array of nanotubes.
+# The output of conductance can be compared with the result from the following reference,
+# Fig. 2), periodicity distance, d=3.195 nm == 3.2 nm. (see width_factor defined below).
+# Léonard, F. (2006). Crosstalk between nanotube devices: contact and channel effects. 
+# Nanotechnology, 17(9), 2381.
 ################
 
 ################
@@ -12,37 +16,34 @@ amrex.the_arena_is_managed=1
 ################################
 ##### Some Important Params ####
 ################################
-my_constants.gx = 1
-my_constants.gy = 4
+my_constants.gx = 2
+my_constants.gy = 8
 my_constants.gz = 2
 
-my_constants.num_CNTs = 1
-my_constants.periodicity_factor = 1.875 #1.875 corresponds to 3.195 nm (smallest periodicity distance)
+my_constants.num_CNTs = 5
+my_constants.periodicity_factor = 7.5 #1.875 corresponds to 3.195 nm (smallest periodicity distance)
 
 my_constants.Channel_unitcells = 24
 my_constants.Overlap_unitcells = 12
 
 my_constants.Vds = 0.   #Drain-Source voltage [V]
-my_constants.Vgs_min = -3
-my_constants.Vgs_max = 1
-my_constants.Nsteps =  9
-#my_constants.dt = 1
+my_constants.Vgs_min = -4
+my_constants.Vgs_max = 12
+my_constants.Nsteps =  65
 my_constants.dt = 1./(Nsteps-1)
 
-
-plot.folder_name = /global/cfs/projectdirs/m4540/eXstatic/point_charge/planar_CNTFET_short
-#plot.folder_name = planar_CNTFET_10nm
+plot.folder_name = /global/cfs/projectdirs/m4540/eXstatic/4x_spacing/nonpll_5CNTs_largeAngles_finer
 plot.write_after_init = 1
-plot.write_interval = 1
+plot.write_interval = 5000
 
 transport.flag_compute_DOS = 1 #DOS, Transmission, Conductance
-transport.flag_write_LDOS = 1
+transport.flag_write_LDOS = 0
 transport.flag_write_LDOS_iter = 0
 transport.write_LDOS_iter_period = 10
 
-restart = 0
-restart_step = 0
-NS_default.initialize_charge_distribution = 0
+restart = 1
+restart_step = 20
+NS_default.initialize_charge_distribution = 1
 ##################################
 ##### USER DEFINED CONSTANTS #####
 ##################################
@@ -174,20 +175,6 @@ domain.is_periodic = 0 0 0
 
 domain.coord_sys = cartesian
 
-##############################
-###### Point Charges #########
-##############################
-
-charge_density_source.type = point_charge
-pc.flag_vary_occupation = 1
-pc.Et = -1
-pc.V0 = 10
-pc.default_charge_unit = 1
-pc.default_occupation = 0
-
-pc.num = 1
-pc_1.location = CN_x CN_y (CN_z + R_CN + 1e-9)
-
 #################################
 ###### BOUNDARY CONDITIONS ######
 #################################
@@ -219,7 +206,7 @@ macroscopic.atom_locations = 0.
 ###### OUTPUT ######
 ####################
 
-plot.fields_to_plot = epsilon.1 charge_density.1 phi.1 atom_locations #vecField 
+plot.fields_to_plot = phi.1 atom_locations #vecField 
 plot.rawfield_write_interval = 1000000
 
 ########################
@@ -228,31 +215,11 @@ plot.rawfield_write_interval = 1000000
 use_diagnostics = 1
 
 diag.specify_using_eb = 1
-diag.objects = X Y Z
-X.geom_type = plane
-X.direction = 0
-X.location = 0.0
-X.fields_to_plot = phi charge_density
-
-Y.geom_type = plane
-Y.direction = 1
-Y.location = 0.0
-Y.fields_to_plot = phi charge_density 
-
-Z.geom_type = plane
-Z.direction = 2
-Z.location = 0.0
-Z.fields_to_plot = phi charge_density 
-
-#diag.objects = Surf1
-#Surf1.geom_type = cylinder
-#Surf1.center = 0 0 CN_z
-#Surf1.radius = R_CN
-#Surf1.axial_direction = 1
-#Surf1.theta_reference_direction = 0
-#Surf1.has_fluid_inside = 0
-#Surf1.fields_to_plot = phi charge_density atom_locations
-
+diag.objects = Z_0
+Z_0.geom_type = plane
+Z_0.point = 0 0 0
+Z_0.normal = 0 0 1
+Z_0.fields_to_plot = phi
 ####################################
 ###### MLMG SOLVER PROPERTIES ######
 ####################################
@@ -293,14 +260,13 @@ transport.Broyden_threshold_maxstep = 100
 NS_default.num_unitcells = N_unitcells
 NS_default.rotation_order = Z
 NS_default.rotation_angle_type = D
-NS_default.rotation_angles = 0 0 0
 NS_default.contact_Fermi_level = Ef
 NS_default.contact_mu_specified = 1
 NS_default.contact_mu = Ef (Ef - Vds)
 NS_default.contact_T  = 298. 298.
 NS_default.Fermi_tail_factors = 14 14
 NS_default.eq_integration_pts = 30 30 30
-NS_default.flag_compute_flatband_dos = 0
+NS_default.flag_compute_flatband_dos = 1
 NS_default.flatband_dos_integration_pts = 400
 NS_default.flatband_dos_integration_limits = -1. 1.
 NS_default.noneq_integration_pts = 400
@@ -320,4 +286,22 @@ CNT_default.type_id = m_index n_index
 CNT_default.acc = bond_length
 CNT_default.gamma = 2.5     
 
-NS_1.offset = (CN_x + (0/2.)*periodicity_length) CN_y CN_z
+
+NS_1.offset = (CN_x + (-4/2.)*periodicity_length) CN_y CN_z
+NS_1.rotation_angles = 0 0 -32.28
+
+
+NS_2.offset = (CN_x + (-2/2.)*periodicity_length) CN_y CN_z
+NS_2.rotation_angles = 0 0 20.45
+
+
+NS_3.offset = (CN_x + (0/2.)*periodicity_length) CN_y CN_z
+NS_3.rotation_angles = 0 0 4.37
+
+
+NS_4.offset = (CN_x + (2/2.)*periodicity_length) CN_y CN_z
+NS_4.rotation_angles = 0 0 -15.27
+
+
+NS_5.offset = (CN_x + (4/2.)*periodicity_length) CN_y CN_z
+NS_5.rotation_angles = 0 0 29.22

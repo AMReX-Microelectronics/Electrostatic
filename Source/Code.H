@@ -131,6 +131,7 @@ public:
     c_Output& get_Output () { return *m_pOutput;}
     
     amrex::Real get_time() { return m_time_instant;}
+    amrex::Real get_step() { return static_cast<int>(m_time_instant/m_timestep);} 
     int use_diagnostics;
     int use_transport;
     int use_electrostatic;
@@ -141,11 +142,11 @@ private:
 
     static c_Code* m_instance;
 
-    amrex::Real m_time_instant = 0;
-    amrex::Real m_timestep;
-    int m_total_steps;
-    int m_flag_restart;
-    int m_restart_step;
+    amrex::Real m_time_instant = 0.;
+    amrex::Real m_timestep = 1.;
+    int m_total_steps = 1;
+    int m_flag_restart = 0;
+    int m_restart_step = 0;
 
     std::unique_ptr<c_GeometryProperties> m_pGeometryProperties;
     std::unique_ptr<c_BoundaryConditions> m_pBoundaryConditions;

@@ -692,3 +692,16 @@ CreateDirectory(std::string foldername)
     }
 
 }
+
+bool
+GeomUtils::Is_ID_Within_Bounds(const amrex::Vector<int>& ID,
+                               const amrex::Vector<int>& minID,
+                               const amrex::Vector<int>& maxID
+                               )
+{
+    bool is_inside = true;
+    for(int d = 0; d < AMREX_SPACEDIM; ++d) {
+        is_inside *= (ID[d] >= minID[d] && ID[d] < maxID[d]);
+    }
+    return is_inside;
+}
