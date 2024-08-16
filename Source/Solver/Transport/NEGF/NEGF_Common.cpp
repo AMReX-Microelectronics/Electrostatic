@@ -1309,7 +1309,7 @@ c_NEGF_Common<T>::Write_Data (const std::string filename_prefix,
 //void 
 //c_NEGF_Common<T>::Define_ContactInfo () 
 //{
-//    /*define the following in overriden functions:
+//    /*define the following in overridden functions:
 //     *global_contact_index
 //     *contact_transmission_index
 //     *h_tau
@@ -1760,7 +1760,7 @@ c_NEGF_Common<T>:: Write_Eql_Characteristics (const amrex::Vector<ComplexType> E
                                               const RealTable1D& Conductance_data, 
                                               std::string filename)
 {
-    amrex::Print() << "Writing Fermi Functions, Trasmission, Conductance as E. E.size(): " << E_vec.size() << "\n"; 
+    amrex::Print() << "Writing Fermi Functions, Transmission, Conductance as E. E.size(): " << E_vec.size() << "\n"; 
     std::ofstream outfile;
     outfile.open(filename.c_str());
 

@@ -312,7 +312,7 @@ protected:
 
     virtual void Construct_Hamiltonian () = 0;
     virtual void Define_ContactInfo() = 0;
-    /*define the following in overriden Define_ContactInfo:
+    /*define the following in overridden Define_ContactInfo:
      *global_contact_index
      *contact_transmission_index
      *h_tau

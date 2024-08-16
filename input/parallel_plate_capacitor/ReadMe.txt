@@ -15,7 +15,7 @@
 
      2) function_parsed_dirichlet:
             This example specifies voltages through dirichlet function 
-        parsers whose name is specied at the time of specifying boundaries,
+        parsers whose name is specified at the time of specifying boundaries,
         e.g. dir(Zmin) or dir(Zmax). Function parsers are specified for 
         Zmin and Zmax.
 
