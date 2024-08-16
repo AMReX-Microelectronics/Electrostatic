@@ -1,0 +1,4 @@
+N_total=4
+num_EnPts = 1000
+print_matrix=1
+amrex.the_arena_is_managed=0
