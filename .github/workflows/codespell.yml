@@ -20,4 +20,4 @@ jobs:
           pip3 install --user codespell
 
       - name: Run codespell
-        run: codespell --skip "*.py,*.ipynb"
+        run: codespell --ignore-words=codespell-ignore.txt --skip "*.py,*.ipynb"
