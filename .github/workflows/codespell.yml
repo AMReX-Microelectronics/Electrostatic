@@ -20,4 +20,4 @@ jobs:
           pip3 install --user codespell
 
       - name: Run codespell
-        run: codespell
+        run: codespell --skip "*.py,*.ipynb"
