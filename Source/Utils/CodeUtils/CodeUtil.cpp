@@ -506,18 +506,6 @@ void Multifab_Manipulation::Copy_3DCartesian_To_2DAzimuthalLongitudinal(
 
                         amrex::Real theta =
                             atan2(cart[dir_ref2], cart[dir_ref1]);
-
-                        // int az = theta*(cyl_ncell_ring/2*pi);
-                        // int ax = index[dir_axial];
-                        // if(ax > 0 and ax < Max_Ncell_Long) {
-                        //(*cyl_surf_grid)(ax+1, ax+1) = mf_array(i,j,k);
-                        //  if(az < 0 or az > Max_Ncell_Azim) {
-                        //    (*cyl_surf_grid)(1, 1) = az;
-                        //  }
-                        // if(az > 0 and az < Max_Ncell_Azim and ax > 0 and ax <
-                        // Max_Ncell_Long) {
-                        //    (*cyl_surf_grid)(az+1, ax+1) = mf_array(i,j,k);
-                        //}
                     }
                 });
         }
@@ -525,41 +513,6 @@ void Multifab_Manipulation::Copy_3DCartesian_To_2DAzimuthalLongitudinal(
 }
 
 #endif  // for AMREX_USE_EB
-
-// AMREX_GPU_DEVICE AMREX_FORCE_INLINE
-// void
-////Multifab_Manipulation::GetXYZ(const int i, const int j, const int k,
-////		              const amrex::GpuArray<amrex::Real, AMREX_SPACEDIM>&
-/// dx,
-////		              const amrex::RealBox& real_box, const amrex::IntVect&
-/// iv, /		              amrex::GpuArray<amrex::Real, AMREX_SPACEDIM>&
-/// coord_vec)
-// Multifab_Manipulation::GetXYZ(const int i, const int j, const int k,
-//		              amrex::GpuArray<amrex::Real, AMREX_SPACEDIM>& coord_vec)
-//{
-//#ifdef PRINT_NAME
-//     amrex::Print() <<
-//     "\n\n\t\t\t\t\t{************************Multifab_Manipulation::GetXYZ()************************\n";
-//     amrex::Print() << "\t\t\t\t\tin file: " << __FILE__ << " at line: " <<
-//     __LINE__ << "\n";
-//#endif
-//       coord_vec[0] = i * dx[0];
-//       coord_vec[1] = j * dx[1];
-//       coord_vec[2] = k * dx[2];
-////    amrex::Real fac_x = (1._rt - iv[0]) * dx[0] * 0.5_rt;
-////    coord_vec[0] = i * dx[0] + real_box.lo(0) + fac_x;
-////
-////    amrex::Real fac_y = (1._rt - iv[1]) * dx[1] * 0.5_rt;
-////    coord_vec[1] = j * dx[1] + real_box.lo(1) + fac_y;
-////
-////    amrex::Real fac_z = (1._rt - iv[2]) * dx[2] * 0.5_rt;
-////    coord_vec[2] = k * dx[2] + real_box.lo(2) + fac_z;
-//
-//#ifdef PRINT_NAME
-//    amrex::Print() <<
-//    "\t\t\t\t\t}************************Multifab_Manipulation::GetXYZ()************************\n";
-//#endif
-//}
 
 void PrintRunDiagnostics(amrex::Real initial_time)
 {

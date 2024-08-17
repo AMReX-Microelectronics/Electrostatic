@@ -1002,10 +1002,6 @@ void c_EmbeddedBoundaries::Specify_SurfSolnOnCutcells(amrex::MultiFab &mf,
     if (map_basic_objects_soln_parser_flag[name]) /*specify value using parser*/
     {
 #ifdef TIME_DEPENDENT
-        // Multifab_Manipulation::SpecifyValueOnlyOnCutcells_UsingParser_4vars(mf,
-        //		                                                    map_basic_objects_soln_parser[name]->compile<4>(),
-        //								    *geom,
-        //								    time);
         amrex::ParserExecutor<4> const &macro_parser =
             map_basic_objects_soln_parser[name]->compile<4>();
 

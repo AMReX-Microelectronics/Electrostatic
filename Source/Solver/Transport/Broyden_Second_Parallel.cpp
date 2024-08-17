@@ -212,12 +212,6 @@ void c_TransportSolver::
 #else
 void c_TransportSolver::Execute_Broyden_Modified_Second_Algorithm_Parallel()
 {
-    // amrex::Print() << "Execute_Broyden_Modified_Second_Algorithm_Parallel\n";
-
-    // amrex::Print() << "\nBroydenStep: " << Broyden_Step
-    //                << ",  fraction: "   << Broyden_fraction
-    //		       << ",  scalar: " << Broyden_Scalar<< "\n";
-
     auto const &h_n_curr_in = h_n_curr_in_data.table();
     auto const &h_intermed_vector = h_intermed_vector_data.table();
     auto *h_Intermed_values = h_Intermed_values_vec.dataPtr();

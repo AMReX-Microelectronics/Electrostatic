@@ -101,11 +101,6 @@ AMREX_GPU_DEVICE AMREX_FORCE_INLINE void ConvertParserIntoMultiFab_4vars(
            "ConvertParserIntoMultiFab_4vars()************************\n";
 #endif
 }
-// void GetXYZ(const int i, const int j, const int k,
-//             const amrex::GpuArray<amrex::Real, AMREX_SPACEDIM>& dx,
-//	    const amrex::RealBox& real_box,
-//	    const amrex::IntVect& iv,
-//	    amrex::GpuArray<amrex::Real, AMREX_SPACEDIM>& coord_vec);
 
 #ifdef AMREX_USE_EB
 void SpecifyValueOnlyOnCutcells(amrex::MultiFab &mf, amrex::Real const value);
