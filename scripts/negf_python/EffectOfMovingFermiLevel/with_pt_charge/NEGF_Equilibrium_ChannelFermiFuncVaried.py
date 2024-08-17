@@ -14,7 +14,7 @@ from matplotlib.ticker import (MultipleLocator, FormatStrFormatter,
 plt.rcParams.update({'font.size': 12})
 import seaborn as sns
 import cmath
-import math 
+import math
 def custom_plot_single(x_lst, y_lst, label_lst, xlim, ylim, label,pltname,
                        color=['k','r','b','g','o','br'],
                        linestyle=['solid','dashed','solid','dashed','solid','dashed'],
@@ -24,7 +24,7 @@ def custom_plot_single(x_lst, y_lst, label_lst, xlim, ylim, label,pltname,
                        markevery=[45,30,50,40,56,72,63,95],
                        show_legend=True,
                        plt_outside=False):
-    
+
     fig, ax1 = plt.subplots(1,1)
     fig.set_size_inches(10,10)
     fig.patch.set_facecolor('white')
@@ -152,17 +152,17 @@ def get_axial_loc(r,ACC):
     elif (r%2 == 1):
         y = ACC/2
     return y
- 
+
 axial_loc[0]=acc/2.
 
 for l in range(1,N):
-    rID_in_unitcell = l%nring_per_unitcell   
+    rID_in_unitcell = l%nring_per_unitcell
 #    print(rID_in_unitcell)
     axial_loc[l] = axial_loc[l-1] + get_axial_loc(rID_in_unitcell,acc)
-    
+
 for l in range(0,N):
-    axial_loc[l] += Y_offset  
-    
+    axial_loc[l] += Y_offset
+
 #print(axial_loc)
 
 U=np.zeros(N)
@@ -170,7 +170,7 @@ pt_charge_loc=np.array([0.,1*nano])
 
 Q=q #C
 print('Q',q)
-eps_r =1 
+eps_r =1
 eps_0 = 8.85418782e-12 #F/m or C/(V.m)
 if (PointCharge):
     for l in range(0, N):
@@ -209,7 +209,7 @@ def get_bandgap_for_mode(p,acc,gamma,m,n):
         Eg_case[3] = (acc*gamma/R)*np.abs(3*p + (2*m+n))
         Eg_case[4] = (acc*gamma/R)*np.abs(3*p + (m+2*n))
         Eg_case[5] = (acc*gamma/R)*np.abs(-3*p - (m-n))
-     
+
     Eg = np.amin(Eg_case)
     min_index = np.argmin(Eg_case)
     return (Eg,min_index+1)
@@ -241,8 +241,8 @@ Eg_min_index_arr = np.where(Eg_arr==Eg_arr.min())
 print('band with minimum bandgap:')
 for j in Eg_min_index_arr:
     print(M_arr[M+j])
-    
-sorted_M_arr = [x for _,x in sorted(zip(Eg_arr,np.arange(1,M+1,1)))] 
+
+sorted_M_arr = [x for _,x in sorted(zip(Eg_arr,np.arange(1,M+1,1)))]
 #print('sorted_M_arr:',sorted_M_arr)
 print('size of sorted_M_arr:',np.shape(sorted_M_arr))
 
@@ -263,7 +263,7 @@ print('M_red_arr',M_red_arr)
 
 
 # ### Band structure and First Brillouin Zone
-# 
+#
 
 # In[6]:
 
@@ -273,7 +273,7 @@ def get_dispersion(m,gamma,nu,E_nu,kxa_arr):
     for kxa in kxa_arr:
         E_nu.append(gamma*np.sqrt(1+(4*np.cos(kyb)*np.cos(kxa))+(4*np.cos(kyb)**2)))
 
-k_pi=np.linspace(-np.pi,np.pi,2401) # range*pi    
+k_pi=np.linspace(-np.pi,np.pi,2401) # range*pi
 k = k_pi/np.pi
 
 nu_label=str(sorted_M_arr)
@@ -295,10 +295,10 @@ for p in sorted_M_arr:
     E_k.append(E_nu_inv)
     if(counter > 1):
         print('counter,p',counter,p)
-        lc='k'  
+        lc='k'
     linecolor.append(lc)
     linecolor.append(lc)
-    
+
     linewidth.append(lw)
     linewidth.append(lw)
     counter += 1
@@ -308,7 +308,7 @@ for p in sorted_M_arr:
 print('size of E_k',np.shape(E_k))
 
 if(PrintFigures):
-    plt,pltname = custom_plot_single(2*M*[k], 
+    plt,pltname = custom_plot_single(2*M*[k],
                        E_k,
                        2*M*[None],
                        [-1,1],[-8,8],[r'k$_x$ a/$\pi$',r'Energy, E / (eV)'],'Dispersion_all.png',
@@ -334,7 +334,7 @@ print('p2',p2)
 
 Eg = gamma*acc/R
 print('gamma',gamma,acc,R)
-a=3*acc/2 
+a=3*acc/2
 b=np.sqrt(3)*acc/2
 
 def get_linear_approximate_dispersion(m,gamma,nu,E_nu,kxa_arr,kf):
@@ -343,7 +343,7 @@ def get_linear_approximate_dispersion(m,gamma,nu,E_nu,kxa_arr,kf):
     for kxa in kxa_arr:
         if(kxa > 0):
             factor =1
-        E_nu.append((3*gamma/2)*np.sqrt((kxa*2/3-factor*kf[0]*acc)**2 + ((kyb*2/np.sqrt(3)-kf[1]*acc))**2))      
+        E_nu.append((3*gamma/2)*np.sqrt((kxa*2/3-factor*kf[0]*acc)**2 + ((kyb*2/np.sqrt(3)-kf[1]*acc))**2))
 
 kf=[np.pi/a, np.pi/(3*b)]
 E_lin_1 = []
@@ -356,7 +356,7 @@ get_linear_approximate_dispersion(m,gamma,p2,E_lin_2,k*np.pi,kf)
 E_lin_2_minus=list(map(operator.mul, E_lin_2, [-1]*len(E_lin_2))) #multiply all elements in list by -1
 
 if(PrintFigures):
-    plt,pltname=custom_plot_single([k,k,k,k,k,k,k,k], 
+    plt,pltname=custom_plot_single([k,k,k,k,k,k,k,k],
                        [E_k[2*1-2],E_k[2*1-1],E_k[2*2-2],E_k[2*2-1],
                         E_lin_1,E_lin_1_minus,E_lin_2, E_lin_2_minus],
                        [r'$\nu$='+str(int(p1)),None, r'$\nu$='+str(int(p2)), None, r'$\nu$='+str(int(p1))+' (linear)',None, r'$\nu$='+str(int(p2))+' (linear)',None],
@@ -366,11 +366,11 @@ if(PrintFigures):
                        8*[None],
                        8*['none'],
                        plt_outside=True)
-    
+
     plt.axhline(y = 0., color = 'b', linestyle = 'dashed',label='Fermi')
     plt.text(-0.7, 0.1, 'Fermi Level', fontsize=22,color='b')
     plt.savefig(pltname, bbox_inches = "tight")
-    
+
 print('minimum band gap: (eV)', Eg)
 
 
@@ -386,16 +386,16 @@ def get_zeros_and_ones(L,lst):
             lst.append(0)
         else:
             lst.append(1)
-            
-def get_ones_and_zeros(L, lst): 
+
+def get_ones_and_zeros(L, lst):
     for i in range(0,L):
         if(i%2==0):
             lst.append(1)
         else:
             lst.append(0)
 
-lst_01 = [] 
-lst_10 = [] 
+lst_01 = []
+lst_10 = []
 
 get_zeros_and_ones(N-1, lst_01)
 get_ones_and_zeros(N-1, lst_10)
@@ -426,7 +426,7 @@ for i in range(0,M_red):
     p=M_red_arr[i]
     beta[i] = get_beta(gamma,M,p)
     H_mode[i] =U*np.diag(np.ones(N)) + gamma*np.diag(lst_01,-1)  + beta[i]*np.diag(lst_10,-1) \
-    + gamma*np.diag(lst_01,1) + beta[i]*np.diag(lst_10,1) 
+    + gamma*np.diag(lst_01,1) + beta[i]*np.diag(lst_10,1)
 
 H_lst=[]
 for i in range (0, M_red):
@@ -435,7 +435,7 @@ for i in range (0, M_red):
         if j==i:
             submat.append(H_mode[i])
         else:
-            submat.append(zero_mat)          
+            submat.append(zero_mat)
     H_lst.append(submat)
 H=np.block(H_lst)
 
@@ -445,7 +445,7 @@ if(PrintFigures):
 
 
 # ### define E-space
-# 
+#
 
 # In[11]:
 
@@ -467,7 +467,7 @@ print(kb*Temp)
 for f in range(0, np.size(Ef_arr)):
     Ef = Ef_arr[f]
     mu_s=Ef + Us
-    mu_d=Ef + Ud 
+    mu_d=Ef + Ud
     mu_c = Ef
     print('mu_c',mu_c)
     f_s=1./(1.+np.exp((E-mu_s)/(kb*Temp)))
@@ -479,13 +479,13 @@ for f in range(0, np.size(Ef_arr)):
     dfdE_s = np.gradient(f_s)
     dfdE_d = np.gradient(f_d)
     dfdE_c = np.gradient(f_c)
-    
-    
+
+
     # In[12]:
-    
-    
+
+
     if(PrintFigures):
-        plt,pltname = custom_plot_single([axial_loc/nano,axial_loc/nano], 
+        plt,pltname = custom_plot_single([axial_loc/nano,axial_loc/nano],
                            [Ev0+U, Ec0+U],
                            [r'$Ev_0$-eVg', r'$Ec_0$-eVg'],
                            [axial_loc[0]/nano,axial_loc[-1]/nano],[-2,1],[r'z / (nm)',r'E / (eV)'],'Ec0_Ev0_minus_U.png',
@@ -495,30 +495,30 @@ for f in range(0, np.size(Ef_arr)):
         plt.axhline(y = Ef, color = 'k', linestyle = 'dashed',label='Fermi')
         plt.text(0, Ef, 'Fermi Level', fontsize=22,color='k')
     #    plt.text(-0.1, (Ev0), 'U=-eVg = 0.2 eV; Vg = -0.2 eV', fontsize=22,color='b')
-    
+
     #    plt.axhline(y = Ev0, color = 'b', linestyle = 'dashed',label='Fermi')
     #    plt.text(-1, (Ev0), 'Ev0-U(z=10nm)', fontsize=22,color='b')
-    
+
     #    plt.axhline(y = Ec0, color = 'r', linestyle = 'dashed',label='Fermi')
     #    plt.text(-1, (Ec0), 'Ec0-U(z=10nm)', fontsize=22,color='r')
-    
+
     #    plt.axhline(y = Ev0-U[-1], color = 'b', linestyle = 'dashed',label='Fermi')
     #    plt.text(-1, (Ev0-U[-1]), 'Ev0-U(z=10nm)', fontsize=22,color='b')
-    
+
     #     plt.axhline(y = Ec0-U[-1], color = 'r', linestyle = 'dashed',label='Fermi')
     #     plt.text(-9, (Ec0-U[-1]), 'Ec0-U(z=10nm)', fontsize=22,color='r')
-    
+
     #     plt.axhline(y = np.min(Ev0-U), color = 'g', linestyle = 'dashed',label='Fermi')
     #     plt.text(-9,  np.min(Ev0-U), 'min(Ev0-U)', fontsize=22,color='g')
-    
+
         plt.savefig(pltname, bbox_inches = "tight")
-    
-    
+
+
     # In[13]:
-    
-    
+
+
     if(PrintFigures):
-        custom_plot_single([E-Ef,E-Ef,E-Ef], 
+        custom_plot_single([E-Ef,E-Ef,E-Ef],
                            [ f_s,f_d,f_c],
                            [r'source (%.2f V)'%(Us),r'drain (%.2f V)'%(Ud),r'channel (%.f K)'%(Temp)],
                            [-0.5,0.5],[0,1],[r'Energy, (E - $E_f$) / (eV)',r'Fermi function, f'],'fermi_functions.png',
@@ -527,8 +527,8 @@ for f in range(0, np.size(Ef_arr)):
                            ['o','^','o','^'],
                            4*['none'],
                            [2,2,2,2])
-    
-        custom_plot_single([E-Ef], 
+
+        custom_plot_single([E-Ef],
                            [-dfdE_c ],
                            [r'channel (%.f K)'%(Temp)],
                            [-0.5,0.5],[0,0.1],[r'Energy, (E - $E_f$) / (eV)',r'Gradient of Fermi function, -$\frac{\partial{f}}{\partial{E}}$'],'gradient_of_fermi_functions.png',
@@ -537,26 +537,26 @@ for f in range(0, np.size(Ef_arr)):
                            ['o','^','o','^'],
                            4*['none'],
                            [2,2,2,2])
-    
-    
+
+
     # ### compute self-energy
-    # 
-    
+    #
+
     # In[14]:
-    
-    
+
+
     def get_analytical_retarted_surface_GF(E, U,gamma,beta_j,Print):
         zplus = 1j*1e-14
     #    zplus=0
         EmU=E+zplus-U
-    
+
         Factor=EmU**2 + gamma**2 - beta_j**2
         Sqrt=cmath.sqrt(Factor**2 - 4 * EmU**2 * gamma**2)
         Denom = 2 * gamma**2 * EmU
-    
+
         Numer1= (Factor + Sqrt)
         Numer2= (Factor - Sqrt)
-      
+
         if(Print):
             print('E,U,gamma,beta_j',E,U,gamma,beta_j)
             print('*',4 * EmUs**2 * gamma**2/Factor**2)
@@ -565,35 +565,35 @@ for f in range(0, np.size(Ef_arr)):
             print('Numer1',Numer1)
             print('Numer2',Numer2)
             print(np.imag(Numer1),np.imag(Numer2))
-    
+
         zplus=1j*1e-8 #small imaginary number
-    
+
         val1 = Numer1/Denom #- zplus
         val2 = Numer2/Denom #- zplus
     #     val = 0. + 1j*0.
     #     if(np.imag(val1) < 0.):
-    #         val = val1 
+    #         val = val1
     #     elif (np.imag(val2) < 0.):
-    #         val = val2 
-            
+    #         val = val2
+
         if(Print): print(val)
         return val1
-    
-    
+
+
     # In[15]:
-    
-    
+
+
     print(Us,Ud)
-    
-    
+
+
     # In[16]:
-    
-    
+
+
     gR_surf_s1 = np.zeros((M_red,Epts),dtype=complex)
     gR_surf_d1 = np.zeros((M_red,Epts),dtype=complex)
     #Ud=0
     #print('Us,Ud',Us,Ud)
-    
+
     for j in range(0,M_red):
         Print=False
         for e in range(0,Epts):
@@ -601,14 +601,14 @@ for f in range(0, np.size(Ef_arr)):
             #    Print=True
             gR_surf_s1[j][e] = get_analytical_retarted_surface_GF(E[e],Us,gamma,beta[j],Print)
             gR_surf_d1[j][e] = get_analytical_retarted_surface_GF(E[e],Ud,gamma,beta[j],Print)
-    
-    
+
+
     # In[17]:
-    
-    
+
+
     if(PrintFigures):
         plt,pltname=custom_plot_single([ np.imag(gR_surf_s1[0]),np.imag(gR_surf_d1[0]) ],
-                           [E,E], 
+                           [E,E],
                            [r'$g_1$, source ('+str(Us)+' V)',r'$g_1$, drain ('+str(Ud)+' V)'],
                            [-0.45,0.1],[-2,2],[r'Surface Green\'s function, $g_1$',r'Energy, E / (eV)'],'g1.png',
                            ['r','r','b','b'],
@@ -618,38 +618,38 @@ for f in range(0, np.size(Ef_arr)):
                            [2,3,2,3], plt_outside=True)
         plt.axhline(y = Ev0+U[-1], color = 'b', linestyle = 'dashed',label='Fermi')
         plt.text(0.1, (Ev0+U[-1]), 'Ev0-eVg(z=10nm)', fontsize=22,color='b')
-    
+
         plt.axhline(y = Ec0+U[-1], color = 'r', linestyle = 'dashed',label='Fermi')
         plt.text(0.1, (Ec0+U[-1]), 'Ec0-eVg(z=10nm)', fontsize=22,color='r')
-    
+
         plt.savefig(pltname, bbox_inches = "tight")
     print('minimum band gap/2 : (eV)', Eg/2)
-    
-    
+
+
     # ### compute Self-energy and Level-broadning
-    
+
     # In[18]:
-    
-    
+
+
     Sigma_s_comp = np.zeros((M_red,Epts),dtype=complex)
     Sigma_d_comp = np.zeros((M_red,Epts),dtype=complex)
     Gamma_s_comp = np.zeros((M_red,Epts),dtype=complex)
     Gamma_d_comp = np.zeros((M_red,Epts),dtype=complex)
-    
+
     for j in range(0,M_red):
         Sigma_s_comp[j] = gamma**2 * gR_surf_s1[j]
         Sigma_d_comp[j] = gamma**2 * gR_surf_d1[j]
-            
+
         Gamma_s_comp[j] = 1j*(Sigma_s_comp[j] - np.conjugate(Sigma_s_comp[j]))
         Gamma_d_comp[j] = 1j*(Sigma_d_comp[j] - np.conjugate(Sigma_d_comp[j]))
-    
-    
+
+
     # In[19]:
-    
-    
+
+
     if(PrintFigures):
     #     plt,pltname=custom_plot_single([ np.real(Sigma_s_comp[0]), np.imag(Sigma_s_comp[0]), np.real(Sigma_d_comp[0]), np.imag(Sigma_d_comp[0])],
-    #                        [E,E,E,E], 
+    #                        [E,E,E,E],
     #                        [r'$\Re(\Sigma_s^{1,1})$',r'$\Im(\Sigma_s^{1,1})$',r'$\Re(\Sigma_d^{N,N})$',r'$\Im(\Sigma_d^{N,N})$'],
     #                        [-3,3],[-2,2],[r'Component of self-energy, $\Sigma$',r'Energy, E / (eV)'],'Sigma.png',
     #                        ['r','r','b','b'],
@@ -658,7 +658,7 @@ for f in range(0, np.size(Ef_arr)):
     #                        4*['none'],
     #                        [2,3,2,3], plt_outside=True)
         plt,pltname=custom_plot_single([np.imag(Sigma_s_comp[0]),  np.imag(Sigma_d_comp[0])],
-                           [E,E,E,E], 
+                           [E,E,E,E],
                            [r'$\Im(\Sigma_s^{1,1})$',r'$\Im(\Sigma_d^{N,N})$'],
                            [-3,3],[-2,2],[r'Component of self-energy, $\Sigma$',r'Energy, E / (eV)'],'Sigma.png',
                            ['r','r','b','b'],
@@ -668,18 +668,18 @@ for f in range(0, np.size(Ef_arr)):
                            [2,3,2,3], plt_outside=True)
         plt.axhline(y = Ev0+U[-1], color = 'b', linestyle = 'dashed',label='Fermi')
         plt.text(0.1, (Ev0+U[-1]), 'Ev0-eVg(z=10nm)', fontsize=22,color='b')
-    
+
         plt.axhline(y = Ec0+U[-1], color = 'r', linestyle = 'dashed',label='Fermi')
         plt.text(0.1, (Ec0+U[-1]), 'Ec0-eVg(z=10nm)', fontsize=22,color='r')
-    
+
         plt.savefig(pltname, bbox_inches = "tight")
-    
+
     print('minimum band gap/2 : (eV)', Eg/2)
-    
-    
+
+
     # In[20]:
-    
-    
+
+
     if(PrintFigures):
         plt,pltname=custom_plot_single([np.real(Gamma_s_comp[0]), np.real(Gamma_d_comp[0])],
                            [E,E],
@@ -692,37 +692,37 @@ for f in range(0, np.size(Ef_arr)):
                            [3,3], plt_outside=True)
         plt.axhline(y = Ev0+U[-1], color = 'b', linestyle = 'dashed',label='Fermi')
         plt.text(0.1, (Ev0+U[-1]), 'Ev0-eVg(z=10nm)', fontsize=22,color='b')
-    
+
         plt.axhline(y = Ec0+U[-1], color = 'r', linestyle = 'dashed',label='Fermi')
         plt.text(0.1, (Ec0+U[-1]), 'Ec0-eVg(z=10nm)', fontsize=22,color='r')
-    
+
     #    plt.axhline(y = np.min(Ev0-U), color = 'g', linestyle = 'dashed',label='Fermi')
     #    plt.text(2.1,  np.min(Ev0-U), 'min(Ev0-U)', fontsize=22,color='g')
     #    plt.text(1.25, 1.5, r'T=Trace[$\Gamma_s G^R \Gamma_d G^A$]', fontsize=22,color='k')
         plt.savefig(pltname, bbox_inches = "tight")
-    
-    
+
+
     # In[21]:
-    
-    
+
+
     from numpy.linalg import inv
     zplus=1j*1e-12 #small imaginary number
-    
+
     T=np.zeros(Epts,dtype=float)
     Cond=np.zeros(Epts,dtype=float)
-    
+
     D=np.zeros(Epts,dtype=float)
     A=np.zeros((Epts,N),dtype=float)
-   
+
     Cond_tot[f] = 0.
     I=0. #Current
     deltaE=E[1]-E[0]
     print(deltaE)
-    
-    
+
+
     # In[22]:
-    
-    
+
+
     for e in range(0,Epts):
         Sigma_s=np.zeros((M_red*N,M_red*N),dtype=complex)
         Sigma_d=np.zeros((M_red*N,M_red*N),dtype=complex)
@@ -738,18 +738,18 @@ for f in range(0, np.size(Ef_arr)):
     #         print('\Sigma_s',Sigma_s[j*N][j*N], Sigma_s_comp[j][e])
     #         print('\Sigma_d',Sigma_d[(j+1)*N-1][(j+1)*N-1], Sigma_d_comp[j][e])
     #         print('\Gamma_s',Gamma_s[j*N][j*N], Gamma_s_comp[j][e])
-    #         print('\Gamma_d',Gamma_d[(j+1)*N-1][(j+1)*N-1], Gamma_d_comp[j][e])  
-    
+    #         print('\Gamma_d',Gamma_d[(j+1)*N-1][(j+1)*N-1], Gamma_d_comp[j][e])
+
         #or do the following (OK because Sigma matrix is diagonal)
-        #Gamma_s = 1j*(Sigma_s - Sigma_s.conj().T) 
-        #Gamma_d = 1j*(Sigma_d - Sigma_d.conj().T) 
+        #Gamma_s = 1j*(Sigma_s - Sigma_s.conj().T)
+        #Gamma_d = 1j*(Sigma_d - Sigma_d.conj().T)
         #sns.heatmap(np.real(Sigma_d+Sigma_s),cmap='coolwarm',annot=True)
     #    if(PrintFigures):
     #        if(e == 0):
     #            plt.figure(figsize = (16,16))
     #            #sns.heatmap(np.real(Sigma_s+Sigma_d),cmap='coolwarm',annot=True)
     #            sns.heatmap(H,cmap='coolwarm',annot=True)
-     
+
         G_R=inv(((E[e]+zplus)*np.eye(M_red*N))- H - Sigma_s - Sigma_d)
         G_A = G_R.conj().T
         T[e]=np.real(np.trace(Gamma_s@G_A@Gamma_d@G_R))
@@ -757,18 +757,18 @@ for f in range(0, np.size(Ef_arr)):
         Amat=1j*(G_R - G_A)
         D[e]=np.real(np.trace(Amat)/(2*np.pi))
         A[e] = np.real(np.diag(Amat))
-        #print(A[0]) 
+        #print(A[0])
         Cond_tot[f] += Cond[e]*deltaE
-    
-         
-    #    I=I+(dE*IE*T[e]*(f1[k]-f2[k])) 
-    
-    
+
+
+    #    I=I+(dE*IE*T[e]*(f1[k]-f2[k]))
+
+
     # In[23]:
-    
-    
+
+
     if(PrintFigures):
-        plt,pltname=custom_plot_single([T], 
+        plt,pltname=custom_plot_single([T],
                            [E],
                            [r'$T(E) (%d,%d)$'%(m,n)],
                            [0,1.1],[-2,1],[r'Transmission, T(E)', r'Energy, E / (eV)', 'T'],'Transmission_%d_%d.png'%(m,n),
@@ -779,29 +779,29 @@ for f in range(0, np.size(Ef_arr)):
                            [3],show_legend=False,plt_outside=True)
         plt.axhline(y = Ev0+U[-1], color = 'b', linestyle = 'dashed',label='Fermi')
         plt.text(1.1, (Ev0+U[-1]), 'Ev0-eVg', fontsize=22,color='b')
-    
+
         plt.axhline(y = Ec0+U[-1], color = 'r', linestyle = 'dashed',label='Fermi')
         plt.text(1.1, (Ec0+U[-1]), 'Ec0-eVg', fontsize=22,color='r')
-    
+
         plt.axhline(y = np.min(Ev0+U), color = 'g', linestyle = 'dashed',label='Fermi')
         #plt.text(1.1,  np.min(Ev0+U), 'min(Ev0-U)', fontsize=22,color='g')
         #plt.text(0.5, 0.8, r'T=Trace[$\Gamma_s G^R \Gamma_d G^A$]', fontsize=22,color='k')
-    
+
         plt.savefig(pltname, bbox_inches = "tight")
-        
-    
-    
+
+
+
     # In[24]:
-    
-    
+
+
     #print(Cond)
-    
-    
+
+
     # In[25]:
-    
-    
+
+
     if(PrintFigures):
-        plt,pltname=custom_plot_single([Cond/G_quantum], 
+        plt,pltname=custom_plot_single([Cond/G_quantum],
                            [E],
                            [r'$(%d,%d)$'%(m,n)],
                            [0,0.01],[-2,1],[r'Conductance function, $G(E)/(2q^2/h)$',r'Energy, E / (eV)'] ,'Conductance_%d_%d.png'%(m,n),
@@ -812,36 +812,36 @@ for f in range(0, np.size(Ef_arr)):
                            [3],show_legend=False,plt_outside=True)
         plt.axhline(y = Ef, color = 'k', linestyle = 'dashed',label='Fermi')
         plt.text(0.01, Ef, 'Fermi Level', fontsize=22,color='k')
-        
+
         plt.axhline(y = Ev0+U[-1], color = 'b', linestyle = 'dashed',label='Fermi')
         plt.text(0.01, (Ev0+U[-1]), 'Ev0-U(z=10nm)', fontsize=22,color='b')
-    
+
         plt.axhline(y = Ec0+U[-1], color = 'r', linestyle = 'dashed',label='Fermi')
         plt.text(0.01, (Ec0+U[-1]), 'Ec0-U(z=10nm)', fontsize=22,color='r')
-    
+
         plt.axhline(y = np.min(Ev0+U), color = 'g', linestyle = 'dashed',label='Fermi')
         plt.text(0.01,  np.min(Ev0+U), 'min(Ev0-U)', fontsize=22,color='g')
         plt.text(0.004, 0.8, r'$G(E)=-\frac{2q^2}{h} T \frac{\partial f}{\partial E}$', fontsize=30,color='k')
         plt.text(0.004, 0.5, r'$G_{tot}=\int G(E) dE$', fontsize=30,color='k')
-    
+
         plt.savefig(pltname, bbox_inches = "tight")
-    
-    
+
+
     # In[26]:
-    
-    
+
+
     #print(D)
-    
-    
+
+
     # In[27]:
-    
-    
+
+
     print('Total conductance:',Cond_tot)
-    
-    
+
+
     # In[28]:
-    
-    
+
+
     from matplotlib import ticker, cm
     import matplotlib.colors as colors
     def contourSpanVsTime(contourdata,ContourMin,ContourMax,xarr,yarr,fig, ax,cbarTrue,cbarlabel,
@@ -852,12 +852,12 @@ for f in range(0, np.size(Ef_arr)):
         cmap = plt.get_cmap('gist_heat')
         #levels = MaxNLocator(nbins=20).tick_values(0.0001, ContourMax)
         #levels=levels.astype(float)
-    
+
         levels_exp = np.arange(np.floor(np.log10(1e-12)-1),np.ceil(np.log10(ContourMax)+1))
         levels = np.power(10, levels_exp)
         print(levels)
         extent=[xarr[0],xarr[-1],yarr[0],yarr[-1]]
-    
+
         cpl=ax.contourf(contourdata,extent=extent,levels=levels,
                         norm=colors.LogNorm(vmin=1e-12, vmax=ContourMax),
                         cmap=cmap)
@@ -868,7 +868,7 @@ for f in range(0, np.size(Ef_arr)):
             cbar = fig.colorbar(cpl,ax=ax,format='%.2e')
             #cbar.minorticks_on()
             cbar.ax.set_title(cbarlabel,fontsize = 25,weight="bold")
-    
+
         ax.xaxis.set_major_locator(MultipleLocator(1))
         ax.yaxis.set_major_locator(MultipleLocator(0.5))
         ax.xaxis.set_major_formatter(FormatStrFormatter('%d'))
@@ -879,69 +879,69 @@ for f in range(0, np.size(Ef_arr)):
         ax.yaxis.set_minor_locator(ticker.AutoMinorLocator())
         plt.yticks(fontsize=20)
         plt.xticks(fontsize=20)
-    
+
         return plt
-    
+
     from matplotlib import rc, rcParams
     rc('text', usetex=True)
-    
+
     fig, ax = plt.subplots(1,1, constrained_layout=True)
     fig.set_size_inches(10,10)
-    
+
     xe=N
     ye=Epts
     myplt1=contourSpanVsTime(A,A.min(),A.max(),axial_loc/nano,E,fig, ax, cbarTrue=True,cbarlabel=r'A / (eV$^{-1}$)',
-                             x_lst=[axial_loc/nano,axial_loc/nano], 
+                             x_lst=[axial_loc/nano,axial_loc/nano],
                              y_lst=[Ev0+U, Ec0+U],
                              color_lst=['b','r'])
     ax.set_xlabel(r'z / (nm)',fontsize=25)
     ax.set_ylabel(r'E / (eV)',fontsize=25)
     plt.savefig('SpectralFunction.png', bbox_inches = "tight")
-    
-    
+
+
     # # Comparison with Mintmire & White (Theory and First principles)
-    
+
     # In[29]:
-    
-    
+
+
     nu0=np.round(2*m/3)
     print(nu0+M)
     #Mode_arr_Mintmire=np.linspace(-M,M,2*M+1)
     Mode_arr_Mintmire=np.linspace(-M,M,2*M+1)
-    
+
     #Mode_arr_datta=np.linspace(nu0-M,nu0+M,2*M+1)
 #    print('Mode_arr_Mintmire',Mode_arr_Mintmire)
     #print('Mode_arr_datta',Mode_arr_datta)
-    
+
     Lambda_Mintmire = 2*R/acc
 #    print('Lambda_Mintmire',Lambda_Mintmire)
-    
+
 #    print('sorted_M_arr',sorted_M_arr)
-    
-    
+
+
     # In[30]:
-    
-    
+
+
     ##Francois' book
     D_th_lin = np.zeros(Epts, dtype=float)
-    
+
     for e in range(0,Epts):
         const = acc*np.sqrt(3)/(np.pi**2*R*gamma)
         Sum=0.
-        for nu in Mode_arr_Mintmire:   
-            eps_m = np.abs(3*nu-m+n)*acc*gamma/(2*R) 
+        for nu in Mode_arr_Mintmire:
+            eps_m = np.abs(3*nu-m+n)*acc*gamma/(2*R)
             if(np.abs(E[e]) > np.abs(eps_m)):
                 Sum += np.abs(E[e])/cmath.sqrt(E[e]**2 - eps_m**2)
             elif(np.abs(E[e]) < np.abs(eps_m)):
                 Sum +=0
         D_th_lin[e] = const*np.real(Sum)#*num_atoms
-    
+
     dE_dk = np.zeros((M,np.size(k)),dtype=float)
     for p in range(1,M+1):
         dE_dk[p-1] = np.gradient(E_k[p*2-2])
-        
+
     if(PrintFigures):
-        custom_plot_single([Lambda_Mintmire*E/gamma,Lambda_Mintmire*E/gamma], 
+        custom_plot_single([Lambda_Mintmire*E/gamma,Lambda_Mintmire*E/gamma],
                            [Lambda_Mintmire*gamma*D*2/M/N,Lambda_Mintmire*gamma*D_th_lin],
                            [r'NEGF [(%d,%d) CNT]'%(m,n), r'Mintmire & White (Theory)'],
                            [-5,5],[0,10],[r'Normalized energy, $\Lambda E$ / $\gamma$',r'Normalized Density of States, $\Lambda \gamma D(E)$'],'DOS_Normalized_%d_%d.png'%(m,n),
@@ -950,11 +950,11 @@ for f in range(0, np.size(Ef_arr)):
                            3*[None],
                            3*['none'],
                            3*[3])
-    
-    
+
+
     if(PrintFigures):
         plt,pltname = custom_plot_single([Lambda_Mintmire*gamma*D*2/M/N],
-                                         [E], 
+                                         [E],
                            [r'NEGF [(%d,%d) CNT]'%(m,n)],
                            [0,1],[-2,2],[r'Normalized Density of States, $\Lambda \gamma D(E)$',r'Energy, $E$ / (eV)'],'DOS_%d_%d.png'%(m,n),
                            ['k','r','b'],
@@ -964,8 +964,8 @@ for f in range(0, np.size(Ef_arr)):
                            3*[3], plt_outside=True)
         plt.text(0.3, 1, 'point charge= %de'%(Q/q), fontsize=22,color='k')
         plt.savefig(pltname, bbox_inches = "tight")
-    
-    
+
+
 
 fig, ax1 = plt.subplots(1,1)
 fig.set_size_inches(10,10)
