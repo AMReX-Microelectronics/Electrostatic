@@ -10,7 +10,7 @@
 
 namespace Utils
 {
-    class WarnManager;
+class WarnManager;
 }
 
-#endif //WARPX_WARN_MANAGER_FWD_H
+#endif  // WARPX_WARN_MANAGER_FWD_H

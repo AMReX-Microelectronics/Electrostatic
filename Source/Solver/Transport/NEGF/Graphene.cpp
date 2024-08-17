@@ -1,11 +1,11 @@
 #include "Graphene.H"
-#include "../../Utils/CodeUtils/CodeUtil.H"
 
 #include <AMReX_Particles.H>
+#include <math.h>
+#include <stdlib.h>
 
 #include <cmath>
-#include <math.h>
-#include<stdlib.h>
 
+#include "../../Utils/CodeUtils/CodeUtil.H"
 
-amrex::Array<int,2> c_Graphene::type_id;
+amrex::Array<int, 2> c_Graphene::type_id;

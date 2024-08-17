@@ -8,17 +8,19 @@
 #ifndef WARPX_MSG_LOGGER_FWD_H
 #define WARPX_MSG_LOGGER_FWD_H
 
-namespace Utils{
-namespace MsgLogger{
+namespace Utils
+{
+namespace MsgLogger
+{
 
-    enum class Priority;
+enum class Priority;
 
-    struct Msg;
-    struct MsgWithCounter;
-    struct MsgWithCounterAndRanks;
+struct Msg;
+struct MsgWithCounter;
+struct MsgWithCounterAndRanks;
 
-    class Logger;
-}
-}
+class Logger;
+}  // namespace MsgLogger
+}  // namespace Utils
 
-#endif //WARPX_MSG_LOGGER_FWD_H
+#endif  // WARPX_MSG_LOGGER_FWD_H

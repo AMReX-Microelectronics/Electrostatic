@@ -3,4 +3,4 @@
 
 class c_Diagnostics;
 
-#endif 
+#endif

@@ -1,0 +1,8 @@
+---
+BasedOnStyle: Google # You can use LLVM, Google, Mozilla, or any other base style
+IndentWidth: 4       # Number of spaces per indentation level
+UseTab: Never        # Do not use tabs, only spaces
+TabWidth: 4          # Number of spaces per tab
+ColumnLimit: 80
+BreakBeforeBraces: Allman
+PenaltyBreakBeforeFirstCallParameter: 100

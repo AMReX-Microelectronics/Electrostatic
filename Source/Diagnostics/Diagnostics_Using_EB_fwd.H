@@ -3,4 +3,4 @@
 
 class c_Diagnostics_Using_EB;
 
-#endif 
+#endif
