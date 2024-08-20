@@ -1,0 +1,5 @@
+*.ipynb linguist-detectable=false
+*.md linguist-documentation=true
+
+*.cpp linguist-language=C++
+*.H linguist-language=C++
