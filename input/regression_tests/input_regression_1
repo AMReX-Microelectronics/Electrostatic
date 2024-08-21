@@ -1,19 +1,19 @@
 ##############################################################
-# Title: regression_test_1
-# Descriptive title: all_around_metal
+# Title : regression_test_1
+# Descriptive title : all_around_metal
 # 
-# Modules tested: Equilibrium NEGF for carbon nanotubes, 
+# Modules tested : Equilibrium NEGF for carbon nanotubes,
 # Broyden's second method, Electrostatics with EBs
 # 
-# Description: Test models a (17,0) carbon nanotube surrounded 
-# by a palladium contact. Electrostatic potential is imposed 
-# on the metal as "Gate.surf_soln_function" from 0 to 0.5 V in 
-# 2 steps. At each step the charge density on the nanotube 
-# varies until self consistency is achieved with respect to 
-# the potential. Potential at 1 V in the domain is compared.
+# Description : Test models a(17, 0) carbon nanotube surrounded
+# by a palladium contact.Electrostatic potential is imposed
+# on the metal as "Gate.surf_soln_function" from 0 to 0.5 V in
+#  2 steps.At each step the charge density on the nanotube
+# varies until self consistency is achieved with respect to
+# the potential.Potential at 1 V in the domain is compared.
 # 
-# Ref: Stewart and Francois (2006), Nanotechnology 17:4699.
-# doi:10.1088/0957-4484/17/18/029
+# Ref : Stewart and Léonard (2006), Nanotechnology 17 : 4699.
+# doi : 10.1088/0957-4484/17/18/029
 ###############################################################
 
 use_electrostatic = 1
@@ -78,7 +78,7 @@ my_constants.QD_z = GO_h + 2*R_CN + 1e-9
 
 my_constants.sigma_QD = 0.2e-9 #used for Gaussian spreading
 
-# charge density without Gaussian spreading
+#charge density without Gaussian spreading
 my_constants.R_QD = 0.2e-9
 my_constants.charge_density_QD = charge_QD / ((4./3)*pi*R_QD**3)
 
@@ -165,9 +165,11 @@ macroscopic.ghostcells_for_fields = alpha.0 epsilon.1 charge_density.1 phi.1  at
 
 macroscopic.alpha = 0.
 macroscopic.charge_density = 0.
-#macroscopic.charge_density_function = "charge_density_surr + charge_QD * (1./(sqrt(2*pi)*sigma_QD)**3)* exp(-1*( (x-QD_x)**2 + (y-QD_y)**2 + (z-QD_z)**2 ) / (2*sigma_QD**2) )"
+#macroscopic.charge_density_function = \
+    "charge_density_surr + charge_QD * (1./(sqrt(2*pi)*sigma_QD)**3)* exp(-1*( (x-QD_x)**2 + (y-QD_y)**2 + (z-QD_z)**2 ) / (2*sigma_QD**2) )"
 
-#macroscopic.epsilon_function = "epsilon_0 + (epsilon_GO - epsilon_0)    *(z >= 0.)   *(z < GO_h)"
+#macroscopic.epsilon_function = \
+    "epsilon_0 + (epsilon_GO - epsilon_0)    *(z >= 0.)   *(z < GO_h)"
 macroscopic.epsilon_function = "epsilon_0"
 macroscopic.phi = 0.
 macroscopic.atom_locations = 0.
@@ -183,7 +185,7 @@ macroscopic.atom_locations = 0.
 ####################
 
 plot.folder_name = regression_test_1
-plot.fields_to_plot = phi.1 
+plot.fields_to_plot = phi.1
 plot.write_after_init = 0
 plot.write_interval = 1
 plot.rawfield_write_interval = 1000000
