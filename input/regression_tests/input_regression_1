@@ -42,7 +42,6 @@ my_constants.epsilon_0 = 8.8541878128e-12
 my_constants.tiny = 1e-12
 my_constants.pi = 3.141592653589793
 
-
 ### gate oxide
 my_constants.GO_w = Lx
 my_constants.GO_l = Ly
@@ -66,21 +65,6 @@ my_constants.CN_co_l = 2*L_unitcell
 my_constants.small_gap = 0.3e-9  #0.1e-9 #5*bond_length #0.355e-9, gap between nanotube and the contacts
 
 my_constants.epsilon_CN = epsilon_0 #vacuum
-
-### Quantum dot
-my_constants.charge_density_surr = 0.0 #surrounding charge density
-
-#my_constants.charge_QD = 0.
-my_constants.charge_QD = q
-my_constants.QD_x = 0.
-my_constants.QD_y = 0.
-my_constants.QD_z = GO_h + 2*R_CN + 1e-9
-
-my_constants.sigma_QD = 0.2e-9 #used for Gaussian spreading
-
-#charge density without Gaussian spreading
-my_constants.R_QD = 0.2e-9
-my_constants.charge_density_QD = charge_QD / ((4./3)*pi*R_QD**3)
 
 ### Total domain dimensions
 my_constants.D_CN_unitcell = 1          #ceil(R_CN*2./L_unitcell) #2
@@ -149,13 +133,8 @@ domain.coord_sys = cartesian
 #################################
 ###### BOUNDARY CONDITIONS ######
 #################################
-#boundary.hi = neu(0.) neu(0) neu(0.)
-#boundary.lo = neu(0.) neu(0) neu(0.)
 boundary.hi = neu(0.) neu neu(0.)
 boundary.lo = neu(0.) neu neu(0.)
-
-#boundary.GV_function = "GV_min + (GV_max-GV_min) * t" #V
-
 
 ####################################
 ###### MACROSCOPIC PROPERTIES ######
@@ -165,20 +144,9 @@ macroscopic.ghostcells_for_fields = alpha.0 epsilon.1 charge_density.1 phi.1  at
 
 macroscopic.alpha = 0.
 macroscopic.charge_density = 0.
-#macroscopic.charge_density_function = \
-    "charge_density_surr + charge_QD * (1./(sqrt(2*pi)*sigma_QD)**3)* exp(-1*( (x-QD_x)**2 + (y-QD_y)**2 + (z-QD_z)**2 ) / (2*sigma_QD**2) )"
-
-#macroscopic.epsilon_function = \
-    "epsilon_0 + (epsilon_GO - epsilon_0)    *(z >= 0.)   *(z < GO_h)"
 macroscopic.epsilon_function = "epsilon_0"
 macroscopic.phi = 0.
 macroscopic.atom_locations = 0.
-
-#############################
-###### POST PROCESSING ######
-#############################
-
-#post_process.fields_to_process = vecField
 
 ####################
 ###### OUTPUT ######
@@ -189,21 +157,6 @@ plot.fields_to_plot = phi.1
 plot.write_after_init = 0
 plot.write_interval = 1
 plot.rawfield_write_interval = 1000000
-
-########################
-###### DIAGNOSTICS #####
-########################
-use_diagnostics = 0
-
-diag.specify_using_eb = 1
-diag.objects = Surf1
-Surf1.geom_type = cylinder
-Surf1.center = 0 0 CN_z
-Surf1.radius = R_CN
-Surf1.axial_direction = 1
-Surf1.theta_reference_direction = 0
-Surf1.has_fluid_inside = 0
-Surf1.fields_to_plot = phi charge_density atom_locations
 
 ####################################
 ###### MLMG SOLVER PROPERTIES ######
@@ -226,7 +179,6 @@ mlmg.relative_tolerance=1e-10
 ###### NEGF #####
 #################
 
-#nanostructure names
 transport.NS_names = cnt
 transport.use_negf = 1
 transport.NS_gather_field = phi
