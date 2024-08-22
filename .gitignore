@@ -2,7 +2,8 @@ Exec/*
 !Exec/GNUmakefile
 *.ipynb_checkpoints*
 *.ex
+*tmp_build_dir/
 *.png
 *.swp
-perl_runs/
 perlscripts/
+input_local/
