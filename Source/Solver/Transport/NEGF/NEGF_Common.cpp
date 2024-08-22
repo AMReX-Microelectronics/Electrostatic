@@ -24,12 +24,10 @@ const std::map<std::string, AxisType> map_strToAxisType = {
 template <typename T>
 void c_NEGF_Common<T>::Set_KeyParams(const std::string &name_str,
                                      const int &id_counter,
-                                     const int &field_sites_offset,
                                      const amrex::Real &initial_deposit_value)
 {
     name = name_str;
     NS_Id = id_counter;
-    NS_field_sites_offset = field_sites_offset;
     initial_charge = initial_deposit_value;
 
     num_proc = amrex::ParallelDescriptor::NProcs();
@@ -141,7 +139,7 @@ void c_NEGF_Common<T>::Define_MPISendCountAndDisp()
         std::fill(MPI_send_count.begin(), MPI_send_count.end(), 0);
         std::fill(MPI_send_disp.begin(), MPI_send_disp.end(), 0);
     }
-    MPI_Gather(&(site_id_offset), 1, MPI_INT, MPI_send_disp.data(), 1, MPI_INT,
+    MPI_Gather(&(min_local_site_id), 1, MPI_INT, MPI_send_disp.data(), 1, MPI_INT,
                ParallelDescriptor::IOProcessorNumber(),
                ParallelDescriptor::Communicator());
 
@@ -199,7 +197,7 @@ void c_NEGF_Common<T>::Initialize_ChargeAtFieldSites()
         //    // bool full_match = true;
         //    // for(int i=0; i < num_local_field_sites; ++i)
         //    // {
-        //    //     if(h_n_curr_in_loc(i) != h_n_curr_in_glo(i+site_id_offset)
+        //    //     if(h_n_curr_in_loc(i) != h_n_curr_in_glo(i+min_local_site_id)
         //    )
 
         //   //         full_match = false;
@@ -207,7 +205,7 @@ void c_NEGF_Common<T>::Initialize_ChargeAtFieldSites()
         //   //                 + std::to_string(i) + " " +
         //   std::to_string(h_n_curr_in_loc(i)) + " "
         //   //                 +
-        //   std::to_string(h_n_curr_in_glo(i+site_id_offset)));
+        //   std::to_string(h_n_curr_in_glo(i+min_local_site_id)));
         //   //     }
         //   // }
         //   // std::cout << "process: " << my_rank << " full_match: " <<
@@ -745,8 +743,6 @@ void c_NEGF_Common<T>::Print_KeyParams()
 {
     amrex::Print() << "##### name: " << name << "\n";
     amrex::Print() << "##### NS_Id: " << NS_Id << "\n";
-    amrex::Print() << "##### NS_field_sites_offset: " << NS_field_sites_offset
-                   << "\n";
     amrex::Print() << "##### initial_charge: " << initial_charge << "\n";
     amrex::Print() << "##### num_proc: " << num_proc << "\n";
     amrex::Print() << "##### my_rank: " << my_rank << "\n";
@@ -1190,10 +1186,10 @@ void c_NEGF_Common<T>::Define_MatrixPartition()
 template <typename T>
 void c_NEGF_Common<T>::Initialize_NEGF_Params(
     const std::string &name_str, const int &id_counter,
-    const int &field_sites_offset, const amrex::Real &initial_deposit_value,
+    const amrex::Real &initial_deposit_value,
     const std::string &negf_foldername_str)
 {
-    Set_KeyParams(name_str, id_counter, field_sites_offset,
+    Set_KeyParams(name_str, id_counter, 
                   initial_deposit_value);
 
     Define_FoldersAndFiles(negf_foldername_str);

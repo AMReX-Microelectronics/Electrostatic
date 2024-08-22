@@ -42,17 +42,11 @@ class c_Graphene : public c_NEGF_Common<ComplexType[NUM_MODES][NUM_MODES]>
     }
 
    public:
-    struct Get1DSiteID
-    {
-        AMREX_GPU_HOST_DEVICE int operator()(int global_par_id) const
-        {
-            return static_cast<int>(
-                amrex::Math::floor((global_par_id - 1) / type_id[0]));
-        }
-        amrex::Array<int, 2> type_id;
-    };
 
-    static Get1DSiteID get_1D_site_id() { return Get1DSiteID{type_id}; }
+    static int get_1D_site_id(int par_id_local_to_NS) {
+        return static_cast<int>(
+            amrex::Math::floor((par_id_local_to_NS - 1) / type_id[0]));
+    }
 
     struct GetAtomIDAtSite
     {

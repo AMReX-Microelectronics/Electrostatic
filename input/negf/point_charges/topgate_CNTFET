@@ -12,7 +12,7 @@ amrex.the_arena_is_managed=1
 ################################
 ##### Some Important Params ####
 ################################
-my_constants.gx = 1
+my_constants.gx = 2
 my_constants.gy = 16
 my_constants.gz = 2
 
@@ -23,9 +23,9 @@ my_constants.periodicity_length = periodicity_factor * unitcells_per_D_CN * L_un
 
 
 my_constants.Vds = 0.   #Drain-Source voltage [V]
-my_constants.Vgs_min = -0.8
+my_constants.Vgs_min = -2
 my_constants.Vgs_max = 1
-my_constants.Nsteps = 2
+my_constants.Nsteps = 16
 my_constants.dt = 1./(Nsteps-1)
 
 
@@ -345,7 +345,7 @@ NS_default.num_recursive_parts = 2
 #NS_default.read_negf_foldername =
 NS_default.E_valence_min = -10
 NS_default.E_pole_max    = 3
-NS_default.E_zPlus_imag  = 1.e-7
+NS_default.E_zPlus_imag  = 1.e-6
 
 CNT_default.type_id = m_index n_index    
 CNT_default.acc = bond_length

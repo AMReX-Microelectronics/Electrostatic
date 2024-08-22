@@ -372,7 +372,6 @@ int c_TransportSolver::Instantiate_Materials()
         amrex::Print() << "##### Instantiating material: " << name << "\n";
 
         int field_sites = 0;
-        int NS_field_sites_offset = NS_field_sites_cumulative.back();
         switch (c_TransportSolver::map_NSType_enum.at(Get_NS_type_str(name)))
         {
             case s_NS_Type::CNT:
@@ -381,8 +380,7 @@ int c_TransportSolver::Instantiate_Materials()
                 vp_CNT.push_back(std::make_unique<c_Nanostructure<T>>(
                     *_geom, *_dm, *_ba, name, NS_id_counter,
                     NS_gather_field_str, NS_deposit_field_str,
-                    NS_initial_deposit_value, use_negf, negf_foldername_str,
-                    NS_field_sites_offset));
+                    NS_initial_deposit_value, use_negf, negf_foldername_str));
                 field_sites = vp_CNT.back()->get_num_field_sites();
                 break;
             }
@@ -393,8 +391,7 @@ int c_TransportSolver::Instantiate_Materials()
                 vp_Graphene.push_back(std::make_unique<c_Nanostructure<T>>(
                     *_geom, *_dm, *_ba, name, NS_id_counter,
                     NS_gather_field_str, NS_deposit_field_str,
-                    NS_initial_deposit_value, use_negf, negf_foldername_str,
-                    NS_field_sites_offset));
+                    NS_initial_deposit_value, use_negf, negf_foldername_str));
                 field_sites = vp_Graphene.back()->get_num_field_sites();
                 amrex::Abort("NS_type graphene is not yet defined.");
                 break;

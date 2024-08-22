@@ -159,7 +159,6 @@ class c_NEGF_Common : protected MatrixBlock<T>, private c_IntegrationPath
 #endif
 
     void Set_KeyParams(const std::string &NS_name_str, const int &NS_id_counter,
-                       const int &NS_field_sites_offset,
                        const amrex::Real &NS_initial_deposit_value);
     void Define_FoldersAndFiles(const std::string &negf_foldername_str);
     void Read_NanostructureProperties();
@@ -326,8 +325,7 @@ class c_NEGF_Common : protected MatrixBlock<T>, private c_IntegrationPath
     int num_proc = 1;
     int NS_Id = 0;
     int site_size_loc_offset = 0;
-    int site_id_offset = 0;
-    int NS_field_sites_offset = 0;
+    int min_local_site_id = 0;
     MPI_Datatype MPI_BlkType;
 
     /*Nanostructure params*/
@@ -460,7 +458,6 @@ class c_NEGF_Common : protected MatrixBlock<T>, private c_IntegrationPath
 
     void Initialize_NEGF_Params(const std::string &NS_name_str,
                                 const int &NS_id_counter,
-                                const int &NS_field_sites_offset,
                                 const amrex::Real &NS_initial_deposit_value,
                                 const std::string &negf_foldername_str);
     void Define_MPISendCountAndDisp();

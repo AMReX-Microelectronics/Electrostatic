@@ -26,7 +26,7 @@ c_Nanostructure<NSType>::c_Nanostructure(
     const int NS_id_counter, const std::string NS_gather_str,
     const std::string NS_deposit_str,
     const amrex::Real NS_initial_deposit_value, const int use_negf,
-    const std::string negf_foldername_str, const int NS_field_sites_offset)
+    const std::string negf_foldername_str)
     : _geom(&geom),
       amrex::ParticleContainer<realPD::NUM, intPD::NUM, realPA::NUM,
                                intPA::NUM>(geom, dm, ba)
@@ -38,7 +38,6 @@ c_Nanostructure<NSType>::c_Nanostructure(
     if (_use_negf)
     {
         NSType::Initialize_NEGF_Params(NS_name_str, NS_id_counter,
-                                       NS_field_sites_offset,
                                        NS_initial_deposit_value,
                                        negf_foldername_str);
 
@@ -93,23 +92,25 @@ void c_Nanostructure<NSType>::Fill_AtomLocations()
 {
     if (ParallelDescriptor::IOProcessor())
     {
-        auto get_1D_site_id = NSType::get_1D_site_id();
-
         for (int i = 0; i < NSType::num_atoms; ++i)
         {
             ParticleType p;
             p.id() = ParticleType::NextID();
-            p.cpu() = ParallelDescriptor::MyProc();
 
-            int site_id = get_1D_site_id(p.id());
+            if(i==0) particle_id_offset = p.id()-1;
+
+            p.cpu() = ParallelDescriptor::MyProc();
 
             for (int j = 0; j < AMREX_SPACEDIM; ++j)
             {
                 p.pos(j) = pos_vec[i].dir[j];
             }
 
+            int par_id_local_to_NS = p.id() - particle_id_offset;
+            int site_id = NSType::get_1D_site_id(par_id_local_to_NS);
+
             std::array<int, intPA::NUM> int_attribs;
-            int_attribs[intPA::cid] = 0;
+            int_attribs[intPA::site_id] = site_id;
 
             std::array<ParticleReal, realPA::NUM> real_attribs;
             real_attribs[realPA::gather] = 0.0;
@@ -124,8 +125,10 @@ void c_Nanostructure<NSType>::Fill_AtomLocations()
             particle_tile.push_back_real(real_attribs);
         }
     }
+    ParallelDescriptor::Bcast(&particle_id_offset, 1,
+                              ParallelDescriptor::IOProcessorNumber());
 
-    Redistribute();  // This function is in amrex::ParticleContainer
+    Redistribute();  
 }
 
 template <typename NSType>
@@ -144,14 +147,13 @@ void c_Nanostructure<NSType>::Evaluate_LocalFieldSites()
 
         const auto &particles = pti.GetArrayOfStructs();
         const auto p_par = particles().data();
-        auto get_1D_site_id = NSType::get_1D_site_id();
 
-        const int FSO = NSType::NS_field_sites_offset;
+        auto &par_site_id = pti.get_site_id();
+        auto *p_site_id = par_site_id.data();
+
         for (int p = 0; p < np; ++p)
         {
-            int global_id = p_par[p].id();
-            int site_id = get_1D_site_id(global_id) - FSO;
-
+            int site_id = p_site_id[p];
             if (map.find(site_id) == map.end())
             {
                 map[site_id] = counter++;
@@ -162,17 +164,17 @@ void c_Nanostructure<NSType>::Evaluate_LocalFieldSites()
 
     if (hasValidBox)
     {
-        NSType::site_id_offset = min_site_id;
+        NSType::min_local_site_id = min_site_id;
     }
     else
     {
-        NSType::site_id_offset = 0;
+        NSType::min_local_site_id = 0;
     }
     NSType::num_local_field_sites = counter;
 
-    // std::cout << " process/site_id_offset/num_local_field_sites: "
+    // std::cout << " process/min_local_site_id/num_local_field_sites: "
     //           << NSType::my_rank << " "
-    //           << NSType::site_id_offset << " "
+    //           << NSType::min_local_site_id << " "
     //           << NSType::num_local_field_sites << "\n";
 
     /*define local charge density 1D table, h_n_curr_in_loc_data */
@@ -367,27 +369,24 @@ void c_Nanostructure<NSType>::Deposit_AtomAttributeToMesh()
         const auto &par_deposit = pti.get_realPA_comp(realPA::deposit);
         const auto p_par_deposit = par_deposit.data();
 
+        auto &par_site_id = pti.get_site_id();
+        auto *p_site_id = par_site_id.data();
+
         auto rho = p_mf_deposit->array(pti);
-        auto get_1D_site_id = NSType::get_1D_site_id();
 
         amrex::Real unit_charge = PhysConst::q_e;
         int atoms_per_field_site = NSType::num_atoms_per_field_site;
-        int SIO = NSType::site_id_offset;
+        int SIO = NSType::min_local_site_id;
+
+        amrex::Real vol =
+            AMREX_D_TERM(dx[0], *dx[1], *dx[2]);
 
         auto const &h_n_curr_in_loc = NSType::h_n_curr_in_loc_data.table();
-        // amrex::Print() << " SIO: "<< SIO << "\n";
-
-        const int FSO = NSType::NS_field_sites_offset;
 
         amrex::ParallelFor(np,
                            [=] AMREX_GPU_DEVICE(int p) noexcept
                            {
-                               amrex::Real vol =
-                                   AMREX_D_TERM(dx[0], *dx[1], *dx[2]);
-
-                               int global_id = p_par[p].id();
-                               int site_id = get_1D_site_id(global_id) - FSO;
-
+                               int site_id = p_site_id[p];
                                amrex::Real qp = n_curr_in_loc(site_id - SIO) *
                                                 unit_charge / vol /
                                                 atoms_per_field_site;
@@ -414,8 +413,6 @@ void c_Nanostructure<NSType>::Obtain_PotentialAtSites()
     amrex::Real *p_dV = d_vec_V.dataPtr();
     amrex::Real *p_hV = h_vec_V.dataPtr();
 
-    const int FSO = NSType::NS_field_sites_offset;
-
     amrex::Print() << "\n";
 
     int lev = 0;
@@ -428,7 +425,9 @@ void c_Nanostructure<NSType>::Obtain_PotentialAtSites()
 
         auto &par_gather = pti.get_realPA_comp(realPA::gather);
         auto p_par_gather = par_gather.data();
-        auto get_1D_site_id = NSType::get_1D_site_id();
+
+        auto &par_site_id = pti.get_site_id();
+        auto *p_site_id = par_site_id.data();
 
         if (average_field_flag)
         {
@@ -437,9 +436,7 @@ void c_Nanostructure<NSType>::Obtain_PotentialAtSites()
                 amrex::ParallelFor(np,
                                    [=] AMREX_GPU_DEVICE(int p) noexcept
                                    {
-                                       int global_id = p_par[p].id();
-                                       int site_id =
-                                           get_1D_site_id(global_id) - FSO;
+                                       int site_id = p_site_id[p];
 
                                        amrex::HostDevice::Atomic::Add(
                                            &(p_dV[site_id]), p_par_gather[p]);
@@ -453,15 +450,18 @@ void c_Nanostructure<NSType>::Obtain_PotentialAtSites()
 #else
                 auto avg_indices_ptr = NSType::vec_avg_indices.dataPtr();
 #endif
+                auto par_id_offset = particle_id_offset;
 
                 amrex::ParallelFor(
                     np,
                     [=] AMREX_GPU_DEVICE(int p) noexcept
                     {
-                        int global_id = p_par[p].id();
-                        int site_id = get_1D_site_id(global_id) - FSO;
+                        int par_id_local_to_NS = p_par[p].id() - par_id_offset;
 
-                        int atom_id_at_site = get_atom_id_at_site(global_id);
+                        int site_id = p_site_id[p];
+
+                        int atom_id_at_site = get_atom_id_at_site(par_id_local_to_NS);
+
                         int remainder =
                             atom_id_at_site % num_atoms_per_field_site;
 
@@ -481,9 +481,7 @@ void c_Nanostructure<NSType>::Obtain_PotentialAtSites()
             amrex::ParallelFor(np,
                                [=] AMREX_GPU_DEVICE(int p) noexcept
                                {
-                                   int global_id = p_par[p].id();
-                                   int site_id =
-                                       get_1D_site_id(global_id) - FSO;
+                                   int site_id = p_site_id[p];
                                    p_dV[site_id] = p_par_gather[p];
                                });
         }
