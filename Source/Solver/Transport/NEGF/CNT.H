@@ -78,8 +78,8 @@ class c_CNT : public c_NEGF_Common<ComplexType[NUM_MODES]>
         MatrixBlock<BlkType> &gr, const ComplexType EmU) final;
 
    public:
-
-    static int get_1D_site_id(int par_id_local_to_NS) {
+    static int get_1D_site_id(int par_id_local_to_NS)
+    {
         return static_cast<int>(
             amrex::Math::floor((par_id_local_to_NS - 1) / type_id[0]));
     }

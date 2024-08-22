@@ -139,8 +139,8 @@ void c_NEGF_Common<T>::Define_MPISendCountAndDisp()
         std::fill(MPI_send_count.begin(), MPI_send_count.end(), 0);
         std::fill(MPI_send_disp.begin(), MPI_send_disp.end(), 0);
     }
-    MPI_Gather(&(min_local_site_id), 1, MPI_INT, MPI_send_disp.data(), 1, MPI_INT,
-               ParallelDescriptor::IOProcessorNumber(),
+    MPI_Gather(&(min_local_site_id), 1, MPI_INT, MPI_send_disp.data(), 1,
+               MPI_INT, ParallelDescriptor::IOProcessorNumber(),
                ParallelDescriptor::Communicator());
 
     MPI_Gather(&(num_local_field_sites), 1, MPI_INT, MPI_send_count.data(), 1,
@@ -197,7 +197,8 @@ void c_NEGF_Common<T>::Initialize_ChargeAtFieldSites()
         //    // bool full_match = true;
         //    // for(int i=0; i < num_local_field_sites; ++i)
         //    // {
-        //    //     if(h_n_curr_in_loc(i) != h_n_curr_in_glo(i+min_local_site_id)
+        //    //     if(h_n_curr_in_loc(i) !=
+        //    h_n_curr_in_glo(i+min_local_site_id)
         //    )
 
         //   //         full_match = false;
@@ -1189,8 +1190,7 @@ void c_NEGF_Common<T>::Initialize_NEGF_Params(
     const amrex::Real &initial_deposit_value,
     const std::string &negf_foldername_str)
 {
-    Set_KeyParams(name_str, id_counter, 
-                  initial_deposit_value);
+    Set_KeyParams(name_str, id_counter, initial_deposit_value);
 
     Define_FoldersAndFiles(negf_foldername_str);
 

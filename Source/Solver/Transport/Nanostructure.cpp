@@ -97,7 +97,7 @@ void c_Nanostructure<NSType>::Fill_AtomLocations()
             ParticleType p;
             p.id() = ParticleType::NextID();
 
-            if(i==0) particle_id_offset = p.id()-1;
+            if (i == 0) particle_id_offset = p.id() - 1;
 
             p.cpu() = ParallelDescriptor::MyProc();
 
@@ -128,7 +128,7 @@ void c_Nanostructure<NSType>::Fill_AtomLocations()
     ParallelDescriptor::Bcast(&particle_id_offset, 1,
                               ParallelDescriptor::IOProcessorNumber());
 
-    Redistribute();  
+    Redistribute();
 }
 
 template <typename NSType>
@@ -378,8 +378,7 @@ void c_Nanostructure<NSType>::Deposit_AtomAttributeToMesh()
         int atoms_per_field_site = NSType::num_atoms_per_field_site;
         int SIO = NSType::min_local_site_id;
 
-        amrex::Real vol =
-            AMREX_D_TERM(dx[0], *dx[1], *dx[2]);
+        amrex::Real vol = AMREX_D_TERM(dx[0], *dx[1], *dx[2]);
 
         auto const &h_n_curr_in_loc = NSType::h_n_curr_in_loc_data.table();
 
@@ -460,7 +459,8 @@ void c_Nanostructure<NSType>::Obtain_PotentialAtSites()
 
                         int site_id = p_site_id[p];
 
-                        int atom_id_at_site = get_atom_id_at_site(par_id_local_to_NS);
+                        int atom_id_at_site =
+                            get_atom_id_at_site(par_id_local_to_NS);
 
                         int remainder =
                             atom_id_at_site % num_atoms_per_field_site;

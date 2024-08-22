@@ -27,7 +27,7 @@ class c_Nanostructure
     amrex::MultiFab *p_mf_deposit = nullptr;
     const amrex::GpuArray<int, AMREX_SPACEDIM> *_n_cell;
     amrex::Vector<s_Position3D> pos_vec;
-    int particle_id_offset=0;
+    int particle_id_offset = 0;
 
     void Fill_AtomLocations();
     void Read_AtomLocations();

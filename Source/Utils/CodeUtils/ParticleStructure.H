@@ -12,7 +12,7 @@
 
 // Extra Particle attributes in Struct-of-Arrays form
 // real: phi, charge
-// int: site_id 
+// int: site_id
 
 struct realPA  // real Particle Attribute
 {
@@ -28,7 +28,7 @@ struct intPA  // integer Particle Attribute
 {
     enum
     {
-        site_id,  //field_site_id local to nanostructure
+        site_id,  // field_site_id local to nanostructure
         NUM
     };
 };
@@ -104,9 +104,7 @@ class MyParIter
 
     const IntVector &get_site_id() const
     {
-        return this->GetStructOfArrays().GetIntData(
-            intPA::site_id);
+        return this->GetStructOfArrays().GetIntData(intPA::site_id);
     }
-
 };
 #endif
