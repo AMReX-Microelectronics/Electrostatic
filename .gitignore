@@ -1,5 +1,8 @@
 Exec/*
 !Exec/GNUmakefile
 *.ipynb_checkpoints*
+*.ex
 *.png
 *.swp
+perl_runs/
+perlscripts/
