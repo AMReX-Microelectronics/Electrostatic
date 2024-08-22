@@ -1,0 +1,5 @@
+Exec/*
+!Exec/GNUmakefile
+*.ipynb_checkpoints*
+*.png
+*.swp
