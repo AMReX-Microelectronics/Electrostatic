@@ -3,5 +3,4 @@
 
 class c_MacroscopicProperties;
 
-#endif 
-
+#endif

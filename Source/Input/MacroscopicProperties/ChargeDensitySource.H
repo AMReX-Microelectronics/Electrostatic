@@ -5,38 +5,40 @@
 //#include "HasDeposit.H"
 #include <type_traits>
 
-template<typename ParticleContainerType=c_PointChargeContainer>
-class c_ChargeDensitySource 
+template <typename ParticleContainerType = c_PointChargeContainer>
+class c_ChargeDensitySource
 {
-private:
+   private:
     ParticleContainerType m_container;
 
-public:
-
-    c_ChargeDensitySource(const amrex::Geometry& geom,
-                        const amrex::DistributionMapping& dm,
-                        const amrex::BoxArray& ba)
-    : m_container(geom, dm, ba) {}
-
-    void Define(const amrex::Vector<amrex::Vector<amrex::Real>>& particles) { 
-        m_container.Define(particles); 
+   public:
+    c_ChargeDensitySource(const amrex::Geometry &geom,
+                          const amrex::DistributionMapping &dm,
+                          const amrex::BoxArray &ba)
+        : m_container(geom, dm, ba)
+    {
     }
 
-    void Print_Container(bool print_positions = false) {
+    void Define(const amrex::Vector<amrex::Vector<amrex::Real>> &particles)
+    {
+        m_container.Define(particles);
+    }
+
+    void Print_Container(bool print_positions = false)
+    {
         m_container.Print_Container(print_positions);
     }
 
-    void Compute_Occupation() {
-        m_container.Compute_Occupation(); 
-    }
+    void Compute_Occupation() { m_container.Compute_Occupation(); }
 
-    bool Is_Occupation_Variable() {
+    bool Is_Occupation_Variable()
+    {
         return m_container.Is_Occupation_Variable();
     }
 
-    void Deposit(amrex::MultiFab* const p_rho_mf);
+    void Deposit(amrex::MultiFab *const p_rho_mf);
 
-    void Gather(amrex::MultiFab* const p_potential_mf);
+    void Gather(amrex::MultiFab *const p_potential_mf);
 };
 
 using PointChargeSource = c_ChargeDensitySource<c_PointChargeContainer>;

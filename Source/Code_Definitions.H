@@ -10,12 +10,12 @@
 #define NUM_ENERGY_PTS_REAL 10
 
 #include <AMReX_BoxArray.H>
-#include <AMReX_REAL.H>
 #include <AMReX_GpuComplex.H>
+#include <AMReX_REAL.H>
 
 using ComplexType = amrex::GpuComplex<amrex::Real>;
 
-template<typename T>
+template <typename T>
 class TD;
 
 #endif

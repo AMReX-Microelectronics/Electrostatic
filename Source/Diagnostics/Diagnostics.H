@@ -11,13 +11,12 @@
 #include <string>
 #endif
 
-class
-c_Diagnostics
+class c_Diagnostics
 #ifdef AMREX_USE_EB
-            : private c_Diagnostics_Using_EB
+    : private c_Diagnostics_Using_EB
 #endif
 {
-public:
+   public:
     c_Diagnostics();
     ~c_Diagnostics();
 
@@ -27,12 +26,10 @@ public:
     void ComputeAndWriteDiagnostics(int step, amrex::Real time);
     void ComputeFieldDiagnostics(int step, amrex::Real time);
 
-private:
-
+   private:
     void ReadDiagnostics();
 
     std::string m_foldername_str;
     std::string m_diagnostics_str = "/diag";
-
 };
 #endif

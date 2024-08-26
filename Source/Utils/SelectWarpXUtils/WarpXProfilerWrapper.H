@@ -11,14 +11,20 @@
 #include "Code.H"
 #include "ablastr/profiler/ProfilerWrapper.H"
 
+// `BL_PROFILE_PASTE(SYNC_SCOPE_, __COUNTER__)` and `SYNC_V_##vname` used to
+// make unique names for synchronizeOnDestruct objects, like `SYNC_SCOPE_0` and
+// `SYNC_V_pmain`
+#define WARPX_PROFILE(fname) \
+    ABLASTR_PROFILE(fname, c_Code::do_device_synchronize)
+#define WARPX_PROFILE_VAR(fname, vname) \
+    ABLASTR_PROFILE_VAR(fname, vname, c_Code::do_device_synchronize)
+#define WARPX_PROFILE_VAR_NS(fname, vname) \
+    ABLASTR_PROFILE_VAR_NS(fname, vname, c_Code::do_device_synchronize)
+#define WARPX_PROFILE_VAR_START(vname) \
+    ABLASTR_PROFILE_VAR_START(vname, c_Code::do_device_synchronize)
+#define WARPX_PROFILE_VAR_STOP(vname) \
+    ABLASTR_PROFILE_VAR_STOP(vname, c_Code::do_device_synchronize)
+#define WARPX_PROFILE_REGION(rname) \
+    ABLASTR_PROFILE_REGION(rname, c_Code::do_device_synchronize)
 
-// `BL_PROFILE_PASTE(SYNC_SCOPE_, __COUNTER__)` and `SYNC_V_##vname` used to make unique names for
-// synchronizeOnDestruct objects, like `SYNC_SCOPE_0` and `SYNC_V_pmain`
-#define WARPX_PROFILE(fname) ABLASTR_PROFILE(fname, c_Code::do_device_synchronize)
-#define WARPX_PROFILE_VAR(fname, vname) ABLASTR_PROFILE_VAR(fname, vname, c_Code::do_device_synchronize)
-#define WARPX_PROFILE_VAR_NS(fname, vname) ABLASTR_PROFILE_VAR_NS(fname, vname, c_Code::do_device_synchronize)
-#define WARPX_PROFILE_VAR_START(vname) ABLASTR_PROFILE_VAR_START(vname, c_Code::do_device_synchronize)
-#define WARPX_PROFILE_VAR_STOP(vname) ABLASTR_PROFILE_VAR_STOP(vname, c_Code::do_device_synchronize)
-#define WARPX_PROFILE_REGION(rname) ABLASTR_PROFILE_REGION(rname, c_Code::do_device_synchronize)
-
-#endif // WARPX_PROFILERWRAPPER_H_
+#endif  // WARPX_PROFILERWRAPPER_H_
