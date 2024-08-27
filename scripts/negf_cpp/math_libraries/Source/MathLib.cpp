@@ -36,9 +36,9 @@ void MathLib::MatrixMatrixMultiply(ComplexType* d_C,
 
     cublasStatus_t status =cublasZgemm(handle, CUBLAS_OP_N, CUBLAS_OP_N, 
                     A_rows, B_cols, A_cols, &alpha, 
-                    reinterpret_cast<const cuDoubleComplex*>(d_A), A_rows+1, 
-                    reinterpret_cast<const cuDoubleComplex*>(d_B), A_cols+1, &beta, 
-                    reinterpret_cast<cuDoubleComplex*>(d_C), A_rows+1);
+                    reinterpret_cast<const cuDoubleComplex*>(d_A), A_rows, 
+                    reinterpret_cast<const cuDoubleComplex*>(d_B), A_cols, &beta, 
+                    reinterpret_cast<cuDoubleComplex*>(d_C), A_rows);
     checkCudaErrors(status);
 
     checkCudaErrors(cublasDestroy(handle));

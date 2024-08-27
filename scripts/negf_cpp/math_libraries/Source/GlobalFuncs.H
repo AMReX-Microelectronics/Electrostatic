@@ -17,9 +17,9 @@ Define_Table2D (U& Tab2D_data, V val)
 
     auto const& Tab2D = Tab2D_data.table();
 
-    for (int i = tlo[0]; i < thi[0]; ++i)
+    for (int i = tlo[0]; i <= thi[0]; ++i)
     {
-        for (int j = tlo[1]; j < thi[1]; ++j) //slow access
+        for (int j = tlo[1]; j <= thi[1]; ++j) //slow access
         {
             ComplexType new_val(val.real()*(j+1), val.imag()*(j+1));
 
@@ -38,9 +38,9 @@ SetVal_Table2D (U& Tab2D_data, V val)
 
     auto const& Tab2D = Tab2D_data.table();
 
-    for (int i = tlo[0]; i < thi[0]; ++i)
+    for (int i = tlo[0]; i <= thi[0]; ++i)
     {
-        for (int j = tlo[1]; j < thi[1]; ++j) //slow access
+        for (int j = tlo[1]; j <= thi[1]; ++j) //slow access
         {
             Tab2D(i,j) = val; 
         }
@@ -56,9 +56,9 @@ void Print_Table2D(const U& Tab2D_data, const std::string tablename="")
     auto const& Tab2D = Tab2D_data.table();
 
     std::cout << "\nPrinting Table: " << tablename << "\n";
-    for (int i = tlo[0]; i < thi[0]; ++i)
+    for (int i = tlo[0]; i <= thi[0]; ++i)
     {
-        for (int j = tlo[1]; j < thi[1]; ++j) //slow access
+        for (int j = tlo[1]; j <= thi[1]; ++j) //slow access
         {
             std::cout << std::setw(12) << std::setprecision(6) << std::fixed
                       << Tab2D(i,j).real() << " + "

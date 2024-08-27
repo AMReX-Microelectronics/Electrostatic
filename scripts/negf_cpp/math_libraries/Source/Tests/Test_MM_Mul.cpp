@@ -12,12 +12,12 @@ Test_MM_Mul::Test_MM_Mul(int a_rows, int a_cols, int b_cols, const std::vector<i
 void
 Test_MM_Mul:: Define() 
 {
-    h_A_data.resize({0,0},{A_rows, A_cols},The_Pinned_Arena());
-    d_A_data.resize({0,0},{A_rows, A_cols},The_Arena());
-    h_B_data.resize({0,0},{A_cols, B_cols},The_Pinned_Arena());
-    d_B_data.resize({0,0},{A_cols, B_cols},The_Arena());
-    h_C_data.resize({0,0},{A_rows, B_cols},The_Pinned_Arena());
-    d_C_data.resize({0,0},{A_rows, B_cols},The_Arena());
+    h_A_data.resize({0,0},{A_rows-1, A_cols-1},The_Pinned_Arena());
+    d_A_data.resize({0,0},{A_rows-1, A_cols-1},The_Arena());
+    h_B_data.resize({0,0},{A_cols-1, B_cols-1},The_Pinned_Arena());
+    d_B_data.resize({0,0},{A_cols-1, B_cols-1},The_Arena());
+    h_C_data.resize({0,0},{A_rows-1, B_cols-1},The_Pinned_Arena());
+    d_C_data.resize({0,0},{A_rows-1, B_cols-1},The_Arena());
 }
 
 
@@ -48,7 +48,7 @@ Test_MM_Mul:: Print_Input()
 
         //Usage Error: In the forloop we should be using (i < dim_A[0]*dim_A[1])
         //But currently we need to add a buffer of 1 unit size to print properly!
-        for(int i=0; i<(A_rows+1)*A_cols; ++i)
+        for(int i=0; i< A_rows*A_cols; ++i)
         {
             amrex::Print() << i << " "<< *(h_A.p+i) << "\n";
         }
