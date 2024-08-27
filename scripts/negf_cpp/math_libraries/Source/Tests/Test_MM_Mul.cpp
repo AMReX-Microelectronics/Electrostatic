@@ -46,8 +46,6 @@ Test_MM_Mul:: Print_Input()
 
         amrex::Print() << "\nPrinting h_A using h_A.p\n";
 
-        //Usage Error: In the forloop we should be using (i < dim_A[0]*dim_A[1])
-        //But currently we need to add a buffer of 1 unit size to print properly!
         for(int i=0; i< A_rows*A_cols; ++i)
         {
             amrex::Print() << i << " "<< *(h_A.p+i) << "\n";

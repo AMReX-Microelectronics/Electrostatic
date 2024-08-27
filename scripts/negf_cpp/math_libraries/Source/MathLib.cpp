@@ -30,10 +30,6 @@ void MathLib::MatrixMatrixMultiply(ComplexType* d_C,
     // Perform matrix multiplication: C = alpha * A * B + beta * C
     // see: https://docs.nvidia.com/cuda/archive/10.0/cublas/index.html
 
-    // Usage Error: Below, instead of A_rows+1, A_cols+1, 
-    // we should use A_rows and A_cols. But current usage gives correct answer!
-    // These fields are lda, ldb, and ldc (leading dimensions to store matrices)   
-
     cublasStatus_t status =cublasZgemm(handle, CUBLAS_OP_N, CUBLAS_OP_N, 
                     A_rows, B_cols, A_cols, &alpha, 
                     reinterpret_cast<const cuDoubleComplex*>(d_A), A_rows, 
