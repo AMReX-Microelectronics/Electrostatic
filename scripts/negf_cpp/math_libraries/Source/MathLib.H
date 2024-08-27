@@ -1,4 +1,3 @@
-#include <AMReX_REAL.H>
 #include "MatrixDef.H"
 
 namespace MathLib 
