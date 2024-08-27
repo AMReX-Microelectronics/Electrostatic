@@ -18,6 +18,7 @@ Test_MM_Mul:: Define()
     d_B_data.resize({0,0},{A_cols-1, B_cols-1},The_Arena());
     h_C_data.resize({0,0},{A_rows-1, B_cols-1},The_Pinned_Arena());
     d_C_data.resize({0,0},{A_rows-1, B_cols-1},The_Arena());
+    h_ANS_data.resize({0,0},{A_rows-1, B_cols-1},The_Pinned_Arena());
 }
 
 
@@ -29,6 +30,7 @@ Test_MM_Mul:: Initialize()
     Define_Table2D(h_A_data, A_init_val);
     Define_Table2D(h_B_data, B_init_val);
     SetVal_Table2D(h_C_data, zero);
+    SetVal_Table2D(h_ANS_data, zero);
 
     d_A_data.copy(h_A_data);
     d_B_data.copy(h_B_data);
@@ -43,13 +45,6 @@ Test_MM_Mul:: Print_Input()
         Print_Table2D(h_A_data, "A");
         const auto& h_A = h_A_data.const_table();
         const auto& h_B = h_B_data.const_table();
-
-        amrex::Print() << "\nPrinting h_A using h_A.p\n";
-
-        for(int i=0; i< A_rows*A_cols; ++i)
-        {
-            amrex::Print() << i << " "<< *(h_A.p+i) << "\n";
-        }
 
         Print_Table2D(h_B_data, "B");
     }
@@ -72,10 +67,72 @@ Test_MM_Mul:: Print_Output()
 {
     if(print_flags[1]) 
     {
-        //copy C from device to host and print
-        h_C_data.copy(d_C_data);
-        Gpu::streamSynchronize();
-
         Print_Table2D(h_C_data, "C");
     }
+}
+
+
+void
+Test_MM_Mul:: Generate_Answer() 
+{
+    const auto& h_A = h_A_data.const_table();
+    const auto& h_B = h_B_data.const_table();
+    const auto& h_ANS = h_ANS_data.table();
+
+    for (int i = 0; i < A_rows; ++i)
+    {
+        for (int j = 0; j < B_cols; ++j) //slow access
+        {
+            ComplexType sum(0.,0.);
+            for (int k = 0; k < A_cols; ++k) //slow access
+            {
+                sum += h_A(i,k) * h_B(k,j);
+            }
+            h_ANS(i,j) = sum;
+        }
+    }
+}
+
+
+void
+Test_MM_Mul:: Copy_Soln_To_Host() 
+{
+    //copy C from device to host and print
+    h_C_data.copy(d_C_data);
+    Gpu::streamSynchronize();
+}
+
+
+bool
+Test_MM_Mul:: Check_Answer() 
+{
+    const auto& h_C = h_C_data.const_table();
+    const auto& h_ANS = h_ANS_data.const_table();
+
+    bool test_passed = true;
+    for (int i = 0; i < A_rows; ++i)
+    {
+        for (int j = 0; j < B_cols; ++j) //slow access
+        {
+            if((fabs(h_ANS(i,j).real() - h_C(i,j).real()) > 1e-8) or
+               (fabs(h_ANS(i,j).imag() - h_C(i,j).imag()) > 1e-8)) {
+                return false;
+            }
+        }
+    }
+    return test_passed;
+}
+
+
+void
+Test_MM_Mul:: Verify()
+{
+    Copy_Soln_To_Host();
+
+    Generate_Answer();
+    bool test_passed = Check_Answer();
+    if (test_passed)
+        amrex::Print() << "\nMatrix Matrix Multiplication Test Passed!\n"; 
+    else
+        amrex::Print() << "\nMatrix Matrix Multiplication Test Failed!\n"; 
 }

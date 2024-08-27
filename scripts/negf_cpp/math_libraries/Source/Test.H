@@ -20,6 +20,7 @@ class Test_MathLibrary
     void Perform_Test()
     {
         m_test.Perform_Test();
+        m_test.Verify();
     }
 
     void Print_Output() {
