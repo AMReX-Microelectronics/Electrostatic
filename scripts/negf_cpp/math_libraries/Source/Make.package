@@ -1,5 +1,8 @@
 CEXE_sources += main.cpp
 CEXE_sources += MathLib.cpp
+CEXE_sources += Test.cpp
+
+CEXE_headers += Test.H
 CEXE_headers += MathLib.H
 CEXE_headers += MatrixDef.H
 CEXE_headers += GlobalFuncs.H
@@ -7,3 +10,5 @@ CEXE_headers += cudaErrorCheck.H
 
 VPATH_LOCATIONS   += $(CODE_HOME)/Source
 INCLUDE_LOCATIONS += $(CODE_HOME)/Source
+
+include $(CODE_HOME)/Source/Tests/Make.package

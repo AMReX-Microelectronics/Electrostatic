@@ -1,0 +1,7 @@
+A_rows = 2
+A_cols = 4
+B_cols = 3
+
+print_input=1
+print_output=1
+amrex.the_arena_is_managed=0

@@ -1,0 +1,7 @@
+CEXE_sources += Test_MM_Mul.cpp
+
+CEXE_headers += Test_MM_Mul.H
+CEXE_headers += All_Tests.H
+
+VPATH_LOCATIONS   += $(CODE_HOME)/Source/Tests
+INCLUDE_LOCATIONS += $(CODE_HOME)/Source/Tests
