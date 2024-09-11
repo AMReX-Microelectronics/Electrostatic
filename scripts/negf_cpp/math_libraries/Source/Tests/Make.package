@@ -1,6 +1,15 @@
 CEXE_sources += Test_MM_Mul.cpp
-
 CEXE_headers += Test_MM_Mul.H
+
+CEXE_sources += Test_DM_Inv.cpp
+CEXE_headers += Test_DM_Inv.H
+
+#CEXE_sources += Test_ConjT.cpp
+#CEXE_headers += Test_ConjT.H
+#
+#CEXE_sources += Test_DM_Eig.cpp
+#CEXE_headers += Test_DM_Eig.H
+
 CEXE_headers += All_Tests.H
 
 VPATH_LOCATIONS   += $(CODE_HOME)/Source/Tests

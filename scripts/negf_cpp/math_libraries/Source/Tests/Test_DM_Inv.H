@@ -1,23 +1,22 @@
 #include "MatrixDef.H"
 
-class Test_MM_Mul
+class Test_DM_Inv
 {
    private:
-    int A_rows, A_cols, B_cols;
+    int A_rows, A_cols;
     bool output_copied_to_host=false;
 
-    Matrix2D h_A_data, h_B_data, h_C_data, h_ANS_data;
-    Matrix2D d_A_data, d_B_data, d_C_data;
+    Matrix2D h_A_data, h_Ainv_data, h_ANS_data;
+    Matrix2D d_A_data, d_Ainv_data;
 
     ComplexType A_init_val= ComplexType(1., 2.);
-    ComplexType B_init_val= ComplexType(-5., 3.);
 
     void Generate_Answer();
     bool Check_Answer();
     void Copy_Soln_To_Host();
 
    public:
-    Test_MM_Mul(int a_rows, int a_cols, int b_cols);
+    Test_DM_Inv(int a_rows, int a_cols);
 
     void Define();
     void Initialize();

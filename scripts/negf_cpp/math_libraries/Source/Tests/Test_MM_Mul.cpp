@@ -5,8 +5,8 @@
 
 using namespace amrex;
 
-Test_MM_Mul::Test_MM_Mul(int a_rows, int a_cols, int b_cols, const std::vector<int>& flags):
-        A_rows(a_rows), A_cols(a_cols), B_cols(b_cols), print_flags(flags) {}
+Test_MM_Mul::Test_MM_Mul(int a_rows, int a_cols, int b_cols):
+        A_rows(a_rows), A_cols(a_cols), B_cols(b_cols) {}
 
 
 void
@@ -41,13 +41,11 @@ Test_MM_Mul:: Initialize()
 void
 Test_MM_Mul:: Print_Input() 
 {
-    if(print_flags[0]) {
-        Print_Table2D(h_A_data, "A");
-        const auto& h_A = h_A_data.const_table();
-        const auto& h_B = h_B_data.const_table();
+    Print_Table2D(h_A_data, "A");
+    const auto& h_A = h_A_data.const_table();
+    const auto& h_B = h_B_data.const_table();
 
-        Print_Table2D(h_B_data, "B");
-    }
+    Print_Table2D(h_B_data, "B");
 }
 
 
@@ -65,10 +63,9 @@ Test_MM_Mul:: Perform_Test()
 void
 Test_MM_Mul:: Print_Output() 
 {
-    if(print_flags[1]) 
-    {
-        Print_Table2D(h_C_data, "C");
-    }
+    if(!output_copied_to_host) Copy_Soln_To_Host();
+
+    Print_Table2D(h_C_data, "C");
 }
 
 
@@ -100,6 +97,7 @@ Test_MM_Mul:: Copy_Soln_To_Host()
     //copy C from device to host and print
     h_C_data.copy(d_C_data);
     Gpu::streamSynchronize();
+    output_copied_to_host = true;
 }
 
 
@@ -127,7 +125,7 @@ Test_MM_Mul:: Check_Answer()
 void
 Test_MM_Mul:: Verify()
 {
-    Copy_Soln_To_Host();
+    if(!output_copied_to_host) Copy_Soln_To_Host();
 
     Generate_Answer();
     bool test_passed = Check_Answer();

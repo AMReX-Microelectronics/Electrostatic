@@ -1,7 +1,13 @@
-A_rows = 2
+A_rows = 4
 A_cols = 4
 B_cols = 3
 
-print_input=1
-print_output=1
+print_input = 1
+print_output= 1
+
+test.mm_mul = 1
+test.dm_inv = 1
+test.conjT  = 0
+test.dm_eig = 0
+
 amrex.the_arena_is_managed=0
