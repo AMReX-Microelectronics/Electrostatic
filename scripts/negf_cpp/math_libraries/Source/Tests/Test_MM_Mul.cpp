@@ -6,7 +6,10 @@
 using namespace amrex;
 
 Test_MM_Mul::Test_MM_Mul(int a_rows, int a_cols, int b_cols):
-        A_rows(a_rows), A_cols(a_cols), B_cols(b_cols) {}
+        A_rows(a_rows), A_cols(a_cols), B_cols(b_cols) 
+{
+    amrex::Print() << "\n##### Testing Matrix Matrix Multiplication #####\n";
+}
 
 
 void
@@ -65,7 +68,7 @@ Test_MM_Mul:: Print_Output()
 {
     if(!output_copied_to_host) Copy_Soln_To_Host();
 
-    Print_Table2D(h_C_data, "C");
+    Print_Table2D(h_C_data, "C = A * B");
 }
 
 
@@ -88,6 +91,12 @@ Test_MM_Mul:: Generate_Answer()
             h_ANS(i,j) = sum;
         }
     }
+}
+
+void
+Test_MM_Mul:: Print_Answer()
+{
+    Print_Table2D(h_ANS_data, "ANS = A * B");
 }
 
 
@@ -123,14 +132,30 @@ Test_MM_Mul:: Check_Answer()
 
 
 void
-Test_MM_Mul:: Verify()
+Test_MM_Mul:: Verify(bool flag_print_answer)
 {
     if(!output_copied_to_host) Copy_Soln_To_Host();
 
     Generate_Answer();
+
+    if(flag_print_answer) Print_Answer();
+
     bool test_passed = Check_Answer();
     if (test_passed)
         amrex::Print() << "\nMatrix Matrix Multiplication Test Passed!\n"; 
     else
         amrex::Print() << "\nMatrix Matrix Multiplication Test Failed!\n"; 
+}
+
+void
+Test_MM_Mul::Clear()
+{
+    h_A_data.clear();
+    h_B_data.clear();
+    h_C_data.clear();
+    h_ANS_data.clear();
+
+    d_A_data.clear();
+    d_B_data.clear();
+    d_C_data.clear();
 }

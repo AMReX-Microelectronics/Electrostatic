@@ -12,6 +12,7 @@ class Test_DM_Inv
     ComplexType A_init_val= ComplexType(1., 2.);
 
     void Generate_Answer();
+    void Print_Answer();
     bool Check_Answer();
     void Copy_Soln_To_Host();
 
@@ -23,6 +24,6 @@ class Test_DM_Inv
     void Perform_Test();
     void Print_Input();
     void Print_Output();
-    void Verify();
-
+    void Verify(bool flag_print_answer=false);
+    void Clear();
 };

@@ -16,6 +16,12 @@ namespace MathLib
                               unsigned int A_rows,
                               unsigned int A_cols);
 
+    /* DenseMatrixInversion */
+    void ConjugateTranspose(ComplexType* d_AconjT,
+                            ComplexType* d_A,  
+                            unsigned int A_rows,
+                            unsigned int A_cols);
+
     /* DenseMatrixEigendecomposition */
     void DenseMatrixEigendecomposition(ComplexType* d_U,
                                        ComplexType* d_Lambda,

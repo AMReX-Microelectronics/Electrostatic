@@ -6,7 +6,10 @@
 using namespace amrex;
 
 Test_DM_Inv::Test_DM_Inv(int a_rows, int a_cols):
-        A_rows(a_rows), A_cols(a_cols) {}
+        A_rows(a_rows), A_cols(a_cols) 
+{
+    amrex::Print() << "\n##### Testing Dense Matrix Inversion #####\n";
+}
 
 
 void
@@ -24,9 +27,10 @@ void
 Test_DM_Inv:: Initialize() 
 {
     ComplexType zero(0., 0.);
+    ComplexType one(1., 0.);
 
-    Define_Table2D(h_A_data, A_init_val);
-    SetVal_Table2D(h_Ainv_data, zero);
+    Define_InvertibleTable2D(h_A_data);
+    Define_DiagonalTable2D(h_Ainv_data, one);
     SetVal_Table2D(h_ANS_data, zero);
 
     d_A_data.copy(h_A_data);
@@ -56,7 +60,6 @@ Test_DM_Inv:: Print_Output()
 {
     if(!output_copied_to_host) Copy_Soln_To_Host();
 
-    amrex::Print() << "Printing output: " << "\n";
     Print_Table2D(h_Ainv_data, "Ainv");
 }
 
@@ -81,6 +84,14 @@ Test_DM_Inv:: Generate_Answer()
             h_ANS(i,j) = sum;
         }
     }
+
+}
+
+
+void
+Test_DM_Inv:: Print_Answer() 
+{
+    Print_Table2D(h_ANS_data, "ANS = A * Ainv");
 }
 
 
@@ -107,12 +118,12 @@ Test_DM_Inv:: Check_Answer()
         for (int j = 0; j < A_cols; ++j) //slow access
         {
             if(i==j) {
-                if((fabs(h_ANS(i,j).real() - 1.) > 1e-8) &&
+                if((fabs(h_ANS(i,j).real() - 1.) > 1e-8) or
                    (fabs(h_ANS(i,j).imag()) > 1e-8)) {
                     return false;
                 }
             } else if (i != j) {
-                if((fabs(h_ANS(i,j).real()) > 1e-8) &&
+                if((fabs(h_ANS(i,j).real()) > 1e-8) or
                    (fabs(h_ANS(i,j).imag()) > 1e-8)) {
                     return false;
                 }
@@ -124,14 +135,28 @@ Test_DM_Inv:: Check_Answer()
 
 
 void
-Test_DM_Inv:: Verify()
+Test_DM_Inv:: Verify(bool flag_print_answer)
 {
     if(!output_copied_to_host) Copy_Soln_To_Host();
 
     Generate_Answer();
+
+    if(flag_print_answer) Print_Answer();
+
     bool test_passed = Check_Answer();
     if (test_passed)
         amrex::Print() << "\nDense Matrix Inversion Test Passed!\n"; 
     else
         amrex::Print() << "\nDense Matrix Inversion Test Failed!\n"; 
+}
+
+void
+Test_DM_Inv::Clear()
+{
+    h_A_data.clear();
+    h_Ainv_data.clear();
+    h_ANS_data.clear();
+
+    d_A_data.clear();
+    d_Ainv_data.clear();
 }

@@ -10,6 +10,13 @@ enum class Test: int
     MM_Mul, DM_Inv, ConjT, DM_Eig
 };
 
+std::unordered_map<Test, bool> flag_map{
+    {Test::MM_Mul, true}, 
+    {Test::DM_Inv, true},
+    {Test::ConjT,  true},
+    {Test::DM_Eig, true}
+};
+
 int main (int argc, char* argv[])
 {
     amrex::Initialize(argc,argv);
@@ -19,22 +26,11 @@ int main (int argc, char* argv[])
     amrex::Print() << "total number of procs: " << num_proc << "\n";
 
     amrex::ParmParse pp;
-
-    int A_rows=4, A_cols=4, B_cols = 4; //assume, B_rows = A_cols
-    pp.query("A_rows", A_rows);
-    pp.query("A_cols", A_cols);
-    pp.query("B_cols", B_cols);
-    
-    std::vector<int> print_flags(2,0);
+    std::vector<int> print_flags(3,0);
     pp.query("print_input", print_flags[0]);
     pp.query("print_output", print_flags[1]);
+    pp.query("print_answer", print_flags[2]);
 
-    std::unordered_map<Test, bool> flag_map{
-        {Test::MM_Mul, true}, 
-        {Test::DM_Inv, true},
-        {Test::ConjT,  true},
-        {Test::DM_Eig, true}
-    };
     amrex::ParmParse pp_test("test");
     pp_test.query("mm_mul" , flag_map[ Test::MM_Mul ]);
     pp_test.query("dm_inv" , flag_map[ Test::DM_Inv ]);
@@ -46,6 +42,12 @@ int main (int argc, char* argv[])
         //Matrix-Matrix Multiplication
         if(flag_map[ Test::MM_Mul ]) 
         {
+            amrex::ParmParse pp_mm_mul;
+            int A_rows=4, A_cols=4, B_cols = 4; //assume, B_rows = A_cols
+            pp_mm_mul.query("A_rows", A_rows);
+            pp_mm_mul.query("A_cols", A_cols);
+            pp_mm_mul.query("B_cols", B_cols);
+    
             Test_MathLibrary<Test_MM_Mul> 
                 mm_mul(Test_MM_Mul(A_rows, A_cols, B_cols), print_flags);   
 
@@ -55,6 +57,11 @@ int main (int argc, char* argv[])
         //Dense Matrix Inversion
         if(flag_map[ Test::DM_Inv ]) 
         {
+            amrex::ParmParse pp_dm_inv;
+            int A_rows=4; 
+            pp_dm_inv.query("A_rows", A_rows);
+            int A_cols=A_rows;
+
             Test_MathLibrary<Test_DM_Inv> 
                 dm_inv(Test_DM_Inv(A_rows, A_cols), print_flags);   
 

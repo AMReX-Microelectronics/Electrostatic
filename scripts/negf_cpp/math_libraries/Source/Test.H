@@ -31,7 +31,9 @@ class Test_MathLibrary
 
         if(print_flags[1]) m_test.Print_Output();       
 
-        m_test.Verify();
+        m_test.Verify(print_flags[2]);
+
+        m_test.Clear();
     }
 };
 
