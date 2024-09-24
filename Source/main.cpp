@@ -1,6 +1,4 @@
 
-#include <AMReX_TinyProfiler.H>
-
 #include "Code.H"
 #include "CodeUtil.H"
 #include "Utils/SelectWarpXUtils/WarpXProfilerWrapper.H"
