@@ -35,6 +35,10 @@ class c_ChargeDensitySource
     {
         return m_container.Is_Occupation_Variable();
     }
+    amrex::Real Get_mixing_factor() 
+    {
+        return m_container.Get_mixing_factor();
+    }
 
     void Deposit(amrex::MultiFab *const p_rho_mf);
 
