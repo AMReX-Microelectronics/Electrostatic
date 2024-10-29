@@ -88,17 +88,18 @@ void c_ChargeDensitySource<ParticleContainerType>::Gather(
                            {
                                amrex::Real old_phi = p_par_potential[p];
 
-                               amrex::Real new_phi = 
+                               amrex::Real new_phi =
                                    CloudInCell::Gather_Trilinear(p_par[p].pos(),
                                                                  plo, dx, phi);
 
                                p_par_rel_diff[p] = fabs((new_phi - old_phi) /
                                                         (new_phi + old_phi));
 
-                               //if(p_par_rel_diff[p] < THRESHOLD_REL_DIFF) {
-                                   p_par_potential[p] = new_phi*MF + old_phi*(1.-MF);
+                               // if(p_par_rel_diff[p] < THRESHOLD_REL_DIFF) {
+                               p_par_potential[p] =
+                                   new_phi * MF + old_phi * (1. - MF);
                                //}
-                               //else {
+                               // else {
                                //    p_par_potential[p] = new_phi;
                                // }
                            });

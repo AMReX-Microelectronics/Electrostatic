@@ -143,8 +143,7 @@ class c_PointChargeContainer
 
         RealVector &get_relative_difference()
         {
-            return this->GetStructOfArrays().GetRealData(
-                PCA::realPA::rel_diff);
+            return this->GetStructOfArrays().GetRealData(PCA::realPA::rel_diff);
         }
     };
 
