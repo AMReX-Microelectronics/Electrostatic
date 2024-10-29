@@ -10,10 +10,10 @@ amrex.the_arena_is_managed=1
 ############################
 
 my_constants.gx = 2
-my_constants.gy = 16
+my_constants.gy = 16*2
 my_constants.gz = 2
 
-my_constants.Channel_unitcells = 56
+my_constants.Channel_unitcells = 184
 my_constants.Overlap_unitcells = 36
 my_constants.Gap_unitcells = 0
 my_constants.N_unitcells = Channel_unitcells + 2*Overlap_unitcells + 2*Gap_unitcells #64
@@ -25,8 +25,8 @@ cnt.Fermi_tail_factors = 14 14
 
 my_constants.Vgs = 0.8  #Drain-Source voltage [V]
 my_constants.Vds_min = -0.3
-my_constants.Vds_max = 0.
-my_constants.Nsteps =  16
+my_constants.Vds_max = -0.02
+my_constants.Nsteps =  15
 my_constants.dt = 1./(Nsteps-1)
 
 cnt.eq_integration_pts = 50 50 50
@@ -34,12 +34,13 @@ cnt.flag_compute_flatband_dos = 0
 cnt.flatband_dos_integration_pts = 400
 cnt.flatband_dos_integration_limits = -1. 1.
 
-cnt.num_noneq_paths = 3
-cnt.noneq_percent_intercuts = 20 50   
-cnt.noneq_integration_pts = 500 20000 800
-cnt.noneq_integration_pts_density = 500 1600 50
-cnt.flag_adaptive_integration_limits = 1
-cnt.integrand_correction_interval = 50
+cnt.num_noneq_paths = 1
+#cnt.noneq_percent_intercuts = 20 50   
+#cnt.noneq_integration_pts = 500 20000 800
+#cnt.noneq_integration_pts_density = 500 1600 50
+cnt.flag_adaptive_integration_limits = 0
+cnt.noneq_integration_pts = 400
+#cnt.integrand_correction_interval = 50
 cnt.flag_write_integrand = 0
 #cnt.write_integrand_interval = 1
 cnt.kT_window_around_singularity = 3 2
