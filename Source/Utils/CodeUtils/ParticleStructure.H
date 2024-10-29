@@ -12,8 +12,7 @@
 
 // Extra Particle attributes in Struct-of-Arrays form
 // real: phi, charge
-// int: 2 //cell_id, atom_id (from atom_id we can obtain (ring_number,
-// azimuthal_number)
+// int: site_id
 
 struct realPA  // real Particle Attribute
 {
@@ -29,7 +28,7 @@ struct intPA  // integer Particle Attribute
 {
     enum
     {
-        cid,  // cell id
+        site_id,  // field_site_id local to nanostructure
         NUM
     };
 };
@@ -103,9 +102,9 @@ class MyParIter
         return GetStructOfArrays().GetIntData(comp);
     }
 
-    // get realPA
-    // std::array<> (int comp) {
-    //     return GetArrayOfStructs();
-    // }
+    const IntVector &get_site_id() const
+    {
+        return this->GetStructOfArrays().GetIntData(intPA::site_id);
+    }
 };
 #endif

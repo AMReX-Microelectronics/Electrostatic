@@ -1,0 +1,9 @@
+Exec/*
+!Exec/GNUmakefile
+*.ipynb_checkpoints*
+*.ex
+*tmp_build_dir/
+*.png
+*.swp
+perlscripts/
+input_local/

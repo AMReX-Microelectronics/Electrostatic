@@ -27,6 +27,7 @@ class c_Nanostructure
     amrex::MultiFab *p_mf_deposit = nullptr;
     const amrex::GpuArray<int, AMREX_SPACEDIM> *_n_cell;
     amrex::Vector<s_Position3D> pos_vec;
+    int particle_id_offset = 0;
 
     void Fill_AtomLocations();
     void Read_AtomLocations();
@@ -41,8 +42,7 @@ class c_Nanostructure
                     const int NS_id, const std::string NS_gather_str,
                     const std::string NS_deposit_str,
                     const amrex::Real NS_initial_deposit_value,
-                    const int use_negf, const std::string negf_foldername_str,
-                    const int NS_field_sites_offset);
+                    const int use_negf, const std::string negf_foldername_str);
 
     void Evaluate_LocalFieldSites();
     void Gather_MeshAttributeAtAtoms();

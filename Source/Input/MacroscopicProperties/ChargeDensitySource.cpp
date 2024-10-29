@@ -77,12 +77,31 @@ void c_ChargeDensitySource<ParticleContainerType>::Gather(
         auto &par_potential = pti.get_potential();
         auto *p_par_potential = par_potential.data();
 
+        auto &par_rel_diff = pti.get_relative_difference();
+        auto *p_par_rel_diff = par_rel_diff.data();
+
+        amrex::Real MF = Get_mixing_factor();
+        amrex::Real THRESHOLD_REL_DIFF = 1.;
+
         amrex::ParallelFor(np,
                            [=] AMREX_GPU_DEVICE(int p)
                            {
-                               p_par_potential[p] =
+                               amrex::Real old_phi = p_par_potential[p];
+
+                               amrex::Real new_phi =
                                    CloudInCell::Gather_Trilinear(p_par[p].pos(),
                                                                  plo, dx, phi);
+
+                               p_par_rel_diff[p] = fabs((new_phi - old_phi) /
+                                                        (new_phi + old_phi));
+
+                               // if(p_par_rel_diff[p] < THRESHOLD_REL_DIFF) {
+                               p_par_potential[p] =
+                                   new_phi * MF + old_phi * (1. - MF);
+                               //}
+                               // else {
+                               //    p_par_potential[p] = new_phi;
+                               // }
                            });
     }
 }

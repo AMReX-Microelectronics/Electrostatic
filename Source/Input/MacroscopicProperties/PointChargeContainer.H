@@ -18,6 +18,7 @@ struct PointChargeAttributes
             charge_unit,
             occupation,
             potential,
+            rel_diff,
             NUM
         };
     };
@@ -64,31 +65,6 @@ class c_PointChargeContainer
     void Define(const amrex::Vector<amrex::Vector<amrex::Real>> &particles,
                 const amrex::Vector<amrex::Real> &charge_units = {},
                 const amrex::Vector<amrex::Real> &occupations = {});
-
-    // static void Set_StaticVar(amrex::Real& member_variable, amrex::Real
-    // value)
-    //{
-    //     std::lock_guard<std::mutex> lock(mtx);
-    //     member_variable = value;
-    // }
-
-    // struct GetV0 {
-    //    AMREX_GPU_HOST_DEVICE int operator() () const { return V0; }
-    //    amrex::Real V0;
-    // };
-    // static GetV0 Get_V0() { return GetV0{V0}; }
-
-    // struct GetEt {
-    //    AMREX_GPU_HOST_DEVICE int operator() () const { return Et; }
-    //    amrex::Real Et;
-    // };
-    // static GetEt Get_Et() { return GetEt{Et}; }
-    // struct GetChargeDensity {
-    //    AMREX_GPU_HOST_DEVICE int operator() () const { return charge_density;
-    //    } amrex::Real charge_density;
-    // };
-    // static GetChargeDensity Get_Charge_Density() { return
-    // GetChargeDensity{charge_density}; }
 
     amrex::Real Get_V0() { return V0; }
     amrex::Real Get_Et() { return Et; }
@@ -163,6 +139,11 @@ class c_PointChargeContainer
         {
             return this->GetStructOfArrays().GetRealData(
                 PCA::realPA::occupation);
+        }
+
+        RealVector &get_relative_difference()
+        {
+            return this->GetStructOfArrays().GetRealData(PCA::realPA::rel_diff);
         }
     };
 

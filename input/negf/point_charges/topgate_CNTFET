@@ -12,7 +12,7 @@ amrex.the_arena_is_managed=1
 ################################
 ##### Some Important Params ####
 ################################
-my_constants.gx = 1
+my_constants.gx = 2
 my_constants.gy = 16
 my_constants.gz = 2
 
@@ -23,15 +23,15 @@ my_constants.periodicity_length = periodicity_factor * unitcells_per_D_CN * L_un
 
 
 my_constants.Vds = 0.   #Drain-Source voltage [V]
-my_constants.Vgs_min = -0.8
-my_constants.Vgs_max = 1
-my_constants.Nsteps = 2
+my_constants.Vgs_min = -2
+my_constants.Vgs_max = 0.4
+my_constants.Nsteps = 13
 my_constants.dt = 1./(Nsteps-1)
 
 
 plot.folder_name = /global/cfs/projectdirs/m4540/eXstatic/point_charge/topgate_CNTFET/dummy
-plot.write_after_init = 1
-plot.write_interval = 1
+plot.write_after_init = 0
+plot.write_interval = 10000
 
 transport.flag_compute_DOS = 1 #DOS, Transmission, Conductance
 transport.flag_write_LDOS = 0
@@ -57,7 +57,7 @@ my_constants.epsilon_GO     = 25*epsilon_0 #HfO2
 my_constants.epsilon_S      = 3.9*epsilon_0 #SiO2
 
 my_constants.SV = 0.      #source voltage [V]
-my_constants.Ef = -0.28    #Palladium Contact Fermi level [eV] 
+my_constants.Ef = -0.2    #Palladium Contact Fermi level [eV] 
 
 my_constants.MGO_gap = 5*dx + dx/5. #gap between metal and gate oxide
 my_constants.MB_gap  = dx #2*dx/5.
@@ -162,9 +162,9 @@ my_constants.FET_width   = CM_width
 
 charge_density_source.type = point_charge
 pc.flag_vary_occupation = 1
-pc.mixing_factor = 0
-pc.scaling = (GO_width - 8*dx) (Channel_length - 8*dy) (GO_thickness - 8*dz)
-pc.offset =  (-GO_width/2. + 4*dx) (-Channel_length/2. + 4*dy) (GO_bottom + 4*dz)
+pc.mixing_factor = 0.1
+pc.offset =  (-GO_width/2. + 10*dx) (-G_length/2.) (GO_bottom + 4*dz)
+pc.scaling = (GO_width - 20*dx) (G_length) (GO_thickness - 8*dz)
 pc.Et = 2
 pc.V0 = 0.5
 pc.default_charge_unit = 1
@@ -319,7 +319,7 @@ transport.selfconsistency_algorithm = broyden_second
 transport.reset_with_previous_charge_distribution = 1
 transport.initialize_inverse_jacobian = 0
 transport.gate_terminal_type = Boundary
-transport.Broyden_threshold_maxstep = 200
+transport.Broyden_threshold_maxstep = 400
 transport.gate_terminal_type = EB
 
 NS_default.num_unitcells = N_unitcells
@@ -345,7 +345,7 @@ NS_default.num_recursive_parts = 2
 #NS_default.read_negf_foldername =
 NS_default.E_valence_min = -10
 NS_default.E_pole_max    = 3
-NS_default.E_zPlus_imag  = 1.e-7
+NS_default.E_zPlus_imag  = 1.e-6
 
 CNT_default.type_id = m_index n_index    
 CNT_default.acc = bond_length
