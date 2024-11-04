@@ -36,7 +36,7 @@ void Define_InvertibleTable2D(U& Tab2D_data, amrex::Real identityScale = 1e-5)
     }
 }
 
-// Function to define a 2D table as an indentity matrix.
+// Function to define a 2D table as an identity matrix.
 template <typename U, typename V>
 void Define_DiagonalTable2D(U& Tab2D_data, V diagonal_val)
 {
