@@ -10,7 +10,10 @@ mm_mul.B_cols = 2
 test.dm_inv = 1
 dm_inv.A_rows = 4
 
-test.conjT  = 0
+test.conj_tr  = 1
+conj_tr.A_rows = 4
+conj_tr.A_cols = 4
+
 test.dm_eig = 0
 
 amrex.the_arena_is_managed=1

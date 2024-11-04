@@ -72,10 +72,17 @@ Test_ConjT:: Generate_Answer()
     {
         for (int j = 0; j < A_cols; ++j) //slow access
         {
-            h_ANS(j,i).real() = h_A(i,j).real();
-            h_ANS(j,i).imag() = -1.*h_A(i,j).imag();
+            ComplexType temp(h_A(i,j).real(), -1.*h_A(i,j).imag());
+            h_ANS(j,i) = temp;
         }
     }
+}
+
+
+void
+Test_ConjT:: Print_Answer()
+{
+    Print_Table2D(h_ANS_data, "ANS = AconjT");
 }
 
 
@@ -112,14 +119,30 @@ Test_ConjT:: Check_Answer()
 
 
 void
-Test_ConjT:: Verify()
+Test_ConjT:: Verify(bool flag_print_answer)
 {
     if(!output_copied_to_host) Copy_Soln_To_Host();
 
     Generate_Answer();
+
+    if(flag_print_answer) Print_Answer();
+
     bool test_passed = Check_Answer();
     if (test_passed)
         amrex::Print() << "\nConjugate Transpose Test Passed!\n"; 
     else
         amrex::Print() << "\nConjugate Transpose Test Failed!\n"; 
 }
+
+
+void
+Test_ConjT::Clear()
+{
+    h_A_data.clear();
+    h_AconjT_data.clear();
+    h_ANS_data.clear();
+
+    d_A_data.clear();
+    d_AconjT_data.clear();
+}
+

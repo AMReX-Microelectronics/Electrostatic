@@ -34,7 +34,7 @@ int main (int argc, char* argv[])
     amrex::ParmParse pp_test("test");
     pp_test.query("mm_mul" , flag_map[ Test::MM_Mul ]);
     pp_test.query("dm_inv" , flag_map[ Test::DM_Inv ]);
-    pp_test.query("conjT"  , flag_map[ Test::ConjT  ]);
+    pp_test.query("conj_tr"  , flag_map[ Test::ConjT  ]);
     pp_test.query("dm_eig" , flag_map[ Test::DM_Eig ]);
  
     {
@@ -42,7 +42,7 @@ int main (int argc, char* argv[])
         //Matrix-Matrix Multiplication
         if(flag_map[ Test::MM_Mul ]) 
         {
-            amrex::ParmParse pp_mm_mul;
+            amrex::ParmParse pp_mm_mul("mm_mul");
             int A_rows=4, A_cols=4, B_cols = 4; //assume, B_rows = A_cols
             pp_mm_mul.query("A_rows", A_rows);
             pp_mm_mul.query("A_cols", A_cols);
@@ -57,7 +57,7 @@ int main (int argc, char* argv[])
         //Dense Matrix Inversion
         if(flag_map[ Test::DM_Inv ]) 
         {
-            amrex::ParmParse pp_dm_inv;
+            amrex::ParmParse pp_dm_inv("dm_inv");
             int A_rows=4; 
             pp_dm_inv.query("A_rows", A_rows);
             int A_cols=A_rows;
@@ -68,14 +68,21 @@ int main (int argc, char* argv[])
             dm_inv.Perform_Test();
         }
 
-        ////Conjugate Transpose 
-        //if(flag_map[ Test::ConjT ]) 
-        //{
-        //    Test_MathLibrary<Test_ConjT> 
-        //        conjT(Test_DM_Inv(A_rows, A_cols), print_flags);   
+        //Conjugate Transpose 
+        if(flag_map[ Test::ConjT ]) 
+        {
+            amrex::ParmParse pp_conj_tr("conj_tr");
 
-        //    conjT.Perform_Test();
-        //}
+            int A_rows=5, A_cols=2;
+            pp_conj_tr.query("A_rows", A_rows);
+            pp_conj_tr.query("A_cols", A_cols);
+            
+            amrex::Print() << "A_rows/cols: " << A_rows << " " << A_cols << "\n";
+            Test_MathLibrary<Test_ConjT> 
+                conjT(Test_ConjT(A_rows, A_cols), print_flags);   
+
+            conjT.Perform_Test();
+        }
 
         ////Dense Matrix Eigendecomposition
         //if(flag_map[ Test::DM_Eig ]) 

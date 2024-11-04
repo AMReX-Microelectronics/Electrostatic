@@ -24,6 +24,7 @@ class Test_DM_Eig
     void Perform_Test();
     void Print_Input();
     void Print_Output();
-    void Verify();
+    void Verify(bool flag_print_answer=false);
+    void Clear();
 
 };

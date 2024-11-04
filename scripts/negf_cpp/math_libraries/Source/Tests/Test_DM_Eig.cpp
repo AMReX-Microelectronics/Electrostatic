@@ -33,7 +33,9 @@ Test_DM_Eig:: Initialize()
     SetVal_Table2D(h_ANS_data, zero);
 
     d_A_data.copy(h_A_data);
-    d_U_data.copy(h_U_data);
+    d_U_data.copy(h_A_data); //copy A into U for doing eigendecomposition of A.
+    //U will store eigenvectors.
+
     d_Lambda_data.copy(h_Lambda_data);
 }
 
@@ -52,7 +54,7 @@ Test_DM_Eig:: Perform_Test()
     const auto& d_U = d_U_data.table();
     const auto& d_Lambda = d_Lambda_data.table();
 
-    MathLib::DenseMatrixEigendecomposition(d_U.p, d_Lambda.p, d_A.p, A_rows, A_cols);
+    MathLib::DenseMatrixEigendecomposition(d_U.p, d_Lambda.p, A_rows, A_cols);
 }
 
 
@@ -86,6 +88,12 @@ Test_DM_Eig:: Generate_Answer()
     //        h_ANS(i,j) = sum;
     //    }
     //}
+}
+
+
+Test_MM_Mul:: Print_Answer()
+{
+    Print_Table2D(h_ANS_data, "ANS =");
 }
 
 
@@ -128,9 +136,25 @@ Test_DM_Eig:: Verify()
     if(!output_copied_to_host) Copy_Soln_To_Host();
 
     Generate_Answer();
+    if(flag_print_answer) Print_Answer();
+    
     bool test_passed = Check_Answer();
     if (test_passed)
         amrex::Print() << "\nDense Matrix Eigendecomposition Test Passed!\n"; 
     else
         amrex::Print() << "\nDense Matrix Eigendecomposition Test Failed!\n"; 
+}
+
+
+void
+Test_MM_Mul::Clear()
+{
+    h_A_data.clear();
+    h_U_data.clear();
+    h_Lambda_data.clear();
+    h_ANS_data.clear();
+
+    d_A_data.clear();
+    d_U_data.clear();
+    d_Lambda_data.clear();
 }
