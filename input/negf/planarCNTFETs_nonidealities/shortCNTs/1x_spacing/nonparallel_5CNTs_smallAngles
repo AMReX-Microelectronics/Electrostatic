@@ -1,10 +1,15 @@
-################
-# Test case for validation of periodic boundary conditions -- infinite array of nanotubes.
-# The output of conductance can be compared with the result from the following reference,
-# Fig. 2), periodicity distance, d=3.195 nm == 3.2 nm. (see width_factor defined below).
+###############
+# Description:
+# This test case models planar CNTFET simulation with 5 CNTs
+# and small variations in angles. Setup is the same as in the 
+# reference below with distance between CNTs of ~3.2 nm.
+#
+# It can be used to verify that with small variations in angles
+# we obtain the same result as the parallel CNTs case.
+#
 # Léonard, F. (2006). Crosstalk between nanotube devices: contact and channel effects. 
 # Nanotechnology, 17(9), 2381.
-################
+################ 
 
 ################
 ##### FLAGS ####
@@ -16,23 +21,23 @@ amrex.the_arena_is_managed=1
 ################################
 ##### Some Important Params ####
 ################################
-my_constants.gx = 2
+my_constants.gx = 1
 my_constants.gy = 4
 my_constants.gz = 2
 
-my_constants.num_CNTs = 1
-my_constants.periodicity_factor = 7.5 #1.875 corresponds to 3.195 nm (smallest periodicity distance)
+my_constants.num_CNTs = 5
+my_constants.periodicity_factor = 1.875 #1.875 corresponds to 3.195 nm (smallest periodicity distance)
 
 my_constants.Channel_unitcells = 24
 my_constants.Overlap_unitcells = 12
 
 my_constants.Vds = 0.   #Drain-Source voltage [V]
 my_constants.Vgs_min = -4
-my_constants.Vgs_max = 12
-my_constants.Nsteps =  65
+my_constants.Vgs_max = 8
+my_constants.Nsteps =  25
 my_constants.dt = 1./(Nsteps-1)
 
-plot.folder_name = /global/cfs/projectdirs/m4540/eXstatic/4x_spacing/periodic
+plot.folder_name = /global/cfs/projectdirs/m4540/eXstatic/1x_spacing/nonparallel_5CNTs_smallAngles
 plot.write_after_init = 1
 plot.write_interval = 1
 
@@ -41,8 +46,9 @@ transport.flag_write_LDOS = 0
 transport.flag_write_LDOS_iter = 0
 transport.write_LDOS_iter_period = 10
 
-restart = 0
-restart_step = 0
+restart = 1
+restart_step = 20
+NS_default.initialize_charge_distribution = 1
 ##################################
 ##### USER DEFINED CONSTANTS #####
 ##################################
@@ -72,7 +78,7 @@ my_constants.unitcells_per_D_CN = ceil((R_CN*2)/(L_unitcell)) #unitcells per dia
 
 my_constants.periodicity_length = periodicity_factor * unitcells_per_D_CN * L_unitcell
 
-my_constants.width_factor  = (num_CNTs)*periodicity_factor #1.875 corresponds to 3.195 nm (smallest periodicity distance)
+my_constants.width_factor  = (num_CNTs+2)*periodicity_factor #1.875 corresponds to 3.195 nm (smallest periodicity distance)
 
 my_constants.height_factor = 12
 
@@ -170,15 +176,15 @@ domain.blocking_factor = nx/gx ny/gy nz/gz
 domain.prob_lo = -Lx/2. -Ly/2.  Lz_min
 domain.prob_hi =  Lx/2.  Ly/2.  Lz_max
 
-domain.is_periodic = 1 0 0
+domain.is_periodic = 0 0 0
 
 domain.coord_sys = cartesian
 
 #################################
 ###### BOUNDARY CONDITIONS ######
 #################################
-boundary.hi = per neu(0.) neu(0.)
-boundary.lo = per neu(0.) dir(Gate)
+boundary.hi = neu(0.) neu(0.) neu(0.)
+boundary.lo = neu(0.) neu(0.) dir(Gate)
 
 boundary.Gate_function = "SV + Vgs_max - (Vgs_max-Vgs_min) * t"
 
@@ -205,24 +211,20 @@ macroscopic.atom_locations = 0.
 ###### OUTPUT ######
 ####################
 
-plot.fields_to_plot = epsilon.1 charge_density.1 phi.1 atom_locations #vecField 
+plot.fields_to_plot = phi.1 atom_locations #vecField 
 plot.rawfield_write_interval = 1000000
 
 ########################
 ###### DIAGNOSTICS #####
 ########################
-use_diagnostics = 0
+use_diagnostics = 1
 
-#diag.specify_using_eb = 1
-#diag.objects = Surf1
-#Surf1.geom_type = cylinder
-#Surf1.center = 0 0 CN_z
-#Surf1.radius = R_CN
-#Surf1.axial_direction = 1
-#Surf1.theta_reference_direction = 0
-#Surf1.has_fluid_inside = 0
-#Surf1.fields_to_plot = phi charge_density
-
+diag.specify_using_eb = 1
+diag.objects = Z_0
+Z_0.geom_type = plane
+Z_0.direction = 2
+Z_0.location = 0.0
+Z_0.fields_to_plot = phi
 ####################################
 ###### MLMG SOLVER PROPERTIES ######
 ####################################
@@ -278,10 +280,9 @@ NS_default.flag_write_charge_components = 0
 NS_default.num_noneq_paths = 1
 NS_default.num_recursive_parts = 2
 NS_default.write_at_iter = 0
-NS_default.initialize_charge_distribution = 0
 #NS_default.charge_distribution_filename = <full filename>
-#NS_default.read_step = 
-#NS_default.read_negf_foldername = 
+#NS_default.read_step =
+#NS_default.read_negf_foldername =
 NS_default.E_valence_min = -10
 NS_default.E_pole_max    = 3
 NS_default.E_zPlus_imag  = 1.e-5
@@ -289,5 +290,23 @@ NS_default.E_zPlus_imag  = 1.e-5
 CNT_default.type_id = m_index n_index    
 CNT_default.acc = bond_length
 CNT_default.gamma = 2.5     
-NS_1.offset = (CN_x + (0/2.)*periodicity_length) CN_y CN_z
-NS_1.rotation_angles = 0 0 0.0
+
+
+NS_1.offset = (CN_x + (-4/2.)*periodicity_length) CN_y CN_z
+NS_1.rotation_angles = 0 0 0.42
+
+
+NS_2.offset = (CN_x + (-2/2.)*periodicity_length) CN_y CN_z
+NS_2.rotation_angles = 0 0 0.23
+
+
+NS_3.offset = (CN_x + (0/2.)*periodicity_length) CN_y CN_z
+NS_3.rotation_angles = 0 0 -0.46
+
+
+NS_4.offset = (CN_x + (2/2.)*periodicity_length) CN_y CN_z
+NS_4.rotation_angles = 0 0 -0.24
+
+
+NS_5.offset = (CN_x + (4/2.)*periodicity_length) CN_y CN_z
+NS_5.rotation_angles = 0 0 0.81
