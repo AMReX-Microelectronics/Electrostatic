@@ -1,10 +1,14 @@
-################
-# Test case for validation of periodic boundary conditions -- infinite array of nanotubes.
-# The output of conductance can be compared with the result from the following reference,
-# Fig. 2), periodicity distance, d=3.195 nm == 3.2 nm. (see width_factor defined below).
+###############
+# Description:
+# This test case models planar CNTFET simulation with 5 CNTs
+# with angular variations. Setup is the same as in the reference 
+# below with distance between CNTs of ~3.2 nm. 
+#
+# It can be used to produce Fig 4a (5 CNTs with angular variation) in the ELEQTRONeX paper.
+#
 # Léonard, F. (2006). Crosstalk between nanotube devices: contact and channel effects. 
 # Nanotechnology, 17(9), 2381.
-################
+################ 
 
 ################
 ##### FLAGS ####

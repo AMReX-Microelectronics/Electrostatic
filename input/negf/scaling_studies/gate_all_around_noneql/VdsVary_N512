@@ -1,3 +1,14 @@
+##################################################################
+# Description:
+# This test is for modeling gate-all-around CNTFET where Vds is 
+# varied. It is used for carrying out nonequilibrium performance 
+# studies (Table 1, 2 and Fig. 3a) in the ELEQTRONeX paper.
+#
+# This script corresponds to the baseline case with 23.9 nm nanotube
+# simulated with 64 GPUs. Script for longer nanotubes can be generated 
+# by scaling `gy` and `N_unitcells`.
+###################################################################
+
 ################
 ##### FLAGS ####
 ################
@@ -23,10 +34,10 @@ transport.flag_write_LDOS_iter = 0
 transport.write_LDOS_iter_period = 1
 cnt.Fermi_tail_factors = 14 14
 
-my_constants.Vds = -0.1
-my_constants.Vgs_min = -0.3
-my_constants.Vgs_max = 0.8
-my_constants.Nsteps =  23
+my_constants.Vgs = 0.8  #Drain-Source voltage [V]
+my_constants.Vds_min = -0.3
+my_constants.Vds_max = 0.
+my_constants.Nsteps =  16
 my_constants.dt = 1./(Nsteps-1)
 
 cnt.eq_integration_pts = 50 50 50
@@ -43,15 +54,16 @@ cnt.integrand_correction_interval = 50
 cnt.flag_write_integrand = 0
 #cnt.write_integrand_interval = 1
 cnt.kT_window_around_singularity = 3 2
-cnt.num_recursive_parts = 2
+cnt.num_recursive_parts = 1
 
 restart = 0
 restart_step = 0
 
-cnt.initialize_charge_distribution = 1
-cnt.charge_distribution_filename = /global/cfs/projectdirs/m3766/SaurabhTests/weak_scaling/negf_gaa_final/gpu64/N128_Mode1/Run1/negf/cnt/step0005_Qout.dat
+cnt.initialize_charge_distribution = 0
+#cnt.charge_distribution_filename = /global/cfs/projectdirs/m3766/SaurabhTests/weak_scaling/negf_gaa_final/gpu64/zPlus1em6/VdsSweep_0_to_mDot1/negf/cnt/step0000_Qout.dat
 
-plot.folder_name = /global/cfs/projectdirs/m3766/SaurabhTests/weak_scaling/negf_gaa_final/gpu64/N128_Mode1/VgsSweep_Run1
+### specify output folder
+#plot.folder_name = 
 
 plot.write_interval = 1000
 cnt.write_at_iter = 0
@@ -182,9 +194,8 @@ Drain.thickness     = CM_thickness
 Drain.center        = CN_x drain_center_y CN_z
 Drain.height        = drain_hi_y - drain_lo_y
 Drain.direction     = 1
-Drain.surf_soln     = Vds + SV
-#Drain.surf_soln_parser   = 1
-#Drain.surf_soln_function = "SV + Vds_max - (Vds_max-Vds_min) * t"
+Drain.surf_soln_parser   = 1
+Drain.surf_soln_function = "SV + Vds_max - (Vds_max-Vds_min) * t"
 
 Gate.geom_type      = cntfet_contact_cyl
 Gate.inner_radius   = G_inner_rad
@@ -192,9 +203,9 @@ Gate.thickness      = G_thickness
 Gate.center         = CN_x CN_y CN_z
 Gate.height         = gate_length
 Gate.direction      = 1
-#Gate.surf_soln     = Vgs + SV
-Gate.surf_soln_parser   = 1
-Gate.surf_soln_function = "SV + Vgs_max - (Vgs_max-Vgs_min) * t"
+Gate.surf_soln     = Vgs + SV
+#Gate.surf_soln_parser   = 1
+#Gate.surf_soln_function = "SV + Vgs_max - (Vgs_max-Vgs_min) * t"
 
 #################################
 ###### GEOMETRY PROPERTIES ######
@@ -302,8 +313,8 @@ cnt.num_unitcells = N_unitcells
 cnt.offset = CN_x CN_y CN_z
 cnt.contact_mu_specified = 0
 cnt.contact_parser_string = Source Drain
-cnt.contact_mu_specified = 1
-cnt.contact_mu = Ef (Ef - Vds)
+#cnt.contact_mu_specified = 1
+#cnt.contact_mu = Ef (Ef - Vds)
 cnt.contact_T  = 298. 298.
 
 cnt.contact_Fermi_level = Ef

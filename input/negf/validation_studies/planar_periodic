@@ -1,10 +1,17 @@
-################
-# Test case for validation of periodic boundary conditions -- infinite array of nanotubes.
-# The output of conductance can be compared with the result from the following reference,
-# Fig. 2), periodicity distance, d=3.195 nm == 3.2 nm. (see width_factor defined below).
-# Léonard, F. (2006). Crosstalk between nanotube devices: contact and channel effects. 
-# Nanotechnology, 17(9), 2381.
-################
+###############################################################
+# Description:
+# This script models planar CNTFET with periodic boundary 
+# conditions as described in the Ref. below It can be used 
+# to reproduce Fig. 2d in the ELEQTRONeX paper. 
+# The output conductance can be compared with the reference 
+# below for periodicity distance d = 3.195 nm ≈ 3.2 nm 
+# (see `width_factor` defined below).
+#
+# Reference:
+# Léonard, F. (2006). Crosstalk between nanotube devices: 
+# contact and channel effects. Nanotechnology, 17(9), 2381.
+# DOI: 10.1088/0957-4484/17/9/029
+###############################################################
 
 ################
 ##### FLAGS ####
@@ -16,33 +23,34 @@ amrex.the_arena_is_managed=1
 ################################
 ##### Some Important Params ####
 ################################
-my_constants.gx = 2
-my_constants.gy = 16
+my_constants.gx = 1
+my_constants.gy = 4
 my_constants.gz = 2
 
 my_constants.num_CNTs = 1
-my_constants.periodicity_factor = 7.5 #1.875 corresponds to 3.195 nm (smallest periodicity distance)
+my_constants.periodicity_factor = 1.875 #1.875 corresponds to 3.195 nm (smallest periodicity distance)
 
-my_constants.Channel_unitcells = 232
+my_constants.Channel_unitcells = 24
 my_constants.Overlap_unitcells = 12
 
 my_constants.Vds = 0.   #Drain-Source voltage [V]
 my_constants.Vgs_min = -4
-my_constants.Vgs_max = 8
-my_constants.Nsteps =  121
+my_constants.Vgs_max = 12
+my_constants.Nsteps =  65
 my_constants.dt = 1./(Nsteps-1)
 
-plot.folder_name = /global/cfs/projectdirs/m4540/eXstatic/4x_spacing_longCNTs/periodic_finer
+plot.folder_name = /global/cfs/projectdirs/m4540/eXstatic/1x_spacing/periodic
 plot.write_after_init = 0
-plot.write_interval = 100000
+plot.write_interval = 100
 
 transport.flag_compute_DOS = 1 #DOS, Transmission, Conductance
 transport.flag_write_LDOS = 0
 transport.flag_write_LDOS_iter = 0
-transport.write_LDOS_iter_period = 10
+transport.write_LDOS_iter_period = 100
 
 restart = 0
 restart_step = 0
+NS_default.initialize_charge_distribution = 0
 ##################################
 ##### USER DEFINED CONSTANTS #####
 ##################################
@@ -211,14 +219,17 @@ plot.rawfield_write_interval = 1000000
 ########################
 ###### DIAGNOSTICS #####
 ########################
-use_diagnostics = 1
+use_diagnostics = 0
 
-diag.specify_using_eb = 1
-diag.objects = Z_0
-Z_0.geom_type = plane
-Z_0.direction = 2
-Z_0.location = 0.0 
-Z_0.fields_to_plot = phi
+#diag.specify_using_eb = 1
+#diag.objects = Surf1
+#Surf1.geom_type = cylinder
+#Surf1.center = 0 0 CN_z
+#Surf1.radius = R_CN
+#Surf1.axial_direction = 1
+#Surf1.theta_reference_direction = 0
+#Surf1.has_fluid_inside = 0
+#Surf1.fields_to_plot = phi charge_density
 
 ####################################
 ###### MLMG SOLVER PROPERTIES ######
@@ -275,7 +286,6 @@ NS_default.flag_write_charge_components = 0
 NS_default.num_noneq_paths = 1
 NS_default.num_recursive_parts = 2
 NS_default.write_at_iter = 0
-NS_default.initialize_charge_distribution = 0
 #NS_default.charge_distribution_filename = <full filename>
 #NS_default.read_step = 
 #NS_default.read_negf_foldername = 
@@ -286,5 +296,5 @@ NS_default.E_zPlus_imag  = 1.e-5
 CNT_default.type_id = m_index n_index    
 CNT_default.acc = bond_length
 CNT_default.gamma = 2.5     
-NS_1.offset = (CN_x + (0./2.)*periodicity_length) CN_y CN_z
+NS_1.offset = (CN_x + (0/2.)*periodicity_length) CN_y CN_z
 NS_1.rotation_angles = 0 0 0.0
