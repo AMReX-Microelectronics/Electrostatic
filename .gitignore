@@ -5,5 +5,11 @@ Exec/*
 *tmp_build_dir/
 *.png
 *.swp
+*.eps
+Backtrace.*
+*.ipynb_checkpoints
 perlscripts/
 input_local/
+Analysis/*
+Unused_code/*
+Source_old/
