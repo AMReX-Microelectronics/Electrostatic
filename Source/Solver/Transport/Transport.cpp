@@ -79,7 +79,12 @@ void c_TransportSolver::ReadData()
 
     Read_NSTypes(pp_transport);
 
-    Read_GatherAndDepositFields(pp_transport);
+    // ComplexType EmU = E - U;
+    auto &rCode = c_Code::GetInstance();
+    if (rCode.use_electrostatic)
+    {
+        Read_GatherAndDepositFields(pp_transport);
+    }
 
     Read_SelfConsistencyInput(pp_transport);
 

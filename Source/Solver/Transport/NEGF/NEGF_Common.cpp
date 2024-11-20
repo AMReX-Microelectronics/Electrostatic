@@ -7,8 +7,9 @@
 #include "Matrix_Block_Util.H"
 
 /*Explicit specializations*/
-template class c_NEGF_Common<ComplexType[NUM_MODES]>;             // of c_CNT
-template class c_NEGF_Common<ComplexType[NUM_MODES][NUM_MODES]>;  // c_Graphene
+template class c_NEGF_Common<ComplexType[BLOCK_SIZE]>;  // of c_CNT
+template class c_NEGF_Common<
+    ComplexType[BLOCK_SIZE][BLOCK_SIZE]>;  // c_Graphene
 
 const std::map<std::string, AngleType> map_strToAngleType = {
     {"d", AngleType::Degrees},
@@ -595,6 +596,15 @@ void c_NEGF_Common<T>::Read_RecursiveOptimizationParams(amrex::ParmParse &pp_ns)
 }
 
 template <typename T>
+void c_NEGF_Common<T>::Read_DecimationTechniqueParams(amrex::ParmParse &pp_ns)
+{
+    queryWithParser(pp_ns, "use_decimation", use_decimation);
+    queryWithParser(pp_ns, "decimation_max_iter", decimation_max_iter);
+    queryWithParser(pp_ns, "decimation_rel_error", decimation_rel_error);
+    queryWithParser(pp_ns, "decimation_layers", decimation_layers);
+}
+
+template <typename T>
 void c_NEGF_Common<T>::Assert_Reads()
 {
     amrex::Print() << "##### Assert Reads\n";
@@ -643,6 +653,7 @@ void c_NEGF_Common<T>::Read_CommonData(amrex::ParmParse &pp)
     Read_WritingRelatedFlags(pp);
     Read_AtomLocationAndChargeDistributionFilename(pp);
     Read_RecursiveOptimizationParams(pp);
+    Read_DecimationTechniqueParams(pp);
 }
 
 template <typename T>
@@ -1305,6 +1316,81 @@ void c_NEGF_Common<T>::Allocate_ArraysForHamiltonian()
 
     h_Hc_loc_data.resize({0}, {offDiag_repeatBlkSize}, The_Pinned_Arena());
     SetVal_Table1D(h_Hc_loc_data, zero);
+}
+
+template <typename T>
+void c_NEGF_Common<T>::Compute_CondensedHamiltonian(CondensedHamiltonian &CondH,
+                                                    const ComplexType EmU)
+{
+    auto &Xi_s = CondH.Xi_s;
+    auto &Xi = CondH.Xi;
+    auto &Pi = CondH.Pi;
+
+    int P = decimation_layers;
+
+    BlkTable1D H_tilde_data({0}, {P - 1});
+    auto const &H_tilde = H_tilde_data.table();
+    auto const &Hb = h_Hb_loc_data.table();
+
+    MatrixBlock<T> EmUI;
+    EmUI.SetDiag(EmU);  // This is (E-U)I
+
+    H_tilde(P - 1).SetDiag(1. / EmU);  // This is (P-1) element of [(E-U)I]^-1
+
+    auto H_tilde_kP = H_tilde(P - 1);  // This is H_tilde(P-1)(P-1)
+
+    for (int k = P - 2; k >= 1; --k)
+    {
+        int j = k % offDiag_repeatBlkSize;
+        auto temp1 = EmUI - 1. * Hb(j) * H_tilde(k + 1) * Hb(j).Dagger();
+
+        H_tilde(k) = temp1.Inverse();
+
+        H_tilde_kP = H_tilde(k) * Hb(j) * H_tilde_kP;
+    }
+    // here H_tilde_kP is H_tilde_1P
+
+    MatrixBlock<T> C_tilde_kk = H_tilde(1);  //==H_tilde_11 = C_tilde_11
+
+    for (int k = 2; k < P; ++k)
+    {
+        int j = (k - 1) % offDiag_repeatBlkSize;
+        C_tilde_kk = H_tilde(k) + H_tilde(k) * Hb(j).Dagger() * C_tilde_kk *
+                                      Hb(j) * H_tilde(k);
+    }
+    /* Here, C_tilde_kk = C_tilde_(P-1)(P-1)
+     * and,  C_tilde_1P = H_tilde_1P = H_tilde_kP
+     *       C_tilde_11 = H_tilde(1)
+     */
+
+    int id = (P - 1) % offDiag_repeatBlkSize;
+    Xi_s = Hb(0) * H_tilde(1) * Hb(0).Dagger();
+    Xi = Xi_s + Hb(id) * C_tilde_kk * Hb(id).Dagger();
+    Pi = Hb(0) * H_tilde_kP * Hb(id);
+
+    /* For P=2, as an example,
+     *
+     * Xi_s = Hb(0) * H_tilde(1) * Hb(0).Dagger();
+     * Xi   = Xi_s + Hb(1) * C_tilde_kk * Hb(1).Dagger();
+     * Pi   = Hb(0) * H_tilde_kP * Hb(1);
+     *
+     * H_tilde(1) = 1/(E-U)
+     * Hb(0)      = beta
+     * Hb(1)      = gamma
+     * C_tilde_kk = H_tilde(1)
+     * H_tilde_kP = H_tilde(1)
+     *
+     */
+
+    /*
+      amrex::Print() << " EmU: " << EmU  << "\n";
+      amrex::Print() << "Xi_s: " << Xi_s << "\n";
+      amrex::Print() << "  Xi: " << Xi   << "\n";
+      amrex::Print() << "  Pi: " << Pi   << "\n";
+      amrex::Print() << " H_tilde(1): " << H_tilde(1) << "\n";
+      amrex::Print() << " C_tilde_kk: " << C_tilde_kk << "\n";
+      amrex::Print() << " H_tilde_kP: " << H_tilde_kP << "\n";
+    */
 }
 
 template <typename T>
@@ -3881,11 +3967,74 @@ void c_NEGF_Common<T>::Compute_Rho0()
     Deallocate_TemporaryArraysForGFComputation();
 }
 
-// template<typename T>
-// AMREX_GPU_HOST_DEVICE
-// void
-// c_NEGF_Common<T>:: Compute_SurfaceGreensFunction (MatrixBlock<T>& gr, const
-// ComplexType EmU) {}
+template <typename T>
+AMREX_GPU_HOST_DEVICE void c_NEGF_Common<T>::DecimationTechnique(
+    MatrixBlock<T> &gr, const ComplexType EmU)
+{
+    CondensedHamiltonian CondH;
+    Compute_CondensedHamiltonian(CondH, EmU);
+
+    MatrixBlock<T> mu, nu, gamma, zeta;
+
+    // initialize these blocks
+    {
+        MatrixBlock<T> EmUI;
+        EmUI.SetDiag(EmU);
+
+        auto mu0 = EmUI - CondH.Xi_s;
+        auto nu0 = EmUI - CondH.Xi;
+        auto gamma0 = CondH.Pi;
+
+        auto nu0_inverse = nu0.Inverse();
+        auto gamma0_dagger = gamma0.Dagger();
+
+        MatrixBlock<T> temp1 = gamma0 * nu0_inverse;
+        MatrixBlock<T> temp2 = temp1 * gamma0_dagger;
+        MatrixBlock<T> temp3 = gamma0_dagger * nu0_inverse;
+
+        mu = mu0 - temp2;
+        nu = nu0 - temp2 - temp3 * gamma0;
+        gamma = temp1 * gamma0;
+        zeta = temp3 * gamma0_dagger;
+    }
+
+    amrex::Real error = 1;
+    int i = 0;
+
+    while (error > decimation_rel_error)
+    {
+        auto mu_old = mu;
+
+        auto nu_inverse = nu.Inverse();
+        auto temp1 = zeta * nu_inverse * gamma;
+        auto temp2 = gamma * nu_inverse * zeta;
+
+        mu = mu - temp1;
+        nu = nu - temp1 - temp2;
+        gamma = gamma * nu_inverse * gamma;
+        zeta = zeta * nu_inverse * zeta;
+
+        auto sum = mu + mu_old;
+        auto error_mat = (mu - mu_old) * sum.Inverse();
+
+        error = sqrt(amrex::norm(error_mat.FrobeniusNorm()));
+        if (i > decimation_max_iter) break;
+
+        i++;
+    }
+    // amrex::Print() << "decimation iterations: " << i << " error: " << error
+    // << "\n";
+
+    gr = mu.Inverse();
+}
+
+template <typename T>
+AMREX_GPU_HOST_DEVICE void c_NEGF_Common<T>::Compute_SurfaceGreensFunction(
+    MatrixBlock<T> &gr, const ComplexType E, ComplexType U)
+{
+    DecimationTechnique(gr, E - U);
+    // amrex::Print() << "Using decimation, gr: " << gr << "\n";
+}
 
 template <typename T>
 void c_NEGF_Common<T>::get_Sigma_at_contacts(BlkTable1D &h_Sigma_contact_data,
@@ -3897,8 +4046,7 @@ void c_NEGF_Common<T>::get_Sigma_at_contacts(BlkTable1D &h_Sigma_contact_data,
     for (std::size_t c = 0; c < NUM_CONTACTS; ++c)
     {
         MatrixBlock<T> gr;
-        Compute_SurfaceGreensFunction(gr, E - U_contact[c]);
-        // amrex::Print() << "c, E, gr: " << c << " " << E << " " << gr << "\n";
+        Compute_SurfaceGreensFunction(gr, E, U_contact[c]);
         h_Sigma(c) = h_tau(c) * gr * h_tau(c).Dagger();
     }
 }

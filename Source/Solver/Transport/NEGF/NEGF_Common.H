@@ -158,6 +158,18 @@ class c_NEGF_Common : protected MatrixBlock<T>, private c_IntegrationPath
     amrex::Gpu::DeviceVector<amrex::Real> d_Trace_i;
 #endif
 
+    /*Condensed Hamiltonian*/
+    struct CondensedHamiltonian
+    {
+        MatrixBlock<T> Xi_s;
+        MatrixBlock<T> Xi;
+        MatrixBlock<T> Pi;
+
+        CondensedHamiltonian()
+            : Xi_s(), Xi(), Pi() {}  // default initialized
+                                     // calling constructor of MatrixBlock<T>
+    };
+
     void Set_KeyParams(const std::string &NS_name_str, const int &NS_id_counter,
                        const amrex::Real &NS_initial_deposit_value);
     void Define_FoldersAndFiles(const std::string &negf_foldername_str);
@@ -181,6 +193,7 @@ class c_NEGF_Common : protected MatrixBlock<T>, private c_IntegrationPath
     void Read_IntegrandWritingParams(amrex::ParmParse &);
     void Read_AtomLocationAndChargeDistributionFilename(amrex::ParmParse &);
     void Read_RecursiveOptimizationParams(amrex::ParmParse &);
+    void Read_DecimationTechniqueParams(amrex::ParmParse &);
     void Assert_Reads();
 
     void Assert_KeyParameters();
@@ -312,7 +325,14 @@ class c_NEGF_Common : protected MatrixBlock<T>, private c_IntegrationPath
     virtual void Define_IntegrationPaths();
 
     virtual AMREX_GPU_HOST_DEVICE void Compute_SurfaceGreensFunction(
-        MatrixBlock<T> &gr, const ComplexType EmU) = 0;
+        MatrixBlock<T> &gr, const ComplexType E, const ComplexType U);
+
+    /*Decimation*/
+    virtual AMREX_GPU_HOST_DEVICE void Compute_CondensedHamiltonian(
+        CondensedHamiltonian &CondH, const ComplexType EmU);
+
+    AMREX_GPU_HOST_DEVICE void DecimationTechnique(MatrixBlock<T> &gr,
+                                                   const ComplexType EmU);
 
     virtual void Write_Eql_Characteristics(
         const amrex::Vector<ComplexType> E_vec, const RealTable1D &DOS_data,
@@ -446,6 +466,17 @@ class c_NEGF_Common : protected MatrixBlock<T>, private c_IntegrationPath
     RealTable1D d_NonEq_Integrand_Source_data;
     RealTable1D d_NonEq_Integrand_Drain_data;
 #endif
+
+    /*Decimation Technique*/
+    int use_decimation =
+        false;  // whether to use decimation technique in derived class.
+                // if Compute_SurfaceGreensFunction method is not overriden
+                // then the default is decimation regardless of what we set
+                // use_decimation as.
+
+    int decimation_max_iter = 30;      // maximum iterations allowed
+    int decimation_rel_error = 1.e-5;  // relative error
+    int decimation_layers = 10;        // P
 
    public:
     /*MPI Params*/
