@@ -468,11 +468,10 @@ class c_NEGF_Common : protected MatrixBlock<T>, private c_IntegrationPath
 #endif
 
     /*Decimation Technique*/
-    int use_decimation =
-        false;  // whether to use decimation technique in derived class.
-                // if Compute_SurfaceGreensFunction method is not overriden
-                // then the default is decimation regardless of what we set
-                // use_decimation as.
+    int use_decimation = false;
+    // whether to use decimation technique in the derived class.
+    // derived class default is false.
+    // base class default is true.
 
     int decimation_max_iter = 30;      // maximum iterations allowed
     int decimation_rel_error = 1.e-5;  // relative error
