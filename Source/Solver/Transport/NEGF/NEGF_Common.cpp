@@ -602,6 +602,13 @@ void c_NEGF_Common<T>::Read_DecimationTechniqueParams(amrex::ParmParse &pp_ns)
     queryWithParser(pp_ns, "decimation_max_iter", decimation_max_iter);
     queryWithParser(pp_ns, "decimation_rel_error", decimation_rel_error);
     queryWithParser(pp_ns, "decimation_layers", decimation_layers);
+
+    amrex::Print() << "##### use_decimation: " << use_decimation << "\n";
+    amrex::Print() << "##### decimation_max_iter: " << decimation_max_iter
+                   << "\n";
+    amrex::Print() << "##### decimation_rel_error: " << decimation_rel_error
+                   << "\n";
+    amrex::Print() << "##### decimation_layers: " << decimation_layers << "\n";
 }
 
 template <typename T>
