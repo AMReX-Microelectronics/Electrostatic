@@ -212,8 +212,8 @@ cnt.noneq_integration_pts = 100
 cnt.write_at_iter = 1
 
 ### decimation technique
-cnt.use_decimation=1 
-cnt.decimation_max_iter=50 
-cnt.decimation_rel_error=1e-5 
-cnt.decimation_layers=20
+#cnt.use_decimation=1 
+#cnt.decimation_max_iter=50 
+#cnt.decimation_rel_error=1e-5 
+#cnt.decimation_layers=100
 #####################################
