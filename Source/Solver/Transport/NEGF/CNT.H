@@ -10,9 +10,9 @@
 
 #include "NEGF_Common.H"
 
-class c_CNT : public c_NEGF_Common<ComplexType[NUM_MODES]>
+class c_CNT : public c_NEGF_Common<ComplexType[BLOCK_SIZE]>
 {
-    using BlkType = ComplexType[NUM_MODES];
+    using BlkType = ComplexType[BLOCK_SIZE];
 
     amrex::Real acc = 1.42e-10;
     amrex::Real gamma = 2.5;
@@ -75,7 +75,8 @@ class c_CNT : public c_NEGF_Common<ComplexType[NUM_MODES]>
     virtual int get_offDiag_repeatBlkSize() final { return 2; }
 
     virtual AMREX_GPU_HOST_DEVICE void Compute_SurfaceGreensFunction(
-        MatrixBlock<BlkType> &gr, const ComplexType EmU) final;
+        MatrixBlock<BlkType> &gr, const ComplexType E,
+        const ComplexType U) final;
 
    public:
     static int get_1D_site_id(int par_id_local_to_NS)

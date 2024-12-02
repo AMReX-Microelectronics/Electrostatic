@@ -10,9 +10,9 @@
 
 #include "NEGF_Common.H"
 
-class c_Graphene : public c_NEGF_Common<ComplexType[NUM_MODES][NUM_MODES]>
+class c_Graphene : public c_NEGF_Common<ComplexType[BLOCK_SIZE][BLOCK_SIZE]>
 {
-    using BlkType = ComplexType[NUM_MODES][NUM_MODES];
+    using BlkType = ComplexType[BLOCK_SIZE][BLOCK_SIZE];
 
     static amrex::Array<int, 2> type_id;
 
