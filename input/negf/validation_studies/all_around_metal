@@ -1,13 +1,16 @@
-##############################################################
-# Description : Test models a(17, 0) carbon nanotube surrounded
-# by a palladium contact.Electrostatic potential is imposed
-# on the metal as "Gate.surf_soln_function" from 0 to 1 V in
-# 6 steps. At each step the charge density on the nanotube
-# varies until self consistency is achieved with respect to
-# the potential.Potential at 1 V in the domain is compared.
-# 
-# Ref : Stewart and Léonard (2006), Nanotechnology 17 : 4699.
-# doi : 10.1088/0957-4484/17/18/029
+###############################################################
+# Description:
+# This script models a (17, 0) carbon nanotube surrounded by a 
+# constant metal (Pd). Electrostatic potential is imposed
+# on the metal as "Gate.surf_soln_function" from GV_min=0V
+# to GV_max=1V. At each step, charge density on the nanotube
+# varies until self-consistency is achieved with respect to the
+# potential. This script can be used to reproduce Supplementary
+# Fig. 3 in the ELEQTRONeX paper.
+#
+# Reference:
+# Stewart and Léonard (2006), Nanotechnology 17:4699.
+# DOI: 10.1088/0957-4484/17/18/029
 ###############################################################
 
 use_electrostatic = 1
