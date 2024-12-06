@@ -28,6 +28,12 @@ enum class s_Norm_Type : int
     Relative
 };
 
+enum class Gate_Terminal_Type : int 
+{
+    EB,
+    Boundary
+};
+
 struct s_Position3D
 {
     amrex::Array<amrex::Real, AMREX_SPACEDIM> dir = {AMREX_D_DECL(0., 0., 0.)};
@@ -173,6 +179,7 @@ class c_NEGF_Common : protected MatrixBlock<T>, private c_IntegrationPath
     void Read_TerminalParams(amrex::ParmParse &);
     void Read_PotentialProfileParams(amrex::ParmParse &);
     void Read_EqContourIntgPts(amrex::ParmParse &);
+    void Read_DOSParams(amrex::ParmParse &);
     void Read_FlatbandDOSParams(amrex::ParmParse &);
     void Read_NonEqPathParams(amrex::ParmParse &);
     void Read_AdaptiveIntegrationParams(amrex::ParmParse &);
@@ -196,6 +203,7 @@ class c_NEGF_Common : protected MatrixBlock<T>, private c_IntegrationPath
     void Print_TerminalParams();
     void Print_PotentialProfileParams();
     void Print_EqContourIntgPts();
+    void Print_DOSParams();
     void Print_FlatbandDOSParams();
     void Print_NonEqPathParams();
     void Print_IntegrationParams();
@@ -324,7 +332,7 @@ class c_NEGF_Common : protected MatrixBlock<T>, private c_IntegrationPath
     int my_rank = 0;
     int num_proc = 1;
     int NS_Id = 0;
-    int site_size_loc_offset = 0;
+    int num_field_sites_loc_NS_offset = 0;
     int min_local_site_id = 0;
     MPI_Datatype MPI_BlkType;
 
@@ -397,6 +405,12 @@ class c_NEGF_Common : protected MatrixBlock<T>, private c_IntegrationPath
     amrex::Vector<int> noneq_integration_pts_density;
     amrex::Vector<amrex::Real> noneq_percent_intercuts;
 
+    /*DOS/LDOS params*/
+    bool flag_compute_DOS = false;
+    bool flag_write_LDOS = false;
+    bool flag_write_LDOS_iter = false;
+    int write_LDOS_iter_period = 1e6;
+
     bool flag_noneq_integration_pts_density = false;
     bool flag_compute_flatband_dos = false;
     int total_noneq_integration_pts = 0;
@@ -410,8 +424,12 @@ class c_NEGF_Common : protected MatrixBlock<T>, private c_IntegrationPath
     amrex::Vector<c_IntegrationPath> ContourPath_DOS;
 
     /*For contacts*/
-    std::string Gate_String = "Gate";
     bool flag_EC_potential_updated = false;
+    amrex::Real Vds = 0;
+    amrex::Real Vgs = 0;
+    std::string Gate_String = "Gate";
+    std::string gate_terminal_type_str = "EB";
+    Gate_Terminal_Type gate_terminal_type;
 
     int flag_contact_mu_specified = 1;
     amrex::Real E_f = 0.;
@@ -471,7 +489,9 @@ class c_NEGF_Common : protected MatrixBlock<T>, private c_IntegrationPath
     void Initialize_GPUArraysForGreensAndSpectralFunctionToZero();
     void Initialize_GPUArraysForChargeComputationToZero();
 
-    void Solve_NEGF(RealTable1D &n_curr_out_data, const int iter);
+    void Set_TerminalBiasesAndContactPotential();
+    void Solve_NEGF(RealTable1D &n_curr_out_data, const int iter,
+                    const bool flag_update_terminal_bias);
 
     void Compute_InducedCharge(RealTable1D &n_curr_out_data);
     void Compute_Rho0();
@@ -482,14 +502,19 @@ class c_NEGF_Common : protected MatrixBlock<T>, private c_IntegrationPath
     void Compute_Current();
     void Compute_DensityOfStates(std::string DOS_foldername,
                                  bool flag_write_LDOS);
+    void Compute_DensityOfStates_General(bool isIter, int iter_or_step);
 
-    void Fetch_InputLocalCharge_FromNanostructure(RealTable1D &container_data,
-                                                  const int NS_offset,
-                                                  const int disp,
-                                                  const int data_size);
+    void Copy_LocalChargeFromNanostructure(RealTable1D &container_data,
+                                           const int NS_offset);
 
-    void Scatterv_BroydenComputed_GlobalCharge(RealTable1D &n_curr_in_glo_data);
-    // void Gatherv_NEGFComputed_LocalCharge(RealTable1D& n_curr_out_glo_data);
+    void Copy_BroydenPredictedCharge(const RealTable1D& h_n_curr_in_data);
+
+    void Write_Data_General(const bool isIter,
+                            const int iter_or_step,
+                            const int total_iterations_in_step,
+                            const amrex::Real avg_intg_pts,
+                            RealTable1D const& h_n_curr_out_data,
+                            RealTable1D const& h_Norm_data);
 
     void Write_Data(const std::string filename_prefix,
                     const RealTable1D &n_curr_out_data,
@@ -498,20 +523,23 @@ class c_NEGF_Common : protected MatrixBlock<T>, private c_IntegrationPath
     void Write_InputInducedCharge(const std::string filename_prefix,
                                   const RealTable1D &n_curr_in_data);
 
-    void Write_Current(const int step, const amrex::Real Vds,
-                       const amrex::Real Vgs, const int Broyden_Step,
-                       const int max_iter, const amrex::Real Broyden_fraction,
-                       const int Broyden_Scalar);
+    void Write_Current(const int step,
+                       const int total_iterations_in_step,
+                       const amrex::Real avg_intg_pts);
 
     // setters/getters for MPI params
-    void set_site_size_loc_offset(int val) { site_size_loc_offset = val; }
+    void set_num_field_sites_loc_NS_offset(int val) 
+        { num_field_sites_loc_NS_offset = val; }
 
     // setters/getters for nanostructure params
     int get_NS_Id() const { return NS_Id; }
     int get_num_field_sites() const { return num_field_sites; }
+    int get_num_field_sites_loc() const { return blkCol_size_loc; }
     amrex::Real get_Fermi_level() const { return E_f; }
 
     // setters/getters for contact params
+    int get_Vds() const { return Vds; }
+    int get_Vgs() const { return Vgs; }
     std::string get_Gate_String() const { return Gate_String; }
     bool is_contact_mu_specified() const { return flag_contact_mu_specified; }
     void set_Contact_Electrochemical_Potential(

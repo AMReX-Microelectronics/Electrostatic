@@ -6,7 +6,6 @@ using namespace amrex;
 
 enum class s_Algorithm_Type : int
 {
-    broyden_first,
     broyden_second,
     simple_mixing
 };
@@ -45,39 +44,26 @@ void c_TransportSolver::Define_Broyden_Partition()
     /* Each process executes this function.
      *
      * Create the following:
-     * num_field_sites_all_NS
      * my_rank
      * total_proc
-     * site_size_loc
+     * site_size_loc_all_NS
+     * site_size_loc_cumulative vector of size equal to all nanostructure. 
      */
-
-    num_field_sites_all_NS = 0;
     total_proc = amrex::ParallelDescriptor::NProcs();
     my_rank = amrex::ParallelDescriptor::MyProc();
 
-    // MPI_recv_count.resize(total_proc);
-    // MPI_recv_disp.resize(total_proc);
-    // num_procs_with_sites=total_proc;
-
-    site_size_loc_cumulative.resize(vp_CNT.size() + 1);
+    site_size_loc_cumulative.resize(vp_NS.size() + 1);
     site_size_loc_cumulative[0] = 0;
 
-    for (int c = 0; c < vp_CNT.size(); ++c)
+    for (int c = 0; c < vp_NS.size(); ++c)
     {
-        vp_CNT[c]->set_site_size_loc_offset(site_size_loc_cumulative[c]);
-        site_size_loc_cumulative[c + 1] =
-            site_size_loc_cumulative[c] + vp_CNT[c]->MPI_recv_count[my_rank];
-    }
-    site_size_loc_all_NS = site_size_loc_cumulative[vp_CNT.size()];
+        vp_NS[c]->Set_NumFieldSites_Local_NSOffset(site_size_loc_cumulative[c]);
 
-    // if (ParallelDescriptor::IOProcessor())
-    //{
-    //     amrex::Print() << "recv_count/recv_disp: \n";
-    //     for(int i=0; i < total_proc; ++i) {
-    //         amrex::Print() << i << " " << MPI_recv_count[i] << " "<<
-    //         MPI_recv_disp[i] << "\n";
-    //     }
-    // }
+        site_size_loc_cumulative[c + 1] =
+            site_size_loc_cumulative[c] + vp_NS[c]->Get_NumFieldSites_Local();
+    }
+    site_size_loc_all_NS = site_size_loc_cumulative[vp_NS.size()];
+
 }
 
 void c_TransportSolver::Set_Broyden_Parallel()
@@ -99,16 +85,15 @@ void c_TransportSolver::Set_Broyden_Parallel()
     auto const &h_n_curr_in = h_n_curr_in_data.table();
 
     /*Need generalization for multiple CNTs*/
-    for (int c = 0; c < vp_CNT.size(); ++c)
+    for (int c = 0; c < vp_NS.size(); ++c)
     {
         int NS_offset = site_size_loc_cumulative[c];
-        vp_CNT[c]->Fetch_InputLocalCharge_FromNanostructure(
-            h_n_curr_in_data, NS_offset, vp_CNT[c]->MPI_recv_disp[my_rank],
-            vp_CNT[c]->MPI_recv_count[my_rank]);
+        vp_NS[c]->Copy_ForBroydenInput_LocalChargeFromNanostructure(
+                                  h_n_curr_in_data, NS_offset);
 
         // amrex::Print() << "Fetching h_n_curr_in for NS_id: " <<
-        // vp_CNT[c]->NS_Id << "\n"; for(int i=NS_offset; i< NS_offset +
-        // vp_CNT[c]->MPI_recv_count[my_rank]; ++i) {
+        // vp_NS[c]->NS_Id << "\n"; for(int i=NS_offset; i< NS_offset +
+        // vp_NS[c]->MPI_recv_count[my_rank]; ++i) {
         //     amrex::Print() << i << " " << h_n_curr_in(i) << "\n";
         // }
     }
@@ -155,14 +140,6 @@ void c_TransportSolver::Set_Broyden_Parallel()
 
     switch (c_TransportSolver::map_AlgorithmType.at(Algorithm_Type))
     {
-        case s_Algorithm_Type::broyden_first:
-        {
-            amrex::Abort(
-                "Algorithm, broyden_first is not parallelized. Compile "
-                "with preprocessor directive, BROYDEN_PARALLEL=False, or "
-                "use broyden_second algorithm.");
-            break;
-        }
         case s_Algorithm_Type::broyden_second:
         {
             h_intermed_vector_data.resize({0}, {Broyden_Threshold_MaxStep},
@@ -314,10 +291,6 @@ void c_TransportSolver::Reset_Broyden_Parallel()
 
     switch (c_TransportSolver::map_AlgorithmType.at(Algorithm_Type))
     {
-        case s_Algorithm_Type::broyden_first:
-        {
-            break;
-        }
         case s_Algorithm_Type::broyden_second:
         {
 #ifdef BROYDEN_SKIP_GPU_OPTIMIZATION
