@@ -1399,17 +1399,6 @@ void c_NEGF_Common<T>::Write_Data(const std::string filename_prefix,
     }
 }
 
-// template<typename T>
-// void
-// c_NEGF_Common<T>::Define_ContactInfo ()
-//{
-//     /*define the following in overridden functions:
-//      *global_contact_index
-//      *contact_transmission_index
-//      *h_tau
-//      */
-// }
-
 template <typename T>
 void c_NEGF_Common<T>::Allocate_ArraysForHamiltonian()
 {
@@ -4705,7 +4694,7 @@ void c_NEGF_Common<T>:: Set_TerminalBiasesAndContactPotential()
     auto &rGprop = rCode.get_GeometryProperties();
     auto &rBC = rCode.get_BoundaryConditions();
 
-    if (!is_contact_mu_specified())
+    if (!flag_contact_mu_specified)
     {
         amrex::Real V_contact[NUM_CONTACTS] = {0., 0.};
         amrex::Vector<amrex::Real> ep(NUM_CONTACTS, 0);
