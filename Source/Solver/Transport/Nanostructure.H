@@ -69,13 +69,6 @@ class c_Nanostructure
     void Set_GatherAndDepositMultiFabs();
     amrex::Real Compute_CellVolume();
 
-   protected:
-
-    void Evaluate_LocalFieldSites();
-    void Deposit_ZeroToMesh();
-    void Obtain_PotentialAtSites();
-    void Mark_CellsWithAtoms();
-
    public:
     c_Nanostructure(const amrex::Geometry &geom,
                     const amrex::DistributionMapping &dm,
@@ -161,5 +154,12 @@ class c_Nanostructure
                                    h_n_curr_out_data, h_Norm_data);
     }
     
+    /* These are public because functions with lambda need public access.
+     * Code needs refactoring
+     */
+    void Evaluate_LocalFieldSites();
+    void Deposit_ZeroToMesh();
+    void Obtain_PotentialAtSites();
+    void Mark_CellsWithAtoms();
 };
 #endif
