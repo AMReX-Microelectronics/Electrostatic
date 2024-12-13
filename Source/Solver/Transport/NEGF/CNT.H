@@ -74,9 +74,9 @@ class c_CNT : public c_NEGF_Common<ComplexType[BLOCK_SIZE]>
     virtual int get_Hsize() final { return rings_per_unitcell * num_unitcells; }
     virtual int get_offDiag_repeatBlkSize() final { return 2; }
 
-    virtual void Compute_SurfaceGreensFunction(
-       MatrixBlock<BlkType> &gr, const ComplexType E,
-       const ComplexType U) final;
+    virtual void Compute_SurfaceGreensFunction(MatrixBlock<BlkType> &gr,
+                                               const ComplexType E,
+                                               const ComplexType U) final;
 
    public:
     static int get_1D_site_id(int par_id_local_to_NS)

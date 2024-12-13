@@ -319,8 +319,9 @@ class c_NEGF_Common : protected MatrixBlock<T>, private c_IntegrationPath
     void Write_InputInducedCharge(const std::string filename_prefix,
                                   const RealTable1D &n_curr_in_data);
 
-    virtual void Compute_SurfaceGreensFunction(
-        MatrixBlock<T> &gr, const ComplexType E, const ComplexType U);
+    virtual void Compute_SurfaceGreensFunction(MatrixBlock<T> &gr,
+                                               const ComplexType E,
+                                               const ComplexType U);
 
     void Write_Current(const int step, const int total_iterations_in_step,
                        const amrex::Real avg_intg_pts);
@@ -464,7 +465,7 @@ class c_NEGF_Common : protected MatrixBlock<T>, private c_IntegrationPath
 #endif
 
     /*Decimation Technique*/
-    BlkTable1D h_H_tilde_data; //condensed Hamiltonian
+    BlkTable1D h_H_tilde_data;  // condensed Hamiltonian
     int use_decimation = false;
     // whether to use decimation technique in the derived class.
     // derived class default is false.
@@ -493,9 +494,8 @@ class c_NEGF_Common : protected MatrixBlock<T>, private c_IntegrationPath
 
     void DecimationTechnique(MatrixBlock<T> &gr, const ComplexType EmU);
 
-    virtual void Compute_CondensedHamiltonian(
-        CondensedHamiltonian &CondH, const ComplexType EmU);
-
+    virtual void Compute_CondensedHamiltonian(CondensedHamiltonian &CondH,
+                                              const ComplexType EmU);
 
     /*define the following in overridden Define_ContactInfo:
      *global_contact_index
