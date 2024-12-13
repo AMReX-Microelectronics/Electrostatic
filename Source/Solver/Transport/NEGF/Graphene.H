@@ -36,10 +36,10 @@ class c_Graphene : public c_NEGF_Common<ComplexType[BLOCK_SIZE][BLOCK_SIZE]>
     virtual int get_Hsize() final { return 0; }
     virtual int get_offDiag_repeatBlkSize() final { return 1; }
 
-    virtual AMREX_GPU_HOST_DEVICE void Compute_SurfaceGreensFunction(
-        MatrixBlock<BlkType> & gr, const ComplexType EmU) final
-    {
-    }
+    //virtual void Compute_SurfaceGreensFunction(
+    //    MatrixBlock<BlkType> & gr, const ComplexType EmU) final
+    //{
+    //}
 
    public:
     static int get_1D_site_id(int par_id_local_to_NS)

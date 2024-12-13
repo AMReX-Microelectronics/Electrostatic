@@ -1442,7 +1442,7 @@ void c_NEGF_Common<T>::Compute_CondensedHamiltonian(CondensedHamiltonian &CondH,
 
     int P = decimation_layers;
 
-    BlkTable1D H_tilde_data({0}, {P - 1});
+    BlkTable1D H_tilde_data({0},{P-1});
     auto const &H_tilde = H_tilde_data.table();
     auto const &Hb = h_Hb_loc_data.table();
 
@@ -4092,7 +4092,7 @@ void c_NEGF_Common<T>::Compute_Rho0()
 }
 
 template <typename T>
-AMREX_GPU_HOST_DEVICE void c_NEGF_Common<T>::DecimationTechnique(
+void c_NEGF_Common<T>::DecimationTechnique(
     MatrixBlock<T> &gr, const ComplexType EmU)
 {
     CondensedHamiltonian CondH;
@@ -4153,7 +4153,7 @@ AMREX_GPU_HOST_DEVICE void c_NEGF_Common<T>::DecimationTechnique(
 }
 
 template <typename T>
-AMREX_GPU_HOST_DEVICE void c_NEGF_Common<T>::Compute_SurfaceGreensFunction(
+void c_NEGF_Common<T>::Compute_SurfaceGreensFunction(
     MatrixBlock<T> &gr, const ComplexType E, ComplexType U)
 {
     DecimationTechnique(gr, E - U);
