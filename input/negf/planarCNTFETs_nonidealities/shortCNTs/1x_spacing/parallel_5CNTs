@@ -260,7 +260,6 @@ transport.Broyden_norm_type = relative
 transport.Broyden_threshold_maxstep = 100
 transport.reset_with_previous_charge_distribution = 1
 
-NS_default.gate_terminal_type = Boundary
 
 NS_default.num_unitcells = N_unitcells
 NS_default.rotation_order = Z
@@ -270,6 +269,7 @@ NS_default.contact_Fermi_level = Ef
 NS_default.contact_mu_specified = 1
 NS_default.contact_mu = Ef (Ef - Vds)
 NS_default.contact_T  = 298. 298.
+NS_default.gate_terminal_type = Boundary
 NS_default.Fermi_tail_factors = 14 14
 NS_default.eq_integration_pts = 30 30 30
 NS_default.flag_compute_flatband_dos = 1
