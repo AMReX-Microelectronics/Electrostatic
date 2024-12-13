@@ -29,9 +29,6 @@ my_constants.Overlap_unitcells = 36
 my_constants.Gap_unitcells = 0
 my_constants.N_unitcells = Channel_unitcells + 2*Overlap_unitcells + 2*Gap_unitcells #64
 transport.Broyden_threshold_maxstep = 100
-transport.flag_write_LDOS = 0
-transport.flag_write_LDOS_iter = 0
-transport.write_LDOS_iter_period = 1
 cnt.Fermi_tail_factors = 14 14
 
 my_constants.Vgs = 0.8  #Drain-Source voltage [V]
@@ -298,12 +295,15 @@ transport.use_negf = 1
 transport.NS_gather_field = phi            
 transport.NS_deposit_field  = charge_density 
 transport.NS_initial_deposit_value  = 1e-3
+transport.selfconsistency_algorithm = broyden_second
 transport.Broyden_fraction = 0.1
 transport.Broyden_max_norm = 1.e-4
 transport.Broyden_norm_type = relative
-transport.selfconsistency_algorithm = broyden_second
 transport.reset_with_previous_charge_distribution = 1
-transport.initialize_inverse_jacobian = 0
+
+NS_default.flag_write_LDOS = 0
+NS_default.flag_write_LDOS_iter = 0
+NS_default.write_LDOS_iter_period = 1
 
 cnt.type = CNT
 cnt.type_id = m_index n_index     #m n

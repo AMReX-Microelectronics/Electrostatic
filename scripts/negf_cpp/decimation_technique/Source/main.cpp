@@ -102,10 +102,12 @@ void CondenseHamiltonian(CondensedHamiltonianElem& cond, MatrixDType E,
 
     cond.Pi = gamma * beta * H_tilde_11;
 
-    // amrex::Print() << "E: " << E << "\n";
-    // amrex::Print() << "Xi_s: " << Xi_s << "\n";
-    // amrex::Print() << "Xi: " << Xi << "\n";
-    // amrex::Print() << "Pi: " << Pi << "\n";
+    amrex::Print() << "E: "    << E << "\n";
+    amrex::Print() << "U: "    << U << "\n";
+    amrex::Print() << "EmU: "  << E-U << "\n";
+    amrex::Print() << "Xi_s: " << cond.Xi_s << "\n";
+    amrex::Print() << "Xi: "   << cond.Xi << "\n";
+    amrex::Print() << "Pi: "   << cond.Pi << "\n";
 }
 
 AMREX_GPU_HOST_DEVICE

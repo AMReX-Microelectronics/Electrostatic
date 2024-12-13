@@ -36,14 +36,13 @@ plot.folder_name = /global/cfs/projectdirs/m4540/eXstatic/4x_spacing/nonpll_5CNT
 plot.write_after_init = 1
 plot.write_interval = 5000
 
-transport.flag_compute_DOS = 1 #DOS, Transmission, Conductance
-transport.flag_write_LDOS = 0
-transport.flag_write_LDOS_iter = 0
-transport.write_LDOS_iter_period = 10
-
 restart = 1
 restart_step = 20
 NS_default.initialize_charge_distribution = 1
+NS_default.flag_compute_DOS = 1 #DOS, Transmission, Conductance
+NS_default.flag_write_LDOS = 0
+NS_default.flag_write_LDOS_iter = 0
+NS_default.write_LDOS_iter_period = 10
 ##################################
 ##### USER DEFINED CONSTANTS #####
 ##################################
@@ -248,14 +247,12 @@ transport.NS_type_default = CNT
 transport.NS_gather_field = phi            
 transport.NS_deposit_field  = charge_density 
 transport.NS_initial_deposit_value  = 1.e-3
+transport.selfconsistency_algorithm = broyden_second
 transport.Broyden_fraction = 0.1
 transport.Broyden_max_norm = 1.e-5
 transport.Broyden_norm_type = relative
-transport.selfconsistency_algorithm = broyden_second
-transport.reset_with_previous_charge_distribution = 1
-transport.initialize_inverse_jacobian = 0
-transport.gate_terminal_type = Boundary
 transport.Broyden_threshold_maxstep = 100
+transport.reset_with_previous_charge_distribution = 1
 
 NS_default.num_unitcells = N_unitcells
 NS_default.rotation_order = Z
@@ -264,6 +261,7 @@ NS_default.contact_Fermi_level = Ef
 NS_default.contact_mu_specified = 1
 NS_default.contact_mu = Ef (Ef - Vds)
 NS_default.contact_T  = 298. 298.
+NS_default.gate_terminal_type = Boundary
 NS_default.Fermi_tail_factors = 14 14
 NS_default.eq_integration_pts = 30 30 30
 NS_default.flag_compute_flatband_dos = 1

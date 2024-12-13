@@ -28,6 +28,12 @@ enum class s_Norm_Type : int
     Relative
 };
 
+enum class Gate_Terminal_Type : int
+{
+    EB,
+    Boundary
+};
+
 struct s_Position3D
 {
     amrex::Array<amrex::Real, AMREX_SPACEDIM> dir = {AMREX_D_DECL(0., 0., 0.)};
@@ -142,6 +148,12 @@ class c_NEGF_Common : protected MatrixBlock<T>, private c_IntegrationPath
     amrex::Gpu::HostVector<amrex::Real> h_Trace_r;
     amrex::Gpu::HostVector<amrex::Real> h_Trace_i;
 
+    /*MPI Params*/
+    amrex::Vector<int> MPI_recv_count;
+    amrex::Vector<int> MPI_recv_disp;
+    amrex::Vector<int> MPI_send_count;
+    amrex::Vector<int> MPI_send_disp;
+
 #ifdef AMREX_USE_GPU
     BlkTable1D d_Alpha_loc_data;
     BlkTable1D d_Xtil_glo_data;
@@ -158,6 +170,18 @@ class c_NEGF_Common : protected MatrixBlock<T>, private c_IntegrationPath
     amrex::Gpu::DeviceVector<amrex::Real> d_Trace_i;
 #endif
 
+    /*Condensed Hamiltonian*/
+    struct CondensedHamiltonian
+    {
+        MatrixBlock<T> Xi_s;
+        MatrixBlock<T> Xi;
+        MatrixBlock<T> Pi;
+
+        CondensedHamiltonian()
+            : Xi_s(), Xi(), Pi() {}  // default initialized
+                                     // calling constructor of MatrixBlock<T>
+    };
+
     void Set_KeyParams(const std::string &NS_name_str, const int &NS_id_counter,
                        const amrex::Real &NS_initial_deposit_value);
     void Define_FoldersAndFiles(const std::string &negf_foldername_str);
@@ -173,6 +197,7 @@ class c_NEGF_Common : protected MatrixBlock<T>, private c_IntegrationPath
     void Read_TerminalParams(amrex::ParmParse &);
     void Read_PotentialProfileParams(amrex::ParmParse &);
     void Read_EqContourIntgPts(amrex::ParmParse &);
+    void Read_DOSParams(amrex::ParmParse &);
     void Read_FlatbandDOSParams(amrex::ParmParse &);
     void Read_NonEqPathParams(amrex::ParmParse &);
     void Read_AdaptiveIntegrationParams(amrex::ParmParse &);
@@ -181,6 +206,7 @@ class c_NEGF_Common : protected MatrixBlock<T>, private c_IntegrationPath
     void Read_IntegrandWritingParams(amrex::ParmParse &);
     void Read_AtomLocationAndChargeDistributionFilename(amrex::ParmParse &);
     void Read_RecursiveOptimizationParams(amrex::ParmParse &);
+    void Read_DecimationTechniqueParams(amrex::ParmParse &);
     void Assert_Reads();
 
     void Assert_KeyParameters();
@@ -196,6 +222,7 @@ class c_NEGF_Common : protected MatrixBlock<T>, private c_IntegrationPath
     void Print_TerminalParams();
     void Print_PotentialProfileParams();
     void Print_EqContourIntgPts();
+    void Print_DOSParams();
     void Print_FlatbandDOSParams();
     void Print_NonEqPathParams();
     void Print_IntegrationParams();
@@ -280,51 +307,37 @@ class c_NEGF_Common : protected MatrixBlock<T>, private c_IntegrationPath
     template <typename U>
     void Print_Table2D_loc(const U &Tab2D_data);
 
-    // AMREX_GPU_HOST_DEVICE AMREX_FORCE_INLINE
-    // MatrixBlock<T> get_Gamma(const MatrixBlock<T>& Sigma);
+    void set_Contact_Electrochemical_Potential(
+        const amrex::Vector<amrex::Real> &ep);
 
-   protected:
-    virtual void Define_FileHeaderForCurrent();
-    virtual void Read_MaterialSpecificNanostructureProperties() = 0;
-    virtual void Set_MaterialSpecificParameters() = 0;
-    virtual int Compute_NumAtoms() = 0;
-    virtual int Compute_AtomsPerUnitcell() = 0;
-    virtual int Compute_NumFieldSites() = 0;
-    virtual int Compute_NumAtomsPerFieldSite() = 0;
-    virtual int Set_PrimaryTransportDir() = 0;
-    virtual int Set_AverageFieldFlag() = 0;
-    virtual int Compute_NumAtomsToAvgOver() { return 1; }
-    virtual void Set_BlockDegeneracyVector(amrex::Vector<int> &vec) = 0;
-    virtual void Print_MaterialSpecificReadData() = 0;
-    virtual int get_Hsize() = 0;
-    virtual int get_offDiag_repeatBlkSize() = 0;
-    virtual void Define_MPI_BlkType() = 0;
+    void Set_TerminalBiasesAndContactPotential();
 
-    virtual void Construct_Hamiltonian() = 0;
-    virtual void Define_ContactInfo() = 0;
-    /*define the following in overridden Define_ContactInfo:
-     *global_contact_index
-     *contact_transmission_index
-     *h_tau
-     */
+    void Write_Data(const std::string filename_prefix,
+                    const RealTable1D &n_curr_out_data,
+                    const RealTable1D &Norm_data);
 
-    virtual void Define_EnergyLimits();
-    virtual void Define_IntegrationPaths();
+    void Write_InputInducedCharge(const std::string filename_prefix,
+                                  const RealTable1D &n_curr_in_data);
 
     virtual AMREX_GPU_HOST_DEVICE void Compute_SurfaceGreensFunction(
-        MatrixBlock<T> &gr, const ComplexType EmU) = 0;
+        MatrixBlock<T> &gr, const ComplexType E, const ComplexType U);
 
-    virtual void Write_Eql_Characteristics(
-        const amrex::Vector<ComplexType> E_vec, const RealTable1D &DOS_data,
-        const RealTable1D &Transmission_data,
-        const RealTable1D &Conductance_data, std::string filename);
-    virtual void Define_PotentialProfile();
+    /*Decimation*/
+    virtual AMREX_GPU_HOST_DEVICE void Compute_CondensedHamiltonian(
+        CondensedHamiltonian &CondH, const ComplexType EmU);
 
+    AMREX_GPU_HOST_DEVICE void DecimationTechnique(MatrixBlock<T> &gr,
+                                                   const ComplexType EmU);
+
+    void Write_Current(const int step, const int total_iterations_in_step,
+                       const amrex::Real avg_intg_pts);
+
+   protected:
     /*MPI params*/
     int my_rank = 0;
     int num_proc = 1;
     int NS_Id = 0;
-    int site_size_loc_offset = 0;
+    int num_field_sites_loc_NS_offset = 0;
     int min_local_site_id = 0;
     MPI_Datatype MPI_BlkType;
 
@@ -397,6 +410,12 @@ class c_NEGF_Common : protected MatrixBlock<T>, private c_IntegrationPath
     amrex::Vector<int> noneq_integration_pts_density;
     amrex::Vector<amrex::Real> noneq_percent_intercuts;
 
+    /*DOS/LDOS params*/
+    bool flag_compute_DOS = false;
+    bool flag_write_LDOS = false;
+    bool flag_write_LDOS_iter = false;
+    int write_LDOS_iter_period = 1e6;
+
     bool flag_noneq_integration_pts_density = false;
     bool flag_compute_flatband_dos = false;
     int total_noneq_integration_pts = 0;
@@ -410,8 +429,12 @@ class c_NEGF_Common : protected MatrixBlock<T>, private c_IntegrationPath
     amrex::Vector<c_IntegrationPath> ContourPath_DOS;
 
     /*For contacts*/
-    std::string Gate_String = "Gate";
     bool flag_EC_potential_updated = false;
+    amrex::Real Vds = 0;
+    amrex::Real Vgs = 0;
+    std::string Gate_String = "Gate";
+    std::string gate_terminal_type_str = "EB";
+    Gate_Terminal_Type gate_terminal_type;
 
     int flag_contact_mu_specified = 1;
     amrex::Real E_f = 0.;
@@ -447,31 +470,129 @@ class c_NEGF_Common : protected MatrixBlock<T>, private c_IntegrationPath
     RealTable1D d_NonEq_Integrand_Drain_data;
 #endif
 
-   public:
-    /*MPI Params*/
-    amrex::Vector<int> MPI_recv_count;
-    amrex::Vector<int> MPI_recv_disp;
-    amrex::Vector<int> MPI_send_count;
-    amrex::Vector<int> MPI_send_disp;
+    /*Decimation Technique*/
+    int use_decimation = false;
+    // whether to use decimation technique in the derived class.
+    // derived class default is false.
+    // base class default is true.
 
-    virtual ~c_NEGF_Common() = default;
+    int decimation_max_iter = 30;      // maximum iterations allowed
+    int decimation_rel_error = 1.e-5;  // relative error
+    int decimation_layers = 10;        // P
+
+    // virtual methods
+    virtual void Read_MaterialSpecificNanostructureProperties() = 0;
+    virtual void Set_MaterialSpecificParameters() = 0;
+    virtual int Compute_NumAtoms() = 0;
+    virtual int Compute_AtomsPerUnitcell() = 0;
+    virtual int Compute_NumFieldSites() = 0;
+    virtual int Compute_NumAtomsPerFieldSite() = 0;
+    virtual int Set_PrimaryTransportDir() = 0;
+    virtual int Set_AverageFieldFlag() = 0;
+    virtual int Compute_NumAtomsToAvgOver() { return 1; }
+    virtual void Set_BlockDegeneracyVector(amrex::Vector<int> &vec) = 0;
+    virtual void Print_MaterialSpecificReadData() = 0;
+    virtual int get_Hsize() = 0;
+    virtual int get_offDiag_repeatBlkSize() = 0;
+    virtual void Define_MPI_BlkType() = 0;
+    virtual void Construct_Hamiltonian() = 0;
+
+    /*define the following in overridden Define_ContactInfo:
+     *global_contact_index
+     *contact_transmission_index
+     *h_tau
+     */
+    virtual void Define_ContactInfo() = 0;
+
+    virtual void Generate_AtomLocations(amrex::Vector<s_Position3D> &pos) = 0;
+    virtual AMREX_GPU_HOST_DEVICE void Compute_SurfaceGreensFunction(
+        MatrixBlock<T> &gr, const ComplexType EmU) = 0;
+
+    virtual void Define_FileHeaderForCurrent();
+    virtual void Define_EnergyLimits();
+    virtual void Define_IntegrationPaths();
+    virtual void Write_Eql_Characteristics(
+        const amrex::Vector<ComplexType> E_vec, const RealTable1D &DOS_data,
+        const RealTable1D &Transmission_data,
+        const RealTable1D &Conductance_data, std::string filename);
+    virtual void Define_PotentialProfile();
+
+    // other methods accessed from derived classes
+    void Solve_NEGF(RealTable1D &n_curr_out_data, const int iter,
+                    const bool flag_update_terminal_bias);
+
+    void Copy_LocalChargeFromNanostructure(RealTable1D &container_data,
+                                           const int NS_offset);
+
+    void Copy_BroydenPredictedCharge(const RealTable1D &h_n_curr_in_data);
+
+    void Compute_DensityOfStates_General(bool isIter, int iter_or_step);
+
+    void Write_Data_General(const bool isIter, const int iter_or_step,
+                            const int total_iterations_in_step,
+                            const amrex::Real avg_intg_pts,
+                            RealTable1D const &h_n_curr_out_data,
+                            RealTable1D const &h_Norm_data);
 
     void Initialize_NEGF_Params(const std::string &NS_name_str,
                                 const int &NS_id_counter,
                                 const amrex::Real &NS_initial_deposit_value,
                                 const std::string &negf_foldername_str);
-    void Define_MPISendCountAndDisp();
-    void Initialize_ChargeAtFieldSites();
 
-    virtual void Generate_AtomLocations(amrex::Vector<s_Position3D> &pos) = 0;
+    void Define_MPISendCountAndDisp();
+
+    void Initialize_ChargeAtFieldSites();
 
     void Initialize_NEGF(const std::string common_foldername_str,
                          const bool _use_electrostatics);
 
-    void Initialize_GPUArraysForGreensAndSpectralFunctionToZero();
-    void Initialize_GPUArraysForChargeComputationToZero();
+    /* setters/getters */
+    // for MPI params
+    void set_num_field_sites_loc_NS_offset(int val)
+    {
+        num_field_sites_loc_NS_offset = val;
+    }
 
-    void Solve_NEGF(RealTable1D &n_curr_out_data, const int iter);
+    // for nanostructure params
+    int get_NS_Id() const { return NS_Id; }
+    int get_num_field_sites() const { return num_field_sites; }
+    int get_num_field_sites_loc() const { return blkCol_size_loc; }
+    amrex::Real get_Fermi_level() const { return E_f; }
+
+    // for contact params
+    int get_Vds() const { return Vds; }
+    int get_Vgs() const { return Vgs; }
+    std::string get_Gate_String() const { return Gate_String; }
+    bool is_contact_mu_specified() const { return flag_contact_mu_specified; }
+
+    virtual amrex::Real get_Source_Electrochemical_Potential() const
+    {
+        return Contact_Electrochemical_Potential[0];
+    }
+    virtual amrex::Real get_Drain_Electrochemical_Potential() const
+    {
+        return Contact_Electrochemical_Potential[NUM_CONTACTS - 1];
+    }
+    const std::string *get_Contact_Parser_String() const
+    {
+        return Contact_Parser_String;
+    }
+
+    // for output params
+    void Set_StepFilenameString(const int step);
+    void Set_IterationFilenameString(const int iter);
+    int get_flag_write_at_iter() const { return write_at_iter; }
+    std::string get_step_filename() const { return step_filename_str; }
+    std::string get_iter_filename() const { return iter_filename_str; }
+    std::string get_step_foldername() const { return step_foldername_str; }
+    std::string get_iter_foldername() const { return iter_foldername_str; }
+    std::string get_read_atom_filename() const { return read_atom_filename; }
+
+    // for negf specific output
+    int get_Total_Integration_Pts() const;
+
+   public:
+    virtual ~c_NEGF_Common() = default;
 
     void Compute_InducedCharge(RealTable1D &n_curr_out_data);
     void Compute_Rho0();
@@ -483,66 +604,8 @@ class c_NEGF_Common : protected MatrixBlock<T>, private c_IntegrationPath
     void Compute_DensityOfStates(std::string DOS_foldername,
                                  bool flag_write_LDOS);
 
-    void Fetch_InputLocalCharge_FromNanostructure(RealTable1D &container_data,
-                                                  const int NS_offset,
-                                                  const int disp,
-                                                  const int data_size);
-
-    void Scatterv_BroydenComputed_GlobalCharge(RealTable1D &n_curr_in_glo_data);
-    // void Gatherv_NEGFComputed_LocalCharge(RealTable1D& n_curr_out_glo_data);
-
-    void Write_Data(const std::string filename_prefix,
-                    const RealTable1D &n_curr_out_data,
-                    const RealTable1D &Norm_data);
-
-    void Write_InputInducedCharge(const std::string filename_prefix,
-                                  const RealTable1D &n_curr_in_data);
-
-    void Write_Current(const int step, const amrex::Real Vds,
-                       const amrex::Real Vgs, const int Broyden_Step,
-                       const int max_iter, const amrex::Real Broyden_fraction,
-                       const int Broyden_Scalar);
-
-    // setters/getters for MPI params
-    void set_site_size_loc_offset(int val) { site_size_loc_offset = val; }
-
-    // setters/getters for nanostructure params
-    int get_NS_Id() const { return NS_Id; }
-    int get_num_field_sites() const { return num_field_sites; }
-    amrex::Real get_Fermi_level() const { return E_f; }
-
-    // setters/getters for contact params
-    std::string get_Gate_String() const { return Gate_String; }
-    bool is_contact_mu_specified() const { return flag_contact_mu_specified; }
-    void set_Contact_Electrochemical_Potential(
-        const amrex::Vector<amrex::Real> &ep);
-
-    virtual amrex::Real get_Source_Electrochemical_Potential() const
-    {
-        return Contact_Electrochemical_Potential[0];
-    }
-
-    virtual amrex::Real get_Drain_Electrochemical_Potential() const
-    {
-        return Contact_Electrochemical_Potential[NUM_CONTACTS - 1];
-    }
-
-    const std::string *get_Contact_Parser_String() const
-    {
-        return Contact_Parser_String;
-    }
-
-    // setters/getters for output params
-    void Set_StepFilenameString(const int step);
-    void Set_IterationFilenameString(const int iter);
-    int get_flag_write_at_iter() const { return write_at_iter; }
-    std::string get_step_filename() const { return step_filename_str; }
-    std::string get_iter_filename() const { return iter_filename_str; }
-    std::string get_step_foldername() const { return step_foldername_str; }
-    std::string get_iter_foldername() const { return iter_foldername_str; }
-    std::string get_read_atom_filename() const { return read_atom_filename; }
-
-    int get_Total_Integration_Pts() const;
+    void Initialize_GPUArraysForGreensAndSpectralFunctionToZero();
+    void Initialize_GPUArraysForChargeComputationToZero();
 };
 
 template <typename T>

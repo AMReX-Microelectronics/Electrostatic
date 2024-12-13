@@ -1,5 +1,9 @@
 #include "NEGF_Common.H"
 
+#include "../../../Code.H"
+#include "../../../Input/BoundaryConditions/BoundaryConditions.H"
+#include "../../../Input/GeometryProperties/GeometryProperties.H"
+#include "../../../Input/MacroscopicProperties/MacroscopicProperties.H"
 #include "../../Utils/CodeUtils/CodeUtil.H"
 #include "../../Utils/SelectWarpXUtils/TextMsg.H"
 #include "../../Utils/SelectWarpXUtils/WarpXConst.H"
@@ -7,8 +11,9 @@
 #include "Matrix_Block_Util.H"
 
 /*Explicit specializations*/
-template class c_NEGF_Common<ComplexType[NUM_MODES]>;             // of c_CNT
-template class c_NEGF_Common<ComplexType[NUM_MODES][NUM_MODES]>;  // c_Graphene
+template class c_NEGF_Common<ComplexType[BLOCK_SIZE]>;  // of c_CNT
+template class c_NEGF_Common<
+    ComplexType[BLOCK_SIZE][BLOCK_SIZE]>;  // c_Graphene
 
 const std::map<std::string, AngleType> map_strToAngleType = {
     {"d", AngleType::Degrees},
@@ -20,6 +25,12 @@ const std::map<std::string, AngleType> map_strToAngleType = {
 const std::map<std::string, AxisType> map_strToAxisType = {
     {"x", AxisType::X}, {"X", AxisType::X}, {"y", AxisType::Y},
     {"Y", AxisType::Y}, {"z", AxisType::Z}, {"Z", AxisType::Z}};
+
+const std::map<std::string, Gate_Terminal_Type> map_S_GateTerminalType = {
+    {"eb", Gate_Terminal_Type::EB},
+    {"EB", Gate_Terminal_Type::EB},
+    {"boundary", Gate_Terminal_Type::Boundary},
+    {"Boundary", Gate_Terminal_Type::Boundary}};
 
 template <typename T>
 void c_NEGF_Common<T>::Set_KeyParams(const std::string &name_str,
@@ -365,6 +376,18 @@ void c_NEGF_Common<T>::Read_TerminalParams(amrex::ParmParse &pp_ns)
 {
     pp_ns.query("gate_string", Gate_String);
 
+    pp_ns.query("gate_terminal_type", gate_terminal_type_str);
+
+    if (map_S_GateTerminalType.find(gate_terminal_type_str) !=
+        map_S_GateTerminalType.end())
+    {
+        gate_terminal_type = map_S_GateTerminalType.at(gate_terminal_type_str);
+    }
+    else
+    {
+        amrex::Abort("gate_terminal_type: " + gate_terminal_type_str +
+                     " is invalid. Valid type: EB or Boundary.");
+    }
     queryWithParser(pp_ns, "contact_Fermi_level", E_f);
 
     pp_ns.query("contact_mu_specified", flag_contact_mu_specified);
@@ -423,6 +446,15 @@ void c_NEGF_Common<T>::Read_EqContourIntgPts(amrex::ParmParse &pp_ns)
 {
     auto is_specified_eq = queryArrWithParser(pp_ns, "eq_integration_pts",
                                               eq_integration_pts, 0, 3);
+}
+
+template <typename T>
+void c_NEGF_Common<T>::Read_DOSParams(amrex::ParmParse &pp_ns)
+{
+    pp_ns.query("flag_compute_DOS", flag_compute_DOS);
+    pp_ns.query("flag_write_LDOS", flag_write_LDOS);
+    pp_ns.query("flag_write_LDOS_iter", flag_write_LDOS_iter);
+    pp_ns.query("write_LDOS_iter_period", write_LDOS_iter_period);
 }
 
 template <typename T>
@@ -595,6 +627,22 @@ void c_NEGF_Common<T>::Read_RecursiveOptimizationParams(amrex::ParmParse &pp_ns)
 }
 
 template <typename T>
+void c_NEGF_Common<T>::Read_DecimationTechniqueParams(amrex::ParmParse &pp_ns)
+{
+    queryWithParser(pp_ns, "use_decimation", use_decimation);
+    queryWithParser(pp_ns, "decimation_max_iter", decimation_max_iter);
+    queryWithParser(pp_ns, "decimation_rel_error", decimation_rel_error);
+    queryWithParser(pp_ns, "decimation_layers", decimation_layers);
+
+    amrex::Print() << "##### use_decimation: " << use_decimation << "\n";
+    amrex::Print() << "##### decimation_max_iter: " << decimation_max_iter
+                   << "\n";
+    amrex::Print() << "##### decimation_rel_error: " << decimation_rel_error
+                   << "\n";
+    amrex::Print() << "##### decimation_layers: " << decimation_layers << "\n";
+}
+
+template <typename T>
 void c_NEGF_Common<T>::Assert_Reads()
 {
     amrex::Print() << "##### Assert Reads\n";
@@ -636,6 +684,7 @@ void c_NEGF_Common<T>::Read_CommonData(amrex::ParmParse &pp)
     Read_TerminalParams(pp);
     Read_PotentialProfileParams(pp);
     Read_EqContourIntgPts(pp);
+    Read_DOSParams(pp);
     Read_FlatbandDOSParams(pp);
     Read_NonEqPathParams(pp);
     Read_IntegrationParams(pp);
@@ -643,6 +692,7 @@ void c_NEGF_Common<T>::Read_CommonData(amrex::ParmParse &pp)
     Read_WritingRelatedFlags(pp);
     Read_AtomLocationAndChargeDistributionFilename(pp);
     Read_RecursiveOptimizationParams(pp);
+    Read_DecimationTechniqueParams(pp);
 }
 
 template <typename T>
@@ -728,6 +778,7 @@ void c_NEGF_Common<T>::Print_ReadData()
     Print_TerminalParams();
     Print_PotentialProfileParams();
     Print_EqContourIntgPts();
+    Print_DOSParams();
     Print_FlatbandDOSParams();
     Print_NonEqPathParams();
     Print_IntegrationParams();
@@ -806,6 +857,9 @@ void c_NEGF_Common<T>::Print_TerminalParams()
 {
     amrex::Print() << "##### gate_string: " << Gate_String << "\n";
 
+    amrex::Print() << "##### gate_terminal_type: " << gate_terminal_type_str
+                   << "\n";
+
     amrex::Print() << "##### contact_Fermi_level, E_f / [eV]: " << E_f << "\n";
 
     amrex::Print() << "##### contact_mu_specified: "
@@ -857,6 +911,20 @@ void c_NEGF_Common<T>::Print_EqContourIntgPts()
         amrex::Print() << eq_integration_pts[c] << "  ";
     }
     amrex::Print() << "\n";
+}
+
+template <typename T>
+void c_NEGF_Common<T>::Print_DOSParams()
+{
+    amrex::Print() << "##### flag_compute_DOS: " << flag_compute_DOS << "\n";
+
+    amrex::Print() << "##### flag_write_LDOS: " << flag_write_LDOS << "\n";
+
+    amrex::Print() << "##### flag_write_LDOS_iter: " << flag_write_LDOS_iter
+                   << "\n";
+
+    amrex::Print() << "##### write_LDOS_iter_period: " << write_LDOS_iter_period
+                   << "\n";
 }
 
 template <typename T>
@@ -1238,8 +1306,11 @@ void c_NEGF_Common<T>::Initialize_NEGF(const std::string common_foldername_str,
 }
 
 template <typename T>
-void c_NEGF_Common<T>::Solve_NEGF(RealTable1D &n_curr_out_data, const int iter)
+void c_NEGF_Common<T>::Solve_NEGF(RealTable1D &n_curr_out_data, const int iter,
+                                  const bool flag_update_terminal_bias)
 {
+    if (flag_update_terminal_bias) Set_TerminalBiasesAndContactPotential();
+
     Add_PotentialToHamiltonian();
 
     if (flag_adaptive_integration_limits and
@@ -1269,6 +1340,71 @@ void c_NEGF_Common<T>::Solve_NEGF(RealTable1D &n_curr_out_data, const int iter)
 }
 
 template <typename T>
+void c_NEGF_Common<T>::Write_Data_General(const bool isIter,
+                                          const int iter_or_step,
+                                          const int total_iterations_in_step,
+                                          const amrex::Real avg_intg_pts,
+                                          RealTable1D const &h_n_curr_out_data,
+                                          RealTable1D const &h_Norm_data)
+{
+    // Note: n_curr_out_glo is output from negf and input to broyden.
+    // n_curr_in is the broyden predicted charge for next iteration.
+    // NEGF->n_curr_out -> Broyden->n_curr_in -> Electrostatics -> NEGF.
+    std::string write_filename;
+    bool to_write = false;
+
+    if (isIter)
+    {
+        write_filename = get_iter_filename();
+        if (get_flag_write_at_iter())
+        {
+            to_write = true;
+        }
+    }
+    else
+    {
+        write_filename = get_step_filename();
+        to_write = true;
+    }
+
+    if (to_write)
+    {
+        auto const &h_n_curr_out = h_n_curr_out_data.table();
+        auto const &h_Norm = h_Norm_data.table();
+
+        RealTable1D n_curr_out_glo_data;
+        RealTable1D Norm_glo_data;
+
+        if (ParallelDescriptor::IOProcessor())
+        {
+            const int Hsize = get_num_field_sites();
+            n_curr_out_glo_data.resize({0}, {Hsize}, The_Pinned_Arena());
+            Norm_glo_data.resize({0}, {Hsize}, The_Pinned_Arena());
+        }
+        auto const &n_curr_out_glo = n_curr_out_glo_data.table();
+        auto const &Norm_glo = Norm_glo_data.table();
+
+        MPI_Gatherv(&h_n_curr_out(0), MPI_recv_count[my_rank], MPI_DOUBLE,
+                    &n_curr_out_glo(0), MPI_recv_count.data(),
+                    MPI_recv_disp.data(), MPI_DOUBLE,
+                    ParallelDescriptor::IOProcessorNumber(),
+                    ParallelDescriptor::Communicator());
+
+        MPI_Gatherv(&h_Norm(0), MPI_recv_count[my_rank], MPI_DOUBLE,
+                    &Norm_glo(0), MPI_recv_count.data(), MPI_recv_disp.data(),
+                    MPI_DOUBLE, ParallelDescriptor::IOProcessorNumber(),
+                    ParallelDescriptor::Communicator());
+
+        Write_Data(write_filename, n_curr_out_glo_data, Norm_glo_data);
+    }
+
+    if (!isIter)
+    {
+        Write_Current(iter_or_step, total_iterations_in_step, avg_intg_pts);
+    }
+}
+
+template <typename T>
 void c_NEGF_Common<T>::Write_Data(const std::string filename_prefix,
                                   const RealTable1D &n_curr_out_data,
                                   const RealTable1D &Norm_data)
@@ -1280,17 +1416,6 @@ void c_NEGF_Common<T>::Write_Data(const std::string filename_prefix,
         Write_ChargeNorm(filename_prefix, Norm_data);
     }
 }
-
-// template<typename T>
-// void
-// c_NEGF_Common<T>::Define_ContactInfo ()
-//{
-//     /*define the following in overridden functions:
-//      *global_contact_index
-//      *contact_transmission_index
-//      *h_tau
-//      */
-// }
 
 template <typename T>
 void c_NEGF_Common<T>::Allocate_ArraysForHamiltonian()
@@ -1305,6 +1430,81 @@ void c_NEGF_Common<T>::Allocate_ArraysForHamiltonian()
 
     h_Hc_loc_data.resize({0}, {offDiag_repeatBlkSize}, The_Pinned_Arena());
     SetVal_Table1D(h_Hc_loc_data, zero);
+}
+
+template <typename T>
+void c_NEGF_Common<T>::Compute_CondensedHamiltonian(CondensedHamiltonian &CondH,
+                                                    const ComplexType EmU)
+{
+    auto &Xi_s = CondH.Xi_s;
+    auto &Xi = CondH.Xi;
+    auto &Pi = CondH.Pi;
+
+    int P = decimation_layers;
+
+    BlkTable1D H_tilde_data({0}, {P - 1});
+    auto const &H_tilde = H_tilde_data.table();
+    auto const &Hb = h_Hb_loc_data.table();
+
+    MatrixBlock<T> EmUI;
+    EmUI.SetDiag(EmU);  // This is (E-U)I
+
+    H_tilde(P - 1).SetDiag(1. / EmU);  // This is (P-1) element of [(E-U)I]^-1
+
+    auto H_tilde_kP = H_tilde(P - 1);  // This is H_tilde(P-1)(P-1)
+
+    for (int k = P - 2; k >= 1; --k)
+    {
+        int j = k % offDiag_repeatBlkSize;
+        auto temp1 = EmUI - 1. * Hb(j) * H_tilde(k + 1) * Hb(j).Dagger();
+
+        H_tilde(k) = temp1.Inverse();
+
+        H_tilde_kP = H_tilde(k) * Hb(j) * H_tilde_kP;
+    }
+    // here H_tilde_kP is H_tilde_1P
+
+    MatrixBlock<T> C_tilde_kk = H_tilde(1);  //==H_tilde_11 = C_tilde_11
+
+    for (int k = 2; k < P; ++k)
+    {
+        int j = (k - 1) % offDiag_repeatBlkSize;
+        C_tilde_kk = H_tilde(k) + H_tilde(k) * Hb(j).Dagger() * C_tilde_kk *
+                                      Hb(j) * H_tilde(k);
+    }
+    /* Here, C_tilde_kk = C_tilde_(P-1)(P-1)
+     * and,  C_tilde_1P = H_tilde_1P = H_tilde_kP
+     *       C_tilde_11 = H_tilde(1)
+     */
+
+    int id = (P - 1) % offDiag_repeatBlkSize;
+    Xi_s = Hb(0) * H_tilde(1) * Hb(0).Dagger();
+    Xi = Xi_s + Hb(id) * C_tilde_kk * Hb(id).Dagger();
+    Pi = Hb(0) * H_tilde_kP * Hb(id);
+
+    /* For P=2, as an example,
+     *
+     * Xi_s = Hb(0) * H_tilde(1) * Hb(0).Dagger();
+     * Xi   = Xi_s + Hb(1) * C_tilde_kk * Hb(1).Dagger();
+     * Pi   = Hb(0) * H_tilde_kP * Hb(1);
+     *
+     * H_tilde(1) = 1/(E-U)
+     * Hb(0)      = beta
+     * Hb(1)      = gamma
+     * C_tilde_kk = H_tilde(1)
+     * H_tilde_kP = H_tilde(1)
+     *
+     */
+
+    /*
+      amrex::Print() << " EmU: " << EmU  << "\n";
+      amrex::Print() << "Xi_s: " << Xi_s << "\n";
+      amrex::Print() << "  Xi: " << Xi   << "\n";
+      amrex::Print() << "  Pi: " << Pi   << "\n";
+      amrex::Print() << " H_tilde(1): " << H_tilde(1) << "\n";
+      amrex::Print() << " C_tilde_kk: " << C_tilde_kk << "\n";
+      amrex::Print() << " H_tilde_kP: " << H_tilde_kP << "\n";
+    */
 }
 
 template <typename T>
@@ -2154,6 +2354,39 @@ void c_NEGF_Common<T>::Deallocate_TemporaryArraysForGFComputation()
 }
 
 template <typename T>
+void c_NEGF_Common<T>::Compute_DensityOfStates_General(bool flag_isIter,
+                                                       int iter_or_step)
+{
+    if (flag_isIter)
+    {
+        if (flag_write_LDOS_iter and
+            (iter_or_step + 1) % write_LDOS_iter_period == 0)
+        {
+            std::string iter_dos_foldername_str =
+                amrex::Concatenate(iter_foldername_str + "/DOS_iter",
+                                   iter_or_step, negf_plt_name_digits);
+
+            CreateDirectory(iter_dos_foldername_str);
+            // e.g.: /negf/cnt/step0001_iter/LDOS_iter0002/
+
+            Compute_DensityOfStates(iter_dos_foldername_str,
+                                    flag_write_LDOS_iter);
+        }
+    }
+    else if (flag_compute_DOS)
+    {
+        std::string dos_step_foldername_str =
+            amrex::Concatenate(step_foldername_str + "/DOS_step", iter_or_step,
+                               negf_plt_name_digits);
+
+        CreateDirectory(dos_step_foldername_str);
+        // e.g.: /negf/cnt/DOS_step0001/
+
+        Compute_DensityOfStates(dos_step_foldername_str, flag_write_LDOS);
+    }
+}
+
+template <typename T>
 void c_NEGF_Common<T>::Compute_DensityOfStates(std::string dos_foldername,
                                                bool flag_write_LDOS)
 {
@@ -2656,11 +2889,11 @@ void c_NEGF_Common<T>::Compute_InducedCharge(RealTable1D &n_curr_out_data)
 #endif
     auto const &RhoInduced_loc = n_curr_out_data.table();
 
-    int SSL_offset = site_size_loc_offset; /*changes for multiple nanotube*/
+    int field_sites_NS_offset = num_field_sites_loc_NS_offset;
     amrex::ParallelFor(blkCol_size_loc,
                        [=] AMREX_GPU_DEVICE(int n) noexcept
                        {
-                           RhoInduced_loc(n + SSL_offset) =
+                           RhoInduced_loc(n + field_sites_NS_offset) =
                                (RhoEq_loc(n).DiagSum().imag() +
                                 RhoNonEq_loc(n).DiagSum().real() -
                                 Rho0_loc(n).DiagSum().imag());
@@ -2790,44 +3023,21 @@ void c_NEGF_Common<T>::Write_ChargeComponents(
 }
 
 template <typename T>
-void c_NEGF_Common<T>::Fetch_InputLocalCharge_FromNanostructure(
-    RealTable1D &container_data, const int NS_offset, const int disp,
-    const int data_size)
+void c_NEGF_Common<T>::Copy_LocalChargeFromNanostructure(
+    RealTable1D &container_data, const int NS_offset)
 {
     auto const &h_n_curr_in_glo = h_n_curr_in_glo_data.table();
     auto const &container = container_data.table();
+
+    int disp = MPI_recv_disp[my_rank];
+    int data_size = MPI_recv_count[my_rank];
+
     for (int i = 0; i < data_size; ++i)
     {
         int gid = disp + i;
         container(i + NS_offset) = h_n_curr_in_glo(gid);
     }
     h_n_curr_in_glo_data.clear();
-}
-
-template <typename T>
-void c_NEGF_Common<T>::Scatterv_BroydenComputed_GlobalCharge(
-    RealTable1D &n_curr_in_glo_data)
-{
-    auto const &n_curr_in_glo = n_curr_in_glo_data.table();
-    auto const &h_n_curr_in_loc = h_n_curr_in_loc_data.table();
-
-    // amrex::Print() << "In Scatterv: num_local_field_sites, " <<
-    // num_local_field_sites << "\n";
-
-    MPI_Scatterv(&n_curr_in_glo(0), MPI_send_count.data(), MPI_send_disp.data(),
-                 MPI_DOUBLE, &h_n_curr_in_loc(0), num_local_field_sites,
-                 MPI_DOUBLE, ParallelDescriptor::IOProcessorNumber(),
-                 ParallelDescriptor::Communicator());
-
-    // amrex::Print() << "h_n_curr_in_loc in CopyToNS: \n";
-    // amrex::Print() << "MPI_send_count/disp: " << MPI_send_count[0] << " " <<
-    // MPI_send_disp[0] << "\n"; if (ParallelDescriptor::IOProcessor())
-    //{
-    //     for(int n=0; n < 5; ++n) {
-    //        amrex::Print() << n << "  " <<  h_n_curr_in_loc(n) << "\n";
-    //     }
-    // }
-    // MPI_Barrier(ParallelDescriptor::Communicator());
 }
 
 template <typename T>
@@ -3881,11 +4091,74 @@ void c_NEGF_Common<T>::Compute_Rho0()
     Deallocate_TemporaryArraysForGFComputation();
 }
 
-// template<typename T>
-// AMREX_GPU_HOST_DEVICE
-// void
-// c_NEGF_Common<T>:: Compute_SurfaceGreensFunction (MatrixBlock<T>& gr, const
-// ComplexType EmU) {}
+template <typename T>
+AMREX_GPU_HOST_DEVICE void c_NEGF_Common<T>::DecimationTechnique(
+    MatrixBlock<T> &gr, const ComplexType EmU)
+{
+    CondensedHamiltonian CondH;
+    Compute_CondensedHamiltonian(CondH, EmU);
+
+    MatrixBlock<T> mu, nu, gamma, zeta;
+
+    // initialize these blocks
+    {
+        MatrixBlock<T> EmUI;
+        EmUI.SetDiag(EmU);
+
+        auto mu0 = EmUI - CondH.Xi_s;
+        auto nu0 = EmUI - CondH.Xi;
+        auto gamma0 = CondH.Pi;
+
+        auto nu0_inverse = nu0.Inverse();
+        auto gamma0_dagger = gamma0.Dagger();
+
+        MatrixBlock<T> temp1 = gamma0 * nu0_inverse;
+        MatrixBlock<T> temp2 = temp1 * gamma0_dagger;
+        MatrixBlock<T> temp3 = gamma0_dagger * nu0_inverse;
+
+        mu = mu0 - temp2;
+        nu = nu0 - temp2 - temp3 * gamma0;
+        gamma = temp1 * gamma0;
+        zeta = temp3 * gamma0_dagger;
+    }
+
+    amrex::Real error = 1;
+    int i = 0;
+
+    while (error > decimation_rel_error)
+    {
+        auto mu_old = mu;
+
+        auto nu_inverse = nu.Inverse();
+        auto temp1 = zeta * nu_inverse * gamma;
+        auto temp2 = gamma * nu_inverse * zeta;
+
+        mu = mu - temp1;
+        nu = nu - temp1 - temp2;
+        gamma = gamma * nu_inverse * gamma;
+        zeta = zeta * nu_inverse * zeta;
+
+        auto sum = mu + mu_old;
+        auto error_mat = (mu - mu_old) * sum.Inverse();
+
+        error = sqrt(amrex::norm(error_mat.FrobeniusNorm()));
+        if (i > decimation_max_iter) break;
+
+        i++;
+    }
+    // amrex::Print() << "decimation iterations: " << i << " error: " << error
+    // << "\n";
+
+    gr = mu.Inverse();
+}
+
+template <typename T>
+AMREX_GPU_HOST_DEVICE void c_NEGF_Common<T>::Compute_SurfaceGreensFunction(
+    MatrixBlock<T> &gr, const ComplexType E, ComplexType U)
+{
+    DecimationTechnique(gr, E - U);
+    // amrex::Print() << "Using decimation, gr: " << gr << "\n";
+}
 
 template <typename T>
 void c_NEGF_Common<T>::get_Sigma_at_contacts(BlkTable1D &h_Sigma_contact_data,
@@ -3897,8 +4170,7 @@ void c_NEGF_Common<T>::get_Sigma_at_contacts(BlkTable1D &h_Sigma_contact_data,
     for (std::size_t c = 0; c < NUM_CONTACTS; ++c)
     {
         MatrixBlock<T> gr;
-        Compute_SurfaceGreensFunction(gr, E - U_contact[c]);
-        // amrex::Print() << "c, E, gr: " << c << " " << E << " " << gr << "\n";
+        Compute_SurfaceGreensFunction(gr, E, U_contact[c]);
         h_Sigma(c) = h_tau(c) * gr * h_tau(c).Dagger();
     }
 }
@@ -4542,11 +4814,9 @@ void c_NEGF_Common<T>::Compute_Current()
 }
 
 template <typename T>
-void c_NEGF_Common<T>::Write_Current(const int step, const amrex::Real Vds,
-                                     const amrex::Real Vgs,
-                                     const int avg_intg_pts, const int max_iter,
-                                     const amrex::Real Broyden_fraction,
-                                     const int Broyden_Scalar)
+void c_NEGF_Common<T>::Write_Current(const int step,
+                                     const int total_iterations_in_step,
+                                     const amrex::Real avg_intg_pts)
 {
     if (ParallelDescriptor::IOProcessor())
     {
@@ -4561,35 +4831,109 @@ void c_NEGF_Common<T>::Write_Current(const int step, const amrex::Real Vds,
         {
             outfile_I << std::setw(20) << h_Current_loc(k);
         }
-        outfile_I << std::setw(10) << avg_intg_pts << std::setw(10) << max_iter
-                  << std::setw(10) << Broyden_fraction << std::setw(10)
-                  << Broyden_Scalar << std::setw(20) << total_conductance
-                  << "\n";
+        outfile_I << std::setw(10) << avg_intg_pts << std::setw(10)
+                  << total_iterations_in_step << std::setw(20)
+                  << total_conductance << "\n";
         outfile_I.close();
     }
 }
 
-// template<typename T>
-// void
-// c_NEGF_Common<T>::DeallocateArrays ()
-//{
-//
-// }
-//
-//
-// template<typename T>
-// void
-// c_NEGF_Common<T>::ComputeChargeDensity ()
-//{
-//
-// }
+template <typename T>
+void c_NEGF_Common<T>::Set_TerminalBiasesAndContactPotential()
+{
+    auto &rCode = c_Code::GetInstance();
+    auto &rGprop = rCode.get_GeometryProperties();
+    auto &rBC = rCode.get_BoundaryConditions();
 
-//
-// template<typename T>
-// AMREX_GPU_HOST_DEVICE
-// ComplexType
-// c_NEGF_Common<T>::conjugate(ComplexType a)
-//{
-//   ComplexType a_conj(a.real(), -1.*a.imag());
-//   return a_conj;
-//}
+    if (!flag_contact_mu_specified)
+    {
+        amrex::Real V_contact[NUM_CONTACTS] = {0., 0.};
+        amrex::Vector<amrex::Real> ep(NUM_CONTACTS, 0);
+
+        const auto *ps = get_Contact_Parser_String();
+        for (int k = 0; k < NUM_CONTACTS; ++k)
+        {
+            V_contact[k] = rGprop.pEB->Read_SurfSoln(ps[k]);
+
+            amrex::Print() << "\n Updated terminal voltage: " << k << "  "
+                           << V_contact[k] << " V\n";
+
+            ep[k] = get_Fermi_level() - V_contact[k];
+        }
+        set_Contact_Electrochemical_Potential(ep);
+
+        Vds = V_contact[1] - V_contact[0];
+
+        if (gate_terminal_type == Gate_Terminal_Type::EB)
+        {
+            Vgs = rGprop.pEB->Read_SurfSoln(get_Gate_String()) - V_contact[0];
+        }
+        else if (gate_terminal_type == Gate_Terminal_Type::Boundary)
+        {
+            Vgs = rBC.Read_BoundarySoln(get_Gate_String()) - V_contact[0];
+        }
+    }
+    else
+    {
+        amrex::Real ep_s = get_Source_Electrochemical_Potential();
+        amrex::Real ep_d = get_Drain_Electrochemical_Potential();
+
+        Vds = ep_s - ep_d;
+
+        amrex::Real GV = 0.;
+        if (gate_terminal_type == Gate_Terminal_Type::EB)
+        {
+            GV = rGprop.pEB->Read_SurfSoln(get_Gate_String());
+        }
+        else if (gate_terminal_type == Gate_Terminal_Type::Boundary)
+        {
+            GV = rBC.Read_BoundarySoln(get_Gate_String());
+        }
+
+        amrex::Print() << "\n Updated gate voltage: " << GV << " V\n";
+        Vgs = GV - (get_Fermi_level() - ep_s);
+    }
+    amrex::Print() << " Vds: " << Vds << " V, Vgs: " << Vgs << " V\n";
+}
+
+template <typename T>
+void c_NEGF_Common<T>::Copy_BroydenPredictedCharge(
+    const RealTable1D &h_n_curr_in_data)
+{
+    auto const &h_n_curr_in = h_n_curr_in_data.table();
+
+    RealTable1D n_curr_in_glo_data;
+
+    if (ParallelDescriptor::IOProcessor())
+    {
+        n_curr_in_glo_data.resize({0}, {num_field_sites}, The_Pinned_Arena());
+    }
+    auto const &n_curr_in_glo = n_curr_in_glo_data.table();
+
+    MPI_Gatherv(&h_n_curr_in(0), MPI_recv_count[my_rank], MPI_DOUBLE,
+                &n_curr_in_glo(0), MPI_recv_count.data(), MPI_recv_disp.data(),
+                MPI_DOUBLE, ParallelDescriptor::IOProcessorNumber(),
+                ParallelDescriptor::Communicator());
+
+    auto const &h_n_curr_in_loc = h_n_curr_in_loc_data.table();
+
+    MPI_Scatterv(&n_curr_in_glo(0), MPI_send_count.data(), MPI_send_disp.data(),
+                 MPI_DOUBLE, &h_n_curr_in_loc(0), num_local_field_sites,
+                 MPI_DOUBLE, ParallelDescriptor::IOProcessorNumber(),
+                 ParallelDescriptor::Communicator());
+    // amrex::Print() << "h_n_curr_in_loc in CopyToNS: \n";
+    // amrex::Print() << "MPI_send_count/disp: " << MPI_send_count[0] << " " <<
+    // MPI_send_disp[0] << "\n"; if (ParallelDescriptor::IOProcessor())
+    //{
+    //     for(int n=0; n < 5; ++n) {
+    //        amrex::Print() << n << "  " <<  h_n_curr_in_loc(n) << "\n";
+    //     }
+    // }
+    // MPI_Barrier(ParallelDescriptor::Communicator());
+
+    // write out charge
+    if (write_at_iter)
+    {
+        Write_InputInducedCharge(iter_filename_str, n_curr_in_glo_data);
+    }
+}
