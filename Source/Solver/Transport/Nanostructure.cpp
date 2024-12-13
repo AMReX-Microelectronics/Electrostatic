@@ -17,7 +17,6 @@
 
 template class c_Nanostructure<c_CNT>;
 template class c_Nanostructure<c_Graphene>;
-// template class c_Nanostructure<c_Silicon>;
 
 template <typename NSType>
 c_Nanostructure<NSType>::c_Nanostructure(
@@ -64,7 +63,7 @@ c_Nanostructure<NSType>::c_Nanostructure(
 
         NSType::Initialize_ChargeAtFieldSites();
 
-        Deposit_AtomAttributeToMesh();
+        Deposit_ChargeDensityToMesh();
     }
 
     if (_use_negf)
@@ -284,7 +283,7 @@ void c_Nanostructure<NSType>::Mark_CellsWithAtoms()
 }
 
 template <typename NSType>
-void c_Nanostructure<NSType>::Gather_MeshAttributeAtAtoms()
+void c_Nanostructure<NSType>::Gather_PotentialAtAtoms()
 {
     const auto &plo = _geom->ProbLoArray();
     const auto dx = _geom->CellSizeArray();
@@ -342,7 +341,7 @@ void c_Nanostructure<NSType>::Deposit_ZeroToMesh()
 }
 
 template <typename NSType>
-void c_Nanostructure<NSType>::Deposit_AtomAttributeToMesh()
+void c_Nanostructure<NSType>::Deposit_ChargeDensityToMesh()
 {
     const auto &plo = _geom->ProbLoArray();
     const auto dx = _geom->CellSizeArray();
