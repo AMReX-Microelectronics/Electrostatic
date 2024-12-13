@@ -1,3 +1,4 @@
+#include "MathLib.H"
 #include "Matrix_Block.H"
 
 /* Definitions */
@@ -9,10 +10,10 @@ MatrixBlock<T> MatrixBlock<T>::operator=(const ComplexType c_comp)
 }
 
 template <>
-MatrixBlock<ComplexType[NUM_MODES]>
-MatrixBlock<ComplexType[NUM_MODES]>::operator=(const ComplexType c_comp)
+MatrixBlock<ComplexType[BLOCK_SIZE]>
+MatrixBlock<ComplexType[BLOCK_SIZE]>::operator=(const ComplexType c_comp)
 {
-    for (int i = 0; i < NUM_MODES; ++i)
+    for (int i = 0; i < BLOCK_SIZE; ++i)
     {
         this->block[i] = c_comp;
     }
@@ -20,13 +21,13 @@ MatrixBlock<ComplexType[NUM_MODES]>::operator=(const ComplexType c_comp)
 }
 
 template <>
-MatrixBlock<ComplexType[NUM_MODES][NUM_MODES]>
-MatrixBlock<ComplexType[NUM_MODES][NUM_MODES]>::operator=(
+MatrixBlock<ComplexType[BLOCK_SIZE][BLOCK_SIZE]>
+MatrixBlock<ComplexType[BLOCK_SIZE][BLOCK_SIZE]>::operator=(
     const ComplexType c_comp)
 {
-    for (int i = 0; i < NUM_MODES; ++i)
+    for (int i = 0; i < BLOCK_SIZE; ++i)
     {
-        for (int j = 0; j < NUM_MODES; ++j)
+        for (int j = 0; j < BLOCK_SIZE; ++j)
         {
             this->block[i][j] = c_comp;
         }
@@ -43,8 +44,8 @@ MatrixBlock<T> MatrixBlock<T>::operator=(const amrex::Real c)
 }
 
 template <>
-MatrixBlock<ComplexType[NUM_MODES]>
-MatrixBlock<ComplexType[NUM_MODES]>::operator=(const amrex::Real c)
+MatrixBlock<ComplexType[BLOCK_SIZE]>
+MatrixBlock<ComplexType[BLOCK_SIZE]>::operator=(const amrex::Real c)
 {
     ComplexType c_complex(c, 0.);
     *this = c_complex;
@@ -52,8 +53,8 @@ MatrixBlock<ComplexType[NUM_MODES]>::operator=(const amrex::Real c)
 }
 
 template <>
-MatrixBlock<ComplexType[NUM_MODES][NUM_MODES]>
-MatrixBlock<ComplexType[NUM_MODES][NUM_MODES]>::operator=(const amrex::Real c)
+MatrixBlock<ComplexType[BLOCK_SIZE][BLOCK_SIZE]>
+MatrixBlock<ComplexType[BLOCK_SIZE][BLOCK_SIZE]>::operator=(const amrex::Real c)
 {
     ComplexType c_complex(c, 0.);
     *this = c_complex;
@@ -69,11 +70,11 @@ MatrixBlock<T> MatrixBlock<T>::operator*(const ComplexType c)
 }
 
 template <>
-MatrixBlock<ComplexType[NUM_MODES]>
-MatrixBlock<ComplexType[NUM_MODES]>::operator*(const ComplexType c)
+MatrixBlock<ComplexType[BLOCK_SIZE]>
+MatrixBlock<ComplexType[BLOCK_SIZE]>::operator*(const ComplexType c)
 {
-    MatrixBlock<ComplexType[NUM_MODES]> result;
-    for (int i = 0; i < NUM_MODES; ++i)
+    MatrixBlock<ComplexType[BLOCK_SIZE]> result;
+    for (int i = 0; i < BLOCK_SIZE; ++i)
     {
         result.block[i] = this->block[i] * c;
     }
@@ -82,13 +83,14 @@ MatrixBlock<ComplexType[NUM_MODES]>::operator*(const ComplexType c)
 }
 
 template <>
-MatrixBlock<ComplexType[NUM_MODES][NUM_MODES]>
-MatrixBlock<ComplexType[NUM_MODES][NUM_MODES]>::operator*(const ComplexType c)
+MatrixBlock<ComplexType[BLOCK_SIZE][BLOCK_SIZE]>
+MatrixBlock<ComplexType[BLOCK_SIZE][BLOCK_SIZE]>::operator*(const ComplexType c)
 {
-    MatrixBlock<ComplexType[NUM_MODES][NUM_MODES]> result;
-    for (int i = 0; i < NUM_MODES; ++i)
+    MatrixBlock<ComplexType[BLOCK_SIZE][BLOCK_SIZE]> result;
+
+    for (int i = 0; i < BLOCK_SIZE; ++i)
     {
-        for (int j = 0; j < NUM_MODES; ++j)
+        for (int j = 0; j < BLOCK_SIZE; ++j)
         {
             result.block[i][j] = this->block[i][j] * c;
         }
@@ -106,12 +108,12 @@ MatrixBlock<T> MatrixBlock<T>::operator*(const MatrixBlock<T> &rhs)
 }
 
 template <>
-MatrixBlock<ComplexType[NUM_MODES]>
-MatrixBlock<ComplexType[NUM_MODES]>::operator*(
-    const MatrixBlock<ComplexType[NUM_MODES]> &rhs)
+MatrixBlock<ComplexType[BLOCK_SIZE]>
+MatrixBlock<ComplexType[BLOCK_SIZE]>::operator*(
+    const MatrixBlock<ComplexType[BLOCK_SIZE]> &rhs)
 {
-    MatrixBlock<ComplexType[NUM_MODES]> result;
-    for (int i = 0; i < NUM_MODES; ++i)
+    MatrixBlock<ComplexType[BLOCK_SIZE]> result;
+    for (int i = 0; i < BLOCK_SIZE; ++i)
     {
         result.block[i] = this->block[i] * rhs.block[i];
     }
@@ -119,18 +121,16 @@ MatrixBlock<ComplexType[NUM_MODES]>::operator*(
 }
 
 template <>
-MatrixBlock<ComplexType[NUM_MODES][NUM_MODES]>
-MatrixBlock<ComplexType[NUM_MODES][NUM_MODES]>::operator*(
-    const MatrixBlock<ComplexType[NUM_MODES][NUM_MODES]> &rhs)
+MatrixBlock<ComplexType[BLOCK_SIZE][BLOCK_SIZE]>
+MatrixBlock<ComplexType[BLOCK_SIZE][BLOCK_SIZE]>::operator*(
+    const MatrixBlock<ComplexType[BLOCK_SIZE][BLOCK_SIZE]> &rhs)
 {
-    MatrixBlock<ComplexType[NUM_MODES][NUM_MODES]> result;
-    for (int i = 0; i < NUM_MODES; ++i)
-    {
-        for (int j = 0; j < NUM_MODES; ++j)
-        {
-            result.block[i][j] = this->block[i][j] * rhs.block[i][j];
-        }
-    }
+    MatrixBlock<ComplexType[BLOCK_SIZE][BLOCK_SIZE]> result;
+
+    // MathLib::MatrixMatrixMultiply(result.data(), this->const_data(),
+    // rhs.const_data(),
+    //                               BLOCK_SIZE, BLOCK_SIZE, BLOCK_SIZE);
+
     return result;
 }
 
@@ -143,11 +143,11 @@ MatrixBlock<T> operator*(const ComplexType c_complex, const MatrixBlock<T> &B)
 }
 
 template <>
-MatrixBlock<ComplexType[NUM_MODES]> operator*(
-    const ComplexType c_complex, const MatrixBlock<ComplexType[NUM_MODES]> &B)
+MatrixBlock<ComplexType[BLOCK_SIZE]> operator*(
+    const ComplexType c_complex, const MatrixBlock<ComplexType[BLOCK_SIZE]> &B)
 {
-    MatrixBlock<ComplexType[NUM_MODES]> result;
-    for (int i = 0; i < NUM_MODES; ++i)
+    MatrixBlock<ComplexType[BLOCK_SIZE]> result;
+    for (int i = 0; i < BLOCK_SIZE; ++i)
     {
         result.block[i] = c_complex * B.block[i];
     }
@@ -155,14 +155,14 @@ MatrixBlock<ComplexType[NUM_MODES]> operator*(
 }
 
 template <>
-MatrixBlock<ComplexType[NUM_MODES][NUM_MODES]> operator*(
+MatrixBlock<ComplexType[BLOCK_SIZE][BLOCK_SIZE]> operator*(
     const ComplexType c_complex,
-    const MatrixBlock<ComplexType[NUM_MODES][NUM_MODES]> &B)
+    const MatrixBlock<ComplexType[BLOCK_SIZE][BLOCK_SIZE]> &B)
 {
-    MatrixBlock<ComplexType[NUM_MODES][NUM_MODES]> result;
-    for (int i = 0; i < NUM_MODES; ++i)
+    MatrixBlock<ComplexType[BLOCK_SIZE][BLOCK_SIZE]> result;
+    for (int i = 0; i < BLOCK_SIZE; ++i)
     {
-        for (int j = 0; j < NUM_MODES; ++j)
+        for (int j = 0; j < BLOCK_SIZE; ++j)
         {
             result.block[i][j] = c_complex * B.block[i][j];
         }
@@ -179,17 +179,17 @@ MatrixBlock<T> operator*(const amrex::Real c_real, const MatrixBlock<T> &B)
 }
 
 template <>
-MatrixBlock<ComplexType[NUM_MODES]> operator*(
-    const amrex::Real c_real, const MatrixBlock<ComplexType[NUM_MODES]> &B)
+MatrixBlock<ComplexType[BLOCK_SIZE]> operator*(
+    const amrex::Real c_real, const MatrixBlock<ComplexType[BLOCK_SIZE]> &B)
 {
     ComplexType c_complex(c_real, 0.);
     return operator*(c_complex, B);
 }
 
 template <>
-MatrixBlock<ComplexType[NUM_MODES][NUM_MODES]> operator*(
+MatrixBlock<ComplexType[BLOCK_SIZE][BLOCK_SIZE]> operator*(
     const amrex::Real c_real,
-    const MatrixBlock<ComplexType[NUM_MODES][NUM_MODES]> &B)
+    const MatrixBlock<ComplexType[BLOCK_SIZE][BLOCK_SIZE]> &B)
 {
     ComplexType c_complex(c_real, 0.);
     return operator*(c_complex, B);
@@ -204,11 +204,11 @@ MatrixBlock<T> MatrixBlock<T>::operator+(const ComplexType c)
 }
 
 template <>
-MatrixBlock<ComplexType[NUM_MODES]>
-MatrixBlock<ComplexType[NUM_MODES]>::operator+(const ComplexType c)
+MatrixBlock<ComplexType[BLOCK_SIZE]>
+MatrixBlock<ComplexType[BLOCK_SIZE]>::operator+(const ComplexType c)
 {
-    MatrixBlock<ComplexType[NUM_MODES]> result;
-    for (int i = 0; i < NUM_MODES; ++i)
+    MatrixBlock<ComplexType[BLOCK_SIZE]> result;
+    for (int i = 0; i < BLOCK_SIZE; ++i)
     {
         result.block[i] = this->block[i] + c;
     }
@@ -225,12 +225,12 @@ MatrixBlock<T> MatrixBlock<T>::operator+(const MatrixBlock<T> &rhs)
 }
 
 template <>
-MatrixBlock<ComplexType[NUM_MODES]>
-MatrixBlock<ComplexType[NUM_MODES]>::operator+(
-    const MatrixBlock<ComplexType[NUM_MODES]> &rhs)
+MatrixBlock<ComplexType[BLOCK_SIZE]>
+MatrixBlock<ComplexType[BLOCK_SIZE]>::operator+(
+    const MatrixBlock<ComplexType[BLOCK_SIZE]> &rhs)
 {
-    MatrixBlock<ComplexType[NUM_MODES]> result;
-    for (int i = 0; i < NUM_MODES; ++i)
+    MatrixBlock<ComplexType[BLOCK_SIZE]> result;
+    for (int i = 0; i < BLOCK_SIZE; ++i)
     {
         result.block[i] = this->block[i] + rhs.block[i];
     }
@@ -238,14 +238,14 @@ MatrixBlock<ComplexType[NUM_MODES]>::operator+(
 }
 
 template <>
-MatrixBlock<ComplexType[NUM_MODES][NUM_MODES]>
-MatrixBlock<ComplexType[NUM_MODES][NUM_MODES]>::operator+(
-    const MatrixBlock<ComplexType[NUM_MODES][NUM_MODES]> &rhs)
+MatrixBlock<ComplexType[BLOCK_SIZE][BLOCK_SIZE]>
+MatrixBlock<ComplexType[BLOCK_SIZE][BLOCK_SIZE]>::operator+(
+    const MatrixBlock<ComplexType[BLOCK_SIZE][BLOCK_SIZE]> &rhs)
 {
-    MatrixBlock<ComplexType[NUM_MODES][NUM_MODES]> result;
-    for (int i = 0; i < NUM_MODES; ++i)
+    MatrixBlock<ComplexType[BLOCK_SIZE][BLOCK_SIZE]> result;
+    for (int i = 0; i < BLOCK_SIZE; ++i)
     {
-        for (int j = 0; j < NUM_MODES; ++j)
+        for (int j = 0; j < BLOCK_SIZE; ++j)
         {
             result.block[i][j] = this->block[i][j] + rhs.block[i][j];
         }
@@ -262,11 +262,11 @@ MatrixBlock<T> operator+(const ComplexType c, const MatrixBlock<T> &rhs)
 }
 
 template <>
-MatrixBlock<ComplexType[NUM_MODES]> operator+(
-    const ComplexType c, const MatrixBlock<ComplexType[NUM_MODES]> &rhs)
+MatrixBlock<ComplexType[BLOCK_SIZE]> operator+(
+    const ComplexType c, const MatrixBlock<ComplexType[BLOCK_SIZE]> &rhs)
 {
-    MatrixBlock<ComplexType[NUM_MODES]> result;
-    for (int i = 0; i < NUM_MODES; ++i)
+    MatrixBlock<ComplexType[BLOCK_SIZE]> result;
+    for (int i = 0; i < BLOCK_SIZE; ++i)
     {
         result.block[i] = c + rhs.block[i];
     }
@@ -274,14 +274,14 @@ MatrixBlock<ComplexType[NUM_MODES]> operator+(
 }
 
 template <>
-MatrixBlock<ComplexType[NUM_MODES][NUM_MODES]> operator+(
+MatrixBlock<ComplexType[BLOCK_SIZE][BLOCK_SIZE]> operator+(
     const ComplexType c,
-    const MatrixBlock<ComplexType[NUM_MODES][NUM_MODES]> &rhs)
+    const MatrixBlock<ComplexType[BLOCK_SIZE][BLOCK_SIZE]> &rhs)
 {
-    MatrixBlock<ComplexType[NUM_MODES][NUM_MODES]> result;
-    for (int i = 0; i < NUM_MODES; ++i)
+    MatrixBlock<ComplexType[BLOCK_SIZE][BLOCK_SIZE]> result;
+    for (int i = 0; i < BLOCK_SIZE; ++i)
     {
-        for (int j = 0; j < NUM_MODES; ++j)
+        for (int j = 0; j < BLOCK_SIZE; ++j)
         {
             result.block[i][j] = c + rhs.block[i][j];
         }
@@ -298,11 +298,11 @@ MatrixBlock<T> MatrixBlock<T>::operator-(const amrex::Real c)
 }
 
 template <>
-MatrixBlock<ComplexType[NUM_MODES]>
-MatrixBlock<ComplexType[NUM_MODES]>::operator-(const amrex::Real c)
+MatrixBlock<ComplexType[BLOCK_SIZE]>
+MatrixBlock<ComplexType[BLOCK_SIZE]>::operator-(const amrex::Real c)
 {
-    MatrixBlock<ComplexType[NUM_MODES]> result;
-    for (int i = 0; i < NUM_MODES; ++i)
+    MatrixBlock<ComplexType[BLOCK_SIZE]> result;
+    for (int i = 0; i < BLOCK_SIZE; ++i)
     {
         result.block[i] = this->block[i] - c;
     }
@@ -319,11 +319,11 @@ MatrixBlock<T> MatrixBlock<T>::operator-(const ComplexType c)
 }
 
 template <>
-MatrixBlock<ComplexType[NUM_MODES]>
-MatrixBlock<ComplexType[NUM_MODES]>::operator-(const ComplexType c)
+MatrixBlock<ComplexType[BLOCK_SIZE]>
+MatrixBlock<ComplexType[BLOCK_SIZE]>::operator-(const ComplexType c)
 {
-    MatrixBlock<ComplexType[NUM_MODES]> result;
-    for (int i = 0; i < NUM_MODES; ++i)
+    MatrixBlock<ComplexType[BLOCK_SIZE]> result;
+    for (int i = 0; i < BLOCK_SIZE; ++i)
     {
         result.block[i] = this->block[i] - c;
     }
@@ -340,12 +340,12 @@ MatrixBlock<T> MatrixBlock<T>::operator-(const MatrixBlock<T> &rhs)
 }
 
 template <>
-MatrixBlock<ComplexType[NUM_MODES]>
-MatrixBlock<ComplexType[NUM_MODES]>::operator-(
-    const MatrixBlock<ComplexType[NUM_MODES]> &rhs)
+MatrixBlock<ComplexType[BLOCK_SIZE]>
+MatrixBlock<ComplexType[BLOCK_SIZE]>::operator-(
+    const MatrixBlock<ComplexType[BLOCK_SIZE]> &rhs)
 {
-    MatrixBlock<ComplexType[NUM_MODES]> result;
-    for (int i = 0; i < NUM_MODES; ++i)
+    MatrixBlock<ComplexType[BLOCK_SIZE]> result;
+    for (int i = 0; i < BLOCK_SIZE; ++i)
     {
         result.block[i] = this->block[i] - rhs.block[i];
     }
@@ -361,11 +361,11 @@ MatrixBlock<T> operator-(const ComplexType c, const MatrixBlock<T> &rhs)
 }
 
 template <>
-MatrixBlock<ComplexType[NUM_MODES]> operator-(
-    const ComplexType c, const MatrixBlock<ComplexType[NUM_MODES]> &rhs)
+MatrixBlock<ComplexType[BLOCK_SIZE]> operator-(
+    const ComplexType c, const MatrixBlock<ComplexType[BLOCK_SIZE]> &rhs)
 {
-    MatrixBlock<ComplexType[NUM_MODES]> result;
-    for (int i = 0; i < NUM_MODES; ++i)
+    MatrixBlock<ComplexType[BLOCK_SIZE]> result;
+    for (int i = 0; i < BLOCK_SIZE; ++i)
     {
         result.block[i] = c - rhs.block[i];
     }
@@ -381,12 +381,12 @@ MatrixBlock<T> operator-(const MatrixBlock<T> &B, const MatrixBlock<T> &C)
 }
 
 template <>
-MatrixBlock<ComplexType[NUM_MODES]> operator-(
-    const MatrixBlock<ComplexType[NUM_MODES]> &B,
-    const MatrixBlock<ComplexType[NUM_MODES]> &C)
+MatrixBlock<ComplexType[BLOCK_SIZE]> operator-(
+    const MatrixBlock<ComplexType[BLOCK_SIZE]> &B,
+    const MatrixBlock<ComplexType[BLOCK_SIZE]> &C)
 {
-    MatrixBlock<ComplexType[NUM_MODES]> result;
-    for (int i = 0; i < NUM_MODES; ++i)
+    MatrixBlock<ComplexType[BLOCK_SIZE]> result;
+    for (int i = 0; i < BLOCK_SIZE; ++i)
     {
         result.block[i] = B.block[i] - C.block[i];
     }
@@ -394,18 +394,46 @@ MatrixBlock<ComplexType[NUM_MODES]> operator-(
 }
 
 template <>
-MatrixBlock<ComplexType[NUM_MODES][NUM_MODES]> operator-(
-    const MatrixBlock<ComplexType[NUM_MODES][NUM_MODES]> &B,
-    const MatrixBlock<ComplexType[NUM_MODES][NUM_MODES]> &C)
+MatrixBlock<ComplexType[BLOCK_SIZE][BLOCK_SIZE]> operator-(
+    const MatrixBlock<ComplexType[BLOCK_SIZE][BLOCK_SIZE]> &B,
+    const MatrixBlock<ComplexType[BLOCK_SIZE][BLOCK_SIZE]> &C)
 {
-    MatrixBlock<ComplexType[NUM_MODES][NUM_MODES]> result;
-    for (int i = 0; i < NUM_MODES; ++i)
+    MatrixBlock<ComplexType[BLOCK_SIZE][BLOCK_SIZE]> result;
+    for (int i = 0; i < BLOCK_SIZE; ++i)
     {
-        for (int j = 0; j < NUM_MODES; ++j)
+        for (int j = 0; j < BLOCK_SIZE; ++j)
         {
             result.block[i][j] = B.block[i][j] - C.block[i][j];
         }
     }
+    return result;
+}
+
+/*Inverse*/
+template <typename T>
+MatrixBlock<T> MatrixBlock<T>::Inverse() const
+{
+    return 1. / (*this);
+}
+
+template <>
+MatrixBlock<ComplexType[BLOCK_SIZE]>
+MatrixBlock<ComplexType[BLOCK_SIZE]>::Inverse() const
+{
+    MatrixBlock<ComplexType[BLOCK_SIZE]> result;
+    for (int i = 0; i < BLOCK_SIZE; ++i)
+    {
+        result.block[i] = 1. / this->block[i];
+    }
+    return result;
+}
+
+template <>
+MatrixBlock<ComplexType[BLOCK_SIZE][BLOCK_SIZE]>
+MatrixBlock<ComplexType[BLOCK_SIZE][BLOCK_SIZE]>::Inverse() const
+{
+    MatrixBlock<ComplexType[BLOCK_SIZE][BLOCK_SIZE]> result;
+    // MathLib::DenseMatrixInversion(d_result.p, d_A.p, A_rows, A_cols);
     return result;
 }
 
@@ -418,11 +446,11 @@ MatrixBlock<T> MatrixBlock<T>::operator/(ComplexType c)
 }
 
 template <>
-MatrixBlock<ComplexType[NUM_MODES]>
-MatrixBlock<ComplexType[NUM_MODES]>::operator/(ComplexType c)
+MatrixBlock<ComplexType[BLOCK_SIZE]>
+MatrixBlock<ComplexType[BLOCK_SIZE]>::operator/(ComplexType c)
 {
-    MatrixBlock<ComplexType[NUM_MODES]> result;
-    for (int i = 0; i < NUM_MODES; ++i)
+    MatrixBlock<ComplexType[BLOCK_SIZE]> result;
+    for (int i = 0; i < BLOCK_SIZE; ++i)
     {
         result.block[i] = this->block[i] / c;
     }
@@ -439,15 +467,27 @@ MatrixBlock<T> MatrixBlock<T>::operator/(const MatrixBlock<T> &rhs)
 }
 
 template <>
-MatrixBlock<ComplexType[NUM_MODES]>
-MatrixBlock<ComplexType[NUM_MODES]>::operator/(
-    const MatrixBlock<ComplexType[NUM_MODES]> &rhs)
+MatrixBlock<ComplexType[BLOCK_SIZE]>
+MatrixBlock<ComplexType[BLOCK_SIZE]>::operator/(
+    const MatrixBlock<ComplexType[BLOCK_SIZE]> &rhs)
 {
-    MatrixBlock<ComplexType[NUM_MODES]> result;
-    for (int i = 0; i < NUM_MODES; ++i)
+    MatrixBlock<ComplexType[BLOCK_SIZE]> result;
+    for (int i = 0; i < BLOCK_SIZE; ++i)
     {
         result.block[i] = this->block[i] / rhs.block[i];
     }
+    return result;
+}
+
+template <>
+MatrixBlock<ComplexType[BLOCK_SIZE][BLOCK_SIZE]>
+MatrixBlock<ComplexType[BLOCK_SIZE][BLOCK_SIZE]>::operator/(
+    const MatrixBlock<ComplexType[BLOCK_SIZE][BLOCK_SIZE]> &rhs)
+{
+    MatrixBlock<ComplexType[BLOCK_SIZE][BLOCK_SIZE]> result =
+        (*this) * rhs.Inverse();
+    // MathLib::DenseMatrixInversion(rhs_inverse.p, rhs.p, A_rows, A_cols);
+
     return result;
 }
 
@@ -460,11 +500,11 @@ MatrixBlock<T> operator/(const ComplexType c_complex, const MatrixBlock<T> &C)
 }
 
 template <>
-MatrixBlock<ComplexType[NUM_MODES]> operator/(
-    const ComplexType c_complex, const MatrixBlock<ComplexType[NUM_MODES]> &C)
+MatrixBlock<ComplexType[BLOCK_SIZE]> operator/(
+    const ComplexType c_complex, const MatrixBlock<ComplexType[BLOCK_SIZE]> &C)
 {
-    MatrixBlock<ComplexType[NUM_MODES]> result;
-    for (int i = 0; i < NUM_MODES; ++i)
+    MatrixBlock<ComplexType[BLOCK_SIZE]> result;
+    for (int i = 0; i < BLOCK_SIZE; ++i)
     {
         result.block[i] = c_complex / C.block[i];
     }
@@ -472,14 +512,14 @@ MatrixBlock<ComplexType[NUM_MODES]> operator/(
 }
 
 template <>
-MatrixBlock<ComplexType[NUM_MODES][NUM_MODES]> operator/(
+MatrixBlock<ComplexType[BLOCK_SIZE][BLOCK_SIZE]> operator/(
     const ComplexType c_complex,
-    const MatrixBlock<ComplexType[NUM_MODES][NUM_MODES]> &C)
+    const MatrixBlock<ComplexType[BLOCK_SIZE][BLOCK_SIZE]> &C)
 {
-    MatrixBlock<ComplexType[NUM_MODES][NUM_MODES]> result;
-    for (int i = 0; i < NUM_MODES; ++i)
+    MatrixBlock<ComplexType[BLOCK_SIZE][BLOCK_SIZE]> result;
+    for (int i = 0; i < BLOCK_SIZE; ++i)
     {
-        for (int j = 0; j < NUM_MODES; ++j)
+        for (int j = 0; j < BLOCK_SIZE; ++j)
         {
             result.block[i][j] = c_complex / C.block[i][j];
         }
@@ -496,12 +536,12 @@ std::ostream &operator<<(std::ostream &stream, const MatrixBlock<T> &rhs)
 
 template <>
 std::ostream &operator<<(std::ostream &stream,
-                         const MatrixBlock<amrex::Real[NUM_MODES]> &rhs)
+                         const MatrixBlock<amrex::Real[BLOCK_SIZE]> &rhs)
 {
     stream << "{";
-    for (int i = 0; i < NUM_MODES; ++i)
+    for (int i = 0; i < BLOCK_SIZE; ++i)
     {
-        if (i != NUM_MODES - 1)
+        if (i != BLOCK_SIZE - 1)
         {
             stream << rhs.block[i] << ", ";
         }
@@ -516,12 +556,12 @@ std::ostream &operator<<(std::ostream &stream,
 
 template <>
 std::ostream &operator<<(std::ostream &stream,
-                         const MatrixBlock<ComplexType[NUM_MODES]> &rhs)
+                         const MatrixBlock<ComplexType[BLOCK_SIZE]> &rhs)
 {
     stream << "[";
-    for (int i = 0; i < NUM_MODES; ++i)
+    for (int i = 0; i < BLOCK_SIZE; ++i)
     {
-        if (i != NUM_MODES - 1)
+        if (i != BLOCK_SIZE - 1)
         {
             stream << rhs.block[i] << ", ";
         }
@@ -537,21 +577,22 @@ std::ostream &operator<<(std::ostream &stream,
 template <>
 std::ostream &operator<<(
     std::ostream &stream,
-    const MatrixBlock<ComplexType[NUM_MODES][NUM_MODES]> &rhs)
+    const MatrixBlock<ComplexType[BLOCK_SIZE][BLOCK_SIZE]> &rhs)
 {
     stream << "[";
-    for (int i = 0; i < NUM_MODES; ++i)
+    for (int i = 0; i < BLOCK_SIZE; ++i)
     {
-        for (int j = 0; j < NUM_MODES; ++j)
+        for (int j = 0; j < BLOCK_SIZE; ++j)
         {
             stream << std::setw(10) << rhs.block[i][j];
         }
-        if (i != NUM_MODES - 1) stream << "\n ";
+        if (i != BLOCK_SIZE - 1) stream << "\n ";
     }
     stream << "]";
     return stream;
 }
 
+/*Conjugate*/
 template <typename T>
 MatrixBlock<T> MatrixBlock<T>::Conj() const
 {
@@ -560,11 +601,11 @@ MatrixBlock<T> MatrixBlock<T>::Conj() const
 }
 
 template <>
-MatrixBlock<ComplexType[NUM_MODES]> MatrixBlock<ComplexType[NUM_MODES]>::Conj()
-    const
+MatrixBlock<ComplexType[BLOCK_SIZE]>
+MatrixBlock<ComplexType[BLOCK_SIZE]>::Conj() const
 {
-    MatrixBlock<ComplexType[NUM_MODES]> result;
-    for (int i = 0; i < NUM_MODES; ++i)
+    MatrixBlock<ComplexType[BLOCK_SIZE]> result;
+    for (int i = 0; i < BLOCK_SIZE; ++i)
     {
         amrex::GpuComplex X_conj(this->block[i].real(),
                                  -1. * this->block[i].imag());
@@ -574,13 +615,13 @@ MatrixBlock<ComplexType[NUM_MODES]> MatrixBlock<ComplexType[NUM_MODES]>::Conj()
 }
 
 template <>
-MatrixBlock<ComplexType[NUM_MODES][NUM_MODES]>
-MatrixBlock<ComplexType[NUM_MODES][NUM_MODES]>::Conj() const
+MatrixBlock<ComplexType[BLOCK_SIZE][BLOCK_SIZE]>
+MatrixBlock<ComplexType[BLOCK_SIZE][BLOCK_SIZE]>::Conj() const
 {
-    MatrixBlock<ComplexType[NUM_MODES][NUM_MODES]> result;
-    for (int i = 0; i < NUM_MODES; ++i)
+    MatrixBlock<ComplexType[BLOCK_SIZE][BLOCK_SIZE]> result;
+    for (int i = 0; i < BLOCK_SIZE; ++i)
     {
-        for (int j = 0; j < NUM_MODES; ++j)
+        for (int j = 0; j < BLOCK_SIZE; ++j)
         {
             amrex::GpuComplex X_conj(this->block[i][j].real(),
                                      -1. * this->block[i][j].imag());
@@ -590,6 +631,7 @@ MatrixBlock<ComplexType[NUM_MODES][NUM_MODES]>::Conj() const
     return result;
 }
 
+/*Transpose*/
 template <typename T>
 MatrixBlock<T> MatrixBlock<T>::Tran() const
 {
@@ -597,20 +639,20 @@ MatrixBlock<T> MatrixBlock<T>::Tran() const
 }
 
 template <>
-MatrixBlock<ComplexType[NUM_MODES]> MatrixBlock<ComplexType[NUM_MODES]>::Tran()
-    const
+MatrixBlock<ComplexType[BLOCK_SIZE]>
+MatrixBlock<ComplexType[BLOCK_SIZE]>::Tran() const
 {
     return *this;
 }
 
 template <>
-MatrixBlock<ComplexType[NUM_MODES][NUM_MODES]>
-MatrixBlock<ComplexType[NUM_MODES][NUM_MODES]>::Tran() const
+MatrixBlock<ComplexType[BLOCK_SIZE][BLOCK_SIZE]>
+MatrixBlock<ComplexType[BLOCK_SIZE][BLOCK_SIZE]>::Tran() const
 {
-    MatrixBlock<ComplexType[NUM_MODES][NUM_MODES]> result;
-    for (int i = 0; i < NUM_MODES; ++i)
+    MatrixBlock<ComplexType[BLOCK_SIZE][BLOCK_SIZE]> result;
+    for (int i = 0; i < BLOCK_SIZE; ++i)
     {
-        for (int j = 0; j < NUM_MODES; ++j)
+        for (int j = 0; j < BLOCK_SIZE; ++j)
         {
             if (i == j)
             {
@@ -625,6 +667,7 @@ MatrixBlock<ComplexType[NUM_MODES][NUM_MODES]>::Tran() const
     return result;
 }
 
+/*Conjugate-transpose*/
 template <typename T>
 MatrixBlock<T> MatrixBlock<T>::Dagger() const
 {
@@ -632,17 +675,20 @@ MatrixBlock<T> MatrixBlock<T>::Dagger() const
 }
 
 template <>
-MatrixBlock<ComplexType[NUM_MODES]>
-MatrixBlock<ComplexType[NUM_MODES]>::Dagger() const
+MatrixBlock<ComplexType[BLOCK_SIZE]>
+MatrixBlock<ComplexType[BLOCK_SIZE]>::Dagger() const
 {
     return this->Conj().Tran();
 }
 
 template <>
-MatrixBlock<ComplexType[NUM_MODES][NUM_MODES]>
-MatrixBlock<ComplexType[NUM_MODES][NUM_MODES]>::Dagger() const
+MatrixBlock<ComplexType[BLOCK_SIZE][BLOCK_SIZE]>
+MatrixBlock<ComplexType[BLOCK_SIZE][BLOCK_SIZE]>::Dagger() const
 {
-    return this->Conj().Tran();
+    MatrixBlock<ComplexType[BLOCK_SIZE][BLOCK_SIZE]> result;
+    // MathLib::ConjugateTranspose(result.p, this->block.p, BLOCK_SIZE,
+    // BLOCK_SIZE);
+    return result;
 }
 
 ///* Operation AtomicAdd */
@@ -654,11 +700,11 @@ MatrixBlock<ComplexType[NUM_MODES][NUM_MODES]>::Dagger() const
 // }
 //
 // template <>
-// MatrixBlock<ComplexType[NUM_MODES]>
-// MatrixBlock<ComplexType[NUM_MODES]>::AtomicAdd(MatrixBlock<T>& B) const
+// MatrixBlock<ComplexType[BLOCK_SIZE]>
+// MatrixBlock<ComplexType[BLOCK_SIZE]>::AtomicAdd(MatrixBlock<T>& B) const
 //{
 //
-//     for (int i = 0; i < NUM_MODES; ++i)
+//     for (int i = 0; i < BLOCK_SIZE; ++i)
 //     {
 //         amrex::HostDevice::Atomic::Add(&(this->trace_r.block[i]),
 //         B.block[i].real());
@@ -669,14 +715,14 @@ MatrixBlock<ComplexType[NUM_MODES][NUM_MODES]>::Dagger() const
 // }
 //
 // template <>
-// MatrixBlock<ComplexType[NUM_MODES][NUM_MODES]>
-// MatrixBlock<ComplexType[NUM_MODES][NUM_MODES]>::AtomicAdd(MatrixBlock<T>& B)
-// const
+// MatrixBlock<ComplexType[BLOCK_SIZE][BLOCK_SIZE]>
+// MatrixBlock<ComplexType[BLOCK_SIZE][BLOCK_SIZE]>::AtomicAdd(MatrixBlock<T>&
+// B) const
 //{
-//     MatrixBlock<ComplexType[NUM_MODES][NUM_MODES]> result;
-//     for (int i = 0; i < NUM_MODES; ++i)
+//     MatrixBlock<ComplexType[BLOCK_SIZE][BLOCK_SIZE]> result;
+//     for (int i = 0; i < BLOCK_SIZE; ++i)
 //     {
-//         for (int j = 0; j < NUM_MODES; ++j)
+//         for (int j = 0; j < BLOCK_SIZE; ++j)
 //         {
 //             if(i==j)
 //             {
@@ -701,12 +747,12 @@ MatrixBlock<ComplexType[NUM_MODES][NUM_MODES]>::Dagger() const
 // }
 //
 // template <>
-// MatrixBlock<amrex::Real[NUM_MODES]>
-// MatrixBlock<ComplexType[NUM_MODES]>::Real() const
+// MatrixBlock<amrex::Real[BLOCK_SIZE]>
+// MatrixBlock<ComplexType[BLOCK_SIZE]>::Real() const
 //{
-//     MatrixBlock<amrex::Real[NUM_MODES]> result;
+//     MatrixBlock<amrex::Real[BLOCK_SIZE]> result;
 //
-//     for (int i = 0; i < NUM_MODES; ++i)
+//     for (int i = 0; i < BLOCK_SIZE; ++i)
 //     {
 //         result.block[i] = this->block[i].real();
 //     }
@@ -714,14 +760,14 @@ MatrixBlock<ComplexType[NUM_MODES][NUM_MODES]>::Dagger() const
 // }
 //
 // template <>
-// MatrixBlock<amrex::Real[NUM_MODES][NUM_MODES]>
-// MatrixBlock<ComplexType[NUM_MODES][NUM_MODES]>::Real() const
+// MatrixBlock<amrex::Real[BLOCK_SIZE][BLOCK_SIZE]>
+// MatrixBlock<ComplexType[BLOCK_SIZE][BLOCK_SIZE]>::Real() const
 //{
-//     MatrixBlock<amrex::Real[NUM_MODES][NUM_MODES]> result;
+//     MatrixBlock<amrex::Real[BLOCK_SIZE][BLOCK_SIZE]> result;
 //
-//     for (int i = 0; i < NUM_MODES; ++i)
+//     for (int i = 0; i < BLOCK_SIZE; ++i)
 //     {
-//         for (int j = 0; j < NUM_MODES; ++j)
+//         for (int j = 0; j < BLOCK_SIZE; ++j)
 //         {
 //             result.block[i][j] = this->block[i][j].real();
 //         }
@@ -738,10 +784,10 @@ ComplexType MatrixBlock<T>::DiagSum() const
 }
 
 template <>
-ComplexType MatrixBlock<ComplexType[NUM_MODES]>::DiagSum() const
+ComplexType MatrixBlock<ComplexType[BLOCK_SIZE]>::DiagSum() const
 {
     ComplexType result(0., 0.);
-    for (int i = 0; i < NUM_MODES; ++i)
+    for (int i = 0; i < BLOCK_SIZE; ++i)
     {
         result += this->block[i];
     }
@@ -749,12 +795,12 @@ ComplexType MatrixBlock<ComplexType[NUM_MODES]>::DiagSum() const
 }
 
 template <>
-ComplexType MatrixBlock<ComplexType[NUM_MODES][NUM_MODES]>::DiagSum() const
+ComplexType MatrixBlock<ComplexType[BLOCK_SIZE][BLOCK_SIZE]>::DiagSum() const
 {
     ComplexType result(0., 0.);
-    for (int i = 0; i < NUM_MODES; ++i)
+    for (int i = 0; i < BLOCK_SIZE; ++i)
     {
-        for (int j = 0; j < NUM_MODES; ++j)
+        for (int j = 0; j < BLOCK_SIZE; ++j)
         {
             if (i == j)
             {
@@ -763,6 +809,40 @@ ComplexType MatrixBlock<ComplexType[NUM_MODES][NUM_MODES]>::DiagSum() const
         }
     }
     return result;
+}
+
+/* Operation Norm */
+template <typename T>
+ComplexType MatrixBlock<T>::FrobeniusNorm() const
+{
+    ComplexType result(0., 0.);
+    return *this;
+}
+
+template <>
+ComplexType MatrixBlock<ComplexType[BLOCK_SIZE]>::FrobeniusNorm() const
+{
+    ComplexType result(0., 0.);
+    for (int i = 0; i < BLOCK_SIZE; ++i)
+    {
+        result += this->block[i] * this->block[i];
+    }
+    return amrex::sqrt(result);
+}
+
+template <>
+ComplexType MatrixBlock<ComplexType[BLOCK_SIZE][BLOCK_SIZE]>::FrobeniusNorm()
+    const
+{
+    ComplexType result(0., 0.);
+    for (int i = 0; i < BLOCK_SIZE; ++i)
+    {
+        for (int j = 0; j < BLOCK_SIZE; ++j)
+        {
+            result += this->block[i][j] * this->block[i][j];
+        }
+    }
+    return amrex::sqrt(result);
 }
 
 ///* Operation DiagDotSum */
@@ -776,10 +856,10 @@ ComplexType MatrixBlock<T>::DiagDotSum(U &vec) const
 
 template <>
 template <typename U>
-ComplexType MatrixBlock<ComplexType[NUM_MODES]>::DiagDotSum(U &vec) const
+ComplexType MatrixBlock<ComplexType[BLOCK_SIZE]>::DiagDotSum(U &vec) const
 {
     ComplexType result(0., 0.);
-    for (int i = 0; i < NUM_MODES; ++i)
+    for (int i = 0; i < BLOCK_SIZE; ++i)
     {
         ComplexType factor(vec[i], 0.);
         result += factor * this->block[i];
@@ -789,13 +869,13 @@ ComplexType MatrixBlock<ComplexType[NUM_MODES]>::DiagDotSum(U &vec) const
 
 template <>
 template <typename U>
-ComplexType MatrixBlock<ComplexType[NUM_MODES][NUM_MODES]>::DiagDotSum(
+ComplexType MatrixBlock<ComplexType[BLOCK_SIZE][BLOCK_SIZE]>::DiagDotSum(
     U &vec) const
 {
     ComplexType result(0., 0.);
-    for (int i = 0; i < NUM_MODES; ++i)
+    for (int i = 0; i < BLOCK_SIZE; ++i)
     {
-        for (int j = 0; j < NUM_MODES; ++j)
+        for (int j = 0; j < BLOCK_SIZE; ++j)
         {
             if (i == j)
             {
@@ -817,11 +897,11 @@ MatrixBlock<T> MatrixBlock<T>::DiagMult(U &vec) const
 
 template <>
 template <typename U>
-MatrixBlock<ComplexType[NUM_MODES]>
-MatrixBlock<ComplexType[NUM_MODES]>::DiagMult(U &vec) const
+MatrixBlock<ComplexType[BLOCK_SIZE]>
+MatrixBlock<ComplexType[BLOCK_SIZE]>::DiagMult(U &vec) const
 {
-    MatrixBlock<ComplexType[NUM_MODES]> result;
-    for (int i = 0; i < NUM_MODES; ++i)
+    MatrixBlock<ComplexType[BLOCK_SIZE]> result;
+    for (int i = 0; i < BLOCK_SIZE; ++i)
     {
         ComplexType factor(vec[i], 0.);
         result.block[i] = factor * this->block[i];
@@ -831,13 +911,13 @@ MatrixBlock<ComplexType[NUM_MODES]>::DiagMult(U &vec) const
 
 template <>
 template <typename U>
-MatrixBlock<ComplexType[NUM_MODES][NUM_MODES]>
-MatrixBlock<ComplexType[NUM_MODES][NUM_MODES]>::DiagMult(U &vec) const
+MatrixBlock<ComplexType[BLOCK_SIZE][BLOCK_SIZE]>
+MatrixBlock<ComplexType[BLOCK_SIZE][BLOCK_SIZE]>::DiagMult(U &vec) const
 {
-    MatrixBlock<ComplexType[NUM_MODES][NUM_MODES]> result;
-    for (int i = 0; i < NUM_MODES; ++i)
+    MatrixBlock<ComplexType[BLOCK_SIZE][BLOCK_SIZE]> result;
+    for (int i = 0; i < BLOCK_SIZE; ++i)
     {
-        for (int j = 0; j < NUM_MODES; ++j)
+        for (int j = 0; j < BLOCK_SIZE; ++j)
         {
             if (i == j)
             {
@@ -847,4 +927,40 @@ MatrixBlock<ComplexType[NUM_MODES][NUM_MODES]>::DiagMult(U &vec) const
         }
     }
     return result;
+}
+
+///* Operation DiagSet */
+template <typename T>
+void MatrixBlock<T>::SetDiag(const ComplexType c_comp)
+{
+}
+
+template <>
+void MatrixBlock<ComplexType[BLOCK_SIZE]>::SetDiag(const ComplexType c_comp)
+{
+    for (int i = 0; i < BLOCK_SIZE; ++i)
+    {
+        this->block[i] = c_comp;
+    }
+}
+
+template <>
+void MatrixBlock<ComplexType[BLOCK_SIZE][BLOCK_SIZE]>::SetDiag(
+    const ComplexType c_comp)
+{
+    ComplexType zero(0., 0.);
+    for (int i = 0; i < BLOCK_SIZE; ++i)
+    {
+        for (int j = 0; j < BLOCK_SIZE; ++j)
+        {
+            if (i == j)
+            {
+                this->block[i][i] = c_comp;
+            }
+            else
+            {
+                this->block[i][i] = zero;
+            }
+        }
+    }
 }

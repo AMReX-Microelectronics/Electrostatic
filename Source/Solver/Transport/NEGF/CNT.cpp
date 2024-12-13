@@ -66,8 +66,8 @@ void c_CNT::Set_MaterialSpecificParameters()
 
 void c_CNT::Set_BlockDegeneracyVector(amrex::Vector<int> &vec)
 {
-    vec.resize(NUM_MODES);
-    for (int m = 0; m < NUM_MODES; ++m)
+    vec.resize(BLOCK_SIZE);
+    for (int m = 0; m < BLOCK_SIZE; ++m)
     {
         vec[m] = mode_degen_vec[m];
     }
@@ -293,7 +293,8 @@ ComplexType c_CNT::get_beta(int J)
 
 void c_CNT::Define_MPI_BlkType()
 {
-    MPI_Type_vector(1, NUM_MODES, NUM_MODES, MPI_DOUBLE_COMPLEX, &MPI_BlkType);
+    MPI_Type_vector(1, BLOCK_SIZE, BLOCK_SIZE, MPI_DOUBLE_COMPLEX,
+                    &MPI_BlkType);
     MPI_Type_commit(&MPI_BlkType);
 }
 
@@ -310,7 +311,7 @@ void c_CNT::Construct_Hamiltonian()
         h_minusHa(i) = 0.;
     }
 
-    for (int j = 0; j < NUM_MODES; ++j)
+    for (int j = 0; j < BLOCK_SIZE; ++j)
     {
         int J = mode_vec[j];
         beta.block[j] = get_beta(J);
@@ -352,32 +353,42 @@ void c_CNT::Define_ContactInfo()
 
 AMREX_GPU_HOST_DEVICE
 void c_CNT::Compute_SurfaceGreensFunction(MatrixBlock<BlkType> &gr,
-                                          const ComplexType EmU)
+                                          const ComplexType E,
+                                          const ComplexType U)
 {
-    auto EmU_sq = pow(EmU, 2.);
-    auto gamma_sq = pow(gamma, 2.);
-
-    for (int i = 0; i < NUM_MODES; ++i)
+    if (use_decimation)
     {
-        auto Factor = EmU_sq + gamma_sq - pow(beta.block[i], 2);
+        c_NEGF_Common<BlkType>::DecimationTechnique(gr, E - U);
+    }
+    else
+    {
+        ComplexType EmU = E - U;
+        auto EmU_sq = pow(EmU, 2.);
+        auto gamma_sq = pow(gamma, 2.);
 
-        auto Sqrt = sqrt(pow(Factor, 2) - 4. * EmU_sq * gamma_sq);
+        for (int i = 0; i < BLOCK_SIZE; ++i)
+        {
+            auto Factor = EmU_sq + gamma_sq - pow(beta.block[i], 2);
 
-        auto Denom = 2. * gamma_sq * EmU;
+            auto Sqrt = sqrt(pow(Factor, 2) - 4. * EmU_sq * gamma_sq);
 
-        auto val1 = (Factor + Sqrt) / Denom;
-        auto val2 = (Factor - Sqrt) / Denom;
+            auto Denom = 2. * gamma_sq * EmU;
 
-        if (val1.imag() < 0.)
-            gr.block[i] = val1;
-        else if (val2.imag() < 0.)
-            gr.block[i] = val2;
+            auto val1 = (Factor + Sqrt) / Denom;
+            auto val2 = (Factor - Sqrt) / Denom;
 
-        // amrex::Print() << "EmU: " << EmU << "\n";
-        // amrex::Print() << "Factor: " << Factor << "\n";
-        // amrex::Print() << "Sqrt: "  << Sqrt << "\n";
-        // amrex::Print() << "Denom: " << Denom << "\n";
-        // amrex::Print() << "Numerator: " << Factor+Sqrt << "\n";
-        // amrex::Print() << "Value: " << (Factor+Sqrt)/Denom << "\n";
+            if (val1.imag() < 0.)
+                gr.block[i] = val1;
+            else if (val2.imag() < 0.)
+                gr.block[i] = val2;
+
+            // amrex::Print() << "EmU: " << EmU << "\n";
+            // amrex::Print() << "Factor: " << Factor << "\n";
+            // amrex::Print() << "Sqrt: "  << Sqrt << "\n";
+            // amrex::Print() << "Denom: " << Denom << "\n";
+            // amrex::Print() << "Numerator: " << Factor+Sqrt << "\n";
+            // amrex::Print() << "Value: " << (Factor+Sqrt)/Denom << "\n";
+        }
+        // amrex::Print() << "Using quadratic, gr: " << gr << "\n";
     }
 }

@@ -170,6 +170,18 @@ class c_NEGF_Common : protected MatrixBlock<T>, private c_IntegrationPath
     amrex::Gpu::DeviceVector<amrex::Real> d_Trace_i;
 #endif
 
+    /*Condensed Hamiltonian*/
+    struct CondensedHamiltonian
+    {
+        MatrixBlock<T> Xi_s;
+        MatrixBlock<T> Xi;
+        MatrixBlock<T> Pi;
+
+        CondensedHamiltonian()
+            : Xi_s(), Xi(), Pi() {}  // default initialized
+                                     // calling constructor of MatrixBlock<T>
+    };
+
     void Set_KeyParams(const std::string &NS_name_str, const int &NS_id_counter,
                        const amrex::Real &NS_initial_deposit_value);
     void Define_FoldersAndFiles(const std::string &negf_foldername_str);
@@ -194,6 +206,7 @@ class c_NEGF_Common : protected MatrixBlock<T>, private c_IntegrationPath
     void Read_IntegrandWritingParams(amrex::ParmParse &);
     void Read_AtomLocationAndChargeDistributionFilename(amrex::ParmParse &);
     void Read_RecursiveOptimizationParams(amrex::ParmParse &);
+    void Read_DecimationTechniqueParams(amrex::ParmParse &);
     void Assert_Reads();
 
     void Assert_KeyParameters();
@@ -305,6 +318,16 @@ class c_NEGF_Common : protected MatrixBlock<T>, private c_IntegrationPath
 
     void Write_InputInducedCharge(const std::string filename_prefix,
                                   const RealTable1D &n_curr_in_data);
+
+    virtual AMREX_GPU_HOST_DEVICE void Compute_SurfaceGreensFunction(
+        MatrixBlock<T> &gr, const ComplexType E, const ComplexType U);
+
+    /*Decimation*/
+    virtual AMREX_GPU_HOST_DEVICE void Compute_CondensedHamiltonian(
+        CondensedHamiltonian &CondH, const ComplexType EmU);
+
+    AMREX_GPU_HOST_DEVICE void DecimationTechnique(MatrixBlock<T> &gr,
+                                                   const ComplexType EmU);
 
     void Write_Current(const int step, const int total_iterations_in_step,
                        const amrex::Real avg_intg_pts);
@@ -447,6 +470,16 @@ class c_NEGF_Common : protected MatrixBlock<T>, private c_IntegrationPath
     RealTable1D d_NonEq_Integrand_Drain_data;
 #endif
 
+    /*Decimation Technique*/
+    int use_decimation = false;
+    // whether to use decimation technique in the derived class.
+    // derived class default is false.
+    // base class default is true.
+
+    int decimation_max_iter = 30;      // maximum iterations allowed
+    int decimation_rel_error = 1.e-5;  // relative error
+    int decimation_layers = 10;        // P
+
     // virtual methods
     virtual void Read_MaterialSpecificNanostructureProperties() = 0;
     virtual void Set_MaterialSpecificParameters() = 0;
@@ -462,7 +495,6 @@ class c_NEGF_Common : protected MatrixBlock<T>, private c_IntegrationPath
     virtual int get_Hsize() = 0;
     virtual int get_offDiag_repeatBlkSize() = 0;
     virtual void Define_MPI_BlkType() = 0;
-
     virtual void Construct_Hamiltonian() = 0;
 
     /*define the following in overridden Define_ContactInfo:

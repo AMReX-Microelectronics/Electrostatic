@@ -21,6 +21,44 @@ struct MatrixBlock
    public:
     T block;
 
+    // Non-const .data() for 1D array
+    template <typename U = T>
+    auto data() ->
+        typename std::enable_if<std::rank<U>::value == 1,
+                                typename std::remove_extent<U>::type *>::type
+    {
+        return &block[0];
+    }
+
+    // Const .data() for 1D array
+    template <typename U = T>
+    auto const_data() const -> typename std::enable_if<
+        std::rank<U>::value == 1,
+        const typename std::remove_extent<U>::type *>::type
+    {
+        return &block[0];
+    }
+
+    // Non-const .data() for 2D array
+    template <typename U = T>
+    auto data() -> typename std::enable_if<
+        std::rank<U>::value == 2,
+        typename std::remove_all_extents<U>::type *>::type
+    {
+        return reinterpret_cast<typename std::remove_all_extents<U>::type *>(
+            &block[0][0]);
+    }
+
+    // Const .data() for 2D array
+    template <typename U = T>
+    auto const_data() const -> typename std::enable_if<
+        std::rank<U>::value == 2,
+        const typename std::remove_all_extents<U>::type *>::type
+    {
+        return reinterpret_cast<
+            const typename std::remove_all_extents<U>::type *>(&block[0][0]);
+    }
+
     AMREX_GPU_HOST_DEVICE MatrixBlock<T> operator=(const amrex::Real c);
     AMREX_GPU_HOST_DEVICE MatrixBlock<T> operator=(const ComplexType c);
 
@@ -63,7 +101,11 @@ struct MatrixBlock
     AMREX_GPU_HOST_DEVICE MatrixBlock<T> Conj() const;   /*Conjugate*/
     AMREX_GPU_HOST_DEVICE MatrixBlock<T> Tran() const;   /*Transpose*/
     AMREX_GPU_HOST_DEVICE MatrixBlock<T> Dagger() const; /*Conjugate-Transpose*/
-    AMREX_GPU_HOST_DEVICE ComplexType DiagSum() const;   /*Trace*/
+    AMREX_GPU_HOST_DEVICE MatrixBlock<T> Inverse() const; /*Inverse*/
+    AMREX_GPU_HOST_DEVICE ComplexType DiagSum() const;    /*Trace*/
+    AMREX_GPU_HOST_DEVICE ComplexType FrobeniusNorm() const;
+    AMREX_GPU_HOST_DEVICE void SetDiag(
+        const ComplexType c); /*set diagonal element*/
 
     template <typename U>
     AMREX_GPU_HOST_DEVICE ComplexType
@@ -75,6 +117,7 @@ struct MatrixBlock
     // MatrixBlock<T> AtomicAdd(MatrixBlock<T>& B) const; /*Atomic add for the
     // block*/ template<typename U, std::size_t N> MatrixBlock<amrex::Real>
     // Real() const;
+    //
 };
 
 #endif
