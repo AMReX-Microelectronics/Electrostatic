@@ -28,7 +28,7 @@ enum class s_Norm_Type : int
     Relative
 };
 
-enum class Gate_Terminal_Type : int 
+enum class Gate_Terminal_Type : int
 {
     EB,
     Boundary
@@ -306,12 +306,10 @@ class c_NEGF_Common : protected MatrixBlock<T>, private c_IntegrationPath
     void Write_InputInducedCharge(const std::string filename_prefix,
                                   const RealTable1D &n_curr_in_data);
 
-    void Write_Current(const int step,
-                       const int total_iterations_in_step,
+    void Write_Current(const int step, const int total_iterations_in_step,
                        const amrex::Real avg_intg_pts);
 
    protected:
-
     /*MPI params*/
     int my_rank = 0;
     int num_proc = 1;
@@ -494,16 +492,15 @@ class c_NEGF_Common : protected MatrixBlock<T>, private c_IntegrationPath
     void Copy_LocalChargeFromNanostructure(RealTable1D &container_data,
                                            const int NS_offset);
 
-    void Copy_BroydenPredictedCharge(const RealTable1D& h_n_curr_in_data);
+    void Copy_BroydenPredictedCharge(const RealTable1D &h_n_curr_in_data);
 
     void Compute_DensityOfStates_General(bool isIter, int iter_or_step);
 
-    void Write_Data_General(const bool isIter,
-                            const int iter_or_step,
+    void Write_Data_General(const bool isIter, const int iter_or_step,
                             const int total_iterations_in_step,
                             const amrex::Real avg_intg_pts,
-                            RealTable1D const& h_n_curr_out_data,
-                            RealTable1D const& h_Norm_data);
+                            RealTable1D const &h_n_curr_out_data,
+                            RealTable1D const &h_Norm_data);
 
     void Initialize_NEGF_Params(const std::string &NS_name_str,
                                 const int &NS_id_counter,
@@ -519,8 +516,10 @@ class c_NEGF_Common : protected MatrixBlock<T>, private c_IntegrationPath
 
     /* setters/getters */
     // for MPI params
-    void set_num_field_sites_loc_NS_offset(int val) 
-        { num_field_sites_loc_NS_offset = val; }
+    void set_num_field_sites_loc_NS_offset(int val)
+    {
+        num_field_sites_loc_NS_offset = val;
+    }
 
     // for nanostructure params
     int get_NS_Id() const { return NS_Id; }
@@ -561,7 +560,6 @@ class c_NEGF_Common : protected MatrixBlock<T>, private c_IntegrationPath
     int get_Total_Integration_Pts() const;
 
    public:
-
     virtual ~c_NEGF_Common() = default;
 
     void Compute_InducedCharge(RealTable1D &n_curr_out_data);
@@ -576,7 +574,6 @@ class c_NEGF_Common : protected MatrixBlock<T>, private c_IntegrationPath
 
     void Initialize_GPUArraysForGreensAndSpectralFunctionToZero();
     void Initialize_GPUArraysForChargeComputationToZero();
-
 };
 
 template <typename T>

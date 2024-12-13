@@ -125,9 +125,8 @@ class c_TransportSolver
     void Create_NEGFFolderDirectories();
     void Assert_GatherAndDepositFields();
     void Define_InitialDepositValue();
-    template<typename NSType>
-    void Create_Nanostructure(const std::string& name, 
-                              const int NS_id_counter);
+    template <typename NSType>
+    void Create_Nanostructure(const std::string &name, const int NS_id_counter);
     int Instantiate_Materials();
     std::string Get_NS_type_str(const std::string &name);
     void Group_ChargeDepositedByAllNS();
@@ -191,7 +190,10 @@ class c_TransportSolver
    public:
     c_TransportSolver();
     void InitData();
-    const std::vector<std::pair<int, int>>& Get_Vec_Biases() const { return vec_biases; }
+    const std::vector<std::pair<int, int>> &Get_Vec_Biases() const
+    {
+        return vec_biases;
+    }
     void Solve(const int step, const amrex::Real time);
     void Cleanup();
 
@@ -206,7 +208,6 @@ class c_TransportSolver
 #endif
 
     amrex::Real get_Broyden_Step() { return Broyden_Step; }
-
 };
 
 #endif

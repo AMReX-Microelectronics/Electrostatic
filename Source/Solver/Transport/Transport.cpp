@@ -66,7 +66,6 @@ void c_TransportSolver::ReadData()
     Read_GatherAndDepositFields(pp_transport);
 
     Read_SelfConsistencyInput(pp_transport);
-
 }
 
 void c_TransportSolver::Read_NSNames(amrex::ParmParse &pp)
@@ -163,7 +162,6 @@ void c_TransportSolver::InitData()
         Assert_GatherAndDepositFields();
 
         if (!flag_isDefined_InitialDepositValue) Define_InitialDepositValue();
-
     }
     num_field_sites_all_NS = Instantiate_Materials();
 
@@ -261,9 +259,7 @@ void c_TransportSolver::Read_SelfConsistencyInput(amrex::ParmParse &pp)
              flag_reset_with_previous_charge_distribution);
     amrex::Print() << "##### reset_with_previous_charge_distribution: "
                    << flag_reset_with_previous_charge_distribution << "\n";
-
 }
-
 
 std::string c_TransportSolver::Get_NS_type_str(const std::string &name)
 {
@@ -272,15 +268,14 @@ std::string c_TransportSolver::Get_NS_type_str(const std::string &name)
 }
 
 template <typename NSType>
-void c_TransportSolver::Create_Nanostructure(const std::string& name, 
+void c_TransportSolver::Create_Nanostructure(const std::string &name,
                                              const int NS_id_counter)
 {
     vp_NS.push_back(std::make_unique<c_Nanostructure<NSType>>(
-        *_geom, *_dm, *_ba, name, NS_id_counter,
-        NS_gather_field_str, NS_deposit_field_str,
-        NS_initial_deposit_value, use_negf, negf_foldername_str));
+        *_geom, *_dm, *_ba, name, NS_id_counter, NS_gather_field_str,
+        NS_deposit_field_str, NS_initial_deposit_value, use_negf,
+        negf_foldername_str));
 }
-
 
 int c_TransportSolver::Instantiate_Materials()
 {
@@ -356,7 +351,6 @@ void c_TransportSolver::Set_CommonStepFolder(const int step)
     /*eg. output/negf/common/step0001 for step 1*/
 }
 
-
 void c_TransportSolver::Solve(const int step, const amrex::Real time)
 {
     auto &rCode = c_Code::GetInstance();
@@ -385,8 +379,8 @@ void c_TransportSolver::Solve(const int step, const amrex::Real time)
         bool flag_update_terminal_bias = true;
         do
         {
-            amrex::Print() << "\n\n##### Self-Consistent Iteration: "
-                           << m_iter << " #####\n";
+            amrex::Print() << "\n\n##### Self-Consistent Iteration: " << m_iter
+                           << " #####\n";
             if (Broyden_Step > Broyden_Threshold_MaxStep)
             {
                 amrex::Abort(
@@ -418,13 +412,16 @@ void c_TransportSolver::Solve(const int step, const amrex::Real time)
             for (int c = 0; c < vp_NS.size(); ++c)
             {
 #ifdef AMREX_USE_GPU
-                total_intg_pts_in_this_iter += vp_NS[c]->Solve_NEGF(d_n_curr_out_data, 
-                                               m_iter, flag_update_terminal_bias);
+                total_intg_pts_in_this_iter +=
+                    vp_NS[c]->Solve_NEGF(d_n_curr_out_data, m_iter,
+                                         flag_update_terminal_bias);
 #else
-                total_intg_pts_in_this_iter += vp_NS[c]->Solve_NEGF(h_n_curr_out_data, 
-                                               m_iter, flag_update_terminal_bias);
+                total_intg_pts_in_this_iter +=
+                    vp_NS[c]->Solve_NEGF(h_n_curr_out_data, m_iter,
+                                         flag_update_terminal_bias);
 #endif
-                if(flag_update_terminal_bias) vec_biases[c] = vp_NS[c]->Get_Biases();
+                if (flag_update_terminal_bias)
+                    vec_biases[c] = vp_NS[c]->Get_Biases();
             }
             total_intg_pts_in_all_iter += total_intg_pts_in_this_iter;
             time_counter[3] = amrex::second();
@@ -440,9 +437,11 @@ void c_TransportSolver::Solve(const int step, const amrex::Real time)
 
             for (int c = 0; c < vp_NS.size(); ++c)
             {
-                Copy_BroydenPredictedChargeToHost(vp_NS[c]->Get_NanostructureID());
+                Copy_BroydenPredictedChargeToHost(
+                    vp_NS[c]->Get_NanostructureID());
 
-                vp_NS[c]->Copy_BroydenPredictedChargeToNanostructure(h_n_curr_in_data);
+                vp_NS[c]->Copy_BroydenPredictedChargeToNanostructure(
+                    h_n_curr_in_data);
 
                 vp_NS[c]->Deposit_ChargeDensityToMesh();
             }
@@ -456,11 +455,12 @@ void c_TransportSolver::Solve(const int step, const amrex::Real time)
                 bool isIter = true;
                 vp_NS[c]->PostProcess(isIter, m_iter);
 
-                if(vp_NS[c]->Get_Flag_WriteAtIter())
+                if (vp_NS[c]->Get_Flag_WriteAtIter())
                     Copy_DataToBeWrittenToHost(vp_NS[c]->Get_NanostructureID());
 
-                vp_NS[c]->Write_Output(isIter, m_iter, m_iter, 
-                                       static_cast<amrex::Real>(total_intg_pts_in_this_iter),
+                vp_NS[c]->Write_Output(isIter, m_iter, m_iter,
+                                       static_cast<amrex::Real>(
+                                           total_intg_pts_in_this_iter),
                                        h_n_curr_out_data, h_Norm_data);
             }
             time_counter[6] = amrex::second();
@@ -505,36 +505,36 @@ void c_TransportSolver::Solve(const int step, const amrex::Real time)
 
         // Part 7: Postprocess
         amrex::Real time_for_current = amrex::second();
-         for (int c = 0; c < vp_NS.size(); ++c)
-         {
-             bool isIter = false;
-             vp_NS[c]->PostProcess(isIter, m_step);
+        for (int c = 0; c < vp_NS.size(); ++c)
+        {
+            bool isIter = false;
+            vp_NS[c]->PostProcess(isIter, m_step);
 
-             Copy_DataToBeWrittenToHost(vp_NS[c]->Get_NanostructureID());
+            Copy_DataToBeWrittenToHost(vp_NS[c]->Get_NanostructureID());
 
-             vp_NS[c]->Write_Output(isIter, m_step, m_iter, 
-                              static_cast<amrex::Real>(total_intg_pts_in_all_iter)/m_iter,
-                              h_n_curr_out_data, h_Norm_data);
+            vp_NS[c]->Write_Output(
+                isIter, m_step, m_iter,
+                static_cast<amrex::Real>(total_intg_pts_in_all_iter) / m_iter,
+                h_n_curr_out_data, h_Norm_data);
         }
         amrex::Print() << "Time for postprocessing dos/current/writing data:   "
                        << amrex::second() - time_for_current << "\n";
 
         Reset_ForNextBiasStep();
-    }  
-    else //if not using electrostatics
+    }
+    else  // if not using electrostatics
     {
         for (int c = 0; c < vp_NS.size(); ++c)
         {
             RealTable1D RhoInduced; /*this is not correct but added just so
                                        Solve_NEGF compiles*/
             vp_NS[c]->Solve_NEGF(RhoInduced, 0, false);
-
         }
     }
 }
 
-void c_TransportSolver::Copy_BroydenPredictedChargeToHost(int NS_id) {
-
+void c_TransportSolver::Copy_BroydenPredictedChargeToHost(int NS_id)
+{
 #ifdef AMREX_USE_GPU
     int begin = site_size_loc_cumulative[NS_id];
     int end = site_size_loc_cumulative[NS_id + 1];
@@ -549,45 +549,43 @@ void c_TransportSolver::Copy_BroydenPredictedChargeToHost(int NS_id) {
                           d_n_curr_in.p + end, h_n_curr_in.p);
     amrex::Gpu::streamSynchronize();
 #endif
-
 }
 
-void c_TransportSolver::Copy_DataToBeWrittenToHost(int NS_id) {
+void c_TransportSolver::Copy_DataToBeWrittenToHost(int NS_id)
+{
+#ifdef BROYDEN_SKIP_GPU_OPTIMIZATION
+    auto const &h_n_curr_out = h_n_curr_out_data.table();
+    auto const &h_Norm = h_Norm_data.table();
+#else
+    /*only select data need to be copied for multiple NS*/
 
-    #ifdef BROYDEN_SKIP_GPU_OPTIMIZATION
-        auto const &h_n_curr_out = h_n_curr_out_data.table();
-        auto const &h_Norm = h_Norm_data.table();
-    #else
-        /*only select data need to be copied for multiple NS*/
+    int begin = site_size_loc_cumulative[NS_id];
+    int end = site_size_loc_cumulative[NS_id + 1];
+    int site_size_loc = end - begin;
 
-        int begin = site_size_loc_cumulative[NS_id];
-        int end = site_size_loc_cumulative[NS_id + 1];
-        int site_size_loc = end - begin;
+    amrex::Print() << "Create_Global: begin/end/site_size_loc: " << begin << " "
+                   << end << " " << site_size_loc << "\n";
 
-        amrex::Print() << "Create_Global: begin/end/site_size_loc: " << begin << " "
-                       << end << " " << site_size_loc << "\n";
+    h_n_curr_out_data.resize({0}, {site_size_loc}, The_Pinned_Arena());
+    h_Norm_data.resize({0}, {site_size_loc}, The_Pinned_Arena());
 
-        h_n_curr_out_data.resize({0}, {site_size_loc}, The_Pinned_Arena());
-        h_Norm_data.resize({0}, {site_size_loc}, The_Pinned_Arena());
+    auto const &h_n_curr_out = h_n_curr_out_data.table();
+    auto const &h_Norm = h_Norm_data.table();
 
-        auto const &h_n_curr_out = h_n_curr_out_data.table();
-        auto const &h_Norm = h_Norm_data.table();
+    auto const &d_n_curr_out = d_n_curr_out_data.const_table();
+    auto const &d_Norm = d_Norm_data.const_table();
 
-        auto const &d_n_curr_out = d_n_curr_out_data.const_table();
-        auto const &d_Norm = d_Norm_data.const_table();
+    amrex::Gpu::copyAsync(amrex::Gpu::deviceToHost, d_n_curr_out.p + begin,
+                          d_n_curr_out.p + end, h_n_curr_out.p);
 
-        amrex::Gpu::copyAsync(amrex::Gpu::deviceToHost, d_n_curr_out.p + begin,
-                              d_n_curr_out.p + end, h_n_curr_out.p);
+    amrex::Gpu::copyAsync(amrex::Gpu::deviceToHost, d_Norm.p + begin,
+                          d_Norm.p + end, h_Norm.p);
 
-        amrex::Gpu::copyAsync(amrex::Gpu::deviceToHost, d_Norm.p + begin,
-                              d_Norm.p + end, h_Norm.p);
+    amrex::Gpu::streamSynchronize();
 
-        amrex::Gpu::streamSynchronize();
-
-        amrex::Print() << "h_n_curr_out(0): " << h_n_curr_out(0) << "\n";
-        amrex::Print() << "h_Norm(0): " << h_Norm(0) << "\n";
-    #endif
-
+    amrex::Print() << "h_n_curr_out(0): " << h_n_curr_out(0) << "\n";
+    amrex::Print() << "h_Norm(0): " << h_Norm(0) << "\n";
+#endif
 }
 
 void c_TransportSolver::Perform_SelfConsistencyAlgorithm()

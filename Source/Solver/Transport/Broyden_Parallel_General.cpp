@@ -47,7 +47,7 @@ void c_TransportSolver::Define_Broyden_Partition()
      * my_rank
      * total_proc
      * site_size_loc_all_NS
-     * site_size_loc_cumulative vector of size equal to all nanostructure. 
+     * site_size_loc_cumulative vector of size equal to all nanostructure.
      */
     total_proc = amrex::ParallelDescriptor::NProcs();
     my_rank = amrex::ParallelDescriptor::MyProc();
@@ -63,7 +63,6 @@ void c_TransportSolver::Define_Broyden_Partition()
             site_size_loc_cumulative[c] + vp_NS[c]->Get_NumFieldSites_Local();
     }
     site_size_loc_all_NS = site_size_loc_cumulative[vp_NS.size()];
-
 }
 
 void c_TransportSolver::Set_Broyden_Parallel()
@@ -89,7 +88,7 @@ void c_TransportSolver::Set_Broyden_Parallel()
     {
         int NS_offset = site_size_loc_cumulative[c];
         vp_NS[c]->Copy_ForBroydenInput_LocalChargeFromNanostructure(
-                                  h_n_curr_in_data, NS_offset);
+            h_n_curr_in_data, NS_offset);
 
         // amrex::Print() << "Fetching h_n_curr_in for NS_id: " <<
         // vp_NS[c]->NS_Id << "\n"; for(int i=NS_offset; i< NS_offset +

@@ -78,11 +78,12 @@ void c_PointChargeContainer::Write_OutputFile()
         outfile_pc_step << std::setw(10) << step;
 #ifdef USE_TRANSPORT
         auto &rTransport = rCode.get_TransportSolver();
-        const auto& biases = rTransport.Get_Vec_Biases();
-        if(!biases.empty()) {
-            auto [Vds, Vgs] = biases[0]; //here biases on all nanostructures are equal
-            outfile_pc_step << std::setw(12) << Vds
-                            << std::setw(12) << Vgs;
+        const auto &biases = rTransport.Get_Vec_Biases();
+        if (!biases.empty())
+        {
+            auto [Vds, Vgs] =
+                biases[0];  // here biases on all nanostructures are equal
+            outfile_pc_step << std::setw(12) << Vds << std::setw(12) << Vgs;
         }
         outfile_pc_step << std::setw(10) << rTransport.get_Broyden_Step() - 1;
 #endif

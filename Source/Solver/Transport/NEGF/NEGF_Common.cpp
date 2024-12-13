@@ -1,9 +1,9 @@
 #include "NEGF_Common.H"
 
 #include "../../../Code.H"
+#include "../../../Input/BoundaryConditions/BoundaryConditions.H"
 #include "../../../Input/GeometryProperties/GeometryProperties.H"
 #include "../../../Input/MacroscopicProperties/MacroscopicProperties.H"
-#include "../../../Input/BoundaryConditions/BoundaryConditions.H"
 #include "../../Utils/CodeUtils/CodeUtil.H"
 #include "../../Utils/SelectWarpXUtils/TextMsg.H"
 #include "../../Utils/SelectWarpXUtils/WarpXConst.H"
@@ -25,12 +25,11 @@ const std::map<std::string, AxisType> map_strToAxisType = {
     {"x", AxisType::X}, {"X", AxisType::X}, {"y", AxisType::Y},
     {"Y", AxisType::Y}, {"z", AxisType::Z}, {"Z", AxisType::Z}};
 
-const std::map<std::string, Gate_Terminal_Type>
-      map_S_GateTerminalType = {
-        {"eb", Gate_Terminal_Type::EB},
-        {"EB", Gate_Terminal_Type::EB},
-        {"boundary", Gate_Terminal_Type::Boundary},
-        {"Boundary", Gate_Terminal_Type::Boundary}};
+const std::map<std::string, Gate_Terminal_Type> map_S_GateTerminalType = {
+    {"eb", Gate_Terminal_Type::EB},
+    {"EB", Gate_Terminal_Type::EB},
+    {"boundary", Gate_Terminal_Type::Boundary},
+    {"Boundary", Gate_Terminal_Type::Boundary}};
 
 template <typename T>
 void c_NEGF_Common<T>::Set_KeyParams(const std::string &name_str,
@@ -378,10 +377,10 @@ void c_NEGF_Common<T>::Read_TerminalParams(amrex::ParmParse &pp_ns)
 
     pp_ns.query("gate_terminal_type", gate_terminal_type_str);
 
-    if (map_S_GateTerminalType.find(gate_terminal_type_str) != map_S_GateTerminalType.end())
+    if (map_S_GateTerminalType.find(gate_terminal_type_str) !=
+        map_S_GateTerminalType.end())
     {
-        gate_terminal_type = map_S_GateTerminalType.at(
-            gate_terminal_type_str);
+        gate_terminal_type = map_S_GateTerminalType.at(gate_terminal_type_str);
     }
     else
     {
@@ -456,7 +455,6 @@ void c_NEGF_Common<T>::Read_DOSParams(amrex::ParmParse &pp_ns)
     pp_ns.query("flag_write_LDOS_iter", flag_write_LDOS_iter);
     pp_ns.query("write_LDOS_iter_period", write_LDOS_iter_period);
 }
-
 
 template <typename T>
 void c_NEGF_Common<T>::Read_FlatbandDOSParams(amrex::ParmParse &pp_ns)
@@ -840,9 +838,9 @@ template <typename T>
 void c_NEGF_Common<T>::Print_TerminalParams()
 {
     amrex::Print() << "##### gate_string: " << Gate_String << "\n";
-    
+
     amrex::Print() << "##### gate_terminal_type: " << gate_terminal_type_str
-                       << "\n";
+                   << "\n";
 
     amrex::Print() << "##### contact_Fermi_level, E_f / [eV]: " << E_f << "\n";
 
@@ -896,7 +894,6 @@ void c_NEGF_Common<T>::Print_EqContourIntgPts()
     }
     amrex::Print() << "\n";
 }
-
 
 template <typename T>
 void c_NEGF_Common<T>::Print_DOSParams()
@@ -1291,10 +1288,10 @@ void c_NEGF_Common<T>::Initialize_NEGF(const std::string common_foldername_str,
 }
 
 template <typename T>
-void c_NEGF_Common<T>::Solve_NEGF(RealTable1D &n_curr_out_data, const int iter, 
+void c_NEGF_Common<T>::Solve_NEGF(RealTable1D &n_curr_out_data, const int iter,
                                   const bool flag_update_terminal_bias)
 {
-    if(flag_update_terminal_bias) Set_TerminalBiasesAndContactPotential();
+    if (flag_update_terminal_bias) Set_TerminalBiasesAndContactPotential();
 
     Add_PotentialToHamiltonian();
 
@@ -1325,12 +1322,12 @@ void c_NEGF_Common<T>::Solve_NEGF(RealTable1D &n_curr_out_data, const int iter,
 }
 
 template <typename T>
-void c_NEGF_Common<T>:: Write_Data_General(const bool isIter, 
-                                           const int iter_or_step, 
-                                           const int total_iterations_in_step,
-                                           const amrex::Real avg_intg_pts,
-                                           RealTable1D const& h_n_curr_out_data, 
-                                           RealTable1D const& h_Norm_data) 
+void c_NEGF_Common<T>::Write_Data_General(const bool isIter,
+                                          const int iter_or_step,
+                                          const int total_iterations_in_step,
+                                          const amrex::Real avg_intg_pts,
+                                          RealTable1D const &h_n_curr_out_data,
+                                          RealTable1D const &h_Norm_data)
 {
     // Note: n_curr_out_glo is output from negf and input to broyden.
     // n_curr_in is the broyden predicted charge for next iteration.
@@ -1338,19 +1335,22 @@ void c_NEGF_Common<T>:: Write_Data_General(const bool isIter,
     std::string write_filename;
     bool to_write = false;
 
-    if(isIter) {
+    if (isIter)
+    {
         write_filename = get_iter_filename();
-        if(get_flag_write_at_iter()) {
+        if (get_flag_write_at_iter())
+        {
             to_write = true;
         }
     }
-    else {
+    else
+    {
         write_filename = get_step_filename();
         to_write = true;
     }
 
-    if(to_write) {
-
+    if (to_write)
+    {
         auto const &h_n_curr_out = h_n_curr_out_data.table();
         auto const &h_Norm = h_Norm_data.table();
 
@@ -1373,15 +1373,15 @@ void c_NEGF_Common<T>:: Write_Data_General(const bool isIter,
                     ParallelDescriptor::Communicator());
 
         MPI_Gatherv(&h_Norm(0), MPI_recv_count[my_rank], MPI_DOUBLE,
-                    &Norm_glo(0), MPI_recv_count.data(),
-                    MPI_recv_disp.data(), MPI_DOUBLE,
-                    ParallelDescriptor::IOProcessorNumber(),
+                    &Norm_glo(0), MPI_recv_count.data(), MPI_recv_disp.data(),
+                    MPI_DOUBLE, ParallelDescriptor::IOProcessorNumber(),
                     ParallelDescriptor::Communicator());
 
         Write_Data(write_filename, n_curr_out_glo_data, Norm_glo_data);
     }
 
-    if(!isIter) {
+    if (!isIter)
+    {
         Write_Current(iter_or_step, total_iterations_in_step, avg_intg_pts);
     }
 }
@@ -2260,37 +2260,36 @@ void c_NEGF_Common<T>::Deallocate_TemporaryArraysForGFComputation()
 #endif
 }
 
-
 template <typename T>
-void c_NEGF_Common<T>::Compute_DensityOfStates_General(bool flag_isIter, int iter_or_step)
+void c_NEGF_Common<T>::Compute_DensityOfStates_General(bool flag_isIter,
+                                                       int iter_or_step)
 {
-    if(flag_isIter) {
+    if (flag_isIter)
+    {
         if (flag_write_LDOS_iter and
-        (iter_or_step + 1) % write_LDOS_iter_period == 0)
-        {   
+            (iter_or_step + 1) % write_LDOS_iter_period == 0)
+        {
             std::string iter_dos_foldername_str =
-                amrex::Concatenate(iter_foldername_str +
-                                       "/DOS_iter",
-                                   iter_or_step, negf_plt_name_digits); 
-            
+                amrex::Concatenate(iter_foldername_str + "/DOS_iter",
+                                   iter_or_step, negf_plt_name_digits);
+
             CreateDirectory(iter_dos_foldername_str);
             // e.g.: /negf/cnt/step0001_iter/LDOS_iter0002/
-            
+
             Compute_DensityOfStates(iter_dos_foldername_str,
                                     flag_write_LDOS_iter);
         }
     }
-    else if(flag_compute_DOS) {
-            std::string dos_step_foldername_str =
-                amrex::Concatenate(step_foldername_str + 
-                                       "/DOS_step",
-                                   iter_or_step, negf_plt_name_digits);
+    else if (flag_compute_DOS)
+    {
+        std::string dos_step_foldername_str =
+            amrex::Concatenate(step_foldername_str + "/DOS_step", iter_or_step,
+                               negf_plt_name_digits);
 
-            CreateDirectory(dos_step_foldername_str);
-            // e.g.: /negf/cnt/DOS_step0001/
+        CreateDirectory(dos_step_foldername_str);
+        // e.g.: /negf/cnt/DOS_step0001/
 
-            Compute_DensityOfStates(dos_step_foldername_str,
-                                    flag_write_LDOS);
+        Compute_DensityOfStates(dos_step_foldername_str, flag_write_LDOS);
     }
 }
 
@@ -2932,11 +2931,11 @@ void c_NEGF_Common<T>::Write_ChargeComponents(
 
 template <typename T>
 void c_NEGF_Common<T>::Copy_LocalChargeFromNanostructure(
-        RealTable1D &container_data, const int NS_offset)
+    RealTable1D &container_data, const int NS_offset)
 {
     auto const &h_n_curr_in_glo = h_n_curr_in_glo_data.table();
     auto const &container = container_data.table();
-    
+
     int disp = MPI_recv_disp[my_rank];
     int data_size = MPI_recv_count[my_rank];
 
@@ -2947,7 +2946,6 @@ void c_NEGF_Common<T>::Copy_LocalChargeFromNanostructure(
     }
     h_n_curr_in_glo_data.clear();
 }
-
 
 template <typename T>
 void c_NEGF_Common<T>::Write_PotentialAtSites(const std::string filename_prefix)
@@ -4661,7 +4659,7 @@ void c_NEGF_Common<T>::Compute_Current()
 }
 
 template <typename T>
-void c_NEGF_Common<T>::Write_Current(const int step, 
+void c_NEGF_Common<T>::Write_Current(const int step,
                                      const int total_iterations_in_step,
                                      const amrex::Real avg_intg_pts)
 {
@@ -4678,17 +4676,15 @@ void c_NEGF_Common<T>::Write_Current(const int step,
         {
             outfile_I << std::setw(20) << h_Current_loc(k);
         }
-        outfile_I << std::setw(10) << avg_intg_pts << std::setw(10) 
-                  << total_iterations_in_step
-                  << std::setw(20) << total_conductance
-                  << "\n";
+        outfile_I << std::setw(10) << avg_intg_pts << std::setw(10)
+                  << total_iterations_in_step << std::setw(20)
+                  << total_conductance << "\n";
         outfile_I.close();
     }
 }
 
-
 template <typename T>
-void c_NEGF_Common<T>:: Set_TerminalBiasesAndContactPotential() 
+void c_NEGF_Common<T>::Set_TerminalBiasesAndContactPotential()
 {
     auto &rCode = c_Code::GetInstance();
     auto &rGprop = rCode.get_GeometryProperties();
@@ -4715,8 +4711,7 @@ void c_NEGF_Common<T>:: Set_TerminalBiasesAndContactPotential()
 
         if (gate_terminal_type == Gate_Terminal_Type::EB)
         {
-            Vgs =
-                rGprop.pEB->Read_SurfSoln(get_Gate_String()) - V_contact[0];
+            Vgs = rGprop.pEB->Read_SurfSoln(get_Gate_String()) - V_contact[0];
         }
         else if (gate_terminal_type == Gate_Terminal_Type::Boundary)
         {
@@ -4732,7 +4727,7 @@ void c_NEGF_Common<T>:: Set_TerminalBiasesAndContactPotential()
 
         amrex::Real GV = 0.;
         if (gate_terminal_type == Gate_Terminal_Type::EB)
-        {   
+        {
             GV = rGprop.pEB->Read_SurfSoln(get_Gate_String());
         }
         else if (gate_terminal_type == Gate_Terminal_Type::Boundary)
@@ -4742,14 +4737,13 @@ void c_NEGF_Common<T>:: Set_TerminalBiasesAndContactPotential()
 
         amrex::Print() << "\n Updated gate voltage: " << GV << " V\n";
         Vgs = GV - (get_Fermi_level() - ep_s);
-     }
-     amrex::Print()
-         << " Vds: " << Vds << " V, Vgs: " << Vgs << " V\n";
+    }
+    amrex::Print() << " Vds: " << Vds << " V, Vgs: " << Vgs << " V\n";
 }
 
-
 template <typename T>
-void c_NEGF_Common<T>:: Copy_BroydenPredictedCharge(const RealTable1D& h_n_curr_in_data)
+void c_NEGF_Common<T>::Copy_BroydenPredictedCharge(
+    const RealTable1D &h_n_curr_in_data)
 {
     auto const &h_n_curr_in = h_n_curr_in_data.table();
 
@@ -4762,9 +4756,8 @@ void c_NEGF_Common<T>:: Copy_BroydenPredictedCharge(const RealTable1D& h_n_curr_
     auto const &n_curr_in_glo = n_curr_in_glo_data.table();
 
     MPI_Gatherv(&h_n_curr_in(0), MPI_recv_count[my_rank], MPI_DOUBLE,
-                &n_curr_in_glo(0), MPI_recv_count.data(),
-                MPI_recv_disp.data(), MPI_DOUBLE,
-                ParallelDescriptor::IOProcessorNumber(),
+                &n_curr_in_glo(0), MPI_recv_count.data(), MPI_recv_disp.data(),
+                MPI_DOUBLE, ParallelDescriptor::IOProcessorNumber(),
                 ParallelDescriptor::Communicator());
 
     auto const &h_n_curr_in_loc = h_n_curr_in_loc_data.table();
@@ -4783,10 +4776,9 @@ void c_NEGF_Common<T>:: Copy_BroydenPredictedCharge(const RealTable1D& h_n_curr_
     // }
     // MPI_Barrier(ParallelDescriptor::Communicator());
 
-    //write out charge
+    // write out charge
     if (write_at_iter)
     {
-        Write_InputInducedCharge(
-        iter_filename_str, n_curr_in_glo_data);
+        Write_InputInducedCharge(iter_filename_str, n_curr_in_glo_data);
     }
 }
