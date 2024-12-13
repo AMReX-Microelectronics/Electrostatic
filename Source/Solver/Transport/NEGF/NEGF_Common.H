@@ -322,12 +322,6 @@ class c_NEGF_Common : protected MatrixBlock<T>, private c_IntegrationPath
     virtual AMREX_GPU_HOST_DEVICE void Compute_SurfaceGreensFunction(
         MatrixBlock<T> &gr, const ComplexType E, const ComplexType U);
 
-    /*Decimation*/
-    virtual AMREX_GPU_HOST_DEVICE void Compute_CondensedHamiltonian(
-        CondensedHamiltonian &CondH, const ComplexType EmU);
-
-    AMREX_GPU_HOST_DEVICE void DecimationTechnique(MatrixBlock<T> &gr,
-                                                   const ComplexType EmU);
 
     void Write_Current(const int step, const int total_iterations_in_step,
                        const amrex::Real avg_intg_pts);
@@ -505,9 +499,6 @@ class c_NEGF_Common : protected MatrixBlock<T>, private c_IntegrationPath
     virtual void Define_ContactInfo() = 0;
 
     virtual void Generate_AtomLocations(amrex::Vector<s_Position3D> &pos) = 0;
-    virtual AMREX_GPU_HOST_DEVICE void Compute_SurfaceGreensFunction(
-        MatrixBlock<T> &gr, const ComplexType EmU) = 0;
-
     virtual void Define_FileHeaderForCurrent();
     virtual void Define_EnergyLimits();
     virtual void Define_IntegrationPaths();
@@ -516,6 +507,13 @@ class c_NEGF_Common : protected MatrixBlock<T>, private c_IntegrationPath
         const RealTable1D &Transmission_data,
         const RealTable1D &Conductance_data, std::string filename);
     virtual void Define_PotentialProfile();
+
+    /*Decimation*/
+    virtual AMREX_GPU_HOST_DEVICE void Compute_CondensedHamiltonian(
+        CondensedHamiltonian &CondH, const ComplexType EmU);
+
+    AMREX_GPU_HOST_DEVICE void DecimationTechnique(MatrixBlock<T> &gr,
+                                                   const ComplexType EmU);
 
     // other methods accessed from derived classes
     void Solve_NEGF(RealTable1D &n_curr_out_data, const int iter,
