@@ -351,7 +351,6 @@ void c_CNT::Define_ContactInfo()
     }
 }
 
-AMREX_GPU_HOST_DEVICE
 void c_CNT::Compute_SurfaceGreensFunction(MatrixBlock<BlkType> &gr,
                                           const ComplexType E,
                                           const ComplexType U)

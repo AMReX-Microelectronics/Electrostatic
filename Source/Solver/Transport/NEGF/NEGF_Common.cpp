@@ -4092,8 +4092,8 @@ void c_NEGF_Common<T>::Compute_Rho0()
 }
 
 template <typename T>
-AMREX_GPU_HOST_DEVICE void c_NEGF_Common<T>::DecimationTechnique(
-    MatrixBlock<T> &gr, const ComplexType EmU)
+void c_NEGF_Common<T>::DecimationTechnique(MatrixBlock<T> &gr,
+                                           const ComplexType EmU)
 {
     CondensedHamiltonian CondH;
     Compute_CondensedHamiltonian(CondH, EmU);
@@ -4153,8 +4153,9 @@ AMREX_GPU_HOST_DEVICE void c_NEGF_Common<T>::DecimationTechnique(
 }
 
 template <typename T>
-AMREX_GPU_HOST_DEVICE void c_NEGF_Common<T>::Compute_SurfaceGreensFunction(
-    MatrixBlock<T> &gr, const ComplexType E, ComplexType U)
+void c_NEGF_Common<T>::Compute_SurfaceGreensFunction(MatrixBlock<T> &gr,
+                                                     const ComplexType E,
+                                                     ComplexType U)
 {
     DecimationTechnique(gr, E - U);
     // amrex::Print() << "Using decimation, gr: " << gr << "\n";
